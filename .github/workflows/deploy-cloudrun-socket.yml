@@ -1,15 +1,15 @@
-name: Build and Deploy mzm-auth
+name: Build and Deploy mzm-socket
 
 on:
   workflow_dispatch:
 
 defaults:
   run:
-    working-directory: ./packages/auth
+    working-directory: ./packages/socket
 
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
-  SERVICE: mzm-auth
+  SERVICE: mzm-socket
   REGION: asia-northeast1
 
 jobs:

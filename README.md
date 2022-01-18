@@ -16,16 +16,17 @@ $ node -r esbuild-register ./bin/init_mongodb.ts --password=example --user=mzm -
 ```bash
 $ docker-compose up
 
-# start all components
-$ npm run start --workspaces
+# start
+$ npm start --workspace=packages/auth
+$ npm start --workspace=packages/socket
 ```
 
 ### test
 
 ```bash
 # test all components
-$ npm run test --workspaces
+$ npm test --workspaces --if-present
 
 # test "pachages/auth"
-$ npm run test --workspace=packages/auth
+$ npm test --workspace=packages/auth
 ```

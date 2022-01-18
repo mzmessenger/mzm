@@ -1,14 +1,14 @@
-name: test auth
+name: mzm-socket
 
 on:
   push:
     paths:
-      - 'packages/auth/**'
-    branches: [ main ]
+      - 'packages/socket/**'
+    branches: [ master ]
   pull_request:
     paths:
-      - 'packages/auth/**'
-    branches: [ main ]
+      - 'packages/socket/**'
+    branches: [ master ]
 
 jobs:
   build:
@@ -26,7 +26,7 @@ jobs:
       with:
         node-version: ${{ matrix.node-version }}
     - run: npm ci
-    - run: npm run build --workspace=packages/auth
-    - run: npm run test --workspace=packages/auth
+    - run: npm run build --workspace=packages/socket
+    - run: npm run test --workspace=packages/socket
       env:
         CI: true
