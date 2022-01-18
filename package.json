@@ -1,0 +1,11 @@
+{
+  "private": true,
+  "name": "mzm",
+  "workspaces": [
+    "packages/*"
+  ],
+  "devDependencies": {
+    "esbuild": "^0.14.11",
+    "esbuild-register": "^3.3.2"
+  }
+}
