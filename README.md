@@ -14,18 +14,33 @@ $ node -r esbuild-register ./bin/init_mongodb.ts --password=example --user=mzm -
 ### start development
 
 ```bash
+$ npm install
+
+# start middleware
 $ docker-compose up
 
-# start all components
-$ npm run start --workspaces
+# start
+$ npm run start-auth
+$ npm run start-socket
+$ npm run start-backend
+$ npm run start-frontend
 ```
 
 ### test
 
 ```bash
 # test all components
-$ npm run test --workspaces
+$ npm test --workspaces --if-present
 
 # test "pachages/auth"
-$ npm run test --workspace=packages/auth
+$ npm test --workspace=packages/auth
+
+# test file
+$ npx jest --config=./packages/frontend/jest.config.js ./packages/frontend/src/worker/markdown.test.ts
+```
+
+## Docker build
+
+```bash
+$ docker build -f packages/auth/Dockerfile -t mzm-auth .
 ```

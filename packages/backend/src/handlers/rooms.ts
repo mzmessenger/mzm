@@ -1,0 +1,217 @@
+import { Request } from 'express'
+import { ObjectId, WithId } from 'mongodb'
+import isEmpty from 'validator/lib/isEmpty'
+import * as config from '../config'
+import { BadRequest } from '../lib/errors'
+import { getRequestUserId } from '../lib/utils'
+import * as db from '../lib/db'
+import { client as elasticsearch } from '../lib/elasticsearch/index'
+import { popParam, createUserIconPath, createRoomIconPath } from '../lib/utils'
+import {
+  isValidateRoomName,
+  enterRoom as enterRoomLogic,
+  createRoom as createRoomLogic
+} from '../logic/rooms'
+
+export const createRoom = async (
+  req: Request
+): Promise<{ id: string; name: string }> => {
+  const user = getRequestUserId(req)
+  const name = popParam(decodeURIComponent(req.body.name))
+  const valid = isValidateRoomName(name)
+  if (!valid.valid) {
+    throw new BadRequest({ reason: valid.reason })
+  }
+
+  const found = await db.collections.rooms.findOne({ name: name })
+  // @todo throw error if room is rocked
+  if (found) {
+    await enterRoomLogic(new ObjectId(user), new ObjectId(found._id))
+    return { id: found._id.toHexString(), name: found.name }
+  }
+
+  const created = await createRoomLogic(new ObjectId(user), name)
+
+  return { id: created._id.toHexString(), name }
+}
+
+export const enterRoom = async (req: Request) => {
+  const user = getRequestUserId(req)
+  const room = popParam(req.body.room)
+  if (isEmpty(room)) {
+    throw new BadRequest({ reason: 'room is empty' })
+  }
+
+  await enterRoomLogic(new ObjectId(user), new ObjectId(room))
+}
+
+export const exitRoom = async (req: Request) => {
+  const user = getRequestUserId(req)
+  const room = popParam(req.body.room)
+  if (isEmpty(room)) {
+    throw new BadRequest({ reason: 'room is empty' })
+  }
+
+  const roomId = new ObjectId(room)
+
+  const general = await db.collections.rooms.findOne({
+    name: config.room.GENERAL_ROOM_NAME
+  })
+
+  if (room === general._id.toHexString()) {
+    throw new BadRequest({ reason: 'general room' })
+  }
+
+  await db.collections.enter.deleteMany({
+    userId: new ObjectId(user),
+    roomId
+  })
+}
+
+type EnterUser = {
+  userId: string
+  account: string
+  icon: string
+  enterId: string
+}
+
+export const getUsers = async (
+  req: Request
+): Promise<{ count: number; users: EnterUser[] }> => {
+  const room = popParam(req.params.roomid)
+  if (isEmpty(room)) {
+    throw new BadRequest({ reason: 'room is empty' })
+  }
+
+  const roomId = new ObjectId(room)
+
+  const query: Object[] = [
+    {
+      $match: { roomId }
+    },
+    {
+      $lookup: {
+        from: db.COLLECTION_NAMES.USERS,
+        localField: 'userId',
+        foreignField: '_id',
+        as: 'user'
+      }
+    }
+  ]
+
+  const threshold = popParam(
+    typeof req.query.threshold === 'string' ? req.query.threshold : null
+  )
+  if (threshold) {
+    query.push({
+      $match: { _id: { $lt: new ObjectId(threshold) } }
+    })
+  }
+
+  const countQuery = db.collections.enter.countDocuments({ roomId })
+
+  type AggregateType = WithId<db.Message> & { user: WithId<db.User>[] }
+
+  const enterQuery = db.collections.enter
+    .aggregate<AggregateType>(query)
+    .sort({ _id: -1 })
+    .limit(config.room.USER_LIMIT)
+
+  const [count, cursor] = await Promise.all([countQuery, enterQuery])
+
+  const users: EnterUser[] = []
+  for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
+    const user: EnterUser = {
+      userId: doc.userId.toHexString(),
+      account: 'removed',
+      icon: null,
+      enterId: doc._id.toHexString()
+    }
+    if (doc.user && doc.user[0]) {
+      const [u] = doc.user
+      user.account = u.account ? u.account : null
+      user.icon = createUserIconPath(u?.account, u?.icon?.version)
+    }
+    users.push(user)
+  }
+  return { count, users }
+}
+
+export const search = async (req: Request) => {
+  const _query = popParam(
+    typeof req.query.query === 'string' ? req.query.query : null
+  )
+
+  const scroll = popParam(
+    typeof req.query.scroll === 'string' ? req.query.scroll : null
+  )
+
+  // @todo multi query
+  const must: object[] = []
+
+  if (_query) {
+    const roomsQuery = {
+      bool: {
+        should: [
+          {
+            simple_query_string: {
+              fields: ['name.kuromoji'],
+              query: _query,
+              default_operator: 'and'
+            }
+          }
+        ]
+      }
+    }
+    roomsQuery.bool.should.push({
+      simple_query_string: {
+        query: _query,
+        fields: ['name.ngram'],
+        default_operator: 'and'
+      }
+    })
+    must.push(roomsQuery)
+  }
+
+  const body: { [key: string]: object | string | number } = {
+    query: {
+      bool: {
+        must: must,
+        filter: [{ match: { status: db.RoomStatusEnum.OPEN } }]
+      }
+    },
+    sort: [{ _id: 'asc' }]
+  }
+
+  if (scroll) {
+    body.search_after = [scroll]
+  }
+
+  const { body: resBody } = await elasticsearch.search({
+    index: config.elasticsearch.alias.room,
+    size: config.elasticsearch.size.room,
+    body: body
+  })
+
+  const ids = resBody.hits.hits.map((elem) => new ObjectId(elem._id))
+  const cursor = await db.collections.rooms.find({ _id: { $in: ids } })
+
+  type ResRoom = Pick<db.Room, 'name'> & { id: string; iconUrl: string }
+  const rooms: ResRoom[] = []
+  for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
+    rooms.push({
+      id: doc._id.toHexString(),
+      name: doc.name,
+      iconUrl: createRoomIconPath(doc)
+    })
+  }
+
+  const total = resBody.hits.total.value
+
+  return {
+    query: _query,
+    hits: rooms,
+    total: total,
+    scroll: rooms.length > 0 ? rooms[rooms.length - 1].id : null
+  }
+}

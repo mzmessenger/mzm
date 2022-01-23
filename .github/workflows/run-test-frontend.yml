@@ -1,0 +1,32 @@
+name: mzm-frontend
+
+on:
+  push:
+    paths:
+      - 'packages/frontend/**'
+    branches: [ master ]
+  pull_request:
+    paths:
+      - 'packages/frontend/**'
+    branches: [ master ]
+
+jobs:
+  build:
+
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [16.x]
+
+    steps:
+      - uses: actions/checkout@v2
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v1
+        with:
+          node-version: ${{ matrix.node-version }}
+      - run: npm ci -w packages/frontend
+      - run: npm run build -w packages/frontend
+      - run: npm test -w packages/frontend
+        env:
+          CI: true

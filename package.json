@@ -4,6 +4,12 @@
   "workspaces": [
     "packages/*"
   ],
+  "scripts": {
+    "start-auth": "npm start --workspace=packages/auth",
+    "start-socket": "npm start --workspace=packages/socket",
+    "start-backend": "npm start --workspace=packages/backend",
+    "start-frontend": "npm start --workspace=packages/frontend"
+  },
   "devDependencies": {
     "esbuild": "^0.14.11",
     "esbuild-register": "^3.3.2"
