@@ -19,6 +19,8 @@ $ docker-compose up
 # start
 $ npm start --workspace=packages/auth
 $ npm start --workspace=packages/socket
+$ npm start --workspace=packages/backend
+$ npm start --workspace=packages/frontend
 ```
 
 ### test
@@ -29,6 +31,9 @@ $ npm test --workspaces --if-present
 
 # test "pachages/auth"
 $ npm test --workspace=packages/auth
+
+# test file
+$ npx jest --config=./packages/frontend/jest.config.js ./packages/frontend/src/worker/markdown.test.ts
 ```
 
 ## Docker build

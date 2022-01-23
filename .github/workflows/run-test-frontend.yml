@@ -1,13 +1,13 @@
-name: mzm-backend
+name: mzm-frontend
 
 on:
   push:
     paths:
-      - 'packages/backend/**'
+      - 'packages/frontend/**'
     branches: [ master ]
   pull_request:
     paths:
-      - 'packages/backend/**'
+      - 'packages/frontend/**'
     branches: [ master ]
 
 jobs:
@@ -25,8 +25,8 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm ci -w packages/socket
-      - run: npm run build -w packages/backend
-      - run: npm test -w packages/backend
+      - run: npm ci -w packages/frontend
+      - run: npm run build -w packages/frontend
+      - run: npm test -w packages/frontend
         env:
           CI: true
