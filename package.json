@@ -6,7 +6,8 @@
   ],
   "scripts": {
     "start-auth": "npm start --workspace=packages/auth",
-    "start-socket": "npm start --workspace=packages/socket"
+    "start-socket": "npm start --workspace=packages/socket",
+    "start-backend": "npm start --workspace=packages/backend"
   },
   "devDependencies": {
     "esbuild": "^0.14.11",

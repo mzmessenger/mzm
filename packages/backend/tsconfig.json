@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "incremental": true,
+    "lib": ["es2019", "es2020.string"],
+    "outDir": "dist",
+    "sourceMap": true,
+    "noImplicitAny": false,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "target": "es2018",
+    "moduleResolution": "node"
+  },
+  "exclude": ["node_modules"]
+}

@@ -30,3 +30,9 @@ $ npm test --workspaces --if-present
 # test "pachages/auth"
 $ npm test --workspace=packages/auth
 ```
+
+## Docker build
+
+```bash
+$ docker build -f packages/auth/Dockerfile -t mzm-auth .
+```

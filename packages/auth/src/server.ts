@@ -8,7 +8,7 @@ import app from './app'
 import { WORKER_NUM, PORT } from './config'
 import { initRemoveConsumerGroup, consume } from './lib/consumer'
 
-if (cluster.isMaster) {
+if (cluster.isPrimary) {
   for (let i = 0; i < WORKER_NUM; i++) {
     cluster.fork()
   }

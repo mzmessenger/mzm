@@ -11,7 +11,8 @@
     "cleanbuild": "rm -rf dist && tsc -p tsconfig.json",
     "format": "prettier --write src",
     "lint": "eslint --ext .ts,.js src",
-    "test": "npm run lint && jest"
+    "pretest": "npm run lint",
+    "test": "jest --maxWorkers=50% --config=./jest.config.js"
   },
   "dependencies": {
     "bunyan": "^1.8.15",
@@ -19,7 +20,7 @@
     "ioredis": "^4.28.2",
     "undici": "^4.12.1",
     "uuid": "^8.3.2",
-    "ws": "^8.4.0"
+    "ws": "^8.4.2"
   },
   "devDependencies": {
     "@types/bunyan": "^1.8.8",

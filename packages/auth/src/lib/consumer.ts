@@ -1,4 +1,4 @@
-import { ObjectID } from 'mongodb'
+import { ObjectId } from 'mongodb'
 import { redis } from './redis'
 import logger from './logger'
 import * as db from './db'
@@ -29,7 +29,7 @@ export const initRemoveConsumerGroup = async () => {
 }
 
 const remove = async (id: string, user: string) => {
-  const userId = new ObjectID(user)
+  const userId = new ObjectId(user)
   const target = await db.collections.users.findOne({ _id: userId })
   logger.info('[consumer:remove]', user, target)
   if (!target) {

@@ -1,7 +1,7 @@
 import cluster from 'cluster'
 import WebSocket from 'ws'
 import { v4 as uuid } from 'uuid'
-import { WORKER_NUM, SOCKET_LISTEN } from './config'
+import { WORKER_NUM, PORT } from './config'
 import logger from './lib/logger'
 import redis from './lib/redis'
 import { requestSocketAPI } from './lib/req'
@@ -29,10 +29,10 @@ if (cluster.isPrimary) {
     .on('ready', async () => {
       const wss = new WebSocket.Server(
         {
-          port: SOCKET_LISTEN
+          port: PORT
         },
         () => {
-          logger.info('Listening on', SOCKET_LISTEN)
+          logger.info('Listening on', PORT)
         }
       )
 
