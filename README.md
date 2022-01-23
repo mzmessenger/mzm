@@ -24,6 +24,9 @@ $ npm run start-auth
 $ npm run start-socket
 $ npm run start-backend
 $ npm run start-frontend
+
+# add package
+$ npm install -w packages/backend typescript -D
 ```
 
 ### test
