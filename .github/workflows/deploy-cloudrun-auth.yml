@@ -3,10 +3,6 @@ name: Build and Deploy mzm-auth
 on:
   workflow_dispatch:
 
-defaults:
-  run:
-    working-directory: ./packages/auth
-
 env:
   PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   SERVICE: mzm-auth

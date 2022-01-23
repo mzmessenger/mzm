@@ -14,13 +14,16 @@ $ node -r esbuild-register ./bin/init_mongodb.ts --password=example --user=mzm -
 ### start development
 
 ```bash
+$ npm install
+
+# start middleware
 $ docker-compose up
 
 # start
-$ npm start --workspace=packages/auth
-$ npm start --workspace=packages/socket
-$ npm start --workspace=packages/backend
-$ npm start --workspace=packages/frontend
+$ npm run start-auth
+$ npm run start-socket
+$ npm run start-backend
+$ npm run start-frontend
 ```
 
 ### test

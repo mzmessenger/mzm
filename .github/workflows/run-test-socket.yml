@@ -30,3 +30,10 @@ jobs:
       - run: npm run test -w packages/socket
         env:
           CI: true
+      - name: test docker build
+        uses: docker/build-push-action@v2
+        with:
+          file: packages/socket/Dockerfile
+          context: .
+          push: false
+
