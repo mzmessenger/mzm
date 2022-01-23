@@ -1,14 +1,14 @@
-name: mzm-frontend
+name: test frontend
 
 on:
   push:
     paths:
       - 'packages/frontend/**'
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
     paths:
       - 'packages/frontend/**'
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:

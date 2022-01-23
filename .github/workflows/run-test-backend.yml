@@ -1,14 +1,14 @@
-name: mzm-backend
+name: test backend
 
 on:
   push:
     paths:
       - 'packages/backend/**'
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
     paths:
       - 'packages/backend/**'
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:
