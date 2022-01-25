@@ -11,7 +11,7 @@ COPY ./packages/socket/src/ ./packages/socket/src/
 
 RUN npm install -w packages/socket && npm run -w packages/socket cleanbuild
 
-FROM node:16
+FROM node:16-alpine
 
 WORKDIR /usr/app
 

@@ -6,7 +6,7 @@
   "main": "index.js",
   "scripts": {
     "prestart": "npm run build",
-    "start": "node dist/src/socket.js | bunyan",
+    "start": "node dist/socket.js | bunyan",
     "build": "tsc -p tsconfig.json",
     "cleanbuild": "rm -rf dist && tsc -p tsconfig.json",
     "format": "prettier --write src ./*.{js,json}",

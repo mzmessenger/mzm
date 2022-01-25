@@ -11,7 +11,7 @@
     "format": "prettier --write src/**/*.ts ./*.{js,json}",
     "lint": "eslint --ext .ts,.js src",
     "pretest": "npm run lint && npm run build",
-    "jest": "jest --maxWorkers=50% --config=./jest.config.js",
+    "jest": "jest --maxWorkers=50% --config=./jest.config.js --detectOpenHandles",
     "test": "npm run jest"
   },
   "license": "MIT",

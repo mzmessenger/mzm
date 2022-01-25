@@ -11,7 +11,7 @@ COPY ./packages/auth/src/ ./packages/auth/src/
 
 RUN npm install -w packages/auth && npm run -w packages/auth cleanbuild
 
-FROM node:16
+FROM node:16-alpine
 
 WORKDIR /usr/app
 

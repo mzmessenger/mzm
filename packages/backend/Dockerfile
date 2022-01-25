@@ -11,7 +11,7 @@ COPY ./packages/backend/src/ ./packages/backend/src/
 
 RUN npm install -w packages/backend && npm run -w packages/backend cleanbuild
 
-FROM node:16
+FROM node:16-alpine
 
 WORKDIR /usr/app
 
