@@ -1,14 +1,14 @@
-name: mzm-frontend
+name: test frontend
 
 on:
   push:
     paths:
       - 'packages/frontend/**'
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
     paths:
       - 'packages/frontend/**'
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -30,3 +30,9 @@ jobs:
       - run: npm test -w packages/frontend
         env:
           CI: true
+      - name: test docker build
+        uses: docker/build-push-action@v2
+        with:
+          file: packages/frontend/Dockerfile
+          context: .
+          push: false

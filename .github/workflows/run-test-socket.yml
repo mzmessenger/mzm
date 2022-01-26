@@ -1,14 +1,14 @@
-name: mzm-socket
+name: test socket
 
 on:
   push:
     paths:
       - 'packages/socket/**'
-    branches: [ master ]
+    branches: [ main ]
   pull_request:
     paths:
       - 'packages/socket/**'
-    branches: [ master ]
+    branches: [ main ]
 
 jobs:
   build:
@@ -36,4 +36,3 @@ jobs:
           file: packages/socket/Dockerfile
           context: .
           push: false
-

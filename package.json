@@ -8,7 +8,11 @@
     "start-auth": "npm start --workspace=packages/auth",
     "start-socket": "npm start --workspace=packages/socket",
     "start-backend": "npm start --workspace=packages/backend",
-    "start-frontend": "npm start --workspace=packages/frontend"
+    "start-frontend": "npm start --workspace=packages/frontend",
+    "build-docker-image-auth": "docker build -f packages/auth/Dockerfile -t mzm-auth .",
+    "build-docker-image-socket": "docker build -f packages/socket/Dockerfile -t mzm-socket .",
+    "build-docker-image-backend": "docker build -f packages/backend/Dockerfile -t mzm-backend .",
+    "build-docker-image-frontend": "docker build -f packages/frontend/Dockerfile -t mzm-frontend ."
   },
   "devDependencies": {
     "esbuild": "^0.14.11",

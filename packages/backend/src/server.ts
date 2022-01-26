@@ -73,7 +73,7 @@ app.use(errorHandler)
 
 const server = http.createServer(app)
 
-if (cluster.isMaster) {
+if (cluster.isPrimary) {
   for (let i = 0; i < WORKER_NUM; i++) {
     cluster.fork()
   }
