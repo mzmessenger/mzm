@@ -10,8 +10,9 @@
     "cleanbuild": "rm -rf dist/ && tsc -p tsconfig.json",
     "format": "prettier --write src/**/*.ts ./*.{js,json}",
     "lint": "eslint --ext .ts,.js src",
-    "pretest": "npm run lint && npm run build",
-    "jest": "jest --maxWorkers=50% --config=./jest.config.js --detectOpenHandles",
+    "pretest": "npm run lint",
+    "jest": "jest --maxWorkers=50% --config=./jest.config.js",
+    "test-ci": "jest --maxWorkers=50% --config=./jest.config.js --forceExit",
     "test": "npm run jest"
   },
   "license": "MIT",

@@ -27,7 +27,8 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm ci -w packages/backend
       - run: npm run build -w packages/backend
-      - run: npm run test -w packages/backend
+      - run: npm run lint -w packages/backend
+      - run: npm run test-ci -w packages/backend
         env:
           CI: true
       - name: test docker build
