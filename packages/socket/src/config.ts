@@ -9,9 +9,11 @@ export const PORT: number = process.env.PORT
 
 export const INTERNAL_API_URL = process.env.INTERNAL_API
 
-export const redis = {
+export const REDIS = {
   options: {
     host: process.env.REDIS_HOST,
     enableOfflineQueue: false
   }
 }
+
+export const AUTH_SERVER = process.env.AUTH_SERVER

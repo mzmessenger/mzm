@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "name": "mzm-shared",
+  "version": "1.0.0",
+  "main": "./dist/index.js",
+  "exports": {
+    "./auth": "./dist/auth/index.js"
+  },
+  "scripts": {
+    "format": "prettier --write auth ./*.{js,json}",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "license": "MIT",
+  "devDependencies": {
+    "@types/passport": "^1.0.7",
+    "prettier": "^2.5.1",
+    "typescript": "^4.5.5"
+  },
+  "dependencies": {
+    "undici": "^4.13.0"
+  }
+}

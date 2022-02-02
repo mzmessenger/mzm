@@ -10,6 +10,8 @@ export const PORT = process.env.PORT ?? 3001
 
 export const WORKER_NUM = process.env.WORKER_NUM ?? 1
 
+export const AUTH_SERVER = process.env.AUTH_SERVER
+
 export const account = {
   MIN_LENGTH: 2,
   MAX_LENGTH: 30
@@ -90,7 +92,7 @@ export const icon = {
   ROOM_ICON_PREFIX: 'roomicon/'
 } as const
 
-export const MULTER_PATH = '/tmp'
+export const MULTER_PATH = '/tmp' ?? process.env.MULTER_PATH
 
 export const aws = {
   AWS_BUCKET: process.env.AWS_BUCKET,

@@ -1,6 +1,6 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
 import { MONGODB_URI } from '../config'
-import logger from './logger'
+import { logger } from './logger'
 
 export const collections: {
   users: Collection<User>
@@ -20,7 +20,6 @@ export const connect = async () => {
 }
 
 export type User = {
-  _id: ObjectId
   twitterId?: string
   twitterUserName?: string
   githubId?: string

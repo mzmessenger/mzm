@@ -167,7 +167,8 @@ export const connect = (
       onMessage(e, dispatch, getState, history)
     })
 
-    ws.addEventListener('close', () => {
+    ws.addEventListener('close', (e) => {
+      // @todo max recoonect
       const timer = setTimeout(() => {
         connect(url, history)(dispatch, getState)
       }, getState().socket.reconnectInterval)

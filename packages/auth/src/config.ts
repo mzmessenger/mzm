@@ -18,17 +18,19 @@ export const PORT = process.env.PORT ?? 8000
 
 export const REMOVE_STREAM = 'stream:auth:remove:user'
 
-export const redis = {
+export const REDIS = {
   options: {
     host: process.env.REDIS_HOST,
     enableOfflineQueue: false
   }
-}
+} as const
 
-export const sessionRedis = {
+export const SESSION_REDIS = {
   options: {
-    host: process.env.REDIS_HOST,
+    host: process.env.SESSION_REDIS_HOST,
     enableOfflineQueue: false,
     db: 1
   }
-}
+} as const
+
+export const dev = process.env.NODE_ENV !== 'production'

@@ -21,4 +21,4 @@ COPY --from=builder /usr/app/packages/socket/dist/ packages/socket/dist/
 RUN npm install -w packages/socket --production
 
 ENV NODE_ENV=production
-CMD [ "node", "packages/socket/dist/socket.js" ]
+CMD [ "node", "packages/socket/dist/server.js" ]

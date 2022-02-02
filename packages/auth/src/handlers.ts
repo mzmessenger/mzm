@@ -1,25 +1,26 @@
-import { ObjectId } from 'mongodb'
+import { ObjectId, WithId } from 'mongodb'
 import { Request, Response } from 'express'
+import { HEADERS } from 'mzm-shared/auth'
 import * as db from './lib/db'
-import logger from './lib/logger'
+import { logger } from './lib/logger'
 import { redis } from './lib/redis'
 import { REMOVE_STREAM } from './config'
 
-type Serialize = db.User
-type Deserialize = string
-type RequestUser = db.User
+type Serialized = WithId<db.User> & Request['user']
+type Deserialized = string
+type RequestUser = WithId<db.User>
 type PassportRequest = Request & { user?: RequestUser }
 
 export const auth = (req: PassportRequest, res: Response) => {
   if (req.user) {
     const id = req.user._id.toHexString()
-    res.setHeader('X-USER-ID', id)
+    res.setHeader(HEADERS.USER_ID, id)
     res.setHeader(
       'X-TWITTER-USER-ID',
       req.user.twitterId ? req.user.twitterId : ''
     )
     res.setHeader(
-      'X-TWITTER-USER-NAME',
+      HEADERS.TIWTTER_USER_NAME,
       req.user.twitterUserName ? req.user.twitterUserName : ''
     )
     res.setHeader(
@@ -32,27 +33,20 @@ export const auth = (req: PassportRequest, res: Response) => {
     )
     logger.info('[auth] id:', id)
     return res.status(200).send('ok')
-  } else if (req.headers['x-pass-through'] === 'yes') {
-    res.setHeader('X-USER-ID', '')
-    res.setHeader('X-TWITTER-USER-ID', '')
-    res.setHeader('X-TWITTER-USER-NAME', '')
-    res.setHeader('X-GITHUB-USER-ID', '')
-    res.setHeader('X-GITHUB-USER-NAME', '')
-    return res.status(200).send('ok')
   }
   res.status(401).send('not login')
 }
 
 export const serializeUser = (
-  user: Serialize,
+  user: Serialized,
   // eslint-disable-next-line no-unused-vars
-  done: (err, user: Deserialize) => void
+  done: (err, user: Deserialized) => void
 ) => {
   done(null, user._id.toHexString())
 }
 
 export const deserializeUser = (
-  user: Deserialize,
+  user: Deserialized,
   // eslint-disable-next-line no-unused-vars
   done: (err, user?: RequestUser) => void
 ) => {
@@ -69,10 +63,10 @@ export const loginTwitter = async (
   twitterId: string,
   twitterUserName: string,
   // eslint-disable-next-line no-unused-vars
-  cb: (error: any, user?: Serialize) => void
+  cb: (error: any, user?: Serialized) => void
 ) => {
   try {
-    const filter: Pick<db.User, '_id'> | Pick<db.User, 'twitterId'> = req.user
+    const filter: { _id: ObjectId } | Pick<db.User, 'twitterId'> = req.user
       ? { _id: new ObjectId(req.user._id) }
       : { twitterId }
 
@@ -111,10 +105,10 @@ export const loginGithub = async (
   githubId: string,
   githubUserName: string,
   // eslint-disable-next-line no-unused-vars
-  cb: (error: any, user?: Serialize) => void
+  cb: (error: any, user?: Serialized) => void
 ) => {
   try {
-    const filter: Pick<db.User, '_id'> | Pick<db.User, 'githubId'> = req.user
+    const filter: { _id: ObjectId } | Pick<db.User, 'githubId'> = req.user
       ? { _id: new ObjectId(req.user._id) }
       : { githubId }
 

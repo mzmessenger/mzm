@@ -1,14 +1,14 @@
 import { Request } from 'express'
-import { ObjectId } from 'mongodb'
 import isEmpty from 'validator/lib/isEmpty'
+import { getRequestUserId } from '../lib/utils'
 import { NotFound, BadRequest } from '../lib/errors'
-import { getRequestUserId, popParam } from '../lib/utils'
+import { popParam } from '../lib/utils'
 import { isValidAccount, initUser } from '../logic/users'
 import * as db from '../lib/db'
 import { createUserIconPath } from '../lib/utils'
+import { ObjectId } from 'mongodb'
 
 export const signUp = async (req: Request) => {
-  const id = getRequestUserId(req)
   const account = popParam(req.body.account)
   if (!account) {
     throw new BadRequest('account is empty')
@@ -24,7 +24,9 @@ export const signUp = async (req: Request) => {
     throw new BadRequest('account is already created')
   }
 
-  await initUser(new ObjectId(id), account)
+  const id = getRequestUserId(req)
+  const userId = new ObjectId(id)
+  await initUser(userId, account)
 
   return { id: id, account: account }
 }
@@ -59,7 +61,7 @@ export const getUserInfo = async (req: Request) => {
 }
 
 export const updateAccount = async (req: Request) => {
-  const user = getRequestUserId(req)
+  const id = getRequestUserId(req)
   const account = popParam(req.body.account)
   if (!account) {
     throw new BadRequest('account is empty')
@@ -68,10 +70,9 @@ export const updateAccount = async (req: Request) => {
     throw new BadRequest('account is not valid')
   }
 
-  const userId = new ObjectId(user)
   const update: Pick<db.User, 'account'> = { account }
   const updated = await db.collections.users.findOneAndUpdate(
-    { _id: userId },
+    { _id: new ObjectId(id) },
     { $set: update },
     {
       upsert: true
@@ -82,7 +83,7 @@ export const updateAccount = async (req: Request) => {
 }
 
 export const sortRooms = async (req: Request) => {
-  const user = getRequestUserId(req)
+  const id = getRequestUserId(req)
   const rooms = popParam(req.body.rooms)
   if (isEmpty(rooms)) {
     throw new BadRequest({ reason: 'rooms is empty' })
@@ -98,7 +99,7 @@ export const sortRooms = async (req: Request) => {
   }
 
   db.collections.users.updateOne(
-    { _id: new ObjectId(user) },
+    { _id: new ObjectId(id) },
     { $set: { roomOrder } }
   )
 }

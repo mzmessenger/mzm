@@ -1,6 +1,6 @@
 import Redis from 'ioredis'
-import * as config from '../config'
+import { REDIS, SESSION_REDIS } from '../config'
 
-export const redis = new Redis(config.redis.options)
+export const redis = new Redis(REDIS.options)
 
-export const sessionRedis = new Redis(config.sessionRedis.options)
+export const sessionRedis = new Redis(SESSION_REDIS.options)
