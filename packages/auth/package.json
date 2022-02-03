@@ -8,7 +8,7 @@
     "start": "node dist/server.js | bunyan",
     "build": "tsc --build tsconfig.json",
     "cleanbuild": "rm -rf dist && npm run build",
-    "format": "prettier --write src/**/*.{js,json,ts} ./*.{js,json}",
+    "format": "prettier --write src ./*.{js,json}",
     "lint": "eslint --ext .ts,.js src/",
     "test": "npm run lint"
   },

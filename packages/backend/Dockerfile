@@ -4,12 +4,13 @@ FROM node:16 as builder
 WORKDIR /usr/app
 
 COPY ./package.json ./package-lock.json ./
+COPY ./packages/shared ./packages/shared
 COPY ./packages/backend/package.json \
   ./packages/backend/tsconfig.json \
   ./packages/backend/
 COPY ./packages/backend/src/ ./packages/backend/src/
 
-RUN npm install -w packages/backend && npm run -w packages/backend cleanbuild
+RUN npm install -w packages/backend -w packages/shared && npm run -w packages/backend cleanbuild
 
 FROM node:16-alpine
 
