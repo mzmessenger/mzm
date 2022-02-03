@@ -7,7 +7,7 @@
   "scripts": {
     "prestart": "npm run build",
     "start": "node dist/server.js | bunyan",
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc --build tsconfig.json",
     "cleanbuild": "rm -rf dist && tsc -p tsconfig.json",
     "format": "prettier --write src ./*.{js,json}",
     "lint": "eslint --ext .ts,.js src",
