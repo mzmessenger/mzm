@@ -1,6 +1,8 @@
+jest.mock('mzm-shared/auth')
 jest.mock('../lib/logger')
 
 import { Request, Response } from 'express'
+import { HEADERS, requestAuthServer } from 'mzm-shared/auth'
 import { errorHandler, checkLogin } from './index'
 import * as HttpErrors from '../lib/errors'
 
@@ -44,22 +46,35 @@ test.each([
 })
 
 test('checkLogin (success)', (cb) => {
-  expect.assertions(1)
+  expect.assertions(2)
 
-  const req = { headers: { 'x-user-id': 'aaa' } }
+  const req = { headers: {} }
+
+  const mock = jest.mocked(requestAuthServer)
+  mock.mockResolvedValueOnce({
+    userId: 'aaa',
+    twitterUserName: 'xxx'
+  })
 
   const next = jest.fn(() => {
     expect('called').toEqual('called')
+    expect(req.headers[HEADERS.USER_ID]).toEqual('aaa')
     cb()
   })
 
-  checkLogin(req as any as Request, {} as Response, next)
+  checkLogin(req as Request, {} as Response, next)
 })
 
 test.each([[null], [undefined], ['']])('checkLogin send 401 (%s)', (userId) => {
   expect.assertions(4)
 
-  const req = { headers: { 'x-user-id': userId } }
+  const req = { headers: {} }
+
+  const mock = jest.mocked(requestAuthServer)
+  mock.mockResolvedValueOnce({
+    userId: userId,
+    twitterUserName: 'xxx'
+  })
 
   const send = jest.fn(function (arg) {
     expect(this.status.mock.calls.length).toBe(1)
