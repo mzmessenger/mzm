@@ -18,9 +18,10 @@ WORKDIR /usr/app
 
 COPY --from=builder /usr/app/package.json /usr/app/package-lock.json ./
 COPY --from=builder /usr/app/packages/shared/dist/ packages/shared/dist/
+COPY --from=builder /usr/app/packages/shared/package.json packages/shared/package.json
 COPY --from=builder /usr/app/packages/backend/package.json ./packages/backend/
 COPY --from=builder /usr/app/packages/backend/dist/ packages/backend/dist/
-RUN npm install -w packages/backend --production
+RUN npm install -w packages/backend -w packages/shared --production
 
 ENV NODE_ENV=production
 CMD [ "node", "packages/backend/dist/server.js" ]

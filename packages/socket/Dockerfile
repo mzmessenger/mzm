@@ -18,9 +18,10 @@ WORKDIR /usr/app
 
 COPY --from=builder /usr/app/package.json /usr/app/package-lock.json ./
 COPY --from=builder /usr/app/packages/shared/dist/ packages/shared/dist/
+COPY --from=builder /usr/app/packages/shared/package.json packages/shared/package.json
 COPY --from=builder /usr/app/packages/socket/package.json ./packages/socket/
 COPY --from=builder /usr/app/packages/socket/dist/ packages/socket/dist/
-RUN npm install -w packages/socket --production
+RUN npm install -w packages/socket -w packages/shared --production
 
 ENV NODE_ENV=production
 CMD [ "node", "packages/socket/dist/server.js" ]

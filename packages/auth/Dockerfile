@@ -18,9 +18,10 @@ WORKDIR /usr/app
 
 COPY --from=builder /usr/app/package.json /usr/app/package-lock.json ./
 COPY --from=builder /usr/app/packages/shared/dist/ packages/shared/dist/
+COPY --from=builder /usr/app/packages/shared/package.json packages/shared/package.json
 COPY --from=builder /usr/app/packages/auth/package.json ./packages/auth/
 COPY --from=builder /usr/app/packages/auth/dist/ packages/auth/dist/
-RUN npm install -w packages/auth --production
+RUN npm install -w packages/auth -w packages/shared --production
 
 ENV NODE_ENV=production
 CMD [ "node", "packages/auth/dist/server.js" ]
