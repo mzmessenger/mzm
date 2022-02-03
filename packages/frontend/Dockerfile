@@ -4,6 +4,7 @@ FROM node:16 as builder
 WORKDIR /usr/app
 
 COPY ./package.json ./package-lock.json ./
+COPY ./packages/shared ./packages/shared
 COPY ./packages/frontend/package.json \
   ./packages/frontend/tsconfig.json \
   ./packages/frontend/webpack.config.js \

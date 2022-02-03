@@ -17,6 +17,7 @@ FROM node:16-alpine
 WORKDIR /usr/app
 
 COPY --from=builder /usr/app/package.json /usr/app/package-lock.json ./
+COPY --from=builder /usr/app/packages/shared/dist/ packages/shared/dist/
 COPY --from=builder /usr/app/packages/socket/package.json ./packages/socket/
 COPY --from=builder /usr/app/packages/socket/dist/ packages/socket/dist/
 RUN npm install -w packages/socket --production
