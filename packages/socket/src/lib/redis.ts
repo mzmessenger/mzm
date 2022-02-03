@@ -1,6 +1,6 @@
 import Redis from 'ioredis'
 import * as config from '../config'
 
-const redis = new Redis(config.redis.options)
+const redis = new Redis(config.REDIS.options)
 
 export default redis

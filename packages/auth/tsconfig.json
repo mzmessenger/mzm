@@ -8,7 +8,11 @@
     "esModuleInterop": true,
     "module": "commonjs",
     "target": "es2019",
-    "moduleResolution": "node"
+    "moduleResolution": "node",
+    "paths": {
+      "mzm-shared": ["../shared"]
+    }
   },
-  "exclude": ["node_modules", "**/*.test.ts"]
+  "exclude": ["node_modules", "**/*.test.ts"],
+  "references": [{ "path": "../shared" }]
 }

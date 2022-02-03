@@ -4,12 +4,13 @@ FROM node:16 as builder
 WORKDIR /usr/app
 
 COPY ./package.json ./package-lock.json ./
+COPY ./packages/shared ./packages/shared
 COPY ./packages/socket/package.json \
   ./packages/socket/tsconfig.json \
   ./packages/socket/
 COPY ./packages/socket/src/ ./packages/socket/src/
 
-RUN npm install -w packages/socket && npm run -w packages/socket cleanbuild
+RUN npm install -w packages/socket -w packages/shared && npm run -w packages/socket cleanbuild
 
 FROM node:16-alpine
 
@@ -21,4 +22,4 @@ COPY --from=builder /usr/app/packages/socket/dist/ packages/socket/dist/
 RUN npm install -w packages/socket --production
 
 ENV NODE_ENV=production
-CMD [ "node", "packages/socket/dist/socket.js" ]
+CMD [ "node", "packages/socket/dist/server.js" ]

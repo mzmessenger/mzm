@@ -3,6 +3,7 @@
 ## how to develop
 
 Node.js >= v16
+
 Docker >= 20.10.8 (`--add-host=host.docker.internal:host-gateway`)
 
 ### init

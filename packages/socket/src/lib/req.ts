@@ -1,4 +1,5 @@
 import { request } from 'undici'
+import { HEADERS } from 'mzm-shared/auth'
 import { INTERNAL_API_URL } from '../config'
 import logger from './logger'
 
@@ -11,7 +12,7 @@ export const requestSocketAPI = async (
   const options: Parameters<typeof request>[1] = {
     headers: {
       'Content-type': 'application/json',
-      'x-user-id': user,
+      [HEADERS.USER_ID]: user,
       'x-socket-id': id
     },
     method: 'POST',

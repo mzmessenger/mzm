@@ -4,12 +4,13 @@ FROM node:16 as builder
 WORKDIR /usr/app
 
 COPY ./package.json ./package-lock.json ./
+COPY ./packages/shared ./packages/shared
 COPY ./packages/auth/package.json \
   ./packages/auth/tsconfig.json \
   ./packages/auth/
 COPY ./packages/auth/src/ ./packages/auth/src/
 
-RUN npm install -w packages/auth && npm run -w packages/auth cleanbuild
+RUN npm install -w packages/auth -w packages/shared && npm run -w packages/auth cleanbuild
 
 FROM node:16-alpine
 

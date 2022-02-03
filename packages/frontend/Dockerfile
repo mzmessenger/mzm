@@ -24,9 +24,6 @@ COPY --from=builder /usr/app/packages/frontend/dist /var/www/public
 
 ENV PORT 8080
 ENV HOST 0.0.0.0
-ENV MZM_SOCKET localhost:3000
-ENV MZM_API localhost:3001
-ENV MZM_AUTH localhost:8000
 EXPOSE 8080
 
-CMD sh -c "envsubst '\$PORT \$MZM_SOCKET \$MZM_API \$MZM_AUTH' < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"
+CMD sh -c "envsubst '\$PORT' < /etc/nginx/conf.d/nginx.conf.template > /etc/nginx/nginx.conf && nginx -g 'daemon off;'"

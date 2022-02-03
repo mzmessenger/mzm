@@ -1,10 +1,11 @@
-import { IncomingMessage } from 'http'
-import { Request } from 'express'
+import type { IncomingMessage } from 'http'
+import type { Request } from 'express'
+import { HEADERS } from 'mzm-shared/auth'
 import escape from 'validator/lib/escape'
 import trim from 'validator/lib/trim'
 
 export const getRequestUserId = (req: IncomingMessage | Request): string => {
-  const user: string = req.headers['x-user-id'] as string
+  const user: string = req.headers[HEADERS.USER_ID] as string
   return user
 }
 
