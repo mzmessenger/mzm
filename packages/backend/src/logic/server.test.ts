@@ -50,10 +50,8 @@ jest.mock('../lib/provider/index', () => {
   }
 })
 
-import { Request, Response } from 'express'
 import { mongoSetup, getMockType } from '../../jest/testUtil'
 import { init } from './server'
-import * as HttpErrors from '../lib/errors'
 import * as db from '../lib/db'
 import * as config from '../config'
 import * as consumerRemove from '../lib/consumer/remove'
