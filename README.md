@@ -22,6 +22,8 @@ setup env
 ```bash
 # copy environment file and write your token, secret...
 $ cp ./packages/backend/.env.sample ./packages/backend/.env
+$ cp ./packages/auth/.env.sample ./packages/auth/.env
+$ cp ./packages/socket/.env.sample ./packages/socket/.env
 ```
 
 ### start development
