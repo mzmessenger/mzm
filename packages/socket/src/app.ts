@@ -49,6 +49,7 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
 
     ws.on('message', async function incoming(data) {
       const message = data.toString()
+      logger.info('[ws:message]', userId, id, message)
       if (message === 'pong') {
         return
       }
@@ -56,6 +57,7 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
         const res = await requestSocketAPI(message, userId, id)
         if (res.body) {
           ws.send(res.body)
+          logger.info('[ws:send]', userId, id, res.body)
         }
       } catch (e) {
         logger.error('[post:error]', e)
