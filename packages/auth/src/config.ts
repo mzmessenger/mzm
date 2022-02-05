@@ -1,4 +1,5 @@
 import { config } from 'dotenv'
+import type { SessionOptions } from 'express-session'
 config()
 
 export const {
@@ -8,8 +9,7 @@ export const {
   TWITTER_CALLBACK_URL,
   GITHUB_CLIENT_ID,
   GITHUB_CLIENT_SECRET,
-  GITHUB_CALLBACK_URL,
-  SESSION_SECRET
+  GITHUB_CALLBACK_URL
 } = process.env
 
 export const WORKER_NUM = process.env.WORKER_NUM ?? 1
@@ -33,7 +33,19 @@ export const SESSION_REDIS = {
   }
 } as const
 
-export const dev = process.env.NODE_ENV !== 'production'
+export const SESSION_PARSER: SessionOptions = {
+  name: process.env.SESSION_NAME,
+  secret: process.env.SESSION_SECRET,
+  resave: false,
+  rolling: true,
+  saveUninitialized: false,
+  cookie: {
+    secure: process.env.COOKIE_SECURE
+      ? process.env.COOKIE_SECURE === 'true'
+      : 'auto',
+    maxAge: 24 * 60 * 60 * 1000 * 30
+  }
+} as const
 
 export const TRUST_PROXY = process.env.TRUST_PROXY ?? 1
 

@@ -15,10 +15,8 @@ import {
   GITHUB_CLIENT_ID,
   GITHUB_CLIENT_SECRET,
   GITHUB_CALLBACK_URL,
-  SESSION_SECRET,
   TRUST_PROXY,
-  SESSION_NAME,
-  dev
+  SESSION_PARSER
 } from './config'
 import * as handlers from './handlers'
 
@@ -35,12 +33,7 @@ export const createApp = ({ client }: Options) => {
 
   const sessionParser = session({
     store: new RedisStore({ client: client }),
-    name: SESSION_NAME,
-    secret: SESSION_SECRET,
-    resave: false,
-    rolling: true,
-    saveUninitialized: false,
-    cookie: { secure: !dev, maxAge: 24 * 60 * 60 * 1000 * 30 }
+    ...SESSION_PARSER
   })
 
   app.use(sessionParser)
