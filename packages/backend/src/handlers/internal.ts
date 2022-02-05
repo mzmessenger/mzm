@@ -4,7 +4,9 @@ import * as _socket from './internal/socket'
 export const socket = async (req: Request) => {
   const user: string = req.headers['x-user-id'] as string
   const data = req.body as _socket.ReceiveMessage
-  if (data.cmd === _socket.ReceiveMessageCmd.MESSAGE_SEND) {
+  if (data.cmd === _socket.ReceiveMessageCmd.CONNECTION) {
+    return await _socket.connection(user, data)
+  } else if (data.cmd === _socket.ReceiveMessageCmd.MESSAGE_SEND) {
     return await _socket.sendMessage(user, data)
   } else if (data.cmd === _socket.ReceiveMessageCmd.MESSAGE_IINE) {
     return await _socket.iine(user, data)

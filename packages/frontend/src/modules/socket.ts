@@ -81,7 +81,9 @@ const onMessage = async (
 ) => {
   try {
     const parsed: ReceiveSocketMessage = JSON.parse(e.data)
-    if (parsed.cmd === 'rooms') {
+    if (parsed.cmd === 'socket:connection') {
+      sendSocket(getState().socket.socket, { cmd: SendSocketCmd.ROOMS_GET })
+    } else if (parsed.cmd === 'rooms') {
       receiveRooms(
         parsed.rooms,
         parsed.roomOrder,
@@ -153,8 +155,6 @@ export const connect = (
           cmd: SendSocketCmd.ROOMS_ENTER,
           name: state.rooms.currentRoomName
         })
-      } else {
-        sendSocket(ws, { cmd: SendSocketCmd.ROOMS_GET })
       }
       dispatch({ type: SocketActions.Open })
     })

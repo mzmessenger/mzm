@@ -33,20 +33,6 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
     ws.id = id
     saveSocket(id, userId, ws)
 
-    const data: PostData = {
-      cmd: 'socket:connection',
-      payload: { user: userId, twitterUserName }
-    }
-    requestSocketAPI(JSON.stringify(data), userId, id)
-      .then(({ body }) => {
-        if (body) {
-          ws.send(body)
-        }
-      })
-      .catch((e) => {
-        logger.error('[post:error]', e)
-      })
-
     ws.on('message', async function incoming(data) {
       const message = data.toString()
       logger.info('[ws:message]', userId, id, message)
@@ -72,6 +58,21 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
     ws.on('error', function error(e) {
       logger.error('error: ', e)
     })
+
+    const data: PostData = {
+      cmd: 'socket:connection',
+      payload: { user: userId, twitterUserName }
+    }
+
+    requestSocketAPI(JSON.stringify(data), userId, id)
+      .then(({ body }) => {
+        if (body) {
+          ws.send(body)
+        }
+      })
+      .catch((e) => {
+        logger.error('[post:error]', e)
+      })
   })
 
   setInterval(() => {
