@@ -49,10 +49,7 @@ export const ReceiveMessageCmd = {
 } as const
 
 export type ReceiveMessage =
-  | {
-      cmd: typeof ReceiveMessageCmd.CONNECTION
-      payload: { user: string }
-    }
+  | ConnectionMessage
   | { cmd: typeof ReceiveMessageCmd.ROOMS_GET }
   | SendMessage
   | ModifyMessage
@@ -65,6 +62,18 @@ export type ReceiveMessage =
   | CloseRoom
   | SendVoteAnswer
   | RemoveVoteAnswer
+
+type ConnectionMessage = {
+  cmd: typeof ReceiveMessageCmd.CONNECTION
+  payload: { user: string }
+}
+
+export const connection = (userId: string, _data: ConnectionMessage) => {
+  return {
+    cmd: 'socket:connection',
+    user: userId
+  }
+}
 
 export const getRooms = async (userId: string): Promise<SendMessageType> => {
   const [user, rooms] = await Promise.all([

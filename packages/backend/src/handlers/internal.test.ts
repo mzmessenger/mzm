@@ -5,6 +5,7 @@ import { ObjectId } from 'mongodb'
 import { getMockType, createRequest } from '../../jest/testUtil'
 import { socket } from './internal'
 import {
+  connection,
   ReceiveMessageCmd,
   sendMessage,
   modifyMessage,
@@ -21,6 +22,7 @@ import {
 } from './internal/socket'
 
 test.each([
+  [ReceiveMessageCmd.CONNECTION, connection],
   [ReceiveMessageCmd.MESSAGE_SEND, sendMessage],
   [ReceiveMessageCmd.MESSAGE_MODIFY, modifyMessage],
   [ReceiveMessageCmd.MESSAGES_ROOM, getMessagesFromRoom],

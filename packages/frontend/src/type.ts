@@ -33,6 +33,7 @@ export type ReceiveRoom = {
 }
 
 export type ReceiveSocketMessage =
+  | { cmd: 'socket:connection' }
   | { cmd: 'client:reload' }
   | {
       cmd: 'message:receive'
