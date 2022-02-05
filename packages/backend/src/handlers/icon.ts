@@ -16,6 +16,8 @@ const sizeOf = promisify(require('image-size'))
 const returnIconStream = async (key: string) => {
   const head = await storage.headObject({ Key: key })
 
+  logger.info('[icon:returnIconStream]', key, JSON.stringify(head))
+
   return {
     headers: {
       ETag: head.ETag,
