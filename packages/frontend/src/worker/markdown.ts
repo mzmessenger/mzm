@@ -30,7 +30,6 @@ r.em = escapeTxt
 r.codespan = escapeTxt
 r.br = () => ''
 r.image = escapeTxt
-r.text = escapeTxt
 
 const originalLink = r.link.bind(r)
 r.link = (href, title, text) => {

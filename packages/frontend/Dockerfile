@@ -12,7 +12,7 @@ COPY ./packages/frontend/package.json \
 COPY ./packages/frontend/src/ ./packages/frontend/src/
 
 RUN npm install -w packages/frontend 
-RUN npm run -w packages/frontend build:prod
+RUN npm run -w packages/frontend build
 
 # https://cloud.google.com/community/tutorials/deploy-react-nginx-cloud-run
 FROM nginx:alpine
