@@ -43,7 +43,7 @@ export const SESSION_PARSER: SessionOptions = {
     secure: process.env.COOKIE_SECURE
       ? process.env.COOKIE_SECURE === 'true'
       : 'auto',
-    maxAge: 24 * 60 * 60 * 1000 * 30
+    maxAge: 24 * 60 * 60 * 1000 * 30 * 12 * 2
   }
 } as const
 
