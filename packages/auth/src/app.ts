@@ -16,6 +16,7 @@ import {
   GITHUB_CLIENT_SECRET,
   GITHUB_CALLBACK_URL,
   SESSION_SECRET,
+  TRUST_PROXY,
   dev
 } from './config'
 import * as handlers from './handlers'
@@ -27,7 +28,7 @@ type Options = {
 export const createApp = ({ client }: Options) => {
   const app = express()
   app.use(helmet())
-  app.set('trust proxy', 1)
+  app.set('trust proxy', TRUST_PROXY)
 
   const RedisStore = connectRedis(session)
 
