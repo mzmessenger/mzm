@@ -17,9 +17,6 @@ http {
   access_log /var/log/nginx/access.log main;
   charset utf-8;
 
-  proxy_cache_path /var/cache/nginx/static_cache levels=1:2 keys_zone=static_cache:10m max_size=10g inactive=60m;
-  proxy_cache_path /var/cache/nginx/icon_cache levels=1:2 keys_zone=icon_cache:10m max_size=10g inactive=60d;
-
   server {
     listen ${PORT};
 

@@ -11,7 +11,7 @@ import { init } from './logic/server'
 import { addSyncSearchRoomQueue } from './lib/provider'
 import { createApp } from './app'
 
-schedule.scheduleJob({ minute: 0 }, () => {
+schedule.scheduleJob('0 * * * *', () => {
   try {
     addSyncSearchRoomQueue()
   } catch (e) {
