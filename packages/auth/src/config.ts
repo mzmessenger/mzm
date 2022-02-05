@@ -36,3 +36,5 @@ export const SESSION_REDIS = {
 export const dev = process.env.NODE_ENV !== 'production'
 
 export const TRUST_PROXY = process.env.TRUST_PROXY ?? 1
+
+export const SESSION_NAME = process.env.SESSION_NAME ?? 'mzm'
