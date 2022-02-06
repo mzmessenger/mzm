@@ -7,7 +7,7 @@ COPY ./package.json ./package-lock.json ./
 COPY ./packages/shared ./packages/shared
 COPY ./packages/frontend/package.json \
   ./packages/frontend/tsconfig.json \
-  ./packages/frontend/webpack.config.js \
+  ./packages/frontend/vite.config.ts \
   ./packages/frontend/
 COPY ./packages/frontend/src/ ./packages/frontend/src/
 
