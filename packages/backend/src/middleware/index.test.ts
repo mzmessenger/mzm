@@ -46,19 +46,22 @@ test.each([
 })
 
 test('checkLogin (success)', (cb) => {
-  expect.assertions(2)
+  expect.assertions(4)
 
   const req = { headers: {} }
 
   const mock = jest.mocked(requestAuthServer)
   mock.mockResolvedValueOnce({
     userId: 'aaa',
-    twitterUserName: 'xxx'
+    twitterUserName: 'xxx',
+    githubUserName: 'yyy'
   })
 
   const next = jest.fn(() => {
     expect('called').toEqual('called')
     expect(req.headers[HEADERS.USER_ID]).toEqual('aaa')
+    expect(req.headers[HEADERS.TIWTTER_USER_NAME]).toEqual('xxx')
+    expect(req.headers[HEADERS.GITHUB_USER_NAME]).toEqual('yyy')
     cb()
   })
 
@@ -73,7 +76,8 @@ test.each([[null], [undefined], ['']])('checkLogin send 401 (%s)', (userId) => {
   const mock = jest.mocked(requestAuthServer)
   mock.mockResolvedValueOnce({
     userId: userId,
-    twitterUserName: 'xxx'
+    twitterUserName: 'xxx',
+    githubUserName: 'yyy'
   })
 
   const send = jest.fn(function (arg) {
