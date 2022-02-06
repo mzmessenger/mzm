@@ -1,6 +1,6 @@
 import { promisify } from 'util'
 import { Request } from 'express'
-import axios from 'axios'
+import { request } from 'undici'
 import { ObjectId } from 'mongodb'
 import { NotFound, BadRequest } from '../lib/errors'
 import { popParam, getRequestUserId } from '../lib/utils'
@@ -13,7 +13,7 @@ import { isValidMimetype, createVersion } from './internal/icon'
 
 const sizeOf = promisify(require('image-size'))
 
-const returnIconStream = async (key: string) => {
+const returnIconStream = async (key: string): StreamWrapResponse => {
   const head = await storage.headObject({ Key: key })
 
   logger.info('[icon:returnIconStream]', key, JSON.stringify(head))
@@ -21,13 +21,23 @@ const returnIconStream = async (key: string) => {
   return {
     headers: {
       ETag: head.ETag,
-      'Content-Type': head.ContentType,
-      'Content-Length': head.ContentLength,
-      'Last-Modified': head.LastModified,
-      'Cache-Control': head.CacheControl || 'max-age=604800'
+      'content-type': head.ContentType,
+      'content-length': `${head.ContentLength}`,
+      'last-modified': head.LastModified.toUTCString(),
+      'cache-control': head.CacheControl || 'max-age=604800'
     },
     stream: storage.getObject({ Key: key }).createReadStream()
   }
+}
+
+const fromIdenticon = async (account: string): StreamWrapResponse => {
+  const res = await request(
+    `https://identicon.mzm.dev/api/identicon/${account}`,
+    {
+      method: 'GET'
+    }
+  )
+  return { headers: res.headers, stream: res.body }
 }
 
 export const getUserIcon = async (req: Request): StreamWrapResponse => {
@@ -38,27 +48,18 @@ export const getUserIcon = async (req: Request): StreamWrapResponse => {
   const version = popParam(req.params.version)
   const user = await db.collections.users.findOne({ account: account })
 
-  const fromIdenticon = async () => {
-    const res = await axios({
-      method: 'GET',
-      url: `https://identicon.mzm.dev/api/identicon/${account}`,
-      responseType: 'stream'
-    })
-    return { headers: res.headers, stream: res.data }
-  }
-
   if (user?.icon?.version === version) {
     try {
       return await returnIconStream(user.icon.key)
     } catch (e) {
       if (e.statusCode === 404) {
-        return await fromIdenticon()
+        return await fromIdenticon(account)
       }
       throw e
     }
   }
 
-  return await fromIdenticon()
+  return await fromIdenticon(account)
 }
 
 export const getRoomIcon = async (req: Request): StreamWrapResponse => {
