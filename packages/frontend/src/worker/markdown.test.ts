@@ -4,7 +4,7 @@ test.each([
   [
     'simple link',
     'http://mzm.dev',
-    '<p><a href="http://mzm.dev">http:&#x2F;&#x2F;mzm.dev</a></p>'
+    '<p><a href="http://mzm.dev">http://mzm.dev</a></p>'
   ],
   [
     'markdown link',
@@ -14,17 +14,17 @@ test.each([
   [
     'simple link (top)',
     'http://localhost',
-    '<p><a href="http://localhost">http:&#x2F;&#x2F;localhost</a></p>'
+    '<p><a href="http://localhost">http://localhost</a></p>'
   ],
   [
     'simple link (room)',
     'http://localhost/rooms/test',
-    '<p><a class="mzm-room-link" href="http://localhost/rooms/test">&#x2F;rooms&#x2F;test</a></p>'
+    '<p><a class="mzm-room-link" href="http://localhost/rooms/test">/rooms/test</a></p>'
   ],
   [
     'simple  link (room:日本語)',
     'http://localhost/rooms/要望室',
-    '<p><a class="mzm-room-link" href="http://localhost/rooms/%E8%A6%81%E6%9C%9B%E5%AE%A4">&#x2F;rooms&#x2F;要望室</a></p>'
+    '<p><a class="mzm-room-link" href="http://localhost/rooms/%E8%A6%81%E6%9C%9B%E5%AE%A4">/rooms/要望室</a></p>'
   ],
   [
     'markdown link (room)',
