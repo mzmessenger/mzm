@@ -28,7 +28,7 @@ const ModalUsersList = ({ open, onClose, roomId }: Props) => {
       return
     }
     clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
+    timerRef.current = window.setTimeout(() => {
       const wrapRect = listWrapRef.current.getBoundingClientRect()
       const bottomRect = listBottomRef.current.getBoundingClientRect()
       const margin = 10

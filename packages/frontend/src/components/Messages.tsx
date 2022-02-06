@@ -51,7 +51,7 @@ const Messages = ({ className }) => {
       return
     }
     clearTimeout(timerRef.current)
-    timerRef.current = setTimeout(() => {
+    timerRef.current = window.setTimeout(() => {
       const wrapRect = wrapRef.current.getBoundingClientRect()
       const topRect = topRef.current.getBoundingClientRect()
       const margin = 10

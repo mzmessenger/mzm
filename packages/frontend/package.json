@@ -10,7 +10,8 @@
     "pretest": "npm run lint",
     "jest": "jest --maxWorkers=50% --config=./jest.config.js",
     "test": "npm run jest",
-    "build": "vite build"
+    "build": "vite build",
+    "build-tsc": "tsc --build tsconfig.json"
   },
   "license": "MIT",
   "devDependencies": {

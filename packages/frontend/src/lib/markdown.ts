@@ -4,7 +4,6 @@ import type { Markdown } from '../worker/markdown'
 let markdown: Awaited<InstanceType<Remote<typeof Markdown>>> = null
 
 export async function convertToHtml(message: string): Promise<string> {
-  // eslint-disable-next-line require-atomic-updates
   if (!markdown) {
     // @ts-ignore
     const MWorker = await import('../worker/markdown?worker')

@@ -23,7 +23,7 @@ const ResizerX = ({
       if (diff !== currentDiff) {
         setDiff(currentDiff)
         clearTimeout(timerRef.current)
-        timerRef.current = setTimeout(() => {
+        timerRef.current = window.setTimeout(() => {
           setWidth(defaultWidth + currentDiff)
         }, 5)
       }
