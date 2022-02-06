@@ -1,12 +1,13 @@
 import React, { useEffect } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { useHistory } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { State, store } from '../modules/index'
 import { getMyInfo } from '../modules/user'
 import { enterRoom } from '../modules/rooms'
 
 const RouterListener = () => {
-  const history = useHistory()
+  const navigate = useNavigate()
+  const location = useLocation()
   const currentRoomName = useSelector(
     (state: State) => state.rooms.currentRoomName
   )
@@ -16,13 +17,13 @@ const RouterListener = () => {
 
   useEffect(() => {
     if (login && currentRoomName === '') {
-      history.push('/')
+      navigate('/')
     }
   }, [login, currentRoomName])
 
   useEffect(() => {
-    const room = history.location.pathname.match(/\/rooms\/(.+)/) && RegExp.$1
-    if (!login && (history.location.pathname === '/' || room)) {
+    const room = location.pathname.match(/\/rooms\/(.+)/) && RegExp.$1
+    if (!login && (location.pathname === '/' || room)) {
       getMyInfo()(dispatch)
     }
 
@@ -35,11 +36,11 @@ const RouterListener = () => {
     } else {
       document.title = `MZM`
     }
-  }, [login, history.location.pathname])
+  }, [login, location.pathname])
 
   useEffect(() => {
     if (signup) {
-      history.push('/signup')
+      navigate('/signup')
     }
   }, [signup])
 

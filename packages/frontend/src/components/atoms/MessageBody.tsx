@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { useDispatch } from 'react-redux'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { store } from '../../modules/index'
 import { enterRoom } from '../../modules/rooms'
@@ -14,7 +14,7 @@ type Props = {
 
 const MessageBody = ({ className, message, html }: Props) => {
   const dispatch = useDispatch()
-  const history = useHistory()
+  const navigate = useNavigate()
   const messageEl = useRef(null)
 
   useEffect(() => {
@@ -25,7 +25,7 @@ const MessageBody = ({ className, message, html }: Props) => {
       const href = e.target.getAttribute('href')
       const url = new URL(href)
       if (url.host === location.host) {
-        history.push(url.pathname)
+        navigate(url.pathname)
         const roomName = getRoomName(decodeURIComponent(url.pathname))
         enterRoom(roomName)(dispatch, store.getState)
       } else {
@@ -40,7 +40,7 @@ const MessageBody = ({ className, message, html }: Props) => {
       .forEach((e) => e.addEventListener('click', listener))
     return () => {
       messageEl.current
-        .querySelectorAll('a')
+        ?.querySelectorAll('a')
         .forEach((e) => e.removeEventListener('click', listener))
     }
   }, [messageEl])

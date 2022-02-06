@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import styled from 'styled-components'
 import { useSelector, useDispatch } from 'react-redux'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { State, store } from '../modules/index'
 import { readMessages, changeRoom, changeRoomOrder } from '../modules/rooms'
 import { Room } from '../modules/rooms.types'
@@ -63,14 +63,14 @@ const DropZone = ({
 
 const Rooms = () => {
   const dispatch = useDispatch()
-  const history = useHistory()
+  const navigate = useNavigate()
   const roomIds = useSelector((state: State) => state.rooms.rooms.allIds)
   const currentRoomId = useSelector((state: State) => state.rooms.currentRoomId)
   const rooms = useSelector((state: State) => state.rooms.rooms.byId)
 
   const onClick = useCallback((e: React.MouseEvent, room: Room) => {
     e.preventDefault()
-    history.push(`/rooms/${room.name}`)
+    navigate(`/rooms/${room.name}`)
     changeRoom(room.id)(dispatch, store.getState)
     readMessages(room.id)(dispatch, store.getState)
   }, [])

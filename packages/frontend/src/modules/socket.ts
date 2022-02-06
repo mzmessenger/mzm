@@ -1,5 +1,5 @@
 import { Dispatch } from 'redux'
-import { useHistory } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { State } from './index'
 import { sendSocket, getRoomName } from '../lib/util'
 import { SocketState, SocketAction, SocketActions } from './socket.types'
@@ -77,7 +77,8 @@ const onMessage = async (
   e: MessageEvent,
   dispatch: Dispatch,
   getState: () => State,
-  history: ReturnType<typeof useHistory>
+  navigate: ReturnType<typeof useNavigate>,
+  location: ReturnType<typeof useLocation>
 ) => {
   try {
     const parsed: ReceiveSocketMessage = JSON.parse(e.data)
@@ -119,14 +120,14 @@ const onMessage = async (
         })(dispatch)
       })
     } else if (parsed.cmd === 'rooms:enter:success') {
-      const currentPathRoomName = getRoomName(history.location.pathname)
+      const currentPathRoomName = getRoomName(location.pathname)
       if (currentPathRoomName !== parsed.name) {
-        history.push(`/rooms/${parsed.name}`)
+        navigate(`/rooms/${parsed.name}`)
         changeRoom(parsed.id)(dispatch, getState)
       }
       enterSuccess(parsed.id, parsed.name, parsed.iconUrl)(dispatch, getState)
     } else if (parsed.cmd === 'rooms:enter:fail') {
-      history.push('/')
+      navigate('/')
       sendSocket(getState().socket.socket, { cmd: SendSocketCmd.ROOMS_GET })
     } else if (parsed.cmd === 'rooms:read') {
       dispatch(alreadyRead(parsed.room))
@@ -136,7 +137,7 @@ const onMessage = async (
     } else if (parsed.cmd === 'rooms:sort:success') {
       setRoomOrder(parsed.roomOrder)(dispatch, getState)
     } else if (parsed.cmd === 'client:reload') {
-      location.reload()
+      window.location.reload()
     } else if (parsed.cmd === 'vote:answers') {
       setVoteAnswers(parsed.messageId, parsed.answers)(dispatch)
     }
@@ -147,7 +148,8 @@ const onMessage = async (
 
 export const connect = (
   url: string,
-  history: ReturnType<typeof useHistory>
+  navigate: ReturnType<typeof useNavigate>,
+  location: ReturnType<typeof useLocation>
 ) => {
   return (
     dispatch: Dispatch<SocketAction | UserAction>,
@@ -165,13 +167,13 @@ export const connect = (
         ws.send('pong')
         return
       }
-      onMessage(e, dispatch, getState, history)
+      onMessage(e, dispatch, getState, navigate, location)
     })
 
     ws.addEventListener('close', (e) => {
       // @todo max recoonect
       const timer = setTimeout(() => {
-        connect(url, history)(dispatch, getState)
+        connect(url, navigate, location)(dispatch, getState)
       }, getState().socket.reconnectInterval)
 
       dispatch({ type: SocketActions.Close, payload: { timer } })

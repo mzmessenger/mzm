@@ -15,7 +15,7 @@
     "build-docker-image-frontend": "docker build -f packages/frontend/Dockerfile -t mzm-frontend ."
   },
   "devDependencies": {
-    "esbuild": "^0.14.18",
+    "esbuild": "^0.14.19",
     "esbuild-register": "^3.3.2"
   }
 }
