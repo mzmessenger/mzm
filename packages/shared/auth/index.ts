@@ -12,13 +12,17 @@ type RequestOptions = {
   headers: {
     cookie: IncomingHttpHeaders['cookie']
   }
+  bodyTimeout?: number
+  headersTimeout?: number
 }
 export const requestAuthServer = async (options: RequestOptions) => {
   const { headers } = await request(`${options.url}/auth`, {
     method: 'GET',
     headers: {
       cookie: options.headers.cookie
-    }
+    },
+    bodyTimeout: options.bodyTimeout ?? 1000 * 60 * 5,
+    headersTimeout: options.headersTimeout ?? 1000 * 60 * 5
   })
 
   const userId = headers[HEADERS.USER_ID] as string
