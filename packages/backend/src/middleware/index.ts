@@ -22,11 +22,13 @@ export const checkLogin = (req: Request, res: Response, next: NextFunction) => {
         cookie: req.headers.cookie
       }
     })
-      .then(({ userId }) => {
+      .then(({ userId, twitterUserName, githubUserName }) => {
         if (!userId) {
           return res.status(401).send('not login')
         }
         req.headers[HEADERS.USER_ID] = userId
+        req.headers[HEADERS.TIWTTER_USER_NAME] = twitterUserName
+        req.headers[HEADERS.GITHUB_USER_NAME] = githubUserName
         next()
       })
       .catch(() => {
