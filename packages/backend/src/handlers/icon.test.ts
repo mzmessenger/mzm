@@ -1,19 +1,60 @@
-jest.mock('axios')
+jest.mock('undici', () => {
+  return { request: jest.fn() }
+})
 jest.mock('image-size')
 jest.mock('../lib/logger')
 jest.mock('../lib/storage')
 
 import { Readable } from 'stream'
-import { ObjectId, WithId } from 'mongodb'
-import axios from 'axios'
-import sizeOf from 'image-size'
-import { mongoSetup, createRequest, getMockType } from '../../jest/testUtil'
+import type { IncomingHttpHeaders } from 'http'
 import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { ObjectId, WithId } from 'mongodb'
+import { request } from 'undici'
+import sizeOf from 'image-size'
+import { mongoSetup, createRequest } from '../../jest/testUtil'
 import * as db from '../lib/db'
 import * as storage from '../lib/storage'
 import * as config from '../config'
 import { BadRequest, NotFound } from '../lib/errors'
 import * as icon from './icon'
+
+type ResponseBody = Awaited<ReturnType<typeof request>>['body']
+
+const createHeadObjectMockValue = (options: {
+  ETag: string
+  ContentType: string
+  ContentLength: number
+  LastModified: Date
+  CacheControl: string
+}) => {
+  const headers: Awaited<ReturnType<typeof storage.headObject>> = {
+    ETag: options.ETag,
+    ContentType: options.ContentType,
+    ContentLength: options.ContentLength,
+    LastModified: options.LastModified,
+    CacheControl: options.CacheControl,
+    $response: undefined
+  }
+
+  return headers
+}
+
+const createGetObjectMockValue = (options: { createReadStream: Readable }) => {
+  const getObject: Awaited<ReturnType<typeof storage.getObject>> = {
+    createReadStream: () => options.createReadStream,
+    abort: undefined,
+    eachPage: undefined,
+    isPageable: undefined,
+    send: undefined,
+    on: undefined,
+    onAsync: undefined,
+    promise: undefined,
+    startTime: undefined,
+    httpRequest: undefined
+  }
+
+  return getObject
+}
 
 let mongoServer: MongoMemoryServer = null
 
@@ -46,32 +87,35 @@ test('getUserIcon from storage', async () => {
 
   const req = createRequest(null, { params: { account, version } })
 
-  const headObjectMock = getMockType(storage.headObject)
-  const headers = {
+  const headObjectMock = jest.mocked(storage.headObject)
+  const headers = createHeadObjectMockValue({
     ETag: 'etag',
     ContentType: 'image/png',
     ContentLength: 12345,
     LastModified: new Date(2020, 0, 1),
     CacheControl: 'max-age=604800'
-  } as const
-  headObjectMock.mockResolvedValueOnce(headers)
-  const getObjectMock = getMockType(storage.getObject)
-  const readableStream = new Readable()
-  getObjectMock.mockReturnValueOnce({
-    createReadStream: () => readableStream
   })
+  headObjectMock.mockResolvedValueOnce(headers)
+  const getObjectMock = jest.mocked(storage.getObject)
+  const readableStream = new Readable()
+  const getObject = createGetObjectMockValue({
+    createReadStream: readableStream
+  })
+  getObjectMock.mockReturnValueOnce(getObject)
 
   const res = await icon.getUserIcon(req)
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
   expect(res.headers.ETag).toStrictEqual(headers.ETag)
-  expect(res.headers['Content-Type']).toStrictEqual(headers.ContentType)
-  expect(res.headers['Content-Length']).toStrictEqual(headers.ContentLength)
-  expect((res.headers['Last-Modified'] as Date).getTime()).toStrictEqual(
-    headers.LastModified.getTime()
+  expect(res.headers['content-type']).toStrictEqual(headers.ContentType)
+  expect(res.headers['content-length']).toStrictEqual(
+    `${headers.ContentLength}`
   )
-  expect(res.headers['Cache-Control']).toStrictEqual(headers.CacheControl)
+  expect(res.headers['last-modified']).toStrictEqual(
+    headers.LastModified.toUTCString()
+  )
+  expect(res.headers['cache-control']).toStrictEqual(headers.CacheControl)
   expect(res.stream).toStrictEqual(readableStream)
 })
 
@@ -93,18 +137,25 @@ test.each([
     }
     await db.collections.users.insertOne(user)
 
-    const headObjectMock = getMockType(storage.headObject)
-    const getObjectMock = getMockType(storage.getObject)
-    const axiosMock = getMockType(axios)
-    const headers = {
+    const headObjectMock = jest.mocked(storage.headObject)
+    const getObjectMock = jest.mocked(storage.getObject)
+    const requestMock = jest.mocked(request)
+    const headers: IncomingHttpHeaders = {
       ETag: 'etag',
-      'Content-Type': 'image/png',
-      'Content-Length': 12345,
-      'Last-Modified': new Date(2020, 0, 1),
+      'content-type': 'image/png',
+      'content-length': '12345',
+      'Last-Modified': new Date(2020, 0, 1).toUTCString(),
       'Cache-Control': 'max-age=604800'
     } as const
-    const readableStream = new Readable()
-    axiosMock.mockResolvedValueOnce({ headers, data: readableStream })
+    const readableStream = new Readable() as ResponseBody
+    requestMock.mockResolvedValueOnce({
+      headers,
+      body: readableStream,
+      statusCode: 200,
+      trailers: undefined,
+      opaque: undefined,
+      context: undefined
+    })
 
     const req = createRequest(null, {
       params: { account, version: requestVersion }
@@ -114,7 +165,7 @@ test.each([
 
     expect(headObjectMock.mock.calls.length).toStrictEqual(0)
     expect(getObjectMock.mock.calls.length).toStrictEqual(0)
-    expect(axiosMock.mock.calls.length).toStrictEqual(1)
+    expect(requestMock.mock.calls.length).toStrictEqual(1)
     for (const [key, val] of Object.entries(headers)) {
       expect(res.headers[key]).toStrictEqual(val)
     }
@@ -136,18 +187,25 @@ test('getUserIcon from identicon: not found on storage', async () => {
   }
   await db.collections.users.insertOne(user)
 
-  const headObjectMock = getMockType(storage.headObject)
+  const headObjectMock = jest.mocked(storage.headObject)
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
-  const axiosMock = getMockType(axios)
-  const headers = {
+  const requestMock = jest.mocked(request)
+  const headers: IncomingHttpHeaders = {
     ETag: 'etag',
     'Content-Type': 'image/png',
-    'Content-Length': 12345,
-    'Last-Modified': new Date(2020, 0, 1),
+    'Content-Length': '12345',
+    'Last-Modified': new Date(2020, 0, 1).toUTCString(),
     'Cache-Control': 'max-age=604800'
   } as const
-  const readableStream = new Readable()
-  axiosMock.mockResolvedValueOnce({ headers, data: readableStream })
+  const readableStream = new Readable() as ResponseBody
+  requestMock.mockResolvedValueOnce({
+    headers,
+    body: readableStream,
+    statusCode: 200,
+    trailers: undefined,
+    opaque: undefined,
+    context: undefined
+  })
 
   const req = createRequest(null, {
     params: { account, version: user.icon.version }
@@ -159,9 +217,7 @@ test('getUserIcon from identicon: not found on storage', async () => {
   expect(res.headers.ETag).toStrictEqual(headers.ETag)
   expect(res.headers['Content-Type']).toStrictEqual(headers['Content-Type'])
   expect(res.headers['Content-Length']).toStrictEqual(headers['Content-Length'])
-  expect((res.headers['Last-Modified'] as Date).getTime()).toStrictEqual(
-    headers['Last-Modified'].getTime()
-  )
+  expect(res.headers['last-modified']).toStrictEqual(headers['last-modified'])
   expect(res.headers['Cache-Control']).toStrictEqual(headers['Cache-Control'])
   expect(res.stream).toStrictEqual(readableStream)
 })
@@ -189,15 +245,17 @@ test('uploadUserIcon', async () => {
     roomOrder: []
   })
 
-  const putObjectMock = getMockType(storage.putObject)
-  putObjectMock.mockResolvedValueOnce({})
+  const putObjectMock = jest.mocked(storage.putObject)
+  putObjectMock.mockResolvedValueOnce({} as any)
 
-  const sizeOfMock = getMockType(sizeOf)
+  const sizeOfMock = jest.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, { width: 100, height: 100 })
   })
-  const createBodyFromFilePath = getMockType(storage.createBodyFromFilePath)
-  const readableStream = new Readable()
+  const createBodyFromFilePath = jest.mocked(storage.createBodyFromFilePath)
+  const readableStream = new Readable() as ReturnType<
+    typeof storage.createBodyFromFilePath
+  >
   createBodyFromFilePath.mockReturnValue(readableStream)
 
   const file = {
@@ -259,7 +317,7 @@ test('uploadUserIcon validation: size over', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = getMockType(sizeOf)
+  const sizeOfMock = jest.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_USER_ICON_SIZE + 1,
@@ -290,7 +348,7 @@ test('uploadUserIcon validation: not square', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = getMockType(sizeOf)
+  const sizeOfMock = jest.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_USER_ICON_SIZE - 1,
@@ -323,32 +381,35 @@ test('getRoomIcon', async () => {
 
   const req = createRequest(null, { params: { roomname: name, version } })
 
-  const headObjectMock = getMockType(storage.headObject)
-  const headers = {
+  const headObjectMock = jest.mocked(storage.headObject)
+  const headers = createHeadObjectMockValue({
     ETag: 'etag',
     ContentType: 'image/png',
     ContentLength: 12345,
     LastModified: new Date(2020, 0, 1),
     CacheControl: 'max-age=604800'
-  } as const
-  headObjectMock.mockResolvedValueOnce(headers)
-  const getObjectMock = getMockType(storage.getObject)
-  const readableStream = new Readable()
-  getObjectMock.mockReturnValueOnce({
-    createReadStream: () => readableStream
   })
+  headObjectMock.mockResolvedValueOnce(headers)
+  const getObjectMock = jest.mocked(storage.getObject)
+  const readableStream = new Readable()
+  const getObject = createGetObjectMockValue({
+    createReadStream: readableStream
+  })
+  getObjectMock.mockReturnValueOnce(getObject)
 
   const res = await icon.getRoomIcon(req)
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
   expect(res.headers.ETag).toStrictEqual(headers.ETag)
-  expect(res.headers['Content-Type']).toStrictEqual(headers.ContentType)
-  expect(res.headers['Content-Length']).toStrictEqual(headers.ContentLength)
-  expect((res.headers['Last-Modified'] as Date).getTime()).toStrictEqual(
-    headers.LastModified.getTime()
+  expect(res.headers['content-type']).toStrictEqual(headers.ContentType)
+  expect(res.headers['content-length']).toStrictEqual(
+    `${headers.ContentLength}`
   )
-  expect(res.headers['Cache-Control']).toStrictEqual(headers.CacheControl)
+  expect(res.headers['last-modified']).toStrictEqual(
+    headers.LastModified.toUTCString()
+  )
+  expect(res.headers['cache-control']).toStrictEqual(headers.CacheControl)
   expect(res.stream).toStrictEqual(readableStream)
 })
 
@@ -407,7 +468,7 @@ test('getRoomIcon NotFound: not found on storage', async () => {
     status: db.RoomStatusEnum.CLOSE
   })
 
-  const headObjectMock = getMockType(storage.headObject)
+  const headObjectMock = jest.mocked(storage.headObject)
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
 
   const req = createRequest(null, {
@@ -432,18 +493,20 @@ test('uploadRoomIcon', async () => {
     status: db.RoomStatusEnum.CLOSE
   })
 
-  const putObjectMock = getMockType(storage.putObject)
-  putObjectMock.mockResolvedValueOnce({})
+  const putObjectMock = jest.mocked(storage.putObject)
+  putObjectMock.mockResolvedValueOnce({} as any)
 
-  const sizeOfMock = getMockType(sizeOf)
+  const sizeOfMock = jest.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_USER_ICON_SIZE,
       height: config.icon.MAX_USER_ICON_SIZE
     })
   })
-  const createBodyFromFilePath = getMockType(storage.createBodyFromFilePath)
-  const readableStream = new Readable()
+  const createBodyFromFilePath = jest.mocked(storage.createBodyFromFilePath)
+  const readableStream = new Readable() as ReturnType<
+    typeof storage.createBodyFromFilePath
+  >
   createBodyFromFilePath.mockReturnValue(readableStream)
 
   const file = {
@@ -509,7 +572,7 @@ test('uploadRoomIcon: validation: size over ', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = getMockType(sizeOf)
+  const sizeOfMock = jest.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_ROOM_ICON_SIZE + 1,
@@ -540,7 +603,7 @@ test('uploadUserIcon validation: not square', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = getMockType(sizeOf)
+  const sizeOfMock = jest.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_ROOM_ICON_SIZE - 1,

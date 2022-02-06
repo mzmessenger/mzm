@@ -21,7 +21,7 @@ const ResizerY = ({
       if (diff !== currentDiff) {
         setDiff(currentDiff)
         clearTimeout(timerRef.current)
-        timerRef.current = setTimeout(() => {
+        timerRef.current = window.setTimeout(() => {
           setHeight(defaultHeight + currentDiff)
         }, 5)
       }
