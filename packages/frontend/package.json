@@ -4,8 +4,7 @@
   "version": "0.0.0",
   "main": "index.js",
   "scripts": {
-    "start": "webpack-dev-server",
-    "start-vite": "vite",
+    "start": "vite",
     "format": "prettier --write src/**/*.{ts,tsx} ./*.{js,json}",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
     "pretest": "npm run lint",
