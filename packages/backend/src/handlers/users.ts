@@ -1,5 +1,6 @@
 import { Request } from 'express'
 import isEmpty from 'validator/lib/isEmpty'
+import { HEADERS } from 'mzm-shared/auth'
 import { getRequestUserId } from '../lib/utils'
 import { NotFound, BadRequest } from '../lib/errors'
 import { popParam } from '../lib/utils'
@@ -39,8 +40,10 @@ export const getUserInfo = async (req: Request) => {
     { projection: { account: 1, icon: 1 } }
   )
 
-  const twitter: string = (req.headers['x-twitter-user-name'] as string) || null
-  const github: string = (req.headers['x-github-user-name'] as string) || null
+  const twitter: string =
+    (req.headers[HEADERS.TIWTTER_USER_NAME] as string) || null
+  const github: string =
+    (req.headers[HEADERS.GITHUB_USER_NAME] as string) || null
 
   if (!user || !user.account) {
     throw new NotFound({

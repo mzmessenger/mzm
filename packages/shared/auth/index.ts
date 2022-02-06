@@ -3,7 +3,8 @@ import { request } from 'undici'
 
 export const HEADERS = {
   USER_ID: 'x-user-id',
-  TIWTTER_USER_NAME: 'x-twitter-user-name'
+  TIWTTER_USER_NAME: 'x-twitter-user-name',
+  GITHUB_USER_NAME: 'x-github-user-name'
 } as const
 
 type RequestOptions = {
@@ -22,6 +23,7 @@ export const requestAuthServer = async (options: RequestOptions) => {
 
   const userId = headers[HEADERS.USER_ID] as string
   const twitterUserName = headers[HEADERS.TIWTTER_USER_NAME] as string
+  const githubUserName = headers[HEADERS.GITHUB_USER_NAME] as string
 
-  return { userId, twitterUserName }
+  return { userId, twitterUserName, githubUserName }
 }
