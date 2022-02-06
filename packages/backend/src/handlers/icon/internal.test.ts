@@ -1,4 +1,4 @@
-import { isValidMimetype } from './icon'
+import { isValidMimetype } from './internal'
 
 test.each([['image/png'], ['image/jpeg']])(
   'isValidMimetype: success file type (%s)',

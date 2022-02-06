@@ -16,7 +16,9 @@ export const requestSocketAPI = async (
       'x-socket-id': id
     },
     method: 'POST',
-    body: body
+    body: body,
+    bodyTimeout: 1000 * 60 * 5,
+    headersTimeout: 1000 * 60 * 5
   }
 
   const res = await request(INTERNAL_API_URL, options)
