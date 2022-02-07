@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
     "incremental": true,
-    "lib": ["es2019"],
     "outDir": "dist",
     "sourceMap": true,
     "noImplicitAny": false,
     "esModuleInterop": true,
     "module": "commonjs",
-    "target": "es2019",
+    "target": "esnext",
+    "skipLibCheck": true,
     "moduleResolution": "node",
     "composite": true
   },
