@@ -20,7 +20,6 @@ import {
   updateIine,
   setVoteAnswers
 } from './messages'
-import { logout } from './user'
 import { UserAction } from './user.types'
 import { ReceiveSocketMessage, SendSocketMessage, SendSocketCmd } from '../type'
 
@@ -179,7 +178,7 @@ export const connect = (
       dispatch({ type: SocketActions.Close, payload: { timer } })
     })
 
-    ws.addEventListener('error', () => {
+    ws.addEventListener('error', (err) => {
       if (
         ws.readyState !== WebSocket.CLOSING &&
         ws.readyState !== WebSocket.CLOSED
@@ -187,7 +186,7 @@ export const connect = (
         ws.close()
       }
 
-      dispatch(logout())
+      console.error(err)
     })
   }
 }
