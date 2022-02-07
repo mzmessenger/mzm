@@ -1,4 +1,4 @@
-import marked from 'marked'
+import { marked } from 'marked'
 import escape from 'validator/lib/escape'
 import { expose } from 'comlink'
 

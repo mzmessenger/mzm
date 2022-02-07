@@ -4,10 +4,12 @@ on:
   push:
     paths:
       - 'packages/auth/**'
+      - 'packages/shared/**'
     branches: [ main ]
   pull_request:
     paths:
       - 'packages/auth/**'
+      - 'packages/shared/**'
     branches: [ main ]
 
 jobs:

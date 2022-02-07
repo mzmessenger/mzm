@@ -1,6 +1,6 @@
 import React, { useMemo } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
-import { useHistory } from 'react-router-dom'
+import { useNavigate, useLocation } from 'react-router-dom'
 import { store, State } from '../modules/index'
 import { connect } from '../modules/socket'
 
@@ -9,13 +9,14 @@ type Props = {
 }
 
 const Socket = ({ url }: Props) => {
-  const history = useHistory()
+  const navigate = useNavigate()
+  const location = useLocation()
   const login = useSelector((state: State) => state.user.login)
   const dispatch = useDispatch()
 
   useMemo(() => {
     if (login) {
-      connect(url, history)(dispatch, store.getState)
+      connect(url, navigate, location)(dispatch, store.getState)
     }
   }, [url, login])
 

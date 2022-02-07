@@ -17,7 +17,7 @@
   "dependencies": {
     "bunyan": "^1.8.15",
     "dotenv": "^16.0.0",
-    "ioredis": "^4.28.4",
+    "ioredis": "^4.28.5",
     "undici": "^4.12.1",
     "uuid": "^8.3.2",
     "ws": "^8.4.2"

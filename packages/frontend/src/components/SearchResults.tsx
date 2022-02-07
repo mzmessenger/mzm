@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
 import { useSelector, useDispatch } from 'react-redux'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { State } from '../modules/index'
 import TransparentButton from './atoms/TransparentButton'
 import Home from '@material-ui/icons/Home'
@@ -17,10 +17,10 @@ const SearchRoomElem = ({
   iconUrl: string
 }) => {
   const dispatch = useDispatch()
-  const history = useHistory()
+  const navigate = useNavigate()
   const onClick = () => {
     enterRoom(name)(dispatch, store.getState).then(() => {
-      history.push(`/rooms/${name}`)
+      navigate(`/rooms/${name}`)
       dispatch(cancel())
     })
   }

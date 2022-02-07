@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import { useDispatch } from 'react-redux'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { store } from '../modules/index'
 import { createRoom } from '../modules/rooms'
@@ -12,7 +12,7 @@ import InputText from './atoms/InputText'
 type Props = ModalProps
 
 const ModalCraeteRoom = ({ open, onClose }: Props) => {
-  const history = useHistory()
+  const navigate = useNavigate()
   const [txt, setTxt] = useState('')
   const [error, setErrorTxt] = useState('')
   const dispatch = useDispatch()
@@ -24,7 +24,7 @@ const ModalCraeteRoom = ({ open, onClose }: Props) => {
       .then((data) => {
         if (data.status === 200) {
           onClose()
-          history.push(`/rooms/${txt}`)
+          navigate(`/rooms/${txt}`)
           setTxt('')
           setErrorTxt('')
         } else {

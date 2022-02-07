@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import { useDispatch, useSelector } from 'react-redux'
-import { useHistory } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
 import { State } from '../../modules/index'
 import { getMyInfo } from '../../modules/user'
@@ -12,10 +12,10 @@ const ERROR_TXT =
   '入力された値が半角英数字以外か、すでに存在するアカウントです。'
 
 const Signup = () => {
-  const history = useHistory()
+  const navigate = useNavigate()
   const signupAccount = useSelector((state: State) => state.user.signupAccount)
   if (!signupAccount) {
-    history.push('/')
+    navigate('/')
   }
 
   const dispatch = useDispatch()
@@ -57,7 +57,7 @@ const Signup = () => {
       setErrorTxt(ERROR_TXT)
       return
     } else if (res.status === 401) {
-      history.push('/')
+      navigate('/')
     }
     setErrorTxt('')
   }
