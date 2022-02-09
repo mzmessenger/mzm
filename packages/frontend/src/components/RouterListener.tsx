@@ -4,6 +4,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { State, store } from '../modules/index'
 import { getMyInfo } from '../modules/user'
 import { enterRoom } from '../modules/rooms'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 
 const RouterListener = () => {
   const navigate = useNavigate()
@@ -14,6 +15,7 @@ const RouterListener = () => {
   const login = useSelector((state: State) => state.user.login)
   const signup = useSelector((state: State) => state.user.signup)
   const dispatch = useDispatch()
+  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
 
   useEffect(() => {
     if (login && currentRoomName === '') {
@@ -28,7 +30,7 @@ const RouterListener = () => {
     }
 
     if (login && room) {
-      enterRoom(room)(dispatch, store.getState)
+      enterRoom(room, getMessages, enterRoomSocket)(dispatch, store.getState)
     }
 
     if (room) {

@@ -2,6 +2,7 @@ import React, { useState, useCallback } from 'react'
 import { useSelector, useDispatch } from 'react-redux'
 import styled from 'styled-components'
 import DirectionsRun from '@material-ui/icons/DirectionsRun'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 import { WIDTH_MOBILE } from '../lib/constants'
 import { State, store } from '../modules/index'
 import { exitRoom, uploadIcon } from '../modules/rooms'
@@ -23,13 +24,14 @@ const RoomSetting = () => {
   const [image, setImage] = useState('')
   const [open, setOpen] = useState(false)
   const [edit, setEdit] = useState(false)
+  const { getRooms } = useDispatchSocket()
 
   const name = _name || ''
   const iconUrl = room?.iconUrl
   const isGeneral = name === 'general'
 
   const onClick = () => {
-    exitRoom(id)(dispatch, store.getState)
+    exitRoom(id, getRooms)(dispatch, store.getState)
   }
 
   const onloadFile = (file: string) => {

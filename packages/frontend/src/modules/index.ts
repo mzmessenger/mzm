@@ -1,6 +1,4 @@
 import { combineReducers, createStore } from 'redux'
-import { reducer as socketReducer } from './socket'
-import { SocketState } from './socket.types'
 import { reducer as roomsReducer } from './rooms'
 import { RoomsState } from './rooms.types'
 import { reducer as messagesReducer } from './messages'
@@ -13,7 +11,6 @@ import { reducer as searchReducer } from './search'
 import { SearchState } from './search.types'
 
 export type State = {
-  socket: SocketState
   rooms: RoomsState
   messages: MessagesState
   user: UserState
@@ -22,7 +19,6 @@ export type State = {
 }
 
 export const reducer = combineReducers({
-  socket: socketReducer,
   rooms: roomsReducer,
   messages: messagesReducer,
   user: userReducer,

@@ -8,7 +8,7 @@ import { sanitize } from '../lib/sanitize'
 import { isReplied } from '../lib/util'
 import { State, store } from '../modules/index'
 import { startToEdit } from '../modules/ui'
-import { incrementIine } from '../modules/socket'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 import MessageBody from './atoms/MessageBody'
 import MessageVote from './atoms/MessageVote'
 import { Message } from '../type'
@@ -111,11 +111,12 @@ const MessageElement = ({ id }: { id: string }) => {
   const messageObj = useSelector(
     (state: State) => state.messages.messages.byId[id]
   )
+  const { incrementIine } = useDispatchSocket()
 
   const dispatch = useDispatch()
 
   const iineHandler = () => {
-    incrementIine(id)(dispatch, store.getState)
+    incrementIine(id)
   }
   const startEditHandler = () => {
     dispatch(startToEdit(messageObj.id, messageObj.message))

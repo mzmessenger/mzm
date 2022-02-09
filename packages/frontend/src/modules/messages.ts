@@ -1,6 +1,7 @@
 import { Dispatch } from 'redux'
 import { State } from './index'
 import { sendSocket } from '../lib/util'
+import type { useDispatchSocket } from '../contexts/socket/hooks'
 import { MessagesState, MessagesAction, MessagesActions } from './messages.type'
 import { convertToHtml } from '../lib/markdown'
 import { SendSocketCmd, ReceiveMessage, Message, VoteAnswer } from '../type'
@@ -188,7 +189,8 @@ export const setVoteAnswers = (messageId: string, answers: VoteAnswer[]) => {
 export const sendVoteAnswer = (
   messageId: string,
   index: number,
-  answer: number
+  answer: number,
+  sendVoteAnswer: ReturnType<typeof useDispatchSocket>['sendVoteAnswer']
 ) => {
   return async (dispatch: Dispatch<MessagesAction>, getState: () => State) => {
     const user = getState().user.me
@@ -206,16 +208,15 @@ export const sendVoteAnswer = (
         }
       }
     })
-    sendSocket(getState().socket.socket, {
-      cmd: SendSocketCmd.VOTE_ANSWER_SEND,
-      messageId: messageId,
-      index: index,
-      answer: answer
-    })
+    sendVoteAnswer(messageId, index, answer)
   }
 }
 
-export const removeVoteAnswer = (messageId: string, index: number) => {
+export const removeVoteAnswer = (
+  messageId: string,
+  index: number,
+  removeVoteAnswer: ReturnType<typeof useDispatchSocket>['removeVoteAnswer']
+) => {
   return async (dispatch: Dispatch<MessagesAction>, getState: () => State) => {
     dispatch({
       type: MessagesActions.RemoveVoteAnswer,
@@ -225,10 +226,6 @@ export const removeVoteAnswer = (messageId: string, index: number) => {
         index: index
       }
     })
-    sendSocket(getState().socket.socket, {
-      cmd: SendSocketCmd.VOTE_ANSWER_REMOVE,
-      messageId: messageId,
-      index: index
-    })
+    removeVoteAnswer(messageId, index)
   }
 }

@@ -3,8 +3,9 @@ import styled from 'styled-components'
 import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import { State, store } from '../modules/index'
-import { readMessages, changeRoom, changeRoomOrder } from '../modules/rooms'
+import { changeRoom, changeRoomOrder } from '../modules/rooms'
 import { Room } from '../modules/rooms.types'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 import RoomElem from './RoomElem'
 
 const DropZone = ({
@@ -28,7 +29,7 @@ const DropZone = ({
   const onDragOver = (e: React.DragEvent) => {
     e.dataTransfer.dropEffect = 'move'
     setIsOver(true)
-    event.preventDefault()
+    e.preventDefault()
   }
 
   const onDragLeave = () => setIsOver(false)
@@ -67,12 +68,13 @@ const Rooms = () => {
   const roomIds = useSelector((state: State) => state.rooms.rooms.allIds)
   const currentRoomId = useSelector((state: State) => state.rooms.currentRoomId)
   const rooms = useSelector((state: State) => state.rooms.rooms.byId)
+  const { sortRoom, getMessages, readMessages } = useDispatchSocket()
 
   const onClick = useCallback((e: React.MouseEvent, room: Room) => {
     e.preventDefault()
     navigate(`/rooms/${room.name}`)
-    changeRoom(room.id)(dispatch, store.getState)
-    readMessages(room.id)(dispatch, store.getState)
+    changeRoom(room.id, getMessages)(dispatch, store.getState)
+    readMessages(room.id)
   }, [])
 
   const onDrop = useCallback(
@@ -89,7 +91,7 @@ const Rooms = () => {
         moveId
       )
 
-      changeRoomOrder(roomOrder)(dispatch, store.getState)
+      changeRoomOrder(roomOrder, sortRoom)(dispatch, store.getState)
 
       e.dataTransfer.clearData()
     },

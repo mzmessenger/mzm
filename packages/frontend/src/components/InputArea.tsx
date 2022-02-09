@@ -2,8 +2,8 @@ import React, { useState, useRef, useEffect } from 'react'
 import styled from 'styled-components'
 import { useSelector, useDispatch } from 'react-redux'
 import Add from '@material-ui/icons/Add'
-import { State, store } from '../modules/index'
-import { sendMessage, sendModifyMessage } from '../modules/socket'
+import { State } from '../modules/index'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 import { inputMessage, modifyMessage, endToEdit } from '../modules/ui'
 import Button from './atoms/Button'
 import ResizerY from './atoms/ResizerY'
@@ -30,6 +30,8 @@ const InputArea = () => {
   )
   const [showVote, setShowVote] = useState(false)
 
+  const { sendMessage, sendModifyMessage } = useDispatchSocket()
+
   const setHeight = (h: number) => {
     _setHeight(h)
     localStorage.setItem(HEIGHT_KEY, `${h}`)
@@ -43,10 +45,10 @@ const InputArea = () => {
 
   const submit = () => {
     if (inputMode === 'normal') {
-      sendMessage(txt, currentRoomId)(dispatch, store.getState)
+      sendMessage(txt, currentRoomId)
       dispatch(inputMessage(''))
     } else if (inputMode === 'edit') {
-      sendModifyMessage(editTxt, editId)(dispatch, store.getState)
+      sendModifyMessage(editTxt, editId)
       dispatch(endToEdit())
     }
     setRows(1)

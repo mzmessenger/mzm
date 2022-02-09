@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
 import { useDispatch, useSelector } from 'react-redux'
+import { useDispatchSocket } from '../../contexts/socket/hooks'
 import { State, store } from '../../modules/index'
 import { sendVoteAnswer, removeVoteAnswer } from '../../modules/messages'
 import VoteAnswer from './VoteAnswer'
@@ -73,6 +74,10 @@ const Question = ({
     (state: State) => state.messages.voteAnswers.byId[messageId][index] ?? []
   )
   const [checked, setChecked] = useState<number>(null)
+  const {
+    removeVoteAnswer: removeVoteAnswerSocket,
+    sendVoteAnswer: sendVoteAnswerSocket
+  } = useDispatchSocket()
   const name = `${text}-${index}`
 
   const ok = answers.filter((e) => e.answer === 0)
@@ -86,11 +91,20 @@ const Question = ({
   const onClickRadio = (e: React.MouseEvent<HTMLInputElement>) => {
     const answer = parseInt((e.target as HTMLInputElement).value, 10)
     if (answer === checked) {
-      removeVoteAnswer(messageId, index)(dispatch, store.getState)
+      removeVoteAnswer(
+        messageId,
+        index,
+        removeVoteAnswerSocket
+      )(dispatch, store.getState)
       setChecked(null)
     } else {
       const answer = parseInt((e.target as HTMLInputElement).value, 10)
-      sendVoteAnswer(messageId, index, answer)(dispatch, store.getState)
+      sendVoteAnswer(
+        messageId,
+        index,
+        answer,
+        sendVoteAnswerSocket
+      )(dispatch, store.getState)
       setChecked(answer)
     }
   }

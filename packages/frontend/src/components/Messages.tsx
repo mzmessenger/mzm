@@ -2,7 +2,7 @@ import React, { useRef, useEffect } from 'react'
 import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 import { State } from '../modules/index'
-import { getHistory } from '../modules/rooms'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 import MessageElement from './Message'
 
 const Messages = ({ className }) => {
@@ -13,11 +13,11 @@ const Messages = ({ className }) => {
   const scrollTargetIndex = useSelector(
     (state: State) => state.rooms.scrollTargetIndex
   )
-  const socket = useSelector((state: State) => state.socket.socket)
   const wrapRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const topRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef(0)
+  const { getHistory } = useDispatchSocket()
 
   const messages = currentRoom?.messages || []
 
@@ -57,7 +57,7 @@ const Messages = ({ className }) => {
       const margin = 10
       if (wrapRect.top - topRect.bottom <= margin) {
         const oldestId = currentRoom.messages[0]
-        getHistory(oldestId, currentRoomId, socket)
+        getHistory(oldestId, currentRoomId)
       }
     }, 300)
   }

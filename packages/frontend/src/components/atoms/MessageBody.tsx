@@ -5,6 +5,7 @@ import styled from 'styled-components'
 import { store } from '../../modules/index'
 import { enterRoom } from '../../modules/rooms'
 import { getRoomName } from '../../lib/util'
+import { useDispatchSocket } from '../../contexts/socket/hooks'
 
 type Props = {
   className?: string
@@ -16,6 +17,7 @@ const MessageBody = ({ className, message, html }: Props) => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
   const messageEl = useRef(null)
+  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
 
   useEffect(() => {
     if (!messageEl.current) {
@@ -27,7 +29,11 @@ const MessageBody = ({ className, message, html }: Props) => {
       if (url.host === location.host) {
         navigate(url.pathname)
         const roomName = getRoomName(decodeURIComponent(url.pathname))
-        enterRoom(roomName)(dispatch, store.getState)
+        enterRoom(
+          roomName,
+          getMessages,
+          enterRoomSocket
+        )(dispatch, store.getState)
       } else {
         window.open(url.href, '_blank')
       }

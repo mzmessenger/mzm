@@ -8,6 +8,7 @@ import Home from '@material-ui/icons/Home'
 import { store } from '../modules/index'
 import { searchNext, cancel } from '../modules/search'
 import { enterRoom } from '../modules/rooms'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 
 const SearchRoomElem = ({
   name,
@@ -18,8 +19,13 @@ const SearchRoomElem = ({
 }) => {
   const dispatch = useDispatch()
   const navigate = useNavigate()
+  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
   const onClick = () => {
-    enterRoom(name)(dispatch, store.getState).then(() => {
+    enterRoom(
+      name,
+      getMessages,
+      enterRoomSocket
+    )(dispatch, store.getState).then(() => {
       navigate(`/rooms/${name}`)
       dispatch(cancel())
     })
