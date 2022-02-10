@@ -1,18 +1,15 @@
 import React, { useState, useCallback, lazy } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import styled from 'styled-components'
 import { WIDTH_MOBILE } from '../lib/constants'
-import { State } from '../modules/index'
-import { uploadIcon } from '../modules/user'
+import { useUser, useDispatchUser } from '../contexts/user/hooks'
 import Button from './atoms/Button'
 import SocialAccounts from './SocialAccounts'
 import DropImage from './atoms/DropImage'
 
 const SettingAccount = () => {
-  const dispatch = useDispatch()
-  const id = useSelector((state: State) => state.user.me.id)
-  const account = useSelector((state: State) => state.user.me.account)
-  const icon = useSelector((state: State) => state.user.me.iconUrl)
+  const { me } = useUser()
+  const { uploadIcon } = useDispatchUser()
+
   const [open, setOpen] = useState(false)
   const [image, setImage] = useState('')
   const [edit, setEdit] = useState(false)
@@ -20,7 +17,7 @@ const SettingAccount = () => {
   const ModalIcon = lazy(() => import('./atoms/ModalIcon'))
 
   const onModalSave = useCallback((image: Blob) => {
-    uploadIcon(image)(dispatch).then((res) => {
+    uploadIcon(image).then((res) => {
       if (res.ok) {
         onSave()
         setOpen(false)
@@ -57,16 +54,16 @@ const SettingAccount = () => {
     <Wrap>
       <div className="icon">
         {edit && <DropImage onloadFile={onloadFile} />}
-        {!edit && <img src={icon} />}
+        {!edit && <img src={me.iconUrl} />}
       </div>
       <ul className="info">
         <li>
           <h4>ユーザーID</h4>
-          <span>{id}</span>
+          <span>{me.id}</span>
         </li>
         <li>
           <h4>ユーザー名</h4>
-          <span>{account}</span>
+          <span>{me.account}</span>
         </li>
         <li>
           <SocialAccounts />

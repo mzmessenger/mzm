@@ -1,28 +1,24 @@
 import React from 'react'
 import styled from 'styled-components'
-import { useDispatch, useSelector } from 'react-redux'
 import LinkOffIcon from '@material-ui/icons/LinkOff'
 import TwitterIcon from '@material-ui/icons/Twitter'
 import GitHubIcon from '@material-ui/icons/GitHub'
 import { WIDTH_MOBILE } from '../lib/constants'
-import { store } from '../modules/index'
-import { removeTwitter, removeGithub } from '../modules/user'
-import { State } from '../modules/index'
+import { useUser, useDispatchUser } from '../contexts/user/hooks'
 
 const ShowAccount = () => {
-  const dispatch = useDispatch()
-  const twitter = useSelector((state: State) => state.user.me.twitterUserName)
-  const github = useSelector((state: State) => state.user.me.githubUserName)
+  const { me } = useUser()
+  const { removeTwitter, removeGithub } = useDispatchUser()
 
-  const isTwitterLinked = !!twitter
-  const isGithubLinked = !!github
+  const isTwitterLinked = !!me.twitterUserName
+  const isGithubLinked = !!me.githubUserName
 
   const onRemoveTwitter = () => {
-    removeTwitter()(dispatch, store.getState)
+    removeTwitter()
   }
 
   const onRemoveGithub = () => {
-    removeGithub()(dispatch, store.getState)
+    removeGithub()
   }
 
   const twitterClassName = isGithubLinked

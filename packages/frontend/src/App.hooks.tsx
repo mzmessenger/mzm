@@ -3,6 +3,7 @@ import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { store, State } from './modules/index'
 import { useDispatchSocket } from './contexts/socket/hooks'
+import { useUser, useDispatchUser } from './contexts/user/hooks'
 import { getRoomName } from './lib/util'
 import { onResize } from './modules/ui'
 import {
@@ -13,7 +14,8 @@ import {
   alreadyRead,
   reloadMessage,
   setRoomOrder,
-  changeRoom
+  changeRoom,
+  enterRoom
 } from './modules/rooms'
 import {
   addMessages,
@@ -25,9 +27,70 @@ import {
 import { SendSocketCmd } from './type'
 import { sendSocket } from './lib/util'
 
+const useRouter = () => {
+  const navigate = useNavigate()
+  const { login, signup } = useUser()
+  const { fetchMyInfo } = useDispatchUser()
+  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
+  const currentRoomName = useSelector((state: State) => {
+    return state.rooms.currentRoomName
+  })
+
+  useEffect(() => {
+    if (login && currentRoomName === '') {
+      navigate('/')
+    }
+  }, [login, currentRoomName])
+
+  useEffect(() => {
+    const room = location.pathname.match(/\/rooms\/(.+)/) && RegExp.$1
+    if (!login && (location.pathname === '/' || room)) {
+      fetchMyInfo()
+    }
+
+    if (login && room) {
+      enterRoom(room, getMessages, enterRoomSocket)
+    }
+
+    if (room) {
+      document.title = `MZM (${room})`
+    } else {
+      document.title = `MZM`
+    }
+  }, [login, location.pathname])
+
+  useEffect(() => {
+    if (signup) {
+      navigate('/signup')
+    }
+  }, [signup])
+}
+
+const useUi = () => {
+  const dispatch = useDispatch()
+
+  useEffect(() => {
+    dispatch(onResize(window.innerWidth, window.innerHeight))
+
+    const handleResize = () => {
+      dispatch(onResize(window.innerWidth, window.innerHeight))
+    }
+
+    window.addEventListener('resize', handleResize)
+
+    return () => {
+      window.removeEventListener('resize', handleResize)
+    }
+  }, [])
+}
+
 export const useApp = (url: string) => {
   const navigate = useNavigate()
   const location = useLocation()
+  const { login, me } = useUser()
+  const { init, getMessages, getRooms, readMessages } = useDispatchSocket()
+  useRouter()
+  useUi()
 
   const dispatch = useDispatch()
   const currentRoomName = useSelector((state: State) => {
@@ -36,7 +99,6 @@ export const useApp = (url: string) => {
   const currentRoomId = useSelector((state: State) => {
     return state.rooms.currentRoomId
   })
-  const { init, getMessages, getRooms, readMessages } = useDispatchSocket()
 
   const options: Parameters<typeof init>[0] = {
     url,
@@ -69,6 +131,7 @@ export const useApp = (url: string) => {
             message.message.id,
             message.message.message,
             message.room,
+            me,
             readMessages
           )(dispatch, store.getState)
         })
@@ -128,19 +191,8 @@ export const useApp = (url: string) => {
   }
 
   useEffect(() => {
-    dispatch(onResize(window.innerWidth, window.innerHeight))
-
-    const handleResize = () => {
-      dispatch(onResize(window.innerWidth, window.innerHeight))
-    }
-
-    window.addEventListener('resize', handleResize)
     init(options)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-    }
   }, [])
 
-  return {}
+  return { login }
 }

@@ -2,6 +2,7 @@ import { Dispatch } from 'redux'
 import { sendSocket, isReplied } from '../lib/util'
 import { State } from './index'
 import type { useDispatchSocket } from '../contexts/socket/hooks'
+import type { useUser } from '../contexts/user/hooks'
 import { RoomsActions, RoomsAction, RoomsState, Room } from './rooms.types'
 import { closeMenu } from './ui'
 import { ReceiveRoom, SendSocketMessage, SendSocketCmd } from '../type'
@@ -362,6 +363,7 @@ export const receiveMessage = (
   messageId: string,
   message: string,
   room: string,
+  me: ReturnType<typeof useUser>['me'],
   readMessages: ReturnType<typeof useDispatchSocket>['readMessages']
 ) => {
   return async (dispatch: Dispatch<RoomsAction>, getState: () => State) => {
@@ -375,7 +377,7 @@ export const receiveMessage = (
         messageId: messageId,
         message: message,
         room: room,
-        account: getState().user.me.account
+        account: me.account
       }
     })
   }

@@ -1,18 +1,19 @@
 import React, { useEffect } from 'react'
 import { useDispatch } from 'react-redux'
-import { getMyInfo, signup } from '../../modules/user'
+import { useDispatchUser } from '../../contexts/user/hooks'
 
 const LoginSuccess = () => {
+  const { fetchMyInfo, signupUser } = useDispatchUser()
   const dispatch = useDispatch()
 
   useEffect(() => {
-    getMyInfo()(dispatch).then((res) => {
+    fetchMyInfo().then((res) => {
       if (res.status === 404) {
         return res
           .json()
           .then((body: { id: string; twitter?: string; github?: string }) => {
             const account = body.twitter || body.github || ''
-            dispatch(signup(account))
+            signupUser(account)
           })
       }
     })

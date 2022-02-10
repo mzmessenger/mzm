@@ -6,7 +6,8 @@ import CreateIcon from '@material-ui/icons/Create'
 import ThumbUpIcon from '@material-ui/icons/ThumbUp'
 import { sanitize } from '../lib/sanitize'
 import { isReplied } from '../lib/util'
-import { State, store } from '../modules/index'
+import { State } from '../modules/index'
+import { useUser } from '../contexts/user/hooks'
 import { startToEdit } from '../modules/ui'
 import { useDispatchSocket } from '../contexts/socket/hooks'
 import MessageBody from './atoms/MessageBody'
@@ -107,7 +108,7 @@ const PresentationalMessage = ({
 }
 
 const MessageElement = ({ id }: { id: string }) => {
-  const myAccount = useSelector((state: State) => state.user.me.account)
+  const { me } = useUser()
   const messageObj = useSelector(
     (state: State) => state.messages.messages.byId[id]
   )
@@ -143,7 +144,7 @@ const MessageElement = ({ id }: { id: string }) => {
       updated={messageObj.updated}
       createdAt={messageObj.createdAt}
       beforeIine={prevIineRef.current}
-      myAccount={myAccount}
+      myAccount={me.account}
       iineHandler={iineHandler}
       startEditHandler={startEditHandler}
     />

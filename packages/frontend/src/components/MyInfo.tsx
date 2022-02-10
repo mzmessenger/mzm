@@ -4,9 +4,10 @@ import styled from 'styled-components'
 import Settings from '@material-ui/icons/Settings'
 import { State } from '../modules/index'
 import { openSettings, closeSettings } from '../modules/ui'
+import { useUser } from '../contexts/user/hooks'
 
 const MyInfo = () => {
-  const me = useSelector((state: State) => state.user.me)
+  const { me } = useUser()
   const settings = useSelector((state: State) => state.ui.openSettings)
   const icon = me ? me.iconUrl : null
   const dispatch = useDispatch()

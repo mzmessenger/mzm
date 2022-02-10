@@ -1,9 +1,6 @@
 import React, { Suspense, lazy } from 'react'
-import { useSelector } from 'react-redux'
 import { Routes, Route } from 'react-router-dom'
-import { State } from './modules/index'
 import { useApp } from './App.hooks'
-import RouterListener from './components/RouterListener'
 
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const url = `${protocol}//${window.location.host}/socket`
@@ -13,8 +10,7 @@ const WithSuspense: React.FC = ({ children }) => {
 }
 
 const App = () => {
-  const login = useSelector((state: State) => state.user.login)
-  useApp(url)
+  const { login } = useApp(url)
 
   const Top = login
     ? lazy(() => import('./components/pages/Top'))
@@ -84,7 +80,6 @@ const App = () => {
           }
         />
       </Routes>
-      <RouterListener />
     </>
   )
 }
