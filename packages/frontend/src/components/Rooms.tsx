@@ -6,6 +6,7 @@ import { State, store } from '../modules/index'
 import { changeRoom, changeRoomOrder } from '../modules/rooms'
 import { Room } from '../modules/rooms.types'
 import { useDispatchSocket } from '../contexts/socket/hooks'
+import { useDispatchUi } from '../contexts/ui/hooks'
 import RoomElem from './RoomElem'
 
 const DropZone = ({
@@ -69,11 +70,12 @@ const Rooms = () => {
   const currentRoomId = useSelector((state: State) => state.rooms.currentRoomId)
   const rooms = useSelector((state: State) => state.rooms.rooms.byId)
   const { sortRoom, getMessages, readMessages } = useDispatchSocket()
+  const { closeMenu } = useDispatchUi()
 
   const onClick = useCallback((e: React.MouseEvent, room: Room) => {
     e.preventDefault()
     navigate(`/rooms/${room.name}`)
-    changeRoom(room.id, getMessages)(dispatch, store.getState)
+    changeRoom(room.id, getMessages, closeMenu)(dispatch, store.getState)
     readMessages(room.id)
   }, [])
 

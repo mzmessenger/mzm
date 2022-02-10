@@ -5,7 +5,7 @@ import { store, State } from './modules/index'
 import { useDispatchSocket } from './contexts/socket/hooks'
 import { useUser, useDispatchUser } from './contexts/user/hooks'
 import { getRoomName } from './lib/util'
-import { onResize } from './modules/ui'
+import { useDispatchUi } from './contexts/ui/hooks'
 import {
   receiveRooms,
   receiveMessage,
@@ -32,6 +32,7 @@ const useRouter = () => {
   const { login, signup } = useUser()
   const { fetchMyInfo } = useDispatchUser()
   const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
+  const { closeMenu } = useDispatchUi()
   const currentRoomName = useSelector((state: State) => {
     return state.rooms.currentRoomName
   })
@@ -49,7 +50,7 @@ const useRouter = () => {
     }
 
     if (login && room) {
-      enterRoom(room, getMessages, enterRoomSocket)
+      enterRoom(room, getMessages, enterRoomSocket, closeMenu)
     }
 
     if (room) {
@@ -66,14 +67,14 @@ const useRouter = () => {
   }, [signup])
 }
 
-const useUi = () => {
-  const dispatch = useDispatch()
+const useResize = () => {
+  const { onResize } = useDispatchUi()
 
   useEffect(() => {
-    dispatch(onResize(window.innerWidth, window.innerHeight))
+    onResize(window.innerWidth, window.innerHeight)
 
     const handleResize = () => {
-      dispatch(onResize(window.innerWidth, window.innerHeight))
+      onResize(window.innerWidth, window.innerHeight)
     }
 
     window.addEventListener('resize', handleResize)
@@ -89,8 +90,9 @@ export const useApp = (url: string) => {
   const location = useLocation()
   const { login, me } = useUser()
   const { init, getMessages, getRooms, readMessages } = useDispatchSocket()
+  const { closeMenu } = useDispatchUi()
   useRouter()
-  useUi()
+  useResize()
 
   const dispatch = useDispatch()
   const currentRoomName = useSelector((state: State) => {
@@ -155,7 +157,11 @@ export const useApp = (url: string) => {
         if (currentPathRoomName !== message.name) {
           navigate(`/rooms/${message.name}`)
           const gMesssages = (roomId: string) => getMessages(roomId, ws)
-          changeRoom(message.id, gMesssages)(dispatch, store.getState)
+          changeRoom(
+            message.id,
+            gMesssages,
+            closeMenu
+          )(dispatch, store.getState)
         }
         const gRooms = () => getRooms(ws)
         const gMesssages = (roomId: string) => getMessages(roomId, ws)

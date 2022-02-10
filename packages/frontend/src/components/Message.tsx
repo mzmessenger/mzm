@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
+import { useSelector } from 'react-redux'
 import dayjs from 'dayjs'
 import styled from 'styled-components'
 import CreateIcon from '@material-ui/icons/Create'
@@ -8,7 +8,7 @@ import { sanitize } from '../lib/sanitize'
 import { isReplied } from '../lib/util'
 import { State } from '../modules/index'
 import { useUser } from '../contexts/user/hooks'
-import { startToEdit } from '../modules/ui'
+import { useDispatchPostTextArea } from '../contexts/postTextArea/hooks'
 import { useDispatchSocket } from '../contexts/socket/hooks'
 import MessageBody from './atoms/MessageBody'
 import MessageVote from './atoms/MessageVote'
@@ -109,18 +109,17 @@ const PresentationalMessage = ({
 
 const MessageElement = ({ id }: { id: string }) => {
   const { me } = useUser()
+  const { startToEdit } = useDispatchPostTextArea()
   const messageObj = useSelector(
     (state: State) => state.messages.messages.byId[id]
   )
   const { incrementIine } = useDispatchSocket()
 
-  const dispatch = useDispatch()
-
   const iineHandler = () => {
     incrementIine(id)
   }
   const startEditHandler = () => {
-    dispatch(startToEdit(messageObj.id, messageObj.message))
+    startToEdit(messageObj.id, messageObj.message)
   }
   const prevIineRef = useRef<number>()
   useEffect(() => {

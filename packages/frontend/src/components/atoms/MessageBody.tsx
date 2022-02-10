@@ -6,6 +6,7 @@ import { store } from '../../modules/index'
 import { enterRoom } from '../../modules/rooms'
 import { getRoomName } from '../../lib/util'
 import { useDispatchSocket } from '../../contexts/socket/hooks'
+import { useDispatchUi } from '../../contexts/ui/hooks'
 
 type Props = {
   className?: string
@@ -18,6 +19,7 @@ const MessageBody = ({ className, message, html }: Props) => {
   const navigate = useNavigate()
   const messageEl = useRef(null)
   const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
+  const { closeMenu } = useDispatchUi()
 
   useEffect(() => {
     if (!messageEl.current) {
@@ -32,7 +34,8 @@ const MessageBody = ({ className, message, html }: Props) => {
         enterRoom(
           roomName,
           getMessages,
-          enterRoomSocket
+          enterRoomSocket,
+          closeMenu
         )(dispatch, store.getState)
       } else {
         window.open(url.href, '_blank')

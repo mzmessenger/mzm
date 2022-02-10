@@ -3,8 +3,8 @@ import { sendSocket, isReplied } from '../lib/util'
 import { State } from './index'
 import type { useDispatchSocket } from '../contexts/socket/hooks'
 import type { useUser } from '../contexts/user/hooks'
+import type { useDispatchUi } from '../contexts/ui/hooks'
 import { RoomsActions, RoomsAction, RoomsState, Room } from './rooms.types'
-import { closeMenu } from './ui'
 import { ReceiveRoom, SendSocketMessage, SendSocketCmd } from '../type'
 
 const splited = window.location.pathname.split('/')
@@ -240,7 +240,8 @@ export const createRoom = (
 
 export const changeRoom = (
   roomId: string,
-  getMessages: ReturnType<typeof useDispatchSocket>['getMessages']
+  getMessages: ReturnType<typeof useDispatchSocket>['getMessages'],
+  closeMenu: ReturnType<typeof useDispatchUi>['closeMenu']
 ) => {
   return async (dispatch: Dispatch, getState: () => State) => {
     const room = getState().rooms.rooms.byId[roomId]
@@ -254,7 +255,7 @@ export const changeRoom = (
           id: room.id
         }
       })
-      dispatch(closeMenu())
+      closeMenu()
       return
     }
   }
@@ -263,18 +264,19 @@ export const changeRoom = (
 export const enterRoom = (
   roomName: string,
   getMessages: ReturnType<typeof useDispatchSocket>['getMessages'],
-  enterRoom: ReturnType<typeof useDispatchSocket>['enterRoom']
+  enterRoom: ReturnType<typeof useDispatchSocket>['enterRoom'],
+  closeMenu: ReturnType<typeof useDispatchUi>['closeMenu']
 ) => {
   return async (dispatch: Dispatch, getState: () => State) => {
     const room = Object.values(getState().rooms.rooms.byId).find(
       (r) => r.name === roomName
     )
     if (room) {
-      changeRoom(room.id, getMessages)
+      changeRoom(room.id, getMessages, closeMenu)
       return
     }
     enterRoom(roomName)
-    dispatch(closeMenu())
+    closeMenu()
   }
 }
 

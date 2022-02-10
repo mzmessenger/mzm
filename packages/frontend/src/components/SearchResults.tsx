@@ -8,6 +8,7 @@ import { store } from '../modules/index'
 import { useSearch, useDispatchSearch } from '../contexts/search/hooks'
 import { enterRoom } from '../modules/rooms'
 import { useDispatchSocket } from '../contexts/socket/hooks'
+import { useDispatchUi } from '../contexts/ui/hooks'
 
 const SearchRoomElem = ({
   name,
@@ -20,11 +21,13 @@ const SearchRoomElem = ({
   const navigate = useNavigate()
   const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
   const { cancel } = useDispatchSearch()
+  const { closeMenu } = useDispatchUi()
   const onClick = () => {
     enterRoom(
       name,
       getMessages,
-      enterRoomSocket
+      enterRoomSocket,
+      closeMenu
     )(dispatch, store.getState).then(() => {
       navigate(`/rooms/${name}`)
       cancel()

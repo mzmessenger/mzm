@@ -1,11 +1,9 @@
 import React, { useState } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import styled from 'styled-components'
 import Settings from '@material-ui/icons/Settings'
 import { WIDTH_MOBILE } from '../../lib/constants'
-import { State } from '../../modules/index'
 import { useSearch } from '../../contexts/search/hooks'
-import { closeMenu, openSettings } from '../../modules/ui'
+import { useUi, useDispatchUi } from '../../contexts/ui/hooks'
 import ResizerX from './ResizerX'
 import MenuIcon from './MobileMenuIcon'
 import Rooms from '../Rooms'
@@ -17,9 +15,8 @@ const WIDTH_KEY = 'mzm:menu:width'
 const MIN_WIDTH = 240
 
 const Menu = () => {
-  const dispatch = useDispatch()
-  const menuStatus = useSelector((state: State) => state.ui.menuStatus)
-  const device = useSelector((state: State) => state.ui.device)
+  const { menuStatus, device } = useUi()
+  const { closeMenu, openSettings } = useDispatchUi()
   const { query } = useSearch()
   const className = menuStatus === 'open' ? 'menu open' : 'menu'
   const [width, _setWidth] = useState(
@@ -36,8 +33,8 @@ const Menu = () => {
     localStorage.setItem(WIDTH_KEY, `${w}`)
   }
   const isMobile = device === 'mobile'
-  const onClickMenu = () => dispatch(closeMenu())
-  const clickSettings = () => dispatch(openSettings())
+  const onClickMenu = () => closeMenu()
+  const clickSettings = () => openSettings()
 
   return (
     <Wrap className={className} style={{ width: isMobile ? MIN_WIDTH : width }}>

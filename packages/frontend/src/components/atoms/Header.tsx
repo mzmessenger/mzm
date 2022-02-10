@@ -1,19 +1,16 @@
 import React from 'react'
 import styled from 'styled-components'
-import { useSelector, useDispatch } from 'react-redux'
-import { State } from '../../modules/index'
-import { openMenu } from '../../modules/ui'
+import { useUi, useDispatchUi } from '../../contexts/ui/hooks'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import Link from './Link'
 import MenuIcon from './MobileMenuIcon'
 import MyInfo from '../MyInfo'
 
 const Header = ({ style }: { style?: any }) => {
-  const device = useSelector((state: State) => state.ui.device)
+  const { device } = useUi()
+  const { openMenu } = useDispatchUi()
 
-  const dispatch = useDispatch()
-
-  const onClick = () => dispatch(openMenu())
+  const onClick = () => openMenu()
 
   return (
     <Wrap style={style}>

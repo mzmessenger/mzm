@@ -1,15 +1,14 @@
 import React from 'react'
-import { useDispatch } from 'react-redux'
 import styled from 'styled-components'
 import CancelIcon from '@material-ui/icons/Cancel'
 import { WIDTH_MOBILE } from '../lib/constants'
-import { closeSettings } from '../modules/ui'
+import { useDispatchUi } from '../contexts/ui/hooks'
 import SettingAccount from './SettingUser'
 
 const Settings = () => {
-  const dispatch = useDispatch()
+  const { closeSettings } = useDispatchUi()
   const onClose = () => {
-    dispatch(closeSettings())
+    closeSettings()
   }
 
   return (

@@ -1,10 +1,13 @@
 import React, { useState, useRef, useEffect } from 'react'
 import styled from 'styled-components'
-import { useSelector, useDispatch } from 'react-redux'
+import { useSelector } from 'react-redux'
 import Add from '@material-ui/icons/Add'
 import { State } from '../modules/index'
 import { useDispatchSocket } from '../contexts/socket/hooks'
-import { inputMessage, modifyMessage, endToEdit } from '../modules/ui'
+import {
+  usePostTextArea,
+  useDispatchPostTextArea
+} from '../contexts/postTextArea/hooks'
 import Button from './atoms/Button'
 import ResizerY from './atoms/ResizerY'
 import TextArea from './atoms/TextArea'
@@ -14,11 +17,8 @@ const HEIGHT_KEY = 'mzm:input:height'
 
 const InputArea = () => {
   const currentRoomId = useSelector((state: State) => state.rooms.currentRoomId)
-  const txt = useSelector((state: State) => state.ui.txt)
-  const editTxt = useSelector((state: State) => state.ui.editTxt)
-  const editId = useSelector((state: State) => state.ui.editId)
-  const inputMode = useSelector((state: State) => state.ui.inputMode)
-  const dispatch = useDispatch()
+  const { txt, editTxt, editId, inputMode } = usePostTextArea()
+  const { inputMessage, endToEdit, modifyMessage } = useDispatchPostTextArea()
   const [rows, setRows] = useState(
     inputMode === 'normal' ? txt.split('\n').length : editTxt.split('\n').length
   )
@@ -46,10 +46,10 @@ const InputArea = () => {
   const submit = () => {
     if (inputMode === 'normal') {
       sendMessage(txt, currentRoomId)
-      dispatch(inputMessage(''))
+      inputMessage('')
     } else if (inputMode === 'edit') {
       sendModifyMessage(editTxt, editId)
-      dispatch(endToEdit())
+      endToEdit()
     }
     setRows(1)
   }
@@ -70,9 +70,9 @@ const InputArea = () => {
   const onChange = (e) => {
     const value = e.target.value
     if (inputMode === 'normal') {
-      dispatch(inputMessage(value))
+      inputMessage(value)
     } else if (inputMode === 'edit') {
-      dispatch(modifyMessage(value))
+      modifyMessage(value)
     }
     setRows(value.split('\n').length)
   }
@@ -109,7 +109,7 @@ const InputArea = () => {
           <div className="button-area">
             <div style={{ flex: '1' }}></div>
             {inputMode === 'edit' && (
-              <CancelButton onClick={() => dispatch(endToEdit())}>
+              <CancelButton onClick={() => endToEdit()}>
                 キャンセル
               </CancelButton>
             )}

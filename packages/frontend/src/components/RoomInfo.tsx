@@ -5,7 +5,7 @@ import Home from '@material-ui/icons/Home'
 import Person from '@material-ui/icons/Person'
 import ExpandMore from '@material-ui/icons/ExpandMore'
 import { State } from '../modules/index'
-import { openUserDetail } from '../modules/ui'
+import { useDispatchUi } from '../contexts/ui/hooks'
 import { toggleRoomSetting, getUsers } from '../modules/rooms'
 import { WIDTH_MOBILE } from '../lib/constants'
 import ModalUsersList from './ModalUsersList'
@@ -21,6 +21,7 @@ const RoomInfo = () => {
   const iconUrl = useSelector((state: State) => state.rooms.currentRoomIcon)
   const expand = useSelector((state: State) => state.rooms.openRoomSetting)
   const users = useSelector((state: State) => state.rooms.users.byId[id])
+  const { openUserDetail } = useDispatchUi()
   const [open, setOpen] = useState(false)
 
   const name = _name || ''
@@ -32,7 +33,7 @@ const RoomInfo = () => {
   }, [id])
 
   const clickUser = (user) => {
-    dispatch(openUserDetail(user.id, user.account, user.icon))
+    openUserDetail(user.id, user.account, user.icon)
   }
 
   const userIcons = (users?.users || [])
