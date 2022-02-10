@@ -1,18 +1,16 @@
 import React, { useRef, useEffect } from 'react'
-import { useSelector } from 'react-redux'
 import styled from 'styled-components'
-import { State } from '../modules/index'
 import { useDispatchSocket } from '../contexts/socket/hooks'
+import { useRooms } from '../contexts/rooms/hooks'
 import MessageElement from './Message'
 
 const Messages = ({ className }) => {
-  const currentRoomId = useSelector((state: State) => state.rooms.currentRoomId)
-  const currentRoom = useSelector(
-    (state: State) => state.rooms.rooms.byId[currentRoomId]
-  )
-  const scrollTargetIndex = useSelector(
-    (state: State) => state.rooms.scrollTargetIndex
-  )
+  const {
+    currentRoomId,
+    rooms: { byId },
+    scrollTargetIndex
+  } = useRooms()
+  const currentRoom = byId[currentRoomId]
   const wrapRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const topRef = useRef<HTMLDivElement>(null)

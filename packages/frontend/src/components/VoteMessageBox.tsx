@@ -3,7 +3,7 @@ import { useSelector } from 'react-redux'
 import styled from 'styled-components'
 import Add from '@material-ui/icons/Add'
 import Clear from '@material-ui/icons/Clear'
-import { State } from '../modules/index'
+import { useRooms } from '../contexts/rooms/hooks'
 import { useDispatchSocket } from '../contexts/socket/hooks'
 import TextArea from './atoms/TextArea'
 import InputText from './atoms/InputText'
@@ -59,7 +59,7 @@ const VoteMessageBox = ({
   onSave: (e: React.MouseEvent) => void
   onCancel: (e: React.MouseEvent) => void
 }) => {
-  const currentRoomId = useSelector((state: State) => state.rooms.currentRoomId)
+  const { currentRoomId } = useRooms()
   const [text, setText] = useState('候補日')
   const [questions, setQuestions] = useState<string[]>(['4/1', '4/2', '4/3'])
   const { sendMessage } = useDispatchSocket()

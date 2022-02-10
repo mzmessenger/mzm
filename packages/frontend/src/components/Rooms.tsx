@@ -1,10 +1,8 @@
 import React, { useState, useCallback } from 'react'
 import styled from 'styled-components'
-import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { State, store } from '../modules/index'
-import { changeRoom, changeRoomOrder } from '../modules/rooms'
-import { Room } from '../modules/rooms.types'
+import { useRooms, useDispatchRooms } from '../contexts/rooms/hooks'
+import { Room } from '../contexts/rooms/constants'
 import { useDispatchSocket } from '../contexts/socket/hooks'
 import { useDispatchUi } from '../contexts/ui/hooks'
 import RoomElem from './RoomElem'
@@ -64,18 +62,19 @@ const DropZone = ({
 }
 
 const Rooms = () => {
-  const dispatch = useDispatch()
   const navigate = useNavigate()
-  const roomIds = useSelector((state: State) => state.rooms.rooms.allIds)
-  const currentRoomId = useSelector((state: State) => state.rooms.currentRoomId)
-  const rooms = useSelector((state: State) => state.rooms.rooms.byId)
+  const {
+    rooms: { allIds, byId },
+    currentRoomId
+  } = useRooms()
+  const { changeRoom, changeRoomOrder } = useDispatchRooms()
   const { sortRoom, getMessages, readMessages } = useDispatchSocket()
   const { closeMenu } = useDispatchUi()
 
   const onClick = useCallback((e: React.MouseEvent, room: Room) => {
     e.preventDefault()
     navigate(`/rooms/${room.name}`)
-    changeRoom(room.id, getMessages, closeMenu)(dispatch, store.getState)
+    changeRoom(room.id, getMessages, closeMenu)
     readMessages(room.id)
   }, [])
 
@@ -85,27 +84,27 @@ const Rooms = () => {
 
       const moveId = e.dataTransfer.getData('text')
       const roomOrder = [
-        ...roomIds.filter((e, i) => i !== roomIds.indexOf(moveId))
+        ...allIds.filter((e, i) => i !== allIds.indexOf(moveId))
       ]
       roomOrder.splice(
-        roomIds.indexOf(e.currentTarget.getAttribute('attr-room-id')),
+        allIds.indexOf(e.currentTarget.getAttribute('attr-room-id')),
         0,
         moveId
       )
 
-      changeRoomOrder(roomOrder, sortRoom)(dispatch, store.getState)
+      changeRoomOrder(roomOrder, sortRoom)
 
       e.dataTransfer.clearData()
     },
-    [roomIds]
+    [allIds]
   )
 
   return (
     <Wrap>
-      {roomIds.map((r) => (
+      {allIds.map((r) => (
         <DropZone
           key={r}
-          room={rooms[r]}
+          room={byId[r]}
           currentRoomId={currentRoomId}
           onDrop={onDrop}
           onClick={onClick}

@@ -1,22 +1,10 @@
 import { useEffect } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate, useLocation } from 'react-router-dom'
-import { store, State } from './modules/index'
 import { useSocket, useDispatchSocket } from './contexts/socket/hooks'
 import { useUser, useDispatchUser } from './contexts/user/hooks'
 import { getRoomName } from './lib/util'
 import { useDispatchUi } from './contexts/ui/hooks'
-import {
-  receiveRooms,
-  receiveMessage,
-  receiveMessages,
-  enterSuccess,
-  alreadyRead,
-  reloadMessage,
-  setRoomOrder,
-  changeRoom,
-  enterRoom
-} from './modules/rooms'
+import { useRooms, useDispatchRooms } from './contexts/rooms/hooks'
 import { useDispatchMessages } from './contexts/messages/hooks'
 import { SendSocketCmd } from './type'
 import { sendSocket } from './lib/util'
@@ -27,9 +15,8 @@ const useRouter = () => {
   const { fetchMyInfo } = useDispatchUser()
   const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
   const { closeMenu } = useDispatchUi()
-  const currentRoomName = useSelector((state: State) => {
-    return state.rooms.currentRoomName
-  })
+  const { currentRoomName } = useRooms()
+  const { enterRoom } = useDispatchRooms()
 
   useEffect(() => {
     if (login && currentRoomName === '') {
@@ -89,21 +76,24 @@ const useWebSocket = (url: string) => {
   const { closeMenu } = useDispatchUi()
   const { addMessage, modifyMessage, addMessages, updateIine, setVoteAnswers } =
     useDispatchMessages()
-
-  const dispatch = useDispatch()
-  const currentRoomName = useSelector((state: State) => {
-    return state.rooms.currentRoomName
-  })
-  const currentRoomId = useSelector((state: State) => {
-    return state.rooms.currentRoomId
-  })
+  const { currentRoomId, currentRoomName } = useRooms()
+  const {
+    receiveRooms,
+    receiveMessage,
+    receiveMessages,
+    reloadMessage,
+    changeRoom,
+    enterSuccess,
+    alreadyRead,
+    setRoomOrder
+  } = useDispatchRooms()
 
   useEffect(() => {
     if (!ws || !me) {
       return
     }
     setOnMessageHandlers(ws, messageHandlers)
-  }, [ws, me, location])
+  }, [ws, me, location, currentRoomId, currentRoomName])
 
   const messageHandlers: Parameters<typeof setOnMessageHandlers>[1] = {
     'socket:connection': ({ ws }) => {
@@ -121,15 +111,9 @@ const useWebSocket = (url: string) => {
         getMessages(currentRoomId, ws)
       }
       const gMessages = (roomId: string) => getMessages(roomId, ws)
-      receiveRooms(
-        message.rooms,
-        message.roomOrder,
-        store.getState().rooms.currentRoomId,
-        gMessages
-      )(dispatch, store.getState)
+      receiveRooms(message.rooms, message.roomOrder, currentRoomId, gMessages)
     },
     'message:receive': ({ message }) => {
-      console.log(me)
       addMessage(message.message).then(() => {
         receiveMessage(
           message.message.id,
@@ -137,12 +121,12 @@ const useWebSocket = (url: string) => {
           message.room,
           me,
           readMessages
-        )(dispatch, store.getState)
+        )
       })
     },
     'message:modify': ({ message }) => {
       modifyMessage(message.message).then(() => {
-        dispatch(reloadMessage(message.room))
+        reloadMessage(message.room)
       })
     },
     'messages:room': ({ message }) => {
@@ -151,7 +135,7 @@ const useWebSocket = (url: string) => {
           messageIds: message.messages.map((m) => m.id),
           room: message.room,
           existHistory: message.existHistory
-        })(dispatch)
+        })
       })
     },
     'rooms:enter:success': ({ ws, message }) => {
@@ -159,7 +143,7 @@ const useWebSocket = (url: string) => {
       if (currentPathRoomName !== message.name) {
         navigate(`/rooms/${message.name}`)
         const gMesssages = (roomId: string) => getMessages(roomId, ws)
-        changeRoom(message.id, gMesssages, closeMenu)(dispatch, store.getState)
+        changeRoom(message.id, gMesssages, closeMenu)
       }
       const gRooms = () => getRooms(ws)
       const gMesssages = (roomId: string) => getMessages(roomId, ws)
@@ -169,21 +153,21 @@ const useWebSocket = (url: string) => {
         message.iconUrl,
         gRooms,
         gMesssages
-      )(dispatch, store.getState)
+      )
     },
     'rooms:enter:fail': () => {
       navigate('/')
       getRooms()
     },
     'rooms:read': ({ message }) => {
-      dispatch(alreadyRead(message.room))
+      alreadyRead(message.room)
     },
     'message:iine': ({ message }) => {
       updateIine(message.id, message.iine)
-      dispatch(reloadMessage(message.room))
+      reloadMessage(message.room)
     },
     'rooms:sort:success': ({ message }) => {
-      setRoomOrder(message.roomOrder)(dispatch, store.getState)
+      setRoomOrder(message.roomOrder)
     },
     'client:reload': () => {
       window.location.reload()

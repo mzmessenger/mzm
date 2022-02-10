@@ -1,8 +1,7 @@
 import React, { useState, useRef, useEffect } from 'react'
 import styled from 'styled-components'
-import { useSelector } from 'react-redux'
 import Add from '@material-ui/icons/Add'
-import { State } from '../modules/index'
+import { useRooms } from '../contexts/rooms/hooks'
 import { useDispatchSocket } from '../contexts/socket/hooks'
 import {
   usePostTextArea,
@@ -16,7 +15,7 @@ import VoteMessageBox from './VoteMessageBox'
 const HEIGHT_KEY = 'mzm:input:height'
 
 const InputArea = () => {
-  const currentRoomId = useSelector((state: State) => state.rooms.currentRoomId)
+  const { currentRoomId } = useRooms()
   const { txt, editTxt, editId, inputMode } = usePostTextArea()
   const { inputMessage, endToEdit, modifyMessage } = useDispatchPostTextArea()
   const [rows, setRows] = useState(

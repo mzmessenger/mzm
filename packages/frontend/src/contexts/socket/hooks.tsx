@@ -53,7 +53,6 @@ export const useSocketForContext = () => {
       throw new Error('no url')
     }
     setUrl(options.url)
-    setMessageHandlers(options.messageHandlers)
     connect(options.url, options.messageHandlers)
   }
 
@@ -86,6 +85,7 @@ export const useSocketForContext = () => {
   }
 
   const setOnMessageHandlers = (ws: WebSocket, handlers: MessageHandlers) => {
+    setMessageHandlers(handlers)
     ws.onmessage = (e: MessageEvent<any>): any => {
       if (!e) {
         return
