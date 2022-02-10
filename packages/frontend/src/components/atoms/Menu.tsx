@@ -4,6 +4,7 @@ import styled from 'styled-components'
 import Settings from '@material-ui/icons/Settings'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import { State } from '../../modules/index'
+import { useSearch } from '../../contexts/search/hooks'
 import { closeMenu, openSettings } from '../../modules/ui'
 import ResizerX from './ResizerX'
 import MenuIcon from './MobileMenuIcon'
@@ -19,7 +20,7 @@ const Menu = () => {
   const dispatch = useDispatch()
   const menuStatus = useSelector((state: State) => state.ui.menuStatus)
   const device = useSelector((state: State) => state.ui.device)
-  const query = useSelector((state: State) => state.search.query)
+  const { query } = useSearch()
   const className = menuStatus === 'open' ? 'menu open' : 'menu'
   const [width, _setWidth] = useState(
     localStorage.getItem(WIDTH_KEY)
