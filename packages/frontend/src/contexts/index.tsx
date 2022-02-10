@@ -4,6 +4,7 @@ import { UserProvider } from './user'
 import { SearchProvider } from './search'
 import { UiProvider } from './ui'
 import { PostTextAreaProvider } from './postTextArea'
+import { MessagesProvider } from './messages'
 
 export const Provider: React.FC = ({ children }) => {
   return (
@@ -11,7 +12,9 @@ export const Provider: React.FC = ({ children }) => {
       <UserProvider>
         <UiProvider>
           <SearchProvider>
-            <PostTextAreaProvider>{children}</PostTextAreaProvider>
+            <MessagesProvider>
+              <PostTextAreaProvider>{children}</PostTextAreaProvider>
+            </MessagesProvider>
           </SearchProvider>
         </UiProvider>
       </UserProvider>

@@ -1,10 +1,8 @@
 import React, { useState, useEffect } from 'react'
 import styled from 'styled-components'
-import { useDispatch, useSelector } from 'react-redux'
 import { useDispatchSocket } from '../../contexts/socket/hooks'
 import { useUser } from '../../contexts/user/hooks'
-import { State, store } from '../../modules/index'
-import { sendVoteAnswer, removeVoteAnswer } from '../../modules/messages'
+import { useMessages, useDispatchMessages } from '../../contexts/messages/hooks'
 import VoteAnswer from './VoteAnswer'
 import { VoteAnswerTypeEnum, Message } from '../../type'
 
@@ -70,15 +68,17 @@ const Question = ({
   index: number
 }) => {
   const { me } = useUser()
-  const dispatch = useDispatch()
-  const answers = useSelector(
-    (state: State) => state.messages.voteAnswers.byId[messageId][index] ?? []
-  )
+  const {
+    voteAnswers: { byId }
+  } = useMessages()
+  const { removeVoteAnswer, sendVoteAnswer } = useDispatchMessages()
   const [checked, setChecked] = useState<number>(null)
   const {
     removeVoteAnswer: removeVoteAnswerSocket,
     sendVoteAnswer: sendVoteAnswerSocket
   } = useDispatchSocket()
+
+  const answers = byId[messageId][index] ?? []
   const name = `${text}-${index}`
 
   const ok = answers.filter((e) => e.answer === 0)
@@ -92,22 +92,11 @@ const Question = ({
   const onClickRadio = (e: React.MouseEvent<HTMLInputElement>) => {
     const answer = parseInt((e.target as HTMLInputElement).value, 10)
     if (answer === checked) {
-      removeVoteAnswer(
-        messageId,
-        index,
-        me,
-        removeVoteAnswerSocket
-      )(dispatch, store.getState)
+      removeVoteAnswer(messageId, index, me, removeVoteAnswerSocket)
       setChecked(null)
     } else {
       const answer = parseInt((e.target as HTMLInputElement).value, 10)
-      sendVoteAnswer(
-        messageId,
-        index,
-        answer,
-        me,
-        sendVoteAnswerSocket
-      )(dispatch, store.getState)
+      sendVoteAnswer(messageId, index, answer, me, sendVoteAnswerSocket)
       setChecked(answer)
     }
   }

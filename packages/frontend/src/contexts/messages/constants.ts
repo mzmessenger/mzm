@@ -1,11 +1,11 @@
-import { Message, VoteAnswer } from '../type'
+import { Message, VoteAnswer } from '../../type'
 
-export type MessagesState = {
+export type State = {
   messages: {
     byId: {
       [key: string]: Message
     }
-    allIds: string[]
+    allIds: string[] | readonly []
   }
   voteAnswers: {
     byId: {
@@ -16,7 +16,17 @@ export type MessagesState = {
   }
 }
 
-export const MessagesActions = {
+export const INITIAL_STATE: State = {
+  messages: {
+    byId: {},
+    allIds: []
+  },
+  voteAnswers: {
+    byId: {}
+  }
+} as const
+
+export const Actions = {
   AddMessages: 'messageAction:addMessages',
   AddMessage: 'messageAction:addMessage',
   ModifyMessageSuccess: 'messageAction:modifyMessageSuccess',
@@ -26,28 +36,28 @@ export const MessagesActions = {
   RemoveVoteAnswer: 'messageAction:removeVoteAnswer'
 } as const
 
-export type MessagesAction =
+export type ActionType =
   | {
-      type: typeof MessagesActions.AddMessages
+      type: typeof Actions.AddMessages
       payload: { messages: Message[] }
     }
   | {
-      type: typeof MessagesActions.AddMessage
+      type: typeof Actions.AddMessage
       payload: { message: Message }
     }
   | {
-      type: typeof MessagesActions.ModifyMessageSuccess
+      type: typeof Actions.ModifyMessageSuccess
       payload: { message: Message }
     }
   | {
-      type: typeof MessagesActions.UpdateIine
+      type: typeof Actions.UpdateIine
       payload: {
         message: string
         iine: number
       }
     }
   | {
-      type: typeof MessagesActions.SetVoteAnswers
+      type: typeof Actions.SetVoteAnswers
       payload: {
         messageId: string
         answers: {
@@ -56,7 +66,7 @@ export type MessagesAction =
       }
     }
   | {
-      type: typeof MessagesActions.SendVoteAnswer
+      type: typeof Actions.SendVoteAnswer
       payload: {
         messageId: string
         userId: string
@@ -64,7 +74,7 @@ export type MessagesAction =
       }
     }
   | {
-      type: typeof MessagesActions.RemoveVoteAnswer
+      type: typeof Actions.RemoveVoteAnswer
       payload: {
         messageId: string
         userId: string

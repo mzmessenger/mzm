@@ -1,12 +1,11 @@
 import React, { useRef, useEffect, useState } from 'react'
-import { useSelector } from 'react-redux'
 import dayjs from 'dayjs'
 import styled from 'styled-components'
 import CreateIcon from '@material-ui/icons/Create'
 import ThumbUpIcon from '@material-ui/icons/ThumbUp'
 import { sanitize } from '../lib/sanitize'
 import { isReplied } from '../lib/util'
-import { State } from '../modules/index'
+import { useMessages } from '../contexts/messages/hooks'
 import { useUser } from '../contexts/user/hooks'
 import { useDispatchPostTextArea } from '../contexts/postTextArea/hooks'
 import { useDispatchSocket } from '../contexts/socket/hooks'
@@ -109,11 +108,13 @@ const PresentationalMessage = ({
 
 const MessageElement = ({ id }: { id: string }) => {
   const { me } = useUser()
+  const {
+    messages: { byId }
+  } = useMessages()
   const { startToEdit } = useDispatchPostTextArea()
-  const messageObj = useSelector(
-    (state: State) => state.messages.messages.byId[id]
-  )
   const { incrementIine } = useDispatchSocket()
+
+  const messageObj = byId[id]
 
   const iineHandler = () => {
     incrementIine(id)

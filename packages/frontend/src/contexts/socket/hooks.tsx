@@ -46,8 +46,7 @@ export const useSocketForContext = () => {
     INIT_RECONNECT_INTERVAL
   )
   const [reconnectAttempts, setReconnectAttempts] = useState<number>(0)
-  const [messageHandlers, setMessageHandlers] =
-    useState<InitOptions['messageHandlers']>()
+  const [messageHandlers, setMessageHandlers] = useState<MessageHandlers>()
 
   const init = (options: InitOptions) => {
     if (!options.url || options.url === '') {
@@ -86,6 +85,32 @@ export const useSocketForContext = () => {
     setReconnectInterval(interval)
   }
 
+  const setOnMessageHandlers = (ws: WebSocket, handlers: MessageHandlers) => {
+    ws.onmessage = (e: MessageEvent<any>): any => {
+      if (!e) {
+        return
+      }
+      if (e.data === 'ping') {
+        ws.send('pong')
+        return
+      }
+      try {
+        const parsed: ReceiveSocketMessage = JSON.parse(e.data)
+        if (handlers[parsed.cmd]) {
+          const handler = handlers[parsed.cmd]
+          const args: HandlerArgs<typeof parsed.cmd> = {
+            ws: ws,
+            message: parsed
+          }
+          // @todo
+          handler(args as any)
+        }
+      } catch (err) {
+        console.error(err)
+      }
+    }
+  }
+
   const connect = (connectUrl: string, handlers: MessageHandlers) => {
     if (ws) {
       return
@@ -102,29 +127,7 @@ export const useSocketForContext = () => {
       setReconnectAttempts(0)
     })
 
-    socketInstance.addEventListener('message', (e) => {
-      if (!e) {
-        return
-      }
-      if (e.data === 'ping') {
-        socketInstance.send('pong')
-        return
-      }
-      try {
-        const parsed: ReceiveSocketMessage = JSON.parse(e.data)
-        if (handlers[parsed.cmd]) {
-          const handler = handlers[parsed.cmd]
-          const args: HandlerArgs<typeof parsed.cmd> = {
-            ws: socketInstance,
-            message: parsed
-          }
-          // @todo
-          handler(args as any)
-        }
-      } catch (err) {
-        console.error(err)
-      }
-    })
+    setOnMessageHandlers(socketInstance, handlers)
 
     socketInstance.addEventListener('close', (e) => {
       console.log('ws close:', e)
@@ -251,6 +254,7 @@ export const useSocketForContext = () => {
       ws
     },
     init,
+    setOnMessageHandlers,
     connect,
     reconnect,
     getMessages,
