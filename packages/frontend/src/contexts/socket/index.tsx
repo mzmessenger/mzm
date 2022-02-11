@@ -16,8 +16,8 @@ export const SocketProvider: React.FC = ({ children }) => {
   const { state, ...dispatchActions } = useSocketForContext()
 
   return (
-    <SocketContext.Provider value={{ ...state }}>
-      <SocketDispatchContext.Provider value={{ ...dispatchActions }}>
+    <SocketContext.Provider value={state}>
+      <SocketDispatchContext.Provider value={dispatchActions}>
         {children}
       </SocketDispatchContext.Provider>
     </SocketContext.Provider>

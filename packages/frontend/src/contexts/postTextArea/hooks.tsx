@@ -1,4 +1,4 @@
-import { useContext, useReducer } from 'react'
+import { useContext, useReducer, useCallback } from 'react'
 import { PostTextAreaContext, PostTextAreaDispatchContext } from './index'
 import { reducer } from './reducer'
 import { INITIAL_STATE, Actions } from './constants'
@@ -32,9 +32,9 @@ export const usePostTextAreaForContext = () => {
 
   return {
     state,
-    startToEdit,
-    endToEdit,
-    modifyMessage,
-    inputMessage
+    startToEdit: useCallback(startToEdit, []),
+    endToEdit: useCallback(endToEdit, []),
+    modifyMessage: useCallback(modifyMessage, []),
+    inputMessage: useCallback(inputMessage, [])
   } as const
 }

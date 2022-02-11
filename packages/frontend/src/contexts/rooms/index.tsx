@@ -16,8 +16,8 @@ export const RoomsProvider: React.FC = ({ children }) => {
   const { state, ...dispatchActions } = useRoomsForContext()
 
   return (
-    <RoomsContext.Provider value={{ ...state }}>
-      <RoomsDispatchContext.Provider value={{ ...dispatchActions }}>
+    <RoomsContext.Provider value={state}>
+      <RoomsDispatchContext.Provider value={dispatchActions}>
         {children}
       </RoomsDispatchContext.Provider>
     </RoomsContext.Provider>

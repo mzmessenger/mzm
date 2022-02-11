@@ -19,8 +19,8 @@ export const MessagesProvider: React.FC = ({ children }) => {
   const { state, ...dispatchActions } = useMessagesForContext()
 
   return (
-    <MessagesContext.Provider value={{ ...state }}>
-      <MessagesDispatchContext.Provider value={{ ...dispatchActions }}>
+    <MessagesContext.Provider value={state}>
+      <MessagesDispatchContext.Provider value={dispatchActions}>
         {children}
       </MessagesDispatchContext.Provider>
     </MessagesContext.Provider>

@@ -7,10 +7,8 @@ export const reducer = (
 ): State => {
   switch (action.type) {
     case Actions.Onresize:
-      return {
-        ...state,
-        device: action.payload.innerWidth <= WIDTH_MOBILE ? 'mobile' : 'pc'
-      }
+      state.device = action.payload.innerWidth <= WIDTH_MOBILE ? 'mobile' : 'pc'
+      return state
     case Actions.OpenMenu:
       return {
         ...state,

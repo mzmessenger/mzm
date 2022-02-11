@@ -1,4 +1,4 @@
-import { useState, useContext } from 'react'
+import { useState, useContext, useMemo, useCallback } from 'react'
 import { SearchContext, SearchDispatchContext } from './index'
 
 export const useSearch = () => {
@@ -16,6 +16,14 @@ export const userSearchForContext = () => {
   const [results, setResults] = useState<
     { id: string; name: string; iconUrl: string }[]
   >([])
+
+  const state = useMemo(() => {
+    return {
+      query,
+      results,
+      total
+    }
+  }, [query, results, total])
 
   const cancel = () => {
     setQuery('')
@@ -78,13 +86,9 @@ export const userSearchForContext = () => {
   }
 
   return {
-    state: {
-      query,
-      results,
-      total
-    },
-    cancel,
-    search,
-    searchNext
+    state,
+    cancel: useCallback(cancel, []),
+    search: useCallback(search, []),
+    searchNext: useCallback(searchNext, [])
   } as const
 }

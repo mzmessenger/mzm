@@ -1,4 +1,4 @@
-import { useContext, useReducer } from 'react'
+import { useContext, useReducer, useCallback } from 'react'
 import { ReceiveRoom } from '../../type'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useDispatchUi } from '../ui/hooks'
@@ -313,24 +313,24 @@ export const useRoomsForContext = () => {
 
   return {
     state,
-    getRoomMessages,
-    createRoom,
-    changeRoom,
-    enterRoom,
-    exitRoom,
-    receiveRooms,
-    setRoomOrder,
-    changeRoomOrder,
-    receiveMessage,
-    receiveMessages,
-    enterSuccess,
-    getUsers,
-    getNextUsers,
-    alreadyRead,
-    reloadMessage,
-    toggleRoomSetting,
-    closeRoomSetting,
-    uploadIcon,
-    setRoomStatus
+    getRoomMessages: useCallback(getRoomMessages, []),
+    createRoom: useCallback(createRoom, []),
+    changeRoom: useCallback(changeRoom, []),
+    enterRoom: useCallback(enterRoom, []),
+    exitRoom: useCallback(exitRoom, []),
+    receiveRooms: useCallback(receiveRooms, []),
+    setRoomOrder: useCallback(setRoomOrder, []),
+    changeRoomOrder: useCallback(changeRoomOrder, []),
+    receiveMessage: useCallback(receiveMessage, []),
+    receiveMessages: useCallback(receiveMessages, []),
+    enterSuccess: useCallback(enterSuccess, []),
+    getUsers: useCallback(getUsers, []),
+    getNextUsers: useCallback(getNextUsers, []),
+    alreadyRead: useCallback(alreadyRead, []),
+    reloadMessage: useCallback(reloadMessage, []),
+    toggleRoomSetting: useCallback(toggleRoomSetting, []),
+    closeRoomSetting: useCallback(closeRoomSetting, []),
+    uploadIcon: useCallback(uploadIcon, []),
+    setRoomStatus: useCallback(setRoomStatus, [])
   } as const
 }

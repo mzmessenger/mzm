@@ -1,6 +1,7 @@
 import React, { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useApp } from './App.hooks'
+import { useUser } from './contexts/user/hooks'
 
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const url = `${protocol}//${window.location.host}/socket`
@@ -9,9 +10,14 @@ const WithSuspense: React.FC = ({ children }) => {
   return <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
 }
 
-const App = () => {
-  const { login } = useApp(url)
+const Init = React.memo(() => {
+  useApp(url)
+  return <></>
+})
 
+const App = () => {
+  const { login } = useUser()
+  //   const { login } = useApp(url)
   const Top = login
     ? lazy(() => import('./components/pages/Top'))
     : lazy(() => import('./components/pages/Login'))
@@ -80,6 +86,7 @@ const App = () => {
           }
         />
       </Routes>
+      <Init />
     </>
   )
 }

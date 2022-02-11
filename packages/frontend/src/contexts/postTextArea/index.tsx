@@ -21,8 +21,8 @@ export const PostTextAreaProvider: React.FC = ({ children }) => {
   const { state, ...dispatchActions } = usePostTextAreaForContext()
 
   return (
-    <PostTextAreaContext.Provider value={{ ...state }}>
-      <PostTextAreaDispatchContext.Provider value={{ ...dispatchActions }}>
+    <PostTextAreaContext.Provider value={state}>
+      <PostTextAreaDispatchContext.Provider value={dispatchActions}>
         {children}
       </PostTextAreaDispatchContext.Provider>
     </PostTextAreaContext.Provider>

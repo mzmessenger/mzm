@@ -19,8 +19,8 @@ export const SearchProvider: React.FC = ({ children }) => {
   const { state, ...dispatchActions } = userSearchForContext()
 
   return (
-    <SearchContext.Provider value={{ ...state }}>
-      <SearchDispatchContext.Provider value={{ ...dispatchActions }}>
+    <SearchContext.Provider value={state}>
+      <SearchDispatchContext.Provider value={dispatchActions}>
         {children}
       </SearchDispatchContext.Provider>
     </SearchContext.Provider>

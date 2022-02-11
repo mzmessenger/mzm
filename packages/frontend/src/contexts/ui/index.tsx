@@ -14,8 +14,8 @@ export const UiProvider: React.FC = ({ children }) => {
   const { state, ...dispatchActions } = useUiForContext()
 
   return (
-    <UiContext.Provider value={{ ...state }}>
-      <UiDispatchContext.Provider value={{ ...dispatchActions }}>
+    <UiContext.Provider value={state}>
+      <UiDispatchContext.Provider value={dispatchActions}>
         {children}
       </UiDispatchContext.Provider>
     </UiContext.Provider>

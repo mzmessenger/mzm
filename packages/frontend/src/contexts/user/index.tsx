@@ -14,8 +14,8 @@ export const UserProvider: React.FC = ({ children }) => {
   const { state, ...dispatchActions } = useUserForContext()
 
   return (
-    <UserContext.Provider value={{ ...state }}>
-      <UserDispatchContext.Provider value={{ ...dispatchActions }}>
+    <UserContext.Provider value={state}>
+      <UserDispatchContext.Provider value={dispatchActions}>
         {children}
       </UserDispatchContext.Provider>
     </UserContext.Provider>

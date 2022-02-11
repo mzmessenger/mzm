@@ -1,4 +1,4 @@
-import { useContext, useReducer } from 'react'
+import { useContext, useReducer, useCallback } from 'react'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useUser } from '../user/hooks'
 import { ReceiveMessage, Message, VoteAnswer } from '../../type'
@@ -142,14 +142,14 @@ export const useMessagesForContext = () => {
 
   return {
     state,
-    convertVoteAnswerByIndex,
-    convertMessage,
-    addMessages,
-    addMessage,
-    modifyMessage,
-    updateIine,
-    setVoteAnswers,
-    sendVoteAnswer,
-    removeVoteAnswer
+    convertVoteAnswerByIndex: useCallback(convertVoteAnswerByIndex, []),
+    convertMessage: useCallback(convertMessage, []),
+    addMessages: useCallback(addMessages, []),
+    addMessage: useCallback(addMessage, []),
+    modifyMessage: useCallback(modifyMessage, []),
+    updateIine: useCallback(updateIine, []),
+    setVoteAnswers: useCallback(setVoteAnswers, []),
+    sendVoteAnswer: useCallback(sendVoteAnswer, []),
+    removeVoteAnswer: useCallback(removeVoteAnswer, [])
   } as const
 }

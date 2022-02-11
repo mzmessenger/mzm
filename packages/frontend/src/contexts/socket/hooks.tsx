@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react'
+import { useContext, useState, useMemo, useCallback } from 'react'
 import { sendSocket } from '../../lib/util'
 import {
   SendSocketCmd,
@@ -48,6 +48,12 @@ export const useSocketForContext = () => {
   const [reconnectAttempts, setReconnectAttempts] = useState<number>(0)
   const [messageHandlers, setMessageHandlers] = useState<MessageHandlers>()
 
+  const state = useMemo(() => {
+    return {
+      ws
+    }
+  }, [ws])
+
   const init = (options: InitOptions) => {
     if (!options.url || options.url === '') {
       throw new Error('no url')
@@ -56,19 +62,23 @@ export const useSocketForContext = () => {
     connect(options.url, options.messageHandlers)
   }
 
-  const close = () => {
-    if (
-      ws &&
-      ws.readyState !== WebSocket.CLOSING &&
-      ws.readyState !== WebSocket.CLOSED
-    ) {
-      // ws.close()
-    }
-    setWs(null)
-  }
+  const close = useCallback(
+    (socket: WebSocket) => {
+      if (
+        socket &&
+        socket.readyState !== WebSocket.CLOSING &&
+        socket.readyState !== WebSocket.CLOSED
+      ) {
+        // ws.close()
+      }
+      setWs(null)
+    },
+    [setWs]
+  )
 
-  const reconnect = (e: CloseEvent) => {
-    close()
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  const reconnect = () => {
+    close(ws)
     // @todo max recoonect
     const timer = setTimeout(() => {
       connect(url, messageHandlers)
@@ -84,6 +94,7 @@ export const useSocketForContext = () => {
     setReconnectInterval(interval)
   }
 
+  // eslint-disable-next-line react-hooks/exhaustive-deps
   const setOnMessageHandlers = (ws: WebSocket, handlers: MessageHandlers) => {
     setMessageHandlers(handlers)
     ws.onmessage = (e: MessageEvent<any>): any => {
@@ -111,37 +122,50 @@ export const useSocketForContext = () => {
     }
   }
 
-  const connect = (connectUrl: string, handlers: MessageHandlers) => {
-    if (ws) {
-      return
-    }
-    const socketInstance = new WebSocket(connectUrl)
-    setWs(socketInstance)
-
-    socketInstance.addEventListener('open', () => {
-      if (reconnectTimer) {
-        clearTimeout(reconnectTimer)
+  const connect = useCallback(
+    (connectUrl: string, handlers: MessageHandlers) => {
+      if (ws) {
+        return
       }
-      setReconnectTimer(null)
-      setReconnectInterval(INIT_RECONNECT_INTERVAL)
-      setReconnectAttempts(0)
-    })
+      const socketInstance = new WebSocket(connectUrl)
+      setWs(socketInstance)
 
-    setOnMessageHandlers(socketInstance, handlers)
+      socketInstance.addEventListener('open', () => {
+        if (reconnectTimer) {
+          clearTimeout(reconnectTimer)
+        }
+        setReconnectTimer(null)
+        setReconnectInterval(INIT_RECONNECT_INTERVAL)
+        setReconnectAttempts(0)
+      })
 
-    socketInstance.addEventListener('close', (e) => {
-      console.log('ws close:', e)
-      try {
-        reconnect(e)
-      } catch (err) {
-        console.error(err)
-      }
-    })
+      setOnMessageHandlers(socketInstance, handlers)
 
-    socketInstance.addEventListener('error', () => {
-      close()
-    })
-  }
+      socketInstance.addEventListener('close', (e) => {
+        console.log('ws close:', e)
+        try {
+          reconnect()
+        } catch (err) {
+          console.error(err)
+        }
+      })
+
+      socketInstance.addEventListener('error', () => {
+        close(socketInstance)
+      })
+    },
+    [
+      ws,
+      setWs,
+      setReconnectTimer,
+      setReconnectInterval,
+      setReconnectAttempts,
+      close,
+      reconnect,
+      reconnectTimer,
+      setOnMessageHandlers
+    ]
+  )
 
   const getMessages = (roomId: string, socket?: WebSocket) => {
     const sendTo = socket ?? ws
@@ -250,25 +274,33 @@ export const useSocketForContext = () => {
   }
 
   return {
-    state: {
-      ws
-    },
-    init,
+    state,
+    init: useCallback(init, [setUrl, connect]),
     setOnMessageHandlers,
     connect,
-    reconnect,
-    getMessages,
-    getRooms,
-    sortRoom,
-    incrementIine,
-    sendMessage,
-    sendModifyMessage,
-    enterRoom,
-    readMessages,
-    openRoom,
-    closeRoom,
-    getHistory,
-    removeVoteAnswer,
-    sendVoteAnswer
+    reconnect: useCallback(reconnect, [
+      url,
+      ws,
+      connect,
+      setReconnectTimer,
+      setReconnectInterval,
+      close,
+      messageHandlers,
+      reconnectAttempts,
+      reconnectInterval
+    ]),
+    getMessages: useCallback(getMessages, [ws]),
+    getRooms: useCallback(getRooms, [ws]),
+    sortRoom: useCallback(sortRoom, [ws]),
+    incrementIine: useCallback(incrementIine, [ws]),
+    sendMessage: useCallback(sendMessage, [ws]),
+    sendModifyMessage: useCallback(sendModifyMessage, [ws]),
+    enterRoom: useCallback(enterRoom, [ws]),
+    readMessages: useCallback(readMessages, [ws]),
+    openRoom: useCallback(openRoom, [ws]),
+    closeRoom: useCallback(closeRoom, [ws]),
+    getHistory: useCallback(getHistory, [ws]),
+    removeVoteAnswer: useCallback(removeVoteAnswer, [ws]),
+    sendVoteAnswer: useCallback(sendVoteAnswer, [ws])
   } as const
 }

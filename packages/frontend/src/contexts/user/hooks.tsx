@@ -1,4 +1,4 @@
-import { useContext, useState } from 'react'
+import { useContext, useState, useMemo, useCallback } from 'react'
 import { UserContext, UserDispatchContext } from './index'
 
 export const useUser = () => {
@@ -22,6 +22,15 @@ export const useUserForContext = () => {
   const [signupAccount, setSignupAccount] = useState('')
   const [login, setLogin] = useState(false)
   const [me, setMe] = useState<MyInfo>(null)
+
+  const state = useMemo(() => {
+    return {
+      signup,
+      signupAccount,
+      login,
+      me
+    }
+  }, [signup, signupAccount, login, me])
 
   const signupUser = (account: string) => {
     setSignup(true)
@@ -127,18 +136,13 @@ export const useUserForContext = () => {
   }
 
   return {
-    state: {
-      signup,
-      signupAccount,
-      login,
-      me
-    },
-    signupUser,
-    logout,
-    fetchMyInfo,
-    removeTwitter,
-    removeGithub,
-    removeUser,
-    uploadIcon
+    state,
+    signupUser: useCallback(signupUser, []),
+    logout: useCallback(logout, []),
+    fetchMyInfo: useCallback(fetchMyInfo, []),
+    removeTwitter: useCallback(removeTwitter, []),
+    removeGithub: useCallback(removeGithub, []),
+    removeUser: useCallback(removeUser, []),
+    uploadIcon: useCallback(uploadIcon, [])
   } as const
 }

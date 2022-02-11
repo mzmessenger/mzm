@@ -1,10 +1,8 @@
 import React, { useEffect } from 'react'
-import { useDispatch } from 'react-redux'
 import { useDispatchUser } from '../../contexts/user/hooks'
 
 const LoginSuccess = () => {
   const { fetchMyInfo, signupUser } = useDispatchUser()
-  const dispatch = useDispatch()
 
   useEffect(() => {
     fetchMyInfo().then((res) => {
@@ -17,7 +15,7 @@ const LoginSuccess = () => {
           })
       }
     })
-  }, [dispatch])
+  }, [])
 
   return <></>
 }

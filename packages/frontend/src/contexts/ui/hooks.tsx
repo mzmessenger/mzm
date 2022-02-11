@@ -1,4 +1,4 @@
-import { useContext, useReducer } from 'react'
+import { useContext, useReducer, useCallback } from 'react'
 import { UiContext, UiDispatchContext } from './index'
 import { reducer } from './reducer'
 import { INITIAL_STATE, Actions } from './constants'
@@ -44,12 +44,12 @@ export const useUiForContext = () => {
 
   return {
     state,
-    onResize,
-    openMenu,
-    closeMenu,
-    openSettings,
-    closeSettings,
-    openUserDetail,
-    closeUserDetail
+    onResize: useCallback(onResize, []),
+    openMenu: useCallback(openMenu, []),
+    closeMenu: useCallback(closeMenu, []),
+    openSettings: useCallback(openSettings, []),
+    closeSettings: useCallback(closeSettings, []),
+    openUserDetail: useCallback(openUserDetail, []),
+    closeUserDetail: useCallback(closeUserDetail, [])
   } as const
 }
