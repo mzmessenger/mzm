@@ -4,6 +4,7 @@ on:
   push:
     paths:
       - 'packages/frontend/**'
+      - 'packages/package.json'
     branches: [ main ]
   pull_request:
     paths:
@@ -25,7 +26,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm ci -w packages/frontend
+      - run: npm ci
       - run: npm run build-tsc -w packages/frontend
       - run: npm run build -w packages/frontend
       - run: npm test -w packages/frontend
