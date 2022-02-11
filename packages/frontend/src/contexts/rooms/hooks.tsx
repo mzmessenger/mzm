@@ -49,26 +49,29 @@ export const useRoomsForContext = () => {
     return res
   }
 
-  const changeRoom = (
-    roomId: string,
-    getMessages: ReturnType<typeof useDispatchSocket>['getMessages'],
-    closeMenu: ReturnType<typeof useDispatchUi>['closeMenu']
-  ) => {
-    const room = state.rooms.byId[roomId]
-    if (room) {
-      if (!room.receivedMessages && !room.loading) {
-        getMessages(roomId)
-      }
-      dispatch({
-        type: Actions.ChangeRoom,
-        payload: {
-          id: room.id
+  const changeRoom = useCallback(
+    (
+      roomId: string,
+      getMessages: ReturnType<typeof useDispatchSocket>['getMessages'],
+      closeMenu: ReturnType<typeof useDispatchUi>['closeMenu']
+    ) => {
+      const room = state.rooms.byId[roomId]
+      if (room) {
+        if (!room.receivedMessages && !room.loading) {
+          getMessages(roomId)
         }
-      })
-      closeMenu()
-      return
-    }
-  }
+        dispatch({
+          type: Actions.ChangeRoom,
+          payload: {
+            id: room.id
+          }
+        })
+        closeMenu()
+        return
+      }
+    },
+    [state.rooms.byId]
+  )
 
   const enterRoom = async (
     roomName: string,
@@ -315,17 +318,17 @@ export const useRoomsForContext = () => {
     state,
     getRoomMessages: useCallback(getRoomMessages, []),
     createRoom: useCallback(createRoom, []),
-    changeRoom: useCallback(changeRoom, []),
-    enterRoom: useCallback(enterRoom, []),
+    changeRoom,
+    enterRoom: useCallback(enterRoom, [changeRoom, state.rooms.byId]),
     exitRoom: useCallback(exitRoom, []),
     receiveRooms: useCallback(receiveRooms, []),
-    setRoomOrder: useCallback(setRoomOrder, []),
-    changeRoomOrder: useCallback(changeRoomOrder, []),
-    receiveMessage: useCallback(receiveMessage, []),
+    setRoomOrder: useCallback(setRoomOrder, [state.rooms.allIds]),
+    changeRoomOrder: useCallback(changeRoomOrder, [state.rooms.allIds]),
+    receiveMessage: useCallback(receiveMessage, [state.currentRoomId]),
     receiveMessages: useCallback(receiveMessages, []),
-    enterSuccess: useCallback(enterSuccess, []),
+    enterSuccess: useCallback(enterSuccess, [state.rooms.byId]),
     getUsers: useCallback(getUsers, []),
-    getNextUsers: useCallback(getNextUsers, []),
+    getNextUsers: useCallback(getNextUsers, [state.users.byId]),
     alreadyRead: useCallback(alreadyRead, []),
     reloadMessage: useCallback(reloadMessage, []),
     toggleRoomSetting: useCallback(toggleRoomSetting, []),

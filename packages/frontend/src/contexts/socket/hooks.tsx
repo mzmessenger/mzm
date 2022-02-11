@@ -9,7 +9,8 @@ import { SocketContext, SocketDispatchContext } from './index'
 import {
   DEFAULT_INTERVAL,
   RECONNECT_DECAY,
-  INIT_RECONNECT_INTERVAL
+  INIT_RECONNECT_INTERVAL,
+  MAX_RECONNECT
 } from './constants'
 
 export const useSocket = () => {
@@ -46,6 +47,7 @@ export const useSocketForContext = () => {
     INIT_RECONNECT_INTERVAL
   )
   const [reconnectAttempts, setReconnectAttempts] = useState<number>(0)
+  const [reconnectCounter, setReconnectCounter] = useState<number>(0)
   const [messageHandlers, setMessageHandlers] = useState<MessageHandlers>()
 
   const state = useMemo(() => {
@@ -76,57 +78,66 @@ export const useSocketForContext = () => {
     [setWs]
   )
 
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const reconnect = () => {
-    close(ws)
-    // @todo max recoonect
-    const timer = setTimeout(() => {
-      connect(url, messageHandlers)
-    }, reconnectInterval)
-
-    const interval =
-      reconnectInterval <= INIT_RECONNECT_INTERVAL
-        ? DEFAULT_INTERVAL
-        : reconnectInterval *
-          Math.floor(Math.pow(RECONNECT_DECAY, reconnectAttempts))
-
-    setReconnectTimer(timer)
-    setReconnectInterval(interval)
-  }
-
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  const setOnMessageHandlers = (ws: WebSocket, handlers: MessageHandlers) => {
-    setMessageHandlers(handlers)
-    ws.onmessage = (e: MessageEvent<any>): any => {
-      if (!e) {
-        return
-      }
-      if (e.data === 'ping') {
-        ws.send('pong')
-        return
-      }
-      try {
-        const parsed: ReceiveSocketMessage = JSON.parse(e.data)
-        if (handlers[parsed.cmd]) {
-          const handler = handlers[parsed.cmd]
-          const args: HandlerArgs<typeof parsed.cmd> = {
-            ws: ws,
-            message: parsed
-          }
-          // @todo
-          handler(args as any)
+  const setOnMessageHandlers = useCallback(
+    (ws: WebSocket, handlers: MessageHandlers) => {
+      setMessageHandlers(handlers)
+      ws.onmessage = (e: MessageEvent<any>): any => {
+        if (!e) {
+          return
         }
-      } catch (err) {
-        console.error(err)
+        if (e.data === 'ping') {
+          ws.send('pong')
+          return
+        }
+        try {
+          const parsed: ReceiveSocketMessage = JSON.parse(e.data)
+          if (handlers[parsed.cmd]) {
+            const handler = handlers[parsed.cmd]
+            const args: HandlerArgs<typeof parsed.cmd> = {
+              ws: ws,
+              message: parsed
+            }
+            // @todo
+            handler(args as any)
+          }
+        } catch (err) {
+          console.error(err)
+        }
       }
-    }
-  }
+    },
+    []
+  )
 
   const connect = useCallback(
     (connectUrl: string, handlers: MessageHandlers) => {
       if (ws) {
         return
       }
+
+      const reconnect = () => {
+        const counter = reconnectCounter + 1
+        setReconnectCounter(counter)
+        close(ws)
+        if (counter >= MAX_RECONNECT) {
+          if (reconnectTimer) {
+            clearTimeout(reconnectTimer)
+          }
+          return
+        }
+        const timer = setTimeout(() => {
+          connect(url, messageHandlers)
+        }, reconnectInterval)
+
+        const interval =
+          reconnectInterval <= INIT_RECONNECT_INTERVAL
+            ? DEFAULT_INTERVAL
+            : reconnectInterval *
+              Math.floor(Math.pow(RECONNECT_DECAY, reconnectAttempts))
+
+        setReconnectTimer(timer)
+        setReconnectInterval(interval)
+      }
+
       const socketInstance = new WebSocket(connectUrl)
       setWs(socketInstance)
 
@@ -134,6 +145,7 @@ export const useSocketForContext = () => {
         if (reconnectTimer) {
           clearTimeout(reconnectTimer)
         }
+        setReconnectCounter(0)
         setReconnectTimer(null)
         setReconnectInterval(INIT_RECONNECT_INTERVAL)
         setReconnectAttempts(0)
@@ -156,14 +168,14 @@ export const useSocketForContext = () => {
     },
     [
       ws,
-      setWs,
-      setReconnectTimer,
-      setReconnectInterval,
-      setReconnectAttempts,
+      setOnMessageHandlers,
+      reconnectCounter,
       close,
-      reconnect,
+      reconnectInterval,
+      reconnectAttempts,
       reconnectTimer,
-      setOnMessageHandlers
+      url,
+      messageHandlers
     ]
   )
 
@@ -278,17 +290,6 @@ export const useSocketForContext = () => {
     init: useCallback(init, [setUrl, connect]),
     setOnMessageHandlers,
     connect,
-    reconnect: useCallback(reconnect, [
-      url,
-      ws,
-      connect,
-      setReconnectTimer,
-      setReconnectInterval,
-      close,
-      messageHandlers,
-      reconnectAttempts,
-      reconnectInterval
-    ]),
     getMessages: useCallback(getMessages, [ws]),
     getRooms: useCallback(getRooms, [ws]),
     sortRoom: useCallback(sortRoom, [ws]),

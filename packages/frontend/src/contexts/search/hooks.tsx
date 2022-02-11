@@ -9,7 +9,7 @@ export const useDispatchSearch = () => {
   return useContext(SearchDispatchContext)
 }
 
-export const userSearchForContext = () => {
+export const useSearchForContext = () => {
   const [query, setQuery] = useState('')
   const [scroll, setScroll] = useState<string>(null)
   const [total, setTotal] = useState(0)
@@ -89,6 +89,6 @@ export const userSearchForContext = () => {
     state,
     cancel: useCallback(cancel, []),
     search: useCallback(search, []),
-    searchNext: useCallback(searchNext, [])
+    searchNext: useCallback(searchNext, [query, results, scroll])
   } as const
 }

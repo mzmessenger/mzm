@@ -28,28 +28,31 @@ export const useMessagesForContext = () => {
     }, {})
   }
 
-  const convertMessage = async (m: ReceiveMessage): Promise<Message> => {
-    const message: Message = {
-      id: m.id,
-      userId: m.userId,
-      icon: m.icon,
-      userAccount: m.userAccount,
-      message: m.message,
-      iine: m.iine,
-      updated: m.updated,
-      createdAt: m.createdAt
-    }
-    message.html = await convertToHtml(m.message)
-    if (m.vote) {
-      const answers = convertVoteAnswerByIndex(m.vote.answers)
-      message.vote = {
-        questions: m.vote.questions,
-        answers,
-        status: m.vote.status
+  const convertMessage = useCallback(
+    async (m: ReceiveMessage): Promise<Message> => {
+      const message: Message = {
+        id: m.id,
+        userId: m.userId,
+        icon: m.icon,
+        userAccount: m.userAccount,
+        message: m.message,
+        iine: m.iine,
+        updated: m.updated,
+        createdAt: m.createdAt
       }
-    }
-    return message
-  }
+      message.html = await convertToHtml(m.message)
+      if (m.vote) {
+        const answers = convertVoteAnswerByIndex(m.vote.answers)
+        message.vote = {
+          questions: m.vote.questions,
+          answers,
+          status: m.vote.status
+        }
+      }
+      return message
+    },
+    []
+  )
 
   const addMessages = async (messages: ReceiveMessage[]) => {
     const promises = messages.map((m) => convertMessage(m))
@@ -143,10 +146,10 @@ export const useMessagesForContext = () => {
   return {
     state,
     convertVoteAnswerByIndex: useCallback(convertVoteAnswerByIndex, []),
-    convertMessage: useCallback(convertMessage, []),
-    addMessages: useCallback(addMessages, []),
-    addMessage: useCallback(addMessage, []),
-    modifyMessage: useCallback(modifyMessage, []),
+    convertMessage: convertMessage,
+    addMessages: useCallback(addMessages, [convertMessage]),
+    addMessage: useCallback(addMessage, [convertMessage]),
+    modifyMessage: useCallback(modifyMessage, [convertMessage]),
     updateIine: useCallback(updateIine, []),
     setVoteAnswers: useCallback(setVoteAnswers, []),
     sendVoteAnswer: useCallback(sendVoteAnswer, []),

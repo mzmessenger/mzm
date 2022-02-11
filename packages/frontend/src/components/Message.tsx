@@ -68,7 +68,7 @@ const PresentationalMessage = ({
     return () => {
       timer && clearTimeout(timer)
     }
-  }, [beforeIine, iine])
+  }, [beforeIine, iine, iineAction])
 
   let className = ''
   if (replied) {

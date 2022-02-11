@@ -72,7 +72,7 @@ const useResize = () => {
     return () => {
       window.removeEventListener('resize', handleResize)
     }
-  }, [])
+  }, [onResize])
 }
 
 const useWebSocket = (url: string) => {

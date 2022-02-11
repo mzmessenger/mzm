@@ -1,12 +1,9 @@
 import React, { createContext } from 'react'
 
-import { userSearchForContext } from './hooks'
+import { useSearchForContext } from './hooks'
 
-type SearchContextType = ReturnType<typeof userSearchForContext>['state']
-type DispatchContextType = Omit<
-  ReturnType<typeof userSearchForContext>,
-  'state'
->
+type SearchContextType = ReturnType<typeof useSearchForContext>['state']
+type DispatchContextType = Omit<ReturnType<typeof useSearchForContext>, 'state'>
 
 export const SearchContext = createContext<SearchContextType>(
   {} as SearchContextType
@@ -16,7 +13,7 @@ export const SearchDispatchContext = createContext<DispatchContextType>(
 )
 
 export const SearchProvider: React.FC = ({ children }) => {
-  const { state, ...dispatchActions } = userSearchForContext()
+  const { state, ...dispatchActions } = useSearchForContext()
 
   return (
     <SearchContext.Provider value={state}>

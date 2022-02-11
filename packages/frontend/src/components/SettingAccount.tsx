@@ -16,18 +16,21 @@ const SettingAccount = () => {
 
   const ModalIcon = lazy(() => import('./atoms/ModalIcon'))
 
-  const onModalSave = useCallback((image: Blob) => {
-    uploadIcon(image).then((res) => {
-      if (res.ok) {
-        onSave()
-        setOpen(false)
-      } else {
-        res.text().then((text) => {
-          alert(`アップロードにエラーが発生しました(${text})`)
-        })
-      }
-    })
-  }, [])
+  const onModalSave = useCallback(
+    (image: Blob) => {
+      uploadIcon(image).then((res) => {
+        if (res.ok) {
+          onSave()
+          setOpen(false)
+        } else {
+          res.text().then((text) => {
+            alert(`アップロードにエラーが発生しました(${text})`)
+          })
+        }
+      })
+    },
+    [uploadIcon]
+  )
 
   const onModalCancel = useCallback(() => {
     setOpen(false)

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import styled from 'styled-components'
 import { useDispatchSocket } from '../../contexts/socket/hooks'
 import { useUser } from '../../contexts/user/hooks'
@@ -78,7 +78,9 @@ const Question = ({
     sendVoteAnswer: sendVoteAnswerSocket
   } = useDispatchSocket()
 
-  const answers = byId[messageId][index] ?? []
+  const answers = useMemo(() => {
+    return byId[messageId][index] ?? []
+  }, [byId, index, messageId])
   const name = `${text}-${index}`
 
   const ok = answers.filter((e) => e.answer === 0)

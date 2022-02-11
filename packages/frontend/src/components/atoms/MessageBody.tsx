@@ -41,11 +41,12 @@ const MessageBody = ({ className, message, html }: Props) => {
       .querySelectorAll('a')
       .forEach((e) => e.addEventListener('click', listener))
     return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       messageEl.current
         ?.querySelectorAll('a')
         .forEach((e) => e.removeEventListener('click', listener))
     }
-  }, [messageEl])
+  }, [closeMenu, enterRoom, enterRoomSocket, getMessages, messageEl, navigate])
 
   return (
     <Wrap

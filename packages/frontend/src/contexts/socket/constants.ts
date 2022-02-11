@@ -1,5 +1,6 @@
 export const DEFAULT_INTERVAL = 1000
 export const RECONNECT_DECAY = 1.5
+export const MAX_RECONNECT = 10
 export const INIT_RECONNECT_INTERVAL = 0
 
 export type State = {

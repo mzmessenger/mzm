@@ -42,7 +42,7 @@ export const useUserForContext = () => {
     setLogin(false)
   }
 
-  const fetchMyInfo = async () => {
+  const fetchMyInfo = useCallback(async () => {
     const res = await fetch('/api/user/@me', { credentials: 'include' })
     if (res.status === 200) {
       const payload: {
@@ -62,10 +62,10 @@ export const useUserForContext = () => {
       logout()
     }
     return res
-  }
+  }, [])
 
   const removeTwitter = async () => {
-    if (!me.twitterUserName || !me.githubUserName) {
+    if (!me || !me.twitterUserName || !me.githubUserName) {
       return
     }
     const res = await fetch('/auth/twitter', {
@@ -82,7 +82,7 @@ export const useUserForContext = () => {
   }
 
   const removeGithub = async () => {
-    if (!me.twitterUserName || !me.githubUserName) {
+    if (!me || !me.twitterUserName || !me.githubUserName) {
       return
     }
     const res = await fetch('/auth/github', {
@@ -139,10 +139,10 @@ export const useUserForContext = () => {
     state,
     signupUser: useCallback(signupUser, []),
     logout: useCallback(logout, []),
-    fetchMyInfo: useCallback(fetchMyInfo, []),
-    removeTwitter: useCallback(removeTwitter, []),
-    removeGithub: useCallback(removeGithub, []),
+    fetchMyInfo,
+    removeTwitter: useCallback(removeTwitter, [fetchMyInfo, me]),
+    removeGithub: useCallback(removeGithub, [fetchMyInfo, me]),
     removeUser: useCallback(removeUser, []),
-    uploadIcon: useCallback(uploadIcon, [])
+    uploadIcon: useCallback(uploadIcon, [me])
   } as const
 }

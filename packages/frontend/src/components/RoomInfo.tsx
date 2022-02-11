@@ -31,7 +31,7 @@ const RoomInfo = () => {
     if (currentRoomId) {
       getUsers(currentRoomId)
     }
-  }, [currentRoomId])
+  }, [currentRoomId, getUsers])
 
   const clickUser = (user) => {
     openUserDetail(user.id, user.account, user.icon)

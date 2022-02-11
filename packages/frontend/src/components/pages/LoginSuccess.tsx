@@ -15,7 +15,7 @@ const LoginSuccess = () => {
           })
       }
     })
-  }, [])
+  }, [fetchMyInfo, signupUser])
 
   return <></>
 }

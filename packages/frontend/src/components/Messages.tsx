@@ -42,7 +42,7 @@ const Messages = ({ className }) => {
         dom.scrollIntoView()
       }
     }
-  }, [messages.length, scrollTargetIndex])
+  }, [logFlg, messages.length, scrollTargetIndex])
 
   const onScroll = () => {
     if (!logFlg) {

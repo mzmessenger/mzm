@@ -1,4 +1,4 @@
-import React, { useRef, useState, useEffect } from 'react'
+import React, { useRef, useState, useEffect, useCallback } from 'react'
 import styled from 'styled-components'
 import Modal from './Modal'
 import Button from './Button'
@@ -109,7 +109,7 @@ export default function ModalIcon({ image, open, onSave, onCancel }: Props) {
     return { top, left }
   }
 
-  const setSendImg = (length: number, sendScale: number) => {
+  const setSendImg = useCallback((length: number, sendScale: number) => {
     const current = getCurrentPosition()
     sendImgRef.current.width = LIMIT_LENGTH
     sendImgRef.current.height = LIMIT_LENGTH
@@ -130,7 +130,7 @@ export default function ModalIcon({ image, open, onSave, onCancel }: Props) {
     sendImgRef.current.toBlob((blob) => {
       setSize(blob.size)
     })
-  }
+  }, [])
 
   const onLoad = () => {
     const _width = imgRef.current.naturalWidth
@@ -168,7 +168,10 @@ export default function ModalIcon({ image, open, onSave, onCancel }: Props) {
     setTranslate('')
   }, [open])
 
-  const onMouseDown = (e, type: DragType) => {
+  const onMouseDown = (
+    e: React.MouseEvent<HTMLDivElement, MouseEvent>,
+    type: DragType
+  ) => {
     setDrag(true)
     setDragType(type)
     setSx(e.pageX)
@@ -197,7 +200,7 @@ export default function ModalIcon({ image, open, onSave, onCancel }: Props) {
     }
   }
 
-  const onMouseUp = () => {
+  const onMouseUp = useCallback(() => {
     if (!drag) {
       return
     }
@@ -216,51 +219,69 @@ export default function ModalIcon({ image, open, onSave, onCancel }: Props) {
       clipLength
     )
     setSendImg(clipLength, scale)
-  }
+  }, [clipLength, drag, scale, setSendImg])
 
-  const move = (translateX: number, translateY: number, length: number) => {
-    if (translateX + length > width) {
-      translateX = width - length
-    } else if (translateX < 0) {
-      translateX = 0
-    }
+  const move = useCallback(
+    (translateX: number, translateY: number, length: number) => {
+      if (translateX + length > width) {
+        translateX = width - length
+      } else if (translateX < 0) {
+        translateX = 0
+      }
 
-    if (translateY + length > height) {
-      translateY = height - length
-    } else if (translateY < 0) {
-      translateY = 0
-    }
+      if (translateY + length > height) {
+        translateY = height - length
+      } else if (translateY < 0) {
+        translateY = 0
+      }
 
-    setTranslate(`translateX(${translateX}px) translateY(${translateY}px)`)
-  }
+      setTranslate(`translateX(${translateX}px) translateY(${translateY}px)`)
+    },
+    [height, width]
+  )
 
-  const onMouseMove = (e) => {
-    if (!drag) {
-      return
-    }
+  const onMouseMove = useCallback(
+    (e: { pageX: number; pageY: number }) => {
+      if (!drag) {
+        return
+      }
 
-    if (dragType === Drag.MOVE) {
-      move(left + e.pageX - sx, top + e.pageY - sy, clipLength)
-    } else if (
-      dragType === Drag.UPPER_LEFT ||
-      dragType === Drag.UPPER_RIGHT ||
-      dragType === Drag.LOWER_LEFT ||
-      dragType === Drag.LOWER_RIGHT
-    ) {
-      const diff = e.pageY - sy
-      const length = getLength(
-        dragType,
-        startClipLength,
-        diff,
-        minLength,
-        maxLength
-      )
-      setClipLength(Math.floor(length))
+      if (dragType === Drag.MOVE) {
+        move(left + e.pageX - sx, top + e.pageY - sy, clipLength)
+      } else if (
+        dragType === Drag.UPPER_LEFT ||
+        dragType === Drag.UPPER_RIGHT ||
+        dragType === Drag.LOWER_LEFT ||
+        dragType === Drag.LOWER_RIGHT
+      ) {
+        const diff = e.pageY - sy
+        const length = getLength(
+          dragType,
+          startClipLength,
+          diff,
+          minLength,
+          maxLength
+        )
+        setClipLength(Math.floor(length))
 
-      const moveTo = getMoveTo(dragType, left, top, startClipLength - length)
-      move(moveTo.x, moveTo.y, length)
-    }
-  }
+        const moveTo = getMoveTo(dragType, left, top, startClipLength - length)
+        move(moveTo.x, moveTo.y, length)
+      }
+    },
+    [
+      clipLength,
+      drag,
+      dragType,
+      left,
+      maxLength,
+      minLength,
+      move,
+      startClipLength,
+      sx,
+      sy,
+      top
+    ]
+  )
 
   useEffect(() => {
     document.documentElement.addEventListener('mousemove', onMouseMove)
@@ -269,7 +290,7 @@ export default function ModalIcon({ image, open, onSave, onCancel }: Props) {
       document.documentElement.removeEventListener('mousemove', onMouseMove)
       document.documentElement.removeEventListener('mouseup', onMouseUp)
     }
-  }, [drag, clipLength])
+  }, [drag, clipLength, onMouseMove, onMouseUp])
 
   const sendImage = () => {
     sendImgRef.current.toBlob((blob) => onSave(blob))

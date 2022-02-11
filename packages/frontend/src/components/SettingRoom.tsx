@@ -40,17 +40,20 @@ const RoomSetting = () => {
     setOpen(true)
   }
 
-  const onModalSave = useCallback((image: Blob) => {
-    uploadIcon(name, image).then((res) => {
-      if (res.ok) {
-        setOpen(false)
-      } else {
-        res.text().then((text) => {
-          alert(`アップロードにエラーが発生しました(${text})`)
-        })
-      }
-    })
-  }, [])
+  const onModalSave = useCallback(
+    (image: Blob) => {
+      uploadIcon(name, image).then((res) => {
+        if (res.ok) {
+          setOpen(false)
+        } else {
+          res.text().then((text) => {
+            alert(`アップロードにエラーが発生しました(${text})`)
+          })
+        }
+      })
+    },
+    [name, uploadIcon]
+  )
 
   const onModalCancel = useCallback(() => {
     setOpen(false)

@@ -71,12 +71,15 @@ const Rooms = () => {
   const { sortRoom, getMessages, readMessages } = useDispatchSocket()
   const { closeMenu } = useDispatchUi()
 
-  const onClick = useCallback((e: React.MouseEvent, room: Room) => {
-    e.preventDefault()
-    navigate(`/rooms/${room.name}`)
-    changeRoom(room.id, getMessages, closeMenu)
-    readMessages(room.id)
-  }, [])
+  const onClick = useCallback(
+    (e: React.MouseEvent, room: Room) => {
+      e.preventDefault()
+      navigate(`/rooms/${room.name}`)
+      changeRoom(room.id, getMessages, closeMenu)
+      readMessages(room.id)
+    },
+    [changeRoom, closeMenu, getMessages, navigate, readMessages]
+  )
 
   const onDrop = useCallback(
     (e: React.DragEvent) => {
@@ -96,7 +99,7 @@ const Rooms = () => {
 
       e.dataTransfer.clearData()
     },
-    [allIds]
+    [allIds, changeRoomOrder, sortRoom]
   )
 
   return (
