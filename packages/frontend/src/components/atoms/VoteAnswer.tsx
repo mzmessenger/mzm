@@ -1,6 +1,7 @@
 import React from 'react'
 import styled from 'styled-components'
-import { VoteAnswerTypeEnum, VoteAnswer } from '../../type'
+import { VoteAnswerTypeEnum } from '../../type'
+import { VoteAnswerType } from '../../contexts/messages/constants'
 
 const Answer = ({
   className,
@@ -9,7 +10,7 @@ const Answer = ({
 }: {
   className?: string
   type: typeof VoteAnswerTypeEnum[keyof typeof VoteAnswerTypeEnum]
-  answers: VoteAnswer[]
+  answers: VoteAnswerType[]
 }) => {
   const typeClass =
     type === VoteAnswerTypeEnum.ok

@@ -1,5 +1,6 @@
 import React, { createContext } from 'react'
 
+import { INITIAL_STATE } from './constants'
 import { useMessagesForContext } from './hooks'
 
 type MessagesContextType = ReturnType<typeof useMessagesForContext>['state']
@@ -8,9 +9,7 @@ type DispatchContextType = Omit<
   'state'
 >
 
-export const MessagesContext = createContext<MessagesContextType>(
-  {} as MessagesContextType
-)
+export const MessagesContext = createContext<MessagesContextType>(INITIAL_STATE)
 export const MessagesDispatchContext = createContext<DispatchContextType>(
   {} as DispatchContextType
 )

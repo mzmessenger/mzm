@@ -2,10 +2,15 @@ import { useContext, useReducer, useCallback } from 'react'
 import { MessageType } from 'mzm-shared/type/socket'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useUser } from '../user/hooks'
-import { Message, VoteAnswer } from '../../type'
 import { convertToHtml } from '../../lib/markdown'
 import { MessagesContext, MessagesDispatchContext } from './index'
-import { INITIAL_STATE, Actions } from './constants'
+import {
+  INITIAL_STATE,
+  Actions,
+  StateMessageType,
+  StateVoteType,
+  VoteAnswerType
+} from './constants'
 import { reducer } from './reducer'
 
 export const useMessages = () => {
@@ -21,17 +26,17 @@ export const useMessagesForContext = () => {
 
   const convertVoteAnswerByIndex = (
     answers: MessageType['vote']['answers']
-  ): { [key: number]: VoteAnswer[] } => {
+  ): StateVoteType['answers'] => {
     return answers.reduce((byIndex, answer) => {
       byIndex[answer.index] = byIndex[answer.index] ?? []
       byIndex[answer.index].push(answer)
       return byIndex
-    }, {})
+    }, {} as StateVoteType['answers'])
   }
 
   const convertMessage = useCallback(
-    async (m: MessageType): Promise<Message> => {
-      const message: Message = {
+    async (m: MessageType): Promise<StateMessageType> => {
+      const message: StateMessageType = {
         id: m.id,
         userId: m.userId,
         icon: m.icon,
@@ -39,7 +44,8 @@ export const useMessagesForContext = () => {
         message: m.message,
         iine: m.iine,
         updated: m.updated,
-        createdAt: m.createdAt
+        createdAt: m.createdAt,
+        updatedAt: m.updatedAt
       }
       message.html = await convertToHtml(m.message)
       if (m.vote) {
@@ -92,7 +98,7 @@ export const useMessagesForContext = () => {
     })
   }
 
-  const setVoteAnswers = (messageId: string, answers: VoteAnswer[]) => {
+  const setVoteAnswers = (messageId: string, answers: VoteAnswerType[]) => {
     // @todo 数秒間queueに詰めて最後の結果だけ入れる
     dispatch({
       type: Actions.SetVoteAnswers,

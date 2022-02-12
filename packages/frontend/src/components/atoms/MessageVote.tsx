@@ -3,8 +3,9 @@ import styled from 'styled-components'
 import { useDispatchSocket } from '../../contexts/socket/hooks'
 import { useUser } from '../../contexts/user/hooks'
 import { useMessages, useDispatchMessages } from '../../contexts/messages/hooks'
+import { StateMessageType } from '../../contexts/messages/constants'
 import VoteAnswer from './VoteAnswer'
-import { VoteAnswerTypeEnum, Message } from '../../type'
+import { VoteAnswerTypeEnum } from '../../type'
 
 const RadioButton = ({
   name,
@@ -160,7 +161,7 @@ const Question = ({
 type Props = {
   className?: string
   messageId: string
-  vote?: Message['vote']
+  vote?: StateMessageType['vote']
 }
 
 const MessageVote = ({ messageId, className, vote }: Props) => {

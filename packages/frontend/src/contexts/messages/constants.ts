@@ -1,16 +1,32 @@
-import { Message, VoteAnswer } from '../../type'
+import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/type/socket'
+
+type SocketMessageType = FilterToClientType<
+  typeof TO_CLIENT_CMD.MESSAGE_RECEIVE
+>['message'] & { html?: string }
+
+export type VoteAnswerType = SocketMessageType['vote']['answers'][number]
+
+export type StateVoteType = Omit<SocketMessageType['vote'], 'answers'> & {
+  answers: {
+    [key: number]: VoteAnswerType[]
+  }
+}
+
+export type StateMessageType = Omit<SocketMessageType, 'vote'> & {
+  vote?: StateVoteType
+}
 
 export type State = {
   messages: {
     byId: {
-      [key: string]: Message
+      [key: string]: StateMessageType
     }
     allIds: string[] | readonly []
   }
   voteAnswers: {
     byId: {
       [key: string]: {
-        [key: number]: VoteAnswer[]
+        [key: number]: VoteAnswerType[]
       }
     }
   }
@@ -39,15 +55,15 @@ export const Actions = {
 export type ActionType =
   | {
       type: typeof Actions.AddMessages
-      payload: { messages: Message[] }
+      payload: { messages: StateMessageType[] }
     }
   | {
       type: typeof Actions.AddMessage
-      payload: { message: Message }
+      payload: { message: StateMessageType }
     }
   | {
       type: typeof Actions.ModifyMessageSuccess
-      payload: { message: Message }
+      payload: { message: StateMessageType }
     }
   | {
       type: typeof Actions.UpdateIine
@@ -61,7 +77,7 @@ export type ActionType =
       payload: {
         messageId: string
         answers: {
-          [key: number]: VoteAnswer[]
+          [key: number]: VoteAnswerType[]
         }
       }
     }
@@ -70,7 +86,7 @@ export type ActionType =
       payload: {
         messageId: string
         userId: string
-        vote: VoteAnswer
+        vote: VoteAnswerType
       }
     }
   | {

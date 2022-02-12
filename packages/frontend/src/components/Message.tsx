@@ -3,6 +3,7 @@ import dayjs from 'dayjs'
 import styled from 'styled-components'
 import CreateIcon from '@material-ui/icons/Create'
 import ThumbUpIcon from '@material-ui/icons/ThumbUp'
+import { StateMessageType } from '../contexts/messages/constants'
 import { sanitize } from '../lib/sanitize'
 import { isReplied } from '../lib/util'
 import { useMessages } from '../contexts/messages/hooks'
@@ -11,7 +12,6 @@ import { useDispatchPostTextArea } from '../contexts/postTextArea/hooks'
 import { useDispatchSocket } from '../contexts/socket/hooks'
 import MessageBody from './atoms/MessageBody'
 import MessageVote from './atoms/MessageVote'
-import { Message } from '../type'
 
 type Props = {
   id: string
@@ -21,7 +21,7 @@ type Props = {
   userId: string
   userAccount: string
   icon: string
-  vote?: Message['vote']
+  vote?: StateMessageType['vote']
   updated: boolean
   createdAt: string
   beforeIine: number
