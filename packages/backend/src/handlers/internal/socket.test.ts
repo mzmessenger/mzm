@@ -3,6 +3,10 @@ jest.mock('../../logic/messages')
 jest.mock('../../lib/provider')
 
 import { ObjectId } from 'mongodb'
+import {
+  TO_SERVER_CMD,
+  FilterSocketToBackendType
+} from 'mzm-shared/type/socket'
 import { mongoSetup, getMockType } from '../../../jest/testUtil'
 import * as db from '../../lib/db'
 import * as socket from './socket'
@@ -218,7 +222,7 @@ test('openRoom', async () => {
   })
 
   await socket.openRoom(userId.toHexString(), {
-    cmd: socket.ReceiveMessageCmd.ROOMS_OPEN,
+    cmd: TO_SERVER_CMD.ROOMS_OPEN,
     roomId: insert.insertedId.toHexString()
   })
 
@@ -244,7 +248,7 @@ test('closeRoom', async () => {
   })
 
   await socket.closeRoom(userId.toHexString(), {
-    cmd: socket.ReceiveMessageCmd.ROOMS_CLOSE,
+    cmd: TO_SERVER_CMD.ROOMS_CLOSE,
     roomId: insert.insertedId.toHexString()
   })
 
@@ -277,7 +281,7 @@ test('sendVoteAnswer (first time)', async () => {
   })
 
   await socket.sendVoteAnswer(userId.toHexString(), {
-    cmd: socket.ReceiveMessageCmd.VOTE_ANSWER_SEND,
+    cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
     messageId: message.insertedId.toHexString(),
     index: 0,
     answer: db.VoteAnswerEnum.OK
@@ -325,7 +329,7 @@ test('sendVoteAnswer (second time)', async () => {
   expect(before[0].answer).toStrictEqual(db.VoteAnswerEnum.OK)
 
   await socket.sendVoteAnswer(userId.toHexString(), {
-    cmd: socket.ReceiveMessageCmd.VOTE_ANSWER_SEND,
+    cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
     messageId: message.insertedId.toHexString(),
     index: 0,
     answer: db.VoteAnswerEnum.NG
@@ -374,10 +378,10 @@ describe('sendVoteAnswer: BadRequest', () => {
     const before = await db.collections.voteAnswer.find({ messageId }).toArray()
 
     await socket.sendVoteAnswer(userId.toHexString(), {
-      cmd: socket.ReceiveMessageCmd.VOTE_ANSWER_SEND,
+      cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
       index: 0,
       answer: db.VoteAnswerEnum.OK
-    } as socket.SendVoteAnswer)
+    } as FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_SEND>)
 
     const after = await db.collections.voteAnswer.find({ messageId }).toArray()
 
@@ -387,7 +391,7 @@ describe('sendVoteAnswer: BadRequest', () => {
   test.each([
     [
       'no index',
-      socket.ReceiveMessageCmd.VOTE_ANSWER_SEND,
+      TO_SERVER_CMD.VOTE_ANSWER_SEND,
       db.VoteAnswerEnum.OK,
       undefined
     ]
@@ -444,7 +448,7 @@ test('removeVoteAnswer', async () => {
   expect(before[0].answer).toStrictEqual(db.VoteAnswerEnum.OK)
 
   await socket.removeVoteAnswer(userId.toHexString(), {
-    cmd: socket.ReceiveMessageCmd.VOTE_ANSWER_REMOVE,
+    cmd: TO_SERVER_CMD.VOTE_ANSWER_REMOVE,
     messageId: message.insertedId.toHexString(),
     index: 0
   })

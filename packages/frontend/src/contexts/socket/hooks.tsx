@@ -1,10 +1,11 @@
 import { useContext, useState, useMemo, useCallback } from 'react'
-import { sendSocket } from '../../lib/util'
 import {
-  SendSocketCmd,
-  SendSocketMessage,
-  ReceiveSocketMessage
-} from '../../type'
+  ClientToSocketType,
+  TO_SERVER_CMD,
+  ToClientType,
+  FilterToClientType
+} from 'mzm-shared/type/socket'
+import { sendSocket } from '../../lib/util'
 import { SocketContext, SocketDispatchContext } from './index'
 import {
   DEFAULT_INTERVAL,
@@ -21,16 +22,12 @@ export const useDispatchSocket = () => {
   return useContext(SocketDispatchContext)
 }
 
-type FilterCmd<P extends ReceiveSocketMessage['cmd']> = Extract<
-  ReceiveSocketMessage,
-  { cmd: P }
->
-type HandlerArgs<P extends ReceiveSocketMessage['cmd']> = {
+type HandlerArgs<P extends ToClientType['cmd']> = {
   ws: WebSocket
-  message: FilterCmd<P>
+  message: FilterToClientType<P>
 }
 type MessageHandlers = {
-  [P in ReceiveSocketMessage['cmd']]?: (args: HandlerArgs<P>) => void
+  [P in ToClientType['cmd']]?: (args: HandlerArgs<P>) => void
 }
 
 type InitOptions = {
@@ -90,7 +87,7 @@ export const useSocketForContext = () => {
           return
         }
         try {
-          const parsed: ReceiveSocketMessage = JSON.parse(e.data)
+          const parsed: ToClientType = JSON.parse(e.data)
           if (handlers[parsed.cmd]) {
             const handler = handlers[parsed.cmd]
             const args: HandlerArgs<typeof parsed.cmd> = {
@@ -182,26 +179,26 @@ export const useSocketForContext = () => {
   const getMessages = (roomId: string, socket?: WebSocket) => {
     const sendTo = socket ?? ws
     sendSocket(sendTo, {
-      cmd: SendSocketCmd.MESSAGES_ROOM,
+      cmd: TO_SERVER_CMD.MESSAGES_ROOM,
       room: roomId
     })
   }
 
   const getRooms = (socket?: WebSocket) => {
     const sendTo = socket ?? ws
-    sendSocket(sendTo, { cmd: SendSocketCmd.ROOMS_GET })
+    sendSocket(sendTo, { cmd: TO_SERVER_CMD.ROOMS_GET })
   }
 
   const sortRoom = (roomOrder: string[]) => {
     sendSocket(ws, {
-      cmd: SendSocketCmd.ROOMS_SORT,
+      cmd: TO_SERVER_CMD.ROOMS_SORT,
       roomOrder
     })
   }
 
   const incrementIine = (messageId: string) => {
     sendSocket(ws, {
-      cmd: SendSocketCmd.MESSAGE_IINE,
+      cmd: TO_SERVER_CMD.MESSAGE_IINE,
       id: messageId
     })
   }
@@ -211,8 +208,8 @@ export const useSocketForContext = () => {
     roomId: string,
     vote?: { questions: { text: string }[] }
   ) => {
-    const send: SendSocketMessage = {
-      cmd: SendSocketCmd.MESSAGE_SEND,
+    const send: ClientToSocketType = {
+      cmd: TO_SERVER_CMD.MESSAGE_SEND,
       message: message,
       room: roomId
     }
@@ -224,14 +221,14 @@ export const useSocketForContext = () => {
 
   const enterRoom = (roomName: string) => {
     sendSocket(ws, {
-      cmd: SendSocketCmd.ROOMS_ENTER,
+      cmd: TO_SERVER_CMD.ROOMS_ENTER,
       name: encodeURIComponent(roomName)
     })
   }
 
   const sendModifyMessage = (message: string, messageId: string) => {
-    const send: SendSocketMessage = {
-      cmd: SendSocketCmd.MESSAGE_MODIFY,
+    const send: ClientToSocketType = {
+      cmd: TO_SERVER_CMD.MESSAGE_MODIFY,
       message: message,
       id: messageId
     }
@@ -240,28 +237,28 @@ export const useSocketForContext = () => {
 
   const readMessages = (roomId: string) => {
     sendSocket(ws, {
-      cmd: SendSocketCmd.ROOMS_READ,
+      cmd: TO_SERVER_CMD.ROOMS_READ,
       room: roomId
     })
   }
 
   const openRoom = (roomId: string) => {
     sendSocket(ws, {
-      cmd: SendSocketCmd.ROOMS_OPEN,
+      cmd: TO_SERVER_CMD.ROOMS_OPEN,
       roomId
     })
   }
 
   const closeRoom = (roomId: string) => {
     sendSocket(ws, {
-      cmd: SendSocketCmd.ROOMS_CLOSE,
+      cmd: TO_SERVER_CMD.ROOMS_CLOSE,
       roomId
     })
   }
 
   const getHistory = (id: string, roomId: string) => {
-    const message: SendSocketMessage = {
-      cmd: SendSocketCmd.MESSAGES_ROOM,
+    const message: ClientToSocketType = {
+      cmd: TO_SERVER_CMD.MESSAGES_ROOM,
       room: roomId,
       id: id
     }
@@ -270,7 +267,7 @@ export const useSocketForContext = () => {
 
   const removeVoteAnswer = (messageId: string, index: number) => {
     sendSocket(ws, {
-      cmd: SendSocketCmd.VOTE_ANSWER_REMOVE,
+      cmd: TO_SERVER_CMD.VOTE_ANSWER_REMOVE,
       messageId: messageId,
       index: index
     })
@@ -278,7 +275,7 @@ export const useSocketForContext = () => {
 
   const sendVoteAnswer = (messageId: string, index: number, answer: number) => {
     sendSocket(ws, {
-      cmd: SendSocketCmd.VOTE_ANSWER_SEND,
+      cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
       messageId: messageId,
       index: index,
       answer: answer

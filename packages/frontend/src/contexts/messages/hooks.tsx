@@ -1,7 +1,8 @@
 import { useContext, useReducer, useCallback } from 'react'
+import { MessageType } from 'mzm-shared/type/socket'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useUser } from '../user/hooks'
-import { ReceiveMessage, Message, VoteAnswer } from '../../type'
+import { Message, VoteAnswer } from '../../type'
 import { convertToHtml } from '../../lib/markdown'
 import { MessagesContext, MessagesDispatchContext } from './index'
 import { INITIAL_STATE, Actions } from './constants'
@@ -19,7 +20,7 @@ export const useMessagesForContext = () => {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE)
 
   const convertVoteAnswerByIndex = (
-    answers: ReceiveMessage['vote']['answers']
+    answers: MessageType['vote']['answers']
   ): { [key: number]: VoteAnswer[] } => {
     return answers.reduce((byIndex, answer) => {
       byIndex[answer.index] = byIndex[answer.index] ?? []
@@ -29,7 +30,7 @@ export const useMessagesForContext = () => {
   }
 
   const convertMessage = useCallback(
-    async (m: ReceiveMessage): Promise<Message> => {
+    async (m: MessageType): Promise<Message> => {
       const message: Message = {
         id: m.id,
         userId: m.userId,
@@ -54,7 +55,7 @@ export const useMessagesForContext = () => {
     []
   )
 
-  const addMessages = async (messages: ReceiveMessage[]) => {
+  const addMessages = async (messages: MessageType[]) => {
     const promises = messages.map((m) => convertMessage(m))
     const converted = await Promise.all(promises)
     return dispatch({
@@ -63,7 +64,7 @@ export const useMessagesForContext = () => {
     })
   }
 
-  const addMessage = async (message: ReceiveMessage) => {
+  const addMessage = async (message: MessageType) => {
     const converted = await convertMessage(message)
     return dispatch({
       type: Actions.AddMessage,
@@ -71,7 +72,7 @@ export const useMessagesForContext = () => {
     })
   }
 
-  const modifyMessage = async (message: ReceiveMessage) => {
+  const modifyMessage = async (message: MessageType) => {
     const converted = await convertMessage(message)
     return dispatch({
       type: Actions.ModifyMessageSuccess,

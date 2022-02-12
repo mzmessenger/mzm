@@ -1,6 +1,7 @@
 import { client } from '../redis'
 import { logger } from '../logger'
-import { SendMessage, UnreadQueue, ReplyQueue, VoteQueue } from '../../types'
+import { ToClientType } from 'mzm-shared/type/socket'
+import { UnreadQueue, ReplyQueue, VoteQueue } from '../../types'
 import * as config from '../../config'
 export {
   addInitializeSearchRoomQueue,
@@ -8,7 +9,7 @@ export {
   addSyncSearchRoomQueue
 } from './room'
 
-export const addMessageQueue = async (data: SendMessage) => {
+export const addMessageQueue = async (data: ToClientType) => {
   const message = JSON.stringify(data)
   await client.xadd(
     config.stream.MESSAGE,
@@ -21,7 +22,7 @@ export const addMessageQueue = async (data: SendMessage) => {
   logger.info('[queue:add:user]', message)
 }
 
-export const addQueueToUsers = async (users: string[], data: SendMessage) => {
+export const addQueueToUsers = async (users: string[], data: ToClientType) => {
   // todo: too heavy
   const promises = users.map((user) => {
     addMessageQueue({ ...data, user })

@@ -1,5 +1,5 @@
 import { useContext, useReducer, useCallback } from 'react'
-import { ReceiveRoom } from '../../type'
+import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useDispatchUi } from '../ui/hooks'
 import type { useUser } from '../user/hooks'
@@ -110,7 +110,7 @@ export const useRoomsForContext = () => {
   }
 
   const receiveRooms = (
-    rooms: ReceiveRoom[],
+    rooms: FilterToClientType<typeof TO_CLIENT_CMD.ROOMS_GET>['rooms'],
     roomOrder: string[],
     currentRoomId: string,
     getMessages: ReturnType<typeof useDispatchSocket>['getMessages']

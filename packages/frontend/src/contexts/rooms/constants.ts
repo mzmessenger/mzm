@@ -1,4 +1,4 @@
-import { ReceiveRoom } from '../../type'
+import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
 
 export type Message = {
   id: string
@@ -90,7 +90,10 @@ export const Actions = {
 export type ActionType =
   | {
       type: typeof Actions.SetRooms
-      payload: { rooms: ReceiveRoom[]; roomOrder: string[] }
+      payload: {
+        rooms: FilterToClientType<typeof TO_CLIENT_CMD.ROOMS_GET>['rooms']
+        roomOrder: string[]
+      }
     }
   | {
       type: typeof Actions.ReceiveMessage

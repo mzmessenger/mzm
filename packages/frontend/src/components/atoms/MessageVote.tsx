@@ -81,6 +81,7 @@ const Question = ({
   const answers = useMemo(() => {
     return byId[messageId][index] ?? []
   }, [byId, index, messageId])
+
   const name = `${text}-${index}`
 
   const ok = answers.filter((e) => e.answer === 0)

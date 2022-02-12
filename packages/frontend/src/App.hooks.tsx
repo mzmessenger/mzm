@@ -1,12 +1,12 @@
 import { useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
+import { TO_CLIENT_CMD, TO_SERVER_CMD } from 'mzm-shared/type/socket'
 import { useSocket, useDispatchSocket } from './contexts/socket/hooks'
 import { useUser, useDispatchUser } from './contexts/user/hooks'
 import { getRoomName } from './lib/util'
 import { useDispatchUi } from './contexts/ui/hooks'
 import { useRooms, useDispatchRooms } from './contexts/rooms/hooks'
 import { useDispatchMessages } from './contexts/messages/hooks'
-import { SendSocketCmd } from './type'
 import { sendSocket } from './lib/util'
 
 const useRouter = () => {
@@ -100,17 +100,17 @@ const useWebSocket = (url: string) => {
   const messageHandlers: Parameters<typeof setOnMessageHandlers>[1] =
     useMemo(() => {
       return {
-        'socket:connection': ({ ws }) => {
+        [TO_CLIENT_CMD.SOCKET_CONNECTION]: ({ ws }) => {
           if (currentRoomName) {
             sendSocket(ws, {
-              cmd: SendSocketCmd.ROOMS_ENTER,
+              cmd: TO_SERVER_CMD.ROOMS_ENTER,
               name: currentRoomName
             })
           } else {
-            sendSocket(ws, { cmd: SendSocketCmd.ROOMS_GET })
+            sendSocket(ws, { cmd: TO_SERVER_CMD.ROOMS_GET })
           }
         },
-        rooms: ({ ws, message }) => {
+        [TO_CLIENT_CMD.ROOMS_GET]: ({ ws, message }) => {
           if (currentRoomId) {
             getMessages(currentRoomId, ws)
           }
@@ -122,7 +122,7 @@ const useWebSocket = (url: string) => {
             gMessages
           )
         },
-        'message:receive': ({ message }) => {
+        [TO_CLIENT_CMD.MESSAGE_RECEIVE]: ({ message }) => {
           addMessage(message.message).then(() => {
             receiveMessage(
               message.message.id,
@@ -133,12 +133,12 @@ const useWebSocket = (url: string) => {
             )
           })
         },
-        'message:modify': ({ message }) => {
+        [TO_CLIENT_CMD.MESSAGE_MODIFY]: ({ message }) => {
           modifyMessage(message.message).then(() => {
             reloadMessage(message.room)
           })
         },
-        'messages:room': ({ message }) => {
+        [TO_CLIENT_CMD.MESSAGES_ROOM]: ({ message }) => {
           addMessages(message.messages).then(() => {
             receiveMessages({
               messageIds: message.messages.map((m) => m.id),
@@ -147,7 +147,7 @@ const useWebSocket = (url: string) => {
             })
           })
         },
-        'rooms:enter:success': ({ ws, message }) => {
+        [TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS]: ({ ws, message }) => {
           const currentPathRoomName = getRoomName(location.pathname)
           if (currentPathRoomName !== message.name) {
             navigate(`/rooms/${message.name}`)
@@ -164,25 +164,25 @@ const useWebSocket = (url: string) => {
             gMesssages
           )
         },
-        'rooms:enter:fail': () => {
+        [TO_CLIENT_CMD.ROOMS_ENTER_FAIL]: () => {
           navigate('/')
           getRooms()
         },
-        'rooms:read': ({ message }) => {
+        [TO_CLIENT_CMD.ROOMS_READ]: ({ message }) => {
           alreadyRead(message.room)
         },
-        'message:iine': ({ message }) => {
+        [TO_CLIENT_CMD.MESSAGE_IINE]: ({ message }) => {
           updateIine(message.id, message.iine)
           reloadMessage(message.room)
         },
-        'rooms:sort:success': ({ message }) => {
+        [TO_CLIENT_CMD.ROOMS_SORT_SUCCESS]: ({ message }) => {
           setRoomOrder(message.roomOrder)
         },
-        'client:reload': () => {
-          window.location.reload()
-        },
-        'vote:answers': ({ message }) => {
+        [TO_CLIENT_CMD.VOTE_ANSWERS]: ({ message }) => {
           setVoteAnswers(message.messageId, message.answers)
+        },
+        [TO_CLIENT_CMD.CLIENT_RELOAD]: () => {
+          window.location.reload()
         }
       }
     }, [

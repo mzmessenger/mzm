@@ -4,6 +4,7 @@
   "version": "0.0.0",
   "main": "index.js",
   "scripts": {
+    "prestart": "npm run build-tsc",
     "start": "vite",
     "format": "prettier --write src ./*.{js,json}",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",

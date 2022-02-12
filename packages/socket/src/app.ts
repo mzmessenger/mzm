@@ -1,17 +1,13 @@
 import type WebSocket from 'ws'
 import { v4 as uuid } from 'uuid'
 import { requestAuthServer } from 'mzm-shared/auth'
+import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
 import { requestSocketAPI } from './lib/req'
 import { saveSocket, removeSocket } from './lib/sender'
 import { consume } from './lib/consumer'
 import logger from './lib/logger'
 import { AUTH_SERVER } from './config'
 import { ExtWebSocket } from './types'
-
-type PostData = {
-  cmd: 'socket:connection'
-  payload: { user: string; twitterUserName: string }
-}
 
 export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
   consume()
@@ -59,8 +55,8 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
       logger.error('error: ', e)
     })
 
-    const data: PostData = {
-      cmd: 'socket:connection',
+    const data: SocketToBackendType = {
+      cmd: TO_SERVER_CMD.CONNECTION,
       payload: { user: userId, twitterUserName }
     }
 

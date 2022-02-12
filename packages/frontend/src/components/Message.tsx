@@ -47,7 +47,7 @@ const PresentationalMessage = ({
   startEditHandler
 }: Props) => {
   const [iineAction, setIineAction] = useState(false)
-  const day = dayjs(new Date(createdAt))
+  const day = dayjs(new Date(Number(createdAt)))
   const date = day.format(
     day.year() === new Date().getFullYear()
       ? 'MM/DD HH:mm:ss'

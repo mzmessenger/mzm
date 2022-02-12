@@ -51,8 +51,11 @@ export const reducer = (
       return state
     }
     case Actions.SetVoteAnswers: {
-      state.voteAnswers.byId[action.payload.messageId] = action.payload.answers
-      return { ...state }
+      state.voteAnswers.byId = {
+        ...state.voteAnswers.byId,
+        [action.payload.messageId]: action.payload.answers
+      }
+      return state
     }
     case Actions.SendVoteAnswer: {
       const answers = (

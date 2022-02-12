@@ -1,10 +1,10 @@
 import { ObjectId, WithId } from 'mongodb'
 import unescape from 'validator/lib/unescape'
+import { MessageType } from 'mzm-shared/type/socket'
 import * as config from '../config'
 import * as db from '../lib/db'
 import { createUserIconPath } from '../lib/utils'
 import { getVoteAnswers } from './vote'
-import { Message } from '../types'
 
 export const saveMessage = async (
   message: string,
@@ -37,7 +37,7 @@ export const saveMessage = async (
 export const getMessages = async (
   roomId: string,
   thresholdId?: string
-): Promise<{ existHistory: boolean; messages: Message[] }> => {
+): Promise<{ existHistory: boolean; messages: MessageType[] }> => {
   const query: Object[] = [
     {
       $match: { roomId: new ObjectId(roomId) }
@@ -67,17 +67,17 @@ export const getMessages = async (
     .sort({ _id: -1 })
     .limit(config.room.MESSAGE_LIMIT)
 
-  const messages: Message[] = []
+  const messages: MessageType[] = []
   for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
     const [user] = doc.user
-    const message: Message = {
+    const message: MessageType = {
       id: doc._id.toHexString(),
       message: unescape(doc.message),
       iine: doc.iine ? doc.iine : 0,
       userId: doc.userId.toHexString(),
       updated: doc.updated ? doc.updated : false,
-      createdAt: doc.createdAt,
-      updatedAt: doc.updatedAt ? doc.updatedAt : null,
+      createdAt: doc.createdAt.getTime().toString(),
+      updatedAt: doc.updatedAt ? doc.updatedAt.getTime().toString() : null,
       userAccount: user ? user.account : null,
       icon: createUserIconPath(user?.account, user?.icon?.version)
     }
