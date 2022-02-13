@@ -3,6 +3,7 @@ jest.mock('../../logic/messages')
 jest.mock('../../lib/provider')
 
 import { ObjectId } from 'mongodb'
+import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
 import {
   TO_SERVER_CMD,
   FilterSocketToBackendType
@@ -265,8 +266,8 @@ test('sendVoteAnswer (first time)', async () => {
   const userId = new ObjectId()
   const vote: db.Message['vote'] = {
     questions: [{ text: '4/1' }, { text: '4/2' }, { text: '4/3' }],
-    status: db.VoteStatusEnum.OPEN,
-    type: db.VoteTypeEnum.CHOICE
+    status: VoteStatusEnum.OPEN,
+    type: VoteTypeEnum.CHOICE
   }
 
   const message = await db.collections.messages.insertOne({
@@ -299,8 +300,8 @@ test('sendVoteAnswer (second time)', async () => {
 
   const vote: db.Message['vote'] = {
     questions: [{ text: '4/1' }, { text: '4/2' }, { text: '4/3' }],
-    status: db.VoteStatusEnum.OPEN,
-    type: db.VoteTypeEnum.CHOICE
+    status: VoteStatusEnum.OPEN,
+    type: VoteTypeEnum.CHOICE
   }
 
   const message = await db.collections.messages.insertOne({
@@ -357,8 +358,8 @@ describe('sendVoteAnswer: BadRequest', () => {
 
     const vote: db.Message['vote'] = {
       questions: [{ text: '4/1' }, { text: '4/2' }, { text: '4/3' }],
-      status: db.VoteStatusEnum.OPEN,
-      type: db.VoteTypeEnum.CHOICE
+      status: VoteStatusEnum.OPEN,
+      type: VoteTypeEnum.CHOICE
     }
 
     const message = await db.collections.messages.insertOne({
@@ -418,8 +419,8 @@ test('removeVoteAnswer', async () => {
 
   const vote: db.Message['vote'] = {
     questions: [{ text: '4/1' }, { text: '4/2' }, { text: '4/3' }],
-    status: db.VoteStatusEnum.OPEN,
-    type: db.VoteTypeEnum.CHOICE
+    status: VoteStatusEnum.OPEN,
+    type: VoteTypeEnum.CHOICE
   }
 
   const message = await db.collections.messages.insertOne({

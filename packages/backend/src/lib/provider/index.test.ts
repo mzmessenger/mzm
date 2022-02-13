@@ -7,10 +7,10 @@ jest.mock('../redis', () => {
   }
 })
 import { ObjectId } from 'mongodb'
+import { ToClientType } from 'mzm-shared/type/socket'
 import { getMockType } from '../../../jest/testUtil'
 import { client } from '../redis'
 import * as config from '../../config'
-import { SendMessage } from '../../types'
 import { addQueueToUsers, addUnreadQueue, addRepliedQueue } from './index'
 
 const xadd = getMockType(client.xadd)
@@ -20,7 +20,7 @@ test('addQueueToUsers', async () => {
 
   const users = ['5cc9d148139370d11b706624']
 
-  const queue: SendMessage = {
+  const queue: ToClientType = {
     user: null,
     cmd: 'rooms',
     rooms: [],

@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { TO_CLIENT_CMD, TO_SERVER_CMD } from 'mzm-shared/type/socket'
-import { useSocket, useDispatchSocket } from './contexts/socket/hooks'
+import { useDispatchSocket } from './contexts/socket/hooks'
 import { useUser, useDispatchUser } from './contexts/user/hooks'
 import { getRoomName } from './lib/util'
 import { useDispatchUi } from './contexts/ui/hooks'
@@ -79,9 +79,7 @@ const useWebSocket = (url: string) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { me } = useUser()
-  const { ws } = useSocket()
-  const { init, setOnMessageHandlers, getMessages, getRooms, readMessages } =
-    useDispatchSocket()
+  const { init, getMessages, getRooms, readMessages } = useDispatchSocket()
   const { closeMenu } = useDispatchUi()
   const { addMessage, modifyMessage, addMessages, updateIine, setVoteAnswers } =
     useDispatchMessages()
@@ -97,7 +95,7 @@ const useWebSocket = (url: string) => {
     setRoomOrder
   } = useDispatchRooms()
 
-  const messageHandlers: Parameters<typeof setOnMessageHandlers>[1] =
+  const messageHandlers: Parameters<typeof init>[0]['messageHandlers'] =
     useMemo(() => {
       return {
         [TO_CLIENT_CMD.SOCKET_CONNECTION]: ({ ws }) => {
