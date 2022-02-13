@@ -218,21 +218,6 @@ const useWebSocket = (url: string) => {
   }, [url, messageHandlers])
 
   useEffect(() => {
-    if (!ws || !me) {
-      return
-    }
-    setOnMessageHandlers(ws, messageHandlers)
-  }, [
-    ws,
-    me,
-    location,
-    currentRoomId,
-    currentRoomName,
-    setOnMessageHandlers,
-    messageHandlers
-  ])
-
-  useEffect(() => {
     init(options)
   }, [init, options])
 }

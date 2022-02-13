@@ -1,4 +1,5 @@
-import { useContext, useState, useMemo, useCallback } from 'react'
+import { useContext, useCallback, useRef } from 'react'
+import dayjs from 'dayjs'
 import {
   ClientToSocketType,
   TO_SERVER_CMD,
@@ -34,51 +35,34 @@ type InitOptions = {
   url: string
   messageHandlers: MessageHandlers
 }
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export const useSocketForContext = () => {
-  const [url, setUrl] = useState<string>('')
-  const [ws, setWs] = useState<WebSocket>()
-  const [reconnectTimer, setReconnectTimer] =
-    useState<ReturnType<typeof setTimeout>>(null)
-  const [reconnectInterval, setReconnectInterval] = useState<number>(
-    INIT_RECONNECT_INTERVAL
-  )
-  const [reconnectAttempts, setReconnectAttempts] = useState<number>(0)
-  const [reconnectCounter, setReconnectCounter] = useState<number>(0)
-  const [messageHandlers, setMessageHandlers] = useState<MessageHandlers>()
-
-  const state = useMemo(() => {
-    return {
-      ws
-    }
-  }, [ws])
+  const ws = useRef<WebSocket>(null)
+  const reconnectInterval = useRef<number>(INIT_RECONNECT_INTERVAL)
+  const reconnectAttempts = useRef<number>(0)
 
   const init = (options: InitOptions) => {
     if (!options.url || options.url === '') {
       throw new Error('no url')
     }
-    setUrl(options.url)
     connect(options.url, options.messageHandlers)
   }
 
-  const close = useCallback(
-    (socket: WebSocket) => {
-      if (
-        socket &&
-        socket.readyState !== WebSocket.CLOSING &&
-        socket.readyState !== WebSocket.CLOSED
-      ) {
-        // ws.close()
-      }
-      setWs(null)
-    },
-    [setWs]
-  )
+  const close = useCallback((socket: WebSocket) => {
+    if (
+      socket &&
+      socket.readyState !== WebSocket.CLOSING &&
+      socket.readyState !== WebSocket.CLOSED
+    ) {
+      ws.current.close()
+    }
+    ws.current = null
+  }, [])
 
   const setOnMessageHandlers = useCallback(
     (ws: WebSocket, handlers: MessageHandlers) => {
-      setMessageHandlers(handlers)
-      ws.onmessage = (e: MessageEvent<any>): any => {
+      ws.onmessage = (e) => {
         if (!e) {
           return
         }
@@ -107,77 +91,72 @@ export const useSocketForContext = () => {
 
   const connect = useCallback(
     (connectUrl: string, handlers: MessageHandlers) => {
-      if (ws) {
+      if (ws.current) {
         return
       }
 
-      const reconnect = () => {
-        const counter = reconnectCounter + 1
-        setReconnectCounter(counter)
-        close(ws)
+      const reconnect = async () => {
+        const counter = reconnectAttempts.current + 1
+        reconnectAttempts.current = counter
         if (counter >= MAX_RECONNECT) {
-          if (reconnectTimer) {
-            clearTimeout(reconnectTimer)
-          }
           return
         }
-        const timer = setTimeout(() => {
-          connect(url, messageHandlers)
-        }, reconnectInterval)
 
-        const interval =
-          reconnectInterval <= INIT_RECONNECT_INTERVAL
+        console.warn(
+          `ws reconnect: ${reconnectAttempts.current} `,
+          dayjs().format('YYYY/MM/DD HH:mm:ss'),
+          reconnectInterval.current
+        )
+
+        await sleep(reconnectInterval.current)
+        connect(connectUrl, handlers)
+
+        const newInterval =
+          reconnectInterval.current <= INIT_RECONNECT_INTERVAL
             ? DEFAULT_INTERVAL
-            : reconnectInterval *
-              Math.floor(Math.pow(RECONNECT_DECAY, reconnectAttempts))
+            : reconnectInterval.current *
+              Math.floor(Math.pow(RECONNECT_DECAY, reconnectAttempts.current))
 
-        setReconnectTimer(timer)
-        setReconnectInterval(interval)
+        reconnectInterval.current = newInterval
       }
 
       const socketInstance = new WebSocket(connectUrl)
-      setWs(socketInstance)
+      ws.current = socketInstance
 
       socketInstance.addEventListener('open', () => {
-        if (reconnectTimer) {
-          clearTimeout(reconnectTimer)
-        }
-        setReconnectCounter(0)
-        setReconnectTimer(null)
-        setReconnectInterval(INIT_RECONNECT_INTERVAL)
-        setReconnectAttempts(0)
+        console.log('ws open')
+        reconnectInterval.current = INIT_RECONNECT_INTERVAL
+        reconnectAttempts.current = 0
       })
 
       setOnMessageHandlers(socketInstance, handlers)
 
       socketInstance.addEventListener('close', (e) => {
-        console.log('ws close:', e)
+        console.warn('ws close:', e)
         try {
+          close(socketInstance)
           reconnect()
         } catch (err) {
           console.error(err)
         }
       })
 
-      socketInstance.addEventListener('error', () => {
+      socketInstance.addEventListener('error', (e) => {
+        console.warn('ws error:', e)
         close(socketInstance)
+        try {
+          close(socketInstance)
+          reconnect()
+        } catch (err) {
+          console.error(err)
+        }
       })
     },
-    [
-      ws,
-      setOnMessageHandlers,
-      reconnectCounter,
-      close,
-      reconnectInterval,
-      reconnectAttempts,
-      reconnectTimer,
-      url,
-      messageHandlers
-    ]
+    [ws, setOnMessageHandlers, close]
   )
 
   const getMessages = (roomId: string, socket?: WebSocket) => {
-    const sendTo = socket ?? ws
+    const sendTo = socket ?? ws.current
     sendSocket(sendTo, {
       cmd: TO_SERVER_CMD.MESSAGES_ROOM,
       room: roomId
@@ -185,19 +164,19 @@ export const useSocketForContext = () => {
   }
 
   const getRooms = (socket?: WebSocket) => {
-    const sendTo = socket ?? ws
+    const sendTo = socket ?? ws.current
     sendSocket(sendTo, { cmd: TO_SERVER_CMD.ROOMS_GET })
   }
 
   const sortRoom = (roomOrder: string[]) => {
-    sendSocket(ws, {
+    sendSocket(ws.current, {
       cmd: TO_SERVER_CMD.ROOMS_SORT,
       roomOrder
     })
   }
 
   const incrementIine = (messageId: string) => {
-    sendSocket(ws, {
+    sendSocket(ws.current, {
       cmd: TO_SERVER_CMD.MESSAGE_IINE,
       id: messageId
     })
@@ -216,11 +195,11 @@ export const useSocketForContext = () => {
     if (vote) {
       send.vote = vote
     }
-    sendSocket(ws, send)
+    sendSocket(ws.current, send)
   }
 
   const enterRoom = (roomName: string) => {
-    sendSocket(ws, {
+    sendSocket(ws.current, {
       cmd: TO_SERVER_CMD.ROOMS_ENTER,
       name: encodeURIComponent(roomName)
     })
@@ -232,25 +211,25 @@ export const useSocketForContext = () => {
       message: message,
       id: messageId
     }
-    sendSocket(ws, send)
+    sendSocket(ws.current, send)
   }
 
   const readMessages = (roomId: string) => {
-    sendSocket(ws, {
+    sendSocket(ws.current, {
       cmd: TO_SERVER_CMD.ROOMS_READ,
       room: roomId
     })
   }
 
   const openRoom = (roomId: string) => {
-    sendSocket(ws, {
+    sendSocket(ws.current, {
       cmd: TO_SERVER_CMD.ROOMS_OPEN,
       roomId
     })
   }
 
   const closeRoom = (roomId: string) => {
-    sendSocket(ws, {
+    sendSocket(ws.current, {
       cmd: TO_SERVER_CMD.ROOMS_CLOSE,
       roomId
     })
@@ -262,11 +241,11 @@ export const useSocketForContext = () => {
       room: roomId,
       id: id
     }
-    sendSocket(ws, message)
+    sendSocket(ws.current, message)
   }
 
   const removeVoteAnswer = (messageId: string, index: number) => {
-    sendSocket(ws, {
+    sendSocket(ws.current, {
       cmd: TO_SERVER_CMD.VOTE_ANSWER_REMOVE,
       messageId: messageId,
       index: index
@@ -274,7 +253,7 @@ export const useSocketForContext = () => {
   }
 
   const sendVoteAnswer = (messageId: string, index: number, answer: number) => {
-    sendSocket(ws, {
+    sendSocket(ws.current, {
       cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
       messageId: messageId,
       index: index,
@@ -283,9 +262,10 @@ export const useSocketForContext = () => {
   }
 
   return {
-    state,
-    init: useCallback(init, [setUrl, connect]),
-    setOnMessageHandlers,
+    state: {
+      ws: ws.current
+    },
+    init: useCallback(init, [connect]),
     connect,
     getMessages: useCallback(getMessages, [ws]),
     getRooms: useCallback(getRooms, [ws]),
