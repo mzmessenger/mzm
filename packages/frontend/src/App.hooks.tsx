@@ -26,19 +26,25 @@ const useRouter = () => {
   }, [login, currentRoomName, navigate])
 
   useEffect(() => {
-    const room = location.pathname.match(/\/rooms\/(.+)/) && RegExp.$1
-    if (!login && (location.pathname === '/' || room)) {
-      fetchMyInfo()
-    }
+    try {
+      const res = location.pathname.match(/\/rooms\/(.+)/) || ''
+      const room = decodeURIComponent(res[1])
 
-    if (login && room) {
-      enterRoom(room, getMessages, enterRoomSocket, closeMenu)
-    }
+      if (!login && (location.pathname === '/' || room)) {
+        fetchMyInfo()
+      }
 
-    if (room) {
-      document.title = `MZM (${room})`
-    } else {
-      document.title = `MZM`
+      if (login && room) {
+        enterRoom(room, getMessages, enterRoomSocket, closeMenu)
+      }
+
+      if (room) {
+        document.title = `MZM (${room})`
+      } else {
+        document.title = `MZM`
+      }
+    } catch (e) {
+      console.error(e)
     }
   }, [
     login,
@@ -47,7 +53,8 @@ const useRouter = () => {
     enterRoom,
     getMessages,
     enterRoomSocket,
-    closeMenu
+    closeMenu,
+    location
   ])
 
   useEffect(() => {

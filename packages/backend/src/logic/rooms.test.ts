@@ -136,13 +136,7 @@ test.each([
   ['start with @', '@foo'],
   ['&', '&room'],
   ['?', '?room'],
-  ['=', '=room']
-])('isValidateRoomName fail (%s)', async (_label, name) => {
-  const valid = isValidateRoomName(name)
-  expect(valid.valid).toStrictEqual(false)
-})
-
-test.each([
+  ['=', '=room'],
   ['00A0', '\u00A0'],
   ['2001', ' '],
   ['2003', ' '],
@@ -150,8 +144,10 @@ test.each([
   ['0323', '『̣'],
   ['200B', '​'],
   ['2029', '\u2029'],
-  ['202A', '‪']
-])('isValidateRoomName fail unicode (%s)', async (_label, name) => {
+  ['202A', '‪'],
+  ['undefined', 'undefined'],
+  ['null', 'null']
+])('isValidateRoomName fail (%s)', async (_label, name) => {
   const valid = isValidateRoomName(name)
   expect(valid.valid).toStrictEqual(false)
 })
