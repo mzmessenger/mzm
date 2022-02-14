@@ -21,7 +21,13 @@ export const useUserForContext = () => {
   const [signup, setSignup] = useState(false)
   const [signupAccount, setSignupAccount] = useState('')
   const [login, setLogin] = useState(false)
-  const [me, setMe] = useState<MyInfo>(null)
+  const [me, setMe] = useState<MyInfo>({
+    id: '',
+    account: '',
+    iconUrl: '',
+    twitterUserName: '',
+    githubUserName: ''
+  })
 
   const state = useMemo(() => {
     return {

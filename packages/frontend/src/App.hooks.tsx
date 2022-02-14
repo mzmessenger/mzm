@@ -102,6 +102,8 @@ const useWebSocket = (url: string) => {
     setRoomOrder
   } = useDispatchRooms()
 
+  const account = me.account ?? ''
+
   const messageHandlers: Parameters<typeof init>[0]['messageHandlers'] =
     useMemo(() => {
       return {
@@ -133,7 +135,7 @@ const useWebSocket = (url: string) => {
               message.message.id,
               message.message.message,
               message.room,
-              me,
+              account,
               readMessages
             )
           })
@@ -191,6 +193,7 @@ const useWebSocket = (url: string) => {
         }
       }
     }, [
+      account,
       addMessage,
       addMessages,
       alreadyRead,
@@ -202,7 +205,6 @@ const useWebSocket = (url: string) => {
       getMessages,
       getRooms,
       location.pathname,
-      me,
       modifyMessage,
       navigate,
       readMessages,
