@@ -17,7 +17,6 @@ const Init = React.memo(() => {
 
 const App = () => {
   const { login } = useUser()
-  //   const { login } = useApp(url)
   const Top = login
     ? lazy(() => import('./components/pages/Top'))
     : lazy(() => import('./components/pages/Login'))
