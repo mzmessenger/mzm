@@ -158,7 +158,7 @@ export const useRoomsForContext = () => {
     messageId: string,
     message: string,
     room: string,
-    me: ReturnType<typeof useUser>['me'],
+    account: ReturnType<typeof useUser>['me']['account'],
     readMessages: ReturnType<typeof useDispatchSocket>['readMessages']
   ) => {
     // 現在みている部屋だったら既読フラグを返す
@@ -171,7 +171,7 @@ export const useRoomsForContext = () => {
         messageId: messageId,
         message: message,
         room: room,
-        account: me.account
+        account: account
       }
     })
   }
