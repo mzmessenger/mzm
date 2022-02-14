@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import CancelIcon from '@material-ui/icons/Cancel'
+import CancelIcon from '@mui/icons-material/Cancel'
 import { WIDTH_MOBILE } from '../lib/constants'
 import { useDispatchUi } from '../contexts/ui/hooks'
 import SettingAccount from './SettingUser'

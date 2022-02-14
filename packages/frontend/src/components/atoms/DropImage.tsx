@@ -1,6 +1,6 @@
 import React, { useEffect, useRef } from 'react'
 import styled from 'styled-components'
-import ImageIcon from '@material-ui/icons/Image'
+import ImageIcon from '@mui/icons-material/Image'
 
 const DropImage = ({ onloadFile }: { onloadFile: (file: string) => void }) => {
   const fileInputRef = useRef(null)

@@ -1,8 +1,10 @@
 import React, { useRef, useEffect, useState } from 'react'
 import dayjs from 'dayjs'
 import styled from 'styled-components'
-import CreateIcon from '@material-ui/icons/Create'
-import ThumbUpIcon from '@material-ui/icons/ThumbUp'
+import {
+  Create as CreateIcon,
+  ThumbUp as ThumbUpIcon
+} from '@mui/icons-material'
 import { StateMessageType } from '../contexts/messages/constants'
 import { sanitize } from '../lib/sanitize'
 import { isReplied } from '../lib/util'

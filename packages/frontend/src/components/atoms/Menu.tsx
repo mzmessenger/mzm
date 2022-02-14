@@ -1,6 +1,6 @@
 import React, { useState } from 'react'
 import styled from 'styled-components'
-import Settings from '@material-ui/icons/Settings'
+import Settings from '@mui/icons-material/Settings'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import { useSearch } from '../../contexts/search/hooks'
 import { useUi, useDispatchUi } from '../../contexts/ui/hooks'

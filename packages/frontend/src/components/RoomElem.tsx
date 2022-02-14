@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import Home from '@material-ui/icons/Home'
+import Home from '@mui/icons-material/Home'
 
 type Props = {
   name: string

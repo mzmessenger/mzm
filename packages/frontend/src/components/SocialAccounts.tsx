@@ -1,8 +1,10 @@
 import React from 'react'
 import styled from 'styled-components'
-import LinkOffIcon from '@material-ui/icons/LinkOff'
-import TwitterIcon from '@material-ui/icons/Twitter'
-import GitHubIcon from '@material-ui/icons/GitHub'
+import {
+  LinkOff as LinkOffIcon,
+  Twitter as TwitterIcon,
+  GitHub as GitHubIcon
+} from '@mui/icons-material'
 import { WIDTH_MOBILE } from '../lib/constants'
 import { useUser, useDispatchUser } from '../contexts/user/hooks'
 

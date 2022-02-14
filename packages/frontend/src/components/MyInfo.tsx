@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from 'styled-components'
-import Settings from '@material-ui/icons/Settings'
+import Settings from '@mui/icons-material/Settings'
 import { useUi, useDispatchUi } from '../contexts/ui/hooks'
 import { useUser } from '../contexts/user/hooks'
 

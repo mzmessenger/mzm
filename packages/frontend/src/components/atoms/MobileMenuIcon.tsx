@@ -1,5 +1,5 @@
 import React from 'react'
-import ListIcon from '@material-ui/icons/List'
+import ListIcon from '@mui/icons-material/List'
 import styled from 'styled-components'
 
 const MobileMenuIcon = ({
