@@ -49,6 +49,15 @@ export const isValidateRoomName = (
       reason: `less ${config.room.MAX_ROOM_NAME_LENGTH}`
     }
   } else if (
+    config.room.BANNED_ROOM_NAME.includes(
+      name as typeof config.room.BANNED_ROOM_NAME[number]
+    )
+  ) {
+    return {
+      valid: false,
+      reason: `${name} is not valid`
+    }
+  } else if (
     config.room.BANNED_CHARS_REGEXP_IN_ROOM_NAME.test(name) ||
     config.room.BANNED_UNICODE_REGEXP_IN_ROOM_NAME.test(name)
   ) {
