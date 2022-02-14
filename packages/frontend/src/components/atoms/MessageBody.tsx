@@ -1,10 +1,10 @@
 import React, { useRef, useEffect } from 'react'
-import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { store } from '../../modules/index'
-import { enterRoom } from '../../modules/rooms'
+import { useDispatchRooms } from '../../contexts/rooms/hooks'
 import { getRoomName } from '../../lib/util'
+import { useDispatchSocket } from '../../contexts/socket/hooks'
+import { useDispatchUi } from '../../contexts/ui/hooks'
 
 type Props = {
   className?: string
@@ -13,9 +13,11 @@ type Props = {
 }
 
 const MessageBody = ({ className, message, html }: Props) => {
-  const dispatch = useDispatch()
   const navigate = useNavigate()
+  const { enterRoom } = useDispatchRooms()
   const messageEl = useRef(null)
+  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
+  const { closeMenu } = useDispatchUi()
 
   useEffect(() => {
     if (!messageEl.current) {
@@ -27,7 +29,7 @@ const MessageBody = ({ className, message, html }: Props) => {
       if (url.host === location.host) {
         navigate(url.pathname)
         const roomName = getRoomName(decodeURIComponent(url.pathname))
-        enterRoom(roomName)(dispatch, store.getState)
+        enterRoom(roomName, getMessages, enterRoomSocket, closeMenu)
       } else {
         window.open(url.href, '_blank')
       }
@@ -39,11 +41,12 @@ const MessageBody = ({ className, message, html }: Props) => {
       .querySelectorAll('a')
       .forEach((e) => e.addEventListener('click', listener))
     return () => {
+      // eslint-disable-next-line react-hooks/exhaustive-deps
       messageEl.current
         ?.querySelectorAll('a')
         .forEach((e) => e.removeEventListener('click', listener))
     }
-  }, [messageEl])
+  }, [closeMenu, enterRoom, enterRoomSocket, getMessages, messageEl, navigate])
 
   return (
     <Wrap

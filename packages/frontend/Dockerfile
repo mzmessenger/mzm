@@ -11,8 +11,9 @@ COPY ./packages/frontend/package.json \
   ./packages/frontend/
 COPY ./packages/frontend/src/ ./packages/frontend/src/
 
-RUN npm install -w packages/frontend 
-RUN npm run -w packages/frontend build
+RUN npm install -w packages/frontend -w packages/shared
+RUN npm run build-esm -w packages/shared
+RUN npm run build -w packages/frontend
 
 # https://cloud.google.com/community/tutorials/deploy-react-nginx-cloud-run
 FROM nginx:alpine

@@ -1,9 +1,8 @@
 import React, { useState } from 'react'
-import { useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { store } from '../modules/index'
-import { createRoom } from '../modules/rooms'
+import { useDispatchRooms } from '../contexts/rooms/hooks'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 import Button from './atoms/Button'
 import TransparentButton from './atoms/TransparentButton'
 import Modal, { ModalProps } from './atoms/Modal'
@@ -15,12 +14,13 @@ const ModalCraeteRoom = ({ open, onClose }: Props) => {
   const navigate = useNavigate()
   const [txt, setTxt] = useState('')
   const [error, setErrorTxt] = useState('')
-  const dispatch = useDispatch()
+  const { getRooms } = useDispatchSocket()
+  const { createRoom } = useDispatchRooms()
 
   const handleSubmit = (evt) => {
     evt.preventDefault()
     // @todo エラー時の処理
-    createRoom(txt)(dispatch, store.getState)
+    createRoom(txt, getRooms)
       .then((data) => {
         if (data.status === 200) {
           onClose()

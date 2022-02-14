@@ -1,16 +1,14 @@
 import React from 'react'
 import styled from 'styled-components'
 import Clear from '@material-ui/icons/Clear'
-import { useSelector, useDispatch } from 'react-redux'
-import { State } from '../modules/index'
-import { closeUserDetail } from '../modules/ui'
+import { useUi, useDispatchUi } from '../contexts/ui/hooks'
 
 const UserDetail = () => {
-  const userDetail = useSelector((state: State) => state.ui.userDetail)
-  const dispatch = useDispatch()
+  const { userDetail } = useUi()
+  const { closeUserDetail } = useDispatchUi()
 
   const close = () => {
-    dispatch(closeUserDetail())
+    closeUserDetail()
   }
 
   return (

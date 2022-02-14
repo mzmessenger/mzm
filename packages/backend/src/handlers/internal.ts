@@ -1,34 +1,35 @@
 import { Request } from 'express'
+import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
 import * as _socket from './internal/socket'
 
 export const socket = async (req: Request) => {
   const user: string = req.headers['x-user-id'] as string
-  const data = req.body as _socket.ReceiveMessage
-  if (data.cmd === _socket.ReceiveMessageCmd.CONNECTION) {
+  const data = req.body as SocketToBackendType
+  if (data.cmd === TO_SERVER_CMD.CONNECTION) {
     return await _socket.connection(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.MESSAGE_SEND) {
+  } else if (data.cmd === TO_SERVER_CMD.MESSAGE_SEND) {
     return await _socket.sendMessage(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.MESSAGE_IINE) {
+  } else if (data.cmd === TO_SERVER_CMD.MESSAGE_IINE) {
     return await _socket.iine(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.MESSAGE_MODIFY) {
+  } else if (data.cmd === TO_SERVER_CMD.MESSAGE_MODIFY) {
     return _socket.modifyMessage(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.MESSAGES_ROOM) {
+  } else if (data.cmd === TO_SERVER_CMD.MESSAGES_ROOM) {
     return _socket.getMessagesFromRoom(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.ROOMS_GET) {
+  } else if (data.cmd === TO_SERVER_CMD.ROOMS_GET) {
     return _socket.getRooms(user)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.ROOMS_ENTER) {
+  } else if (data.cmd === TO_SERVER_CMD.ROOMS_ENTER) {
     return _socket.enterRoom(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.ROOMS_READ) {
+  } else if (data.cmd === TO_SERVER_CMD.ROOMS_READ) {
     return _socket.readMessage(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.ROOMS_SORT) {
+  } else if (data.cmd === TO_SERVER_CMD.ROOMS_SORT) {
     return _socket.sortRooms(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.ROOMS_OPEN) {
+  } else if (data.cmd === TO_SERVER_CMD.ROOMS_OPEN) {
     return await _socket.openRoom(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.ROOMS_CLOSE) {
+  } else if (data.cmd === TO_SERVER_CMD.ROOMS_CLOSE) {
     return await _socket.closeRoom(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.VOTE_ANSWER_SEND) {
+  } else if (data.cmd === TO_SERVER_CMD.VOTE_ANSWER_SEND) {
     return await _socket.sendVoteAnswer(user, data)
-  } else if (data.cmd === _socket.ReceiveMessageCmd.VOTE_ANSWER_REMOVE) {
+  } else if (data.cmd === TO_SERVER_CMD.VOTE_ANSWER_REMOVE) {
     return await _socket.removeVoteAnswer(user, data)
   }
   return

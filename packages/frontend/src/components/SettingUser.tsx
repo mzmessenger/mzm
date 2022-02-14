@@ -1,16 +1,15 @@
 import React from 'react'
-import { useDispatch } from 'react-redux'
 import styled from 'styled-components'
-import { removeUser } from '../modules/user'
+import { useDispatchUser } from '../contexts/user/hooks'
 import Button from './atoms/Button'
 import SettingAccount from './SettingAccount'
 
 const SettingUser = () => {
-  const dispatch = useDispatch()
+  const { removeUser } = useDispatchUser()
 
   const onDelete = () => {
     if (window.confirm('本当にアカウントを削除しますか？')) {
-      removeUser()(dispatch)
+      removeUser()
     }
   }
 

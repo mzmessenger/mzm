@@ -1,4 +1,4 @@
-import { ReceiveRoom } from '../type'
+import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
 
 export type Message = {
   id: string
@@ -32,14 +32,14 @@ export type Room = {
   status: 'open' | 'close'
 }
 
-export type RoomsState = {
+export type State = {
   rooms: {
     byId: { [key: string]: Room }
     allIds: string[]
     order: string[]
   }
   users: {
-    byId: { [key: string]: { count: number; users: RoomUser[] } }
+    byId: { [key: string]: { count: number; users: RoomUser[] | readonly [] } }
     allIds: string[]
   }
   currentRoomId: string
@@ -49,7 +49,24 @@ export type RoomsState = {
   openRoomSetting: boolean
 }
 
-export const RoomsActions = {
+const splited = window.location.pathname.split('/')
+const initCurrentRoomName = splited[1] === 'rooms' ? splited[2] : ''
+
+export const INITIAL_STATE: State = {
+  rooms: {
+    byId: {},
+    allIds: [] as State['rooms']['allIds'],
+    order: [] as State['rooms']['order']
+  },
+  users: { byId: {}, allIds: [] as State['users']['allIds'] },
+  currentRoomId: '',
+  currentRoomName: initCurrentRoomName,
+  currentRoomIcon: null,
+  scrollTargetIndex: 'bottom',
+  openRoomSetting: false
+} as const
+
+export const Actions = {
   SetRooms: 'roomAction:setRooms',
   SetRoomOrder: 'roomAction:setRoomOrder',
   ReceiveMessage: 'roomAction:receiveMessage',
@@ -70,13 +87,16 @@ export const RoomsActions = {
   SetRoomStatus: 'roomAction:setRoomStatus'
 } as const
 
-export type RoomsAction =
+export type ActionType =
   | {
-      type: typeof RoomsActions.SetRooms
-      payload: { rooms: ReceiveRoom[]; roomOrder: string[] }
+      type: typeof Actions.SetRooms
+      payload: {
+        rooms: FilterToClientType<typeof TO_CLIENT_CMD.ROOMS_GET>['rooms']
+        roomOrder: string[]
+      }
     }
   | {
-      type: typeof RoomsActions.ReceiveMessage
+      type: typeof Actions.ReceiveMessage
       payload: {
         messageId: string
         message: string
@@ -85,18 +105,18 @@ export type RoomsAction =
       }
     }
   | {
-      type: typeof RoomsActions.EnterRoomSuccess
+      type: typeof Actions.EnterRoomSuccess
       payload: { id: string; name: string; iconUrl: string; loading: boolean }
     }
   | {
-      type: typeof RoomsActions.ExitRoom
+      type: typeof Actions.ExitRoom
     }
   | {
-      type: typeof RoomsActions.CreateRoom
+      type: typeof Actions.CreateRoom
       payload: { id: string; name: string }
     }
   | {
-      type: typeof RoomsActions.ReceiveMessages
+      type: typeof Actions.ReceiveMessages
       payload: {
         room: string
         existHistory: boolean
@@ -104,48 +124,48 @@ export type RoomsAction =
       }
     }
   | {
-      type: typeof RoomsActions.ChangeRoom
+      type: typeof Actions.ChangeRoom
       payload: {
         id: string
       }
     }
   | {
-      type: typeof RoomsActions.GetMessages
+      type: typeof Actions.GetMessages
       payload: {
         id: string
       }
     }
   | {
-      type: typeof RoomsActions.AlreadyRead
+      type: typeof Actions.AlreadyRead
       payload: {
         room: string
       }
     }
   | {
-      type: typeof RoomsActions.ReloadMessages
+      type: typeof Actions.ReloadMessages
       payload: {
         room: string
       }
     }
-  | { type: typeof RoomsActions.ToggleSetting }
-  | { type: typeof RoomsActions.CloseSetting }
+  | { type: typeof Actions.ToggleSetting }
+  | { type: typeof Actions.CloseSetting }
   | {
-      type: typeof RoomsActions.SetIcon
+      type: typeof Actions.SetIcon
       payload: { id: string; version: string }
     }
   | {
-      type: typeof RoomsActions.SetRoomOrder
+      type: typeof Actions.SetRoomOrder
       payload: { roomOrder: string[]; allIds: string[] }
     }
   | {
-      type: typeof RoomsActions.SetRoomUsers
+      type: typeof Actions.SetRoomUsers
       payload: { room: string; users: RoomUser[]; count: number }
     }
   | {
-      type: typeof RoomsActions.SetNextRoomUsers
+      type: typeof Actions.SetNextRoomUsers
       payload: { room: string; users: RoomUser[] }
     }
   | {
-      type: typeof RoomsActions.SetRoomStatus
+      type: typeof Actions.SetRoomStatus
       payload: { id: string; status: 'open' | 'close' }
     }

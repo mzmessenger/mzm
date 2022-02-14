@@ -5,6 +5,7 @@ on:
     paths:
       - 'packages/auth/**'
       - 'packages/shared/**'
+      - 'packages/package.json'
     branches: [ main ]
   pull_request:
     paths:
@@ -27,7 +28,7 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm ci -w packages/auth -w packages/shared
+      - run: npm ci
       - run: npm run build -w packages/auth
       - run: npm run test -w packages/auth
         env:

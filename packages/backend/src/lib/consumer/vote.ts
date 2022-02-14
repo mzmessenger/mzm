@@ -1,4 +1,5 @@
 import { ObjectId } from 'mongodb'
+import { TO_CLIENT_CMD } from 'mzm-shared/type/socket'
 import * as config from '../../config'
 import { VoteQueue } from '../../types'
 import * as db from '../db'
@@ -27,7 +28,7 @@ export const vote = async (ackid: string, messages: string[]) => {
   const answers = await getVoteAnswers(messageId)
 
   addQueueToUsers(users, {
-    cmd: 'vote:answers',
+    cmd: TO_CLIENT_CMD.VOTE_ANSWERS,
     messageId: queue.messageId,
     answers
   })

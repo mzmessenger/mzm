@@ -1,10 +1,7 @@
-import React, { Suspense, lazy, useEffect } from 'react'
-import { BrowserRouter, Routes, Route } from 'react-router-dom'
-import { useSelector, useDispatch } from 'react-redux'
-import { State } from './modules/index'
-import { onResize } from './modules/ui'
-import Socket from './components/Socket'
-import RouterListener from './components/RouterListener'
+import React, { Suspense, lazy } from 'react'
+import { Routes, Route } from 'react-router-dom'
+import { useApp } from './App.hooks'
+import { useUser } from './contexts/user/hooks'
 
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const url = `${protocol}//${window.location.host}/socket`
@@ -13,24 +10,13 @@ const WithSuspense: React.FC = ({ children }) => {
   return <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
 }
 
+const Init = React.memo(() => {
+  useApp(url)
+  return <></>
+})
+
 const App = () => {
-  const login = useSelector((state: State) => state.user.login)
-  const dispatch = useDispatch()
-
-  useEffect(() => {
-    dispatch(onResize(window.innerWidth, window.innerHeight))
-
-    const handleResize = () => {
-      dispatch(onResize(window.innerWidth, window.innerHeight))
-    }
-
-    window.addEventListener('resize', handleResize)
-
-    return () => {
-      window.removeEventListener('resize', handleResize)
-    }
-  }, [])
-
+  const { login } = useUser()
   const Top = login
     ? lazy(() => import('./components/pages/Top'))
     : lazy(() => import('./components/pages/Login'))
@@ -46,7 +32,7 @@ const App = () => {
   const LoginSuccess = lazy(() => import('./components/pages/LoginSuccess'))
 
   return (
-    <BrowserRouter>
+    <>
       <Routes>
         <Route
           path="/"
@@ -99,9 +85,8 @@ const App = () => {
           }
         />
       </Routes>
-      <RouterListener />
-      <Socket url={url} />
-    </BrowserRouter>
+      <Init />
+    </>
   )
 }
 export default App

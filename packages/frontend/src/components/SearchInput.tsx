@@ -1,18 +1,16 @@
 import React from 'react'
 import styled from 'styled-components'
-import { useDispatch, useSelector } from 'react-redux'
-import { State } from '../modules/index'
-import { search, cancel } from '../modules/search'
+import { useSearch, useDispatchSearch } from '../contexts/search/hooks'
 import InputText from './atoms/InputText'
 import Button from './atoms/TransparentButton'
 
 const SearchInput = () => {
-  const query = useSelector((state: State) => state.search.query)
-  const dispatch = useDispatch()
+  const { query } = useSearch()
+  const { search, cancel } = useDispatchSearch()
 
-  const onChange = (e) => search(e.target.value)(dispatch)
+  const onChange = (e) => search(e.target.value)
 
-  const onCancel = () => dispatch(cancel())
+  const onCancel = () => cancel()
 
   return (
     <Wrap>

@@ -1,17 +1,17 @@
 import React, { lazy } from 'react'
-import { useSelector } from 'react-redux'
-import { State } from '../../modules/index'
+import { useUi } from '../../contexts/ui/hooks'
 import Menu from '../atoms/Menu'
 import PageWrapper from '../templates/PageWrapper'
 import TopContent from '../TopContent'
 
 const Top = () => {
-  const settings = useSelector((state: State) => state.ui.openSettings)
+  const { isOpenSettings } = useUi()
+
   const Settings = lazy(() => import('../Settings'))
 
   return (
     <PageWrapper>
-      {settings ? (
+      {isOpenSettings ? (
         <Settings />
       ) : (
         <>

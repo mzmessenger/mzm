@@ -1,26 +1,28 @@
 import React from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import styled from 'styled-components'
-import { State, store } from '../modules/index'
-import { setRoomStatus } from '../modules/rooms'
-import { openRoom, closeRoom } from '../modules/socket'
+import { useRooms, useDispatchRooms } from '../contexts/rooms/hooks'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 import CheckIcon from '@material-ui/icons/Check'
 
 const RoomSettingStatus = () => {
-  const dispatch = useDispatch()
-  const id = useSelector((state: State) => state.rooms.currentRoomId)
-  const room = useSelector((state: State) => state.rooms.rooms.byId[id])
+  const {
+    currentRoomId,
+    rooms: { byId }
+  } = useRooms()
+  const { setRoomStatus } = useDispatchRooms()
+  const { openRoom, closeRoom } = useDispatchSocket()
 
+  const room = byId[currentRoomId]
   const status = room?.status
 
   const clickOpen = () => {
-    openRoom(id)(dispatch, store.getState)
-    dispatch(setRoomStatus(id, 'open'))
+    openRoom(currentRoomId)
+    setRoomStatus(currentRoomId, 'open')
   }
 
   const clickClose = () => {
-    closeRoom(id)(dispatch, store.getState)
-    dispatch(setRoomStatus(id, 'close'))
+    closeRoom(currentRoomId)
+    setRoomStatus(currentRoomId, 'close')
   }
 
   return (

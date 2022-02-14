@@ -1,4 +1,5 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
+import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
 import { MONGODB_URI } from '../config'
 import { logger } from './logger'
 
@@ -107,15 +108,6 @@ export type Message = {
   createdAt: Date
   updatedAt: Date
   vote?: Vote
-}
-
-export const VoteStatusEnum = {
-  CLOSE: 0,
-  OPEN: 1
-} as const
-
-export const VoteTypeEnum = {
-  CHOICE: 'CHOICE'
 }
 
 type Vote = {

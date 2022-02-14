@@ -1,13 +1,12 @@
 import React from 'react'
 import styled from 'styled-components'
-import { useSelector, useDispatch } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
-import { State } from '../modules/index'
 import TransparentButton from './atoms/TransparentButton'
 import Home from '@material-ui/icons/Home'
-import { store } from '../modules/index'
-import { searchNext, cancel } from '../modules/search'
-import { enterRoom } from '../modules/rooms'
+import { useSearch, useDispatchSearch } from '../contexts/search/hooks'
+import { useDispatchRooms } from '../contexts/rooms/hooks'
+import { useDispatchSocket } from '../contexts/socket/hooks'
+import { useDispatchUi } from '../contexts/ui/hooks'
 
 const SearchRoomElem = ({
   name,
@@ -16,12 +15,15 @@ const SearchRoomElem = ({
   name: string
   iconUrl: string
 }) => {
-  const dispatch = useDispatch()
   const navigate = useNavigate()
+  const { enterRoom } = useDispatchRooms()
+  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
+  const { cancel } = useDispatchSearch()
+  const { closeMenu } = useDispatchUi()
   const onClick = () => {
-    enterRoom(name)(dispatch, store.getState).then(() => {
+    enterRoom(name, getMessages, enterRoomSocket, closeMenu).then(() => {
       navigate(`/rooms/${name}`)
-      dispatch(cancel())
+      cancel()
     })
   }
 
@@ -77,11 +79,10 @@ const RoomWrap = styled.div`
 `
 
 const SearchResult = () => {
-  const dispatch = useDispatch()
-  const results = useSelector((state: State) => state.search.results)
-  const total = useSelector((state: State) => state.search.total)
+  const { results, total } = useSearch()
+  const { searchNext } = useDispatchSearch()
 
-  const onClick = () => searchNext()(dispatch, store.getState)
+  const onClick = () => searchNext()
 
   return (
     <Wrap>

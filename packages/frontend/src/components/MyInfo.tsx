@@ -1,21 +1,20 @@
 import React from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import styled from 'styled-components'
 import Settings from '@material-ui/icons/Settings'
-import { State } from '../modules/index'
-import { openSettings, closeSettings } from '../modules/ui'
+import { useUi, useDispatchUi } from '../contexts/ui/hooks'
+import { useUser } from '../contexts/user/hooks'
 
 const MyInfo = () => {
-  const me = useSelector((state: State) => state.user.me)
-  const settings = useSelector((state: State) => state.ui.openSettings)
+  const { me } = useUser()
+  const { isOpenSettings } = useUi()
+  const { closeSettings, openSettings } = useDispatchUi()
   const icon = me ? me.iconUrl : null
-  const dispatch = useDispatch()
 
   const clickSettings = () => {
-    if (settings) {
-      dispatch(closeSettings())
+    if (isOpenSettings) {
+      closeSettings()
     } else {
-      dispatch(openSettings())
+      openSettings()
     }
   }
 

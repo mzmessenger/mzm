@@ -1,10 +1,11 @@
-import React, { useState, useEffect } from 'react'
+import React, { useState, useEffect, useMemo } from 'react'
 import styled from 'styled-components'
-import { useDispatch, useSelector } from 'react-redux'
-import { State, store } from '../../modules/index'
-import { sendVoteAnswer, removeVoteAnswer } from '../../modules/messages'
+import { useDispatchSocket } from '../../contexts/socket/hooks'
+import { useUser } from '../../contexts/user/hooks'
+import { useMessages, useDispatchMessages } from '../../contexts/messages/hooks'
+import { StateMessageType } from '../../contexts/messages/constants'
 import VoteAnswer from './VoteAnswer'
-import { VoteAnswerTypeEnum, Message } from '../../type'
+import { VoteAnswerTypeEnum } from '../../type'
 
 const RadioButton = ({
   name,
@@ -67,12 +68,21 @@ const Question = ({
   text: string
   index: number
 }) => {
-  const dispatch = useDispatch()
-  const myId = useSelector((state: State) => state.user.me.id)
-  const answers = useSelector(
-    (state: State) => state.messages.voteAnswers.byId[messageId][index] ?? []
-  )
+  const { me } = useUser()
+  const {
+    voteAnswers: { byId }
+  } = useMessages()
+  const { removeVoteAnswer, sendVoteAnswer } = useDispatchMessages()
   const [checked, setChecked] = useState<number>(null)
+  const {
+    removeVoteAnswer: removeVoteAnswerSocket,
+    sendVoteAnswer: sendVoteAnswerSocket
+  } = useDispatchSocket()
+
+  const answers = useMemo(() => {
+    return byId[messageId][index] ?? []
+  }, [byId, index, messageId])
+
   const name = `${text}-${index}`
 
   const ok = answers.filter((e) => e.answer === 0)
@@ -80,17 +90,17 @@ const Question = ({
   const na = answers.filter((e) => e.answer === 2)
 
   useEffect(() => {
-    setChecked(answers.find((e) => e.userId === myId)?.answer)
-  }, [myId, answers])
+    setChecked(answers.find((e) => e.userId === me.id)?.answer)
+  }, [me.id, answers])
 
   const onClickRadio = (e: React.MouseEvent<HTMLInputElement>) => {
     const answer = parseInt((e.target as HTMLInputElement).value, 10)
     if (answer === checked) {
-      removeVoteAnswer(messageId, index)(dispatch, store.getState)
+      removeVoteAnswer(messageId, index, me, removeVoteAnswerSocket)
       setChecked(null)
     } else {
       const answer = parseInt((e.target as HTMLInputElement).value, 10)
-      sendVoteAnswer(messageId, index, answer)(dispatch, store.getState)
+      sendVoteAnswer(messageId, index, answer, me, sendVoteAnswerSocket)
       setChecked(answer)
     }
   }
@@ -151,7 +161,7 @@ const Question = ({
 type Props = {
   className?: string
   messageId: string
-  vote?: Message['vote']
+  vote?: StateMessageType['vote']
 }
 
 const MessageVote = ({ messageId, className, vote }: Props) => {

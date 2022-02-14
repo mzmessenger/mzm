@@ -1,10 +1,16 @@
 import { ObjectId, WithId } from 'mongodb'
+import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
+import {
+  TO_SERVER_CMD,
+  FilterSocketToBackendType,
+  TO_CLIENT_CMD,
+  ToClientType
+} from 'mzm-shared/type/socket'
 import escape from 'validator/lib/escape'
 import unescape from 'validator/lib/unescape'
 import trim from 'validator/lib/trim'
 import isEmpty from 'validator/lib/isEmpty'
 import isNumeric from 'validator/lib/isNumeric'
-import { SendMessage as SendMessageType } from '../../types'
 import * as db from '../../lib/db'
 import * as config from '../../config'
 import {
@@ -32,50 +38,17 @@ import {
   enterRoom as logicEnterRoom
 } from '../../logic/rooms'
 
-export const ReceiveMessageCmd = {
-  CONNECTION: 'socket:connection',
-  ROOMS_GET: 'rooms:get',
-  ROOMS_ENTER: 'rooms:enter',
-  ROOMS_READ: 'rooms:read',
-  ROOMS_SORT: 'rooms:sort',
-  ROOMS_OPEN: 'rooms:open',
-  ROOMS_CLOSE: 'rooms:close',
-  MESSAGE_SEND: 'message:send',
-  MESSAGE_IINE: 'message:iine',
-  MESSAGE_MODIFY: 'message:modify',
-  MESSAGES_ROOM: 'messages:room',
-  VOTE_ANSWER_SEND: 'vote:answer:send',
-  VOTE_ANSWER_REMOVE: 'vote:answer:remove'
-} as const
-
-export type ReceiveMessage =
-  | ConnectionMessage
-  | { cmd: typeof ReceiveMessageCmd.ROOMS_GET }
-  | SendMessage
-  | ModifyMessage
-  | IineMessage
-  | GetMessages
-  | EnterRoom
-  | ReadMessage
-  | SortRooms
-  | OpenRoom
-  | CloseRoom
-  | SendVoteAnswer
-  | RemoveVoteAnswer
-
-type ConnectionMessage = {
-  cmd: typeof ReceiveMessageCmd.CONNECTION
-  payload: { user: string }
-}
-
-export const connection = (userId: string, _data: ConnectionMessage) => {
+export const connection = (
+  userId: string,
+  _data: FilterSocketToBackendType<typeof TO_SERVER_CMD.CONNECTION>
+): ToClientType => {
   return {
-    cmd: 'socket:connection',
+    cmd: TO_CLIENT_CMD.SOCKET_CONNECTION,
     user: userId
   }
 }
 
-export const getRooms = async (userId: string): Promise<SendMessageType> => {
+export const getRooms = async (userId: string): Promise<ToClientType> => {
   const [user, rooms] = await Promise.all([
     db.collections.users.findOne<Pick<db.User, 'roomOrder'>>(
       { _id: new ObjectId(userId) },
@@ -83,27 +56,19 @@ export const getRooms = async (userId: string): Promise<SendMessageType> => {
     ),
     getRoomsLogic(userId)
   ])
-  const room: SendMessageType = {
+  const room: ToClientType = {
     user: userId,
-    cmd: 'rooms',
+    cmd: TO_CLIENT_CMD.ROOMS_GET,
     rooms,
     roomOrder: user.roomOrder ? user.roomOrder : []
   }
   return room
 }
 
-type SendMessage = {
-  cmd: typeof ReceiveMessageCmd.MESSAGE_SEND
-  message: string
-  room: string
-  vote?: {
-    questions: {
-      text: string
-    }[]
-  }
-}
-
-export const sendMessage = async (user: string, data: SendMessage) => {
+export const sendMessage = async (
+  user: string,
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_SEND>
+) => {
   const message = escape(trim(data.message))
   const room = escape(trim(data.room))
   // todo: send bad request
@@ -130,8 +95,8 @@ export const sendMessage = async (user: string, data: SendMessage) => {
     }
     vote = {
       questions,
-      status: db.VoteStatusEnum.OPEN,
-      type: db.VoteTypeEnum.CHOICE
+      status: VoteStatusEnum.OPEN,
+      type: VoteTypeEnum.CHOICE
     }
   }
 
@@ -144,9 +109,9 @@ export const sendMessage = async (user: string, data: SendMessage) => {
   const u = await db.collections.users.findOne({
     _id: new ObjectId(user)
   })
-  const send: SendMessageType = {
+  const send: ToClientType = {
     user: null,
-    cmd: 'message:receive',
+    cmd: TO_CLIENT_CMD.MESSAGE_RECEIVE,
     message: {
       id: saved.insertedId.toHexString(),
       userId: user,
@@ -154,7 +119,7 @@ export const sendMessage = async (user: string, data: SendMessage) => {
       message: unescape(message),
       iine: 0,
       updated: false,
-      createdAt: new Date(Date.now()),
+      createdAt: Date.now().toString(),
       updatedAt: null,
       icon: createUserIconPath(u.account, u.icon?.version)
     },
@@ -166,7 +131,7 @@ export const sendMessage = async (user: string, data: SendMessage) => {
     send.message.vote = {
       questions,
       answers: [],
-      status: db.VoteStatusEnum.OPEN
+      status: VoteStatusEnum.OPEN
     }
   }
 
@@ -187,12 +152,10 @@ export const sendMessage = async (user: string, data: SendMessage) => {
   return
 }
 
-type IineMessage = {
-  cmd: typeof ReceiveMessageCmd.MESSAGE_IINE
-  id: string
-}
-
-export const iine = async (user: string, data: IineMessage) => {
+export const iine = async (
+  user: string,
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_IINE>
+) => {
   const target = await db.collections.messages.findOne({
     _id: new ObjectId(data.id)
   })
@@ -203,8 +166,8 @@ export const iine = async (user: string, data: IineMessage) => {
   )
 
   const users = await getAllUserIdsInRoom(target.roomId.toHexString())
-  const send: SendMessageType = {
-    cmd: 'message:iine',
+  const send: ToClientType = {
+    cmd: TO_CLIENT_CMD.MESSAGE_IINE,
     iine: (target.iine ? target.iine : 0) + 1,
     room: target.roomId.toHexString(),
     id: target._id.toHexString()
@@ -214,13 +177,10 @@ export const iine = async (user: string, data: IineMessage) => {
   return
 }
 
-type ModifyMessage = {
-  cmd: typeof ReceiveMessageCmd.MESSAGE_MODIFY
-  id: string
-  message: string
-}
-
-export const modifyMessage = async (user: string, data: ModifyMessage) => {
+export const modifyMessage = async (
+  user: string,
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_MODIFY>
+) => {
   const message = escape(trim(data.message))
   const id = escape(trim(data.id))
   // todo: send bad request
@@ -247,9 +207,9 @@ export const modifyMessage = async (user: string, data: ModifyMessage) => {
   const u = await db.collections.users.findOne({
     _id: new ObjectId(user)
   })
-  const send: SendMessageType = {
+  const send: ToClientType = {
     user: user,
-    cmd: 'message:modify',
+    cmd: TO_CLIENT_CMD.MESSAGE_MODIFY,
     message: {
       id: from._id.toHexString(),
       message: unescape(message),
@@ -257,8 +217,8 @@ export const modifyMessage = async (user: string, data: ModifyMessage) => {
       userId: from.userId.toHexString(),
       userAccount: u.account,
       updated: true,
-      createdAt: from.createdAt,
-      updatedAt: updatedAt,
+      createdAt: from.createdAt.getTime().toString(),
+      updatedAt: updatedAt.getTime().toString(),
       icon: createUserIconPath(u.account, u.icon?.version)
     },
     room: from.roomId.toHexString()
@@ -268,16 +228,10 @@ export const modifyMessage = async (user: string, data: ModifyMessage) => {
   addQueueToUsers(users, send)
 }
 
-type GetMessages = {
-  cmd: typeof ReceiveMessageCmd.MESSAGES_ROOM
-  room: string
-  id?: string
-}
-
 export const getMessagesFromRoom = async (
   user: string,
-  data: GetMessages
-): Promise<SendMessageType> => {
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGES_ROOM>
+): Promise<ToClientType> => {
   const room = escape(trim(data.room))
   // todo: send bad request
   if (isEmpty(room)) {
@@ -297,9 +251,9 @@ export const getMessagesFromRoom = async (
     id = escape(trim(data.id))
   }
   const { existHistory, messages } = await getMessages(room, id)
-  const send: SendMessageType = {
+  const send: ToClientType = {
     user: user,
-    cmd: 'messages:room',
+    cmd: TO_CLIENT_CMD.MESSAGES_ROOM,
     room,
     messages: messages,
     existHistory
@@ -307,16 +261,10 @@ export const getMessagesFromRoom = async (
   return send
 }
 
-type EnterRoom = {
-  cmd: typeof ReceiveMessageCmd.ROOMS_ENTER
-  id?: string
-  name?: string
-}
-
 export const enterRoom = async (
   user: string,
-  data: EnterRoom
-): Promise<SendMessageType> => {
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_ENTER>
+): Promise<ToClientType> => {
   let room: WithId<db.Room> = null
   if (data.id) {
     const id = escape(trim(data.id))
@@ -327,7 +275,7 @@ export const enterRoom = async (
     if (!valid.valid) {
       return {
         user,
-        cmd: 'rooms:enter:fail',
+        cmd: TO_CLIENT_CMD.ROOMS_ENTER_FAIL,
         id: null,
         name: data.name,
         reason: valid.reason
@@ -345,7 +293,7 @@ export const enterRoom = async (
   if (!room) {
     return {
       user,
-      cmd: 'rooms:enter:fail',
+      cmd: TO_CLIENT_CMD.ROOMS_ENTER_FAIL,
       id: null,
       name: data.name,
       reason: 'not found'
@@ -356,19 +304,17 @@ export const enterRoom = async (
 
   return {
     user,
-    cmd: 'rooms:enter:success',
+    cmd: TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS,
     id: room._id.toHexString(),
     name: room.name,
     iconUrl: createRoomIconPath(room)
   }
 }
 
-type ReadMessage = {
-  cmd: typeof ReceiveMessageCmd.ROOMS_READ
-  room?: string
-}
-
-export const readMessage = async (user: string, data: ReadMessage) => {
+export const readMessage = async (
+  user: string,
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_READ>
+) => {
   if (isEmpty(data.room)) {
     // todo BadRequest
     return
@@ -381,15 +327,17 @@ export const readMessage = async (user: string, data: ReadMessage) => {
     { $set: { unreadCounter: 0, replied: 0 } }
   )
 
-  await addMessageQueue({ user, cmd: 'rooms:read', room: data.room })
+  await addMessageQueue({
+    user,
+    cmd: TO_CLIENT_CMD.ROOMS_READ,
+    room: data.room
+  })
 }
 
-type SortRooms = {
-  cmd: typeof ReceiveMessageCmd.ROOMS_SORT
-  roomOrder?: string[]
-}
-
-export const sortRooms = async (user: string, data: SortRooms) => {
+export const sortRooms = async (
+  user: string,
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_SORT>
+) => {
   if (!data.roomOrder || !Array.isArray(data.roomOrder)) {
     // todo BadRequest
     return
@@ -409,12 +357,17 @@ export const sortRooms = async (user: string, data: SortRooms) => {
     { $set: { roomOrder } }
   )
 
-  await addMessageQueue({ user, cmd: 'rooms:sort:success', roomOrder })
+  await addMessageQueue({
+    user,
+    cmd: TO_CLIENT_CMD.ROOMS_SORT_SUCCESS,
+    roomOrder
+  })
 }
 
-type OpenRoom = { cmd: typeof ReceiveMessageCmd.ROOMS_OPEN; roomId: string }
-
-export const openRoom = async (user: string, data: OpenRoom) => {
+export const openRoom = async (
+  user: string,
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_OPEN>
+) => {
   const roomId = new ObjectId(data.roomId)
 
   const general = await db.collections.rooms.findOne({
@@ -433,9 +386,10 @@ export const openRoom = async (user: string, data: OpenRoom) => {
   // @todo 伝播
 }
 
-type CloseRoom = { cmd: typeof ReceiveMessageCmd.ROOMS_CLOSE; roomId: string }
-
-export const closeRoom = async (user: string, data: CloseRoom) => {
+export const closeRoom = async (
+  user: string,
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_CLOSE>
+) => {
   const roomId = new ObjectId(data.roomId)
 
   const general = await db.collections.rooms.findOne({
@@ -455,18 +409,14 @@ export const closeRoom = async (user: string, data: CloseRoom) => {
   // @todo 伝播
 }
 
-export type SendVoteAnswer = {
-  cmd: typeof ReceiveMessageCmd.VOTE_ANSWER_SEND
-  messageId: string
-  index: number
-  answer: number
-}
-
 const isAnswer = (answer: number): answer is db.VoteAnswer['answer'] => {
   return Object.values<number>(db.VoteAnswerEnum).includes(answer)
 }
 
-export const sendVoteAnswer = async (user: string, data: SendVoteAnswer) => {
+export const sendVoteAnswer = async (
+  user: string,
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_SEND>
+) => {
   if (
     !Object.prototype.hasOwnProperty.call(data, 'messageId') ||
     !Object.prototype.hasOwnProperty.call(data, 'index') ||
@@ -495,7 +445,7 @@ export const sendVoteAnswer = async (user: string, data: SendVoteAnswer) => {
   if (
     !message ||
     !message.vote ||
-    message.vote.status !== db.VoteStatusEnum.OPEN ||
+    message.vote.status !== VoteStatusEnum.OPEN ||
     data.answer > message.vote.questions.length
   ) {
     // todo: send bad request
@@ -517,15 +467,9 @@ export const sendVoteAnswer = async (user: string, data: SendVoteAnswer) => {
   addVoteQueue(data.messageId)
 }
 
-type RemoveVoteAnswer = {
-  cmd: typeof ReceiveMessageCmd.VOTE_ANSWER_REMOVE
-  messageId: string
-  index: number
-}
-
 export const removeVoteAnswer = async (
   user: string,
-  data: RemoveVoteAnswer
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_REMOVE>
 ) => {
   if (
     !Object.prototype.hasOwnProperty.call(data, 'messageId') ||
@@ -545,7 +489,7 @@ export const removeVoteAnswer = async (
   if (
     !message ||
     !message.vote ||
-    message.vote.status !== db.VoteStatusEnum.OPEN
+    message.vote.status !== VoteStatusEnum.OPEN
   ) {
     // todo: send bad request
     return

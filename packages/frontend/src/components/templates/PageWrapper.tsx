@@ -1,13 +1,11 @@
 import React from 'react'
-import { useSelector } from 'react-redux'
 import styled from 'styled-components'
-import { State } from '../../modules/index'
+import { useUi } from '../../contexts/ui/hooks'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import Header from '../atoms/Header'
 
 const PageWrapper = ({ children }: { children?: React.ReactNode }) => {
-  const overlay = useSelector((state: State) => state.ui.overlay)
-  const menuStatus = useSelector((state: State) => state.ui.menuStatus)
+  const { overlay, menuStatus } = useUi()
   const classNames = menuStatus === 'open' ? ['body open'] : ['body']
 
   return (

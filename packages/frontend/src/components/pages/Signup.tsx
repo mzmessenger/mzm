@@ -1,9 +1,7 @@
 import React, { useState, useCallback } from 'react'
-import { useDispatch, useSelector } from 'react-redux'
 import { useNavigate } from 'react-router-dom'
 import styled from 'styled-components'
-import { State } from '../../modules/index'
-import { getMyInfo } from '../../modules/user'
+import { useUser, useDispatchUser } from '../../contexts/user/hooks'
 import Header from '../atoms/LoginHeader'
 import InputText from '../atoms/InputText'
 import Button from '../atoms/Button'
@@ -13,12 +11,12 @@ const ERROR_TXT =
 
 const Signup = () => {
   const navigate = useNavigate()
-  const signupAccount = useSelector((state: State) => state.user.signupAccount)
+  const { signupAccount } = useUser()
+  const { fetchMyInfo } = useDispatchUser()
+
   if (!signupAccount) {
     navigate('/')
   }
-
-  const dispatch = useDispatch()
 
   const [txt, setTxt] = useState(signupAccount ? signupAccount : '')
   const [errorTxt, setErrorTxt] = useState('')
@@ -52,7 +50,7 @@ const Signup = () => {
     })
 
     if (res.status === 200) {
-      return await getMyInfo()(dispatch)
+      return await fetchMyInfo()
     } else if (res.status === 400) {
       setErrorTxt(ERROR_TXT)
       return

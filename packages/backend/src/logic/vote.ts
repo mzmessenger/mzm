@@ -1,10 +1,10 @@
 import { ObjectId } from 'mongodb'
+import { MessageType } from 'mzm-shared/type/socket'
 import * as db from '../lib/db'
 import { createUserIconPath } from '../lib/utils'
-import { Message } from '../types'
 
 export const getVoteAnswers = async (messageId: ObjectId) => {
-  const answers: Message['vote']['answers'] = []
+  const answers: MessageType['vote']['answers'] = []
 
   const cursor = await db.collections.voteAnswer.aggregate<
     db.VoteAnswer & { user: db.User[] }

@@ -1,16 +1,17 @@
 import React, { useRef, useState } from 'react'
 import styled from 'styled-components'
-import { useSelector, useDispatch } from 'react-redux'
 import CancelIcon from '@material-ui/icons/Cancel'
 import Modal, { ModalProps } from './atoms/Modal'
-import { State, store } from '../modules/index'
-import { getNextUsers } from '../modules/rooms'
+import { useRooms, useDispatchRooms } from '../contexts/rooms/hooks'
 
 type Props = ModalProps & { roomId: string }
 
 const ModalUsersList = ({ open, onClose, roomId }: Props) => {
-  const dispatch = useDispatch()
-  const users = useSelector((state: State) => state.rooms.users.byId[roomId])
+  const {
+    users: { byId }
+  } = useRooms()
+  const { getNextUsers } = useDispatchRooms()
+  const users = byId[roomId]
   const [loading, setLoading] = useState(false)
   const timerRef = useRef(0)
   const listWrapRef = useRef<HTMLUListElement>(null)
@@ -34,9 +35,7 @@ const ModalUsersList = ({ open, onClose, roomId }: Props) => {
       const margin = 10
       if (bottomRect.top - wrapRect.bottom <= margin) {
         setLoading(true)
-        getNextUsers(roomId)(dispatch, store.getState).then(() =>
-          setLoading(false)
-        )
+        getNextUsers(roomId).then(() => setLoading(false))
       }
     }, 300)
   }

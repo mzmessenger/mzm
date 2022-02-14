@@ -4,10 +4,13 @@ on:
   push:
     paths:
       - 'packages/frontend/**'
+      - 'packages/shared/**'
+      - 'packages/package.json'
     branches: [ main ]
   pull_request:
     paths:
       - 'packages/frontend/**'
+      - 'packages/shared/**'
     branches: [ main ]
 
 jobs:
@@ -25,7 +28,8 @@ jobs:
         uses: actions/setup-node@v1
         with:
           node-version: ${{ matrix.node-version }}
-      - run: npm ci -w packages/frontend
+      - run: npm ci
+      - run: npm run build-esm -w packages/shared
       - run: npm run build-tsc -w packages/frontend
       - run: npm run build -w packages/frontend
       - run: npm test -w packages/frontend

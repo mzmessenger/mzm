@@ -1,12 +1,10 @@
 import React, { useEffect, useState } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import styled from 'styled-components'
 import Home from '@material-ui/icons/Home'
 import Person from '@material-ui/icons/Person'
 import ExpandMore from '@material-ui/icons/ExpandMore'
-import { State } from '../modules/index'
-import { openUserDetail } from '../modules/ui'
-import { toggleRoomSetting, getUsers } from '../modules/rooms'
+import { useDispatchUi } from '../contexts/ui/hooks'
+import { useRooms, useDispatchRooms } from '../contexts/rooms/hooks'
 import { WIDTH_MOBILE } from '../lib/constants'
 import ModalUsersList from './ModalUsersList'
 
@@ -15,24 +13,28 @@ const RoomIcon = ({ iconUrl }: { iconUrl: string }) => {
 }
 
 const RoomInfo = () => {
-  const dispatch = useDispatch()
-  const id = useSelector((state: State) => state.rooms.currentRoomId)
-  const _name = useSelector((state: State) => state.rooms.currentRoomName)
-  const iconUrl = useSelector((state: State) => state.rooms.currentRoomIcon)
-  const expand = useSelector((state: State) => state.rooms.openRoomSetting)
-  const users = useSelector((state: State) => state.rooms.users.byId[id])
+  const {
+    currentRoomId,
+    currentRoomName,
+    currentRoomIcon,
+    openRoomSetting,
+    users: { byId }
+  } = useRooms()
+  const { getUsers, toggleRoomSetting } = useDispatchRooms()
+  const users = byId[currentRoomId]
+  const { openUserDetail } = useDispatchUi()
   const [open, setOpen] = useState(false)
 
-  const name = _name || ''
+  const name = currentRoomName || ''
 
   useEffect(() => {
-    if (id) {
-      getUsers(id)(dispatch)
+    if (currentRoomId) {
+      getUsers(currentRoomId)
     }
-  }, [id])
+  }, [currentRoomId, getUsers])
 
   const clickUser = (user) => {
-    dispatch(openUserDetail(user.id, user.account, user.icon))
+    openUserDetail(user.id, user.account, user.icon)
   }
 
   const userIcons = (users?.users || [])
@@ -40,18 +42,18 @@ const RoomInfo = () => {
     .map((u, i) => <img key={i} src={u.icon} onClick={() => clickUser(u)} />)
 
   const expandClassName = ['expand-icon']
-  if (expand) {
+  if (openRoomSetting) {
     expandClassName.push('expand')
   }
 
   const onExpandClick = () => {
-    dispatch(toggleRoomSetting())
+    toggleRoomSetting()
   }
 
   return (
     <Wrap>
       <div className="room-icon">
-        <RoomIcon iconUrl={iconUrl} />
+        <RoomIcon iconUrl={currentRoomIcon} />
       </div>
       <span className="room-name">{name}</span>
       <div className="space"></div>
@@ -65,7 +67,11 @@ const RoomInfo = () => {
       <div className={expandClassName.join(' ')} onClick={onExpandClick}>
         <ExpandMore className="icon" />
       </div>
-      <ModalUsersList open={open} onClose={() => setOpen(false)} roomId={id} />
+      <ModalUsersList
+        open={open}
+        onClose={() => setOpen(false)}
+        roomId={currentRoomId}
+      />
     </Wrap>
   )
 }

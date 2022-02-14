@@ -1,10 +1,9 @@
 import React, { useState, useCallback } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import styled from 'styled-components'
 import DirectionsRun from '@material-ui/icons/DirectionsRun'
 import { WIDTH_MOBILE } from '../lib/constants'
-import { State, store } from '../modules/index'
-import { exitRoom, uploadIcon } from '../modules/rooms'
+import { useDispatchSocket } from '../contexts/socket/hooks'
+import { useRooms, useDispatchRooms } from '../contexts/rooms/hooks'
 import Home from '@material-ui/icons/Home'
 import DropImage from './atoms/DropImage'
 import Button from './atoms/Button'
@@ -16,20 +15,24 @@ const IconImage = ({ iconUrl }: { iconUrl: string }) => {
 }
 
 const RoomSetting = () => {
-  const dispatch = useDispatch()
-  const id = useSelector((state: State) => state.rooms.currentRoomId)
-  const _name = useSelector((state: State) => state.rooms.currentRoomName)
-  const room = useSelector((state: State) => state.rooms.rooms.byId[id])
+  const {
+    currentRoomId,
+    currentRoomName,
+    rooms: { byId }
+  } = useRooms()
+  const { exitRoom, uploadIcon } = useDispatchRooms()
+  const room = byId[currentRoomId]
   const [image, setImage] = useState('')
   const [open, setOpen] = useState(false)
   const [edit, setEdit] = useState(false)
+  const { getRooms } = useDispatchSocket()
 
-  const name = _name || ''
+  const name = currentRoomName || ''
   const iconUrl = room?.iconUrl
   const isGeneral = name === 'general'
 
   const onClick = () => {
-    exitRoom(id)(dispatch, store.getState)
+    exitRoom(currentRoomId, getRooms)
   }
 
   const onloadFile = (file: string) => {
@@ -37,20 +40,20 @@ const RoomSetting = () => {
     setOpen(true)
   }
 
-  const onModalSave = useCallback((image: Blob) => {
-    uploadIcon(
-      name,
-      image
-    )(dispatch).then((res) => {
-      if (res.ok) {
-        setOpen(false)
-      } else {
-        res.text().then((text) => {
-          alert(`アップロードにエラーが発生しました(${text})`)
-        })
-      }
-    })
-  }, [])
+  const onModalSave = useCallback(
+    (image: Blob) => {
+      uploadIcon(name, image).then((res) => {
+        if (res.ok) {
+          setOpen(false)
+        } else {
+          res.text().then((text) => {
+            alert(`アップロードにエラーが発生しました(${text})`)
+          })
+        }
+      })
+    },
+    [name, uploadIcon]
+  )
 
   const onModalCancel = useCallback(() => {
     setOpen(false)
@@ -82,7 +85,7 @@ const RoomSetting = () => {
               <ul>
                 <li>
                   <h4>ID</h4>
-                  <span>{id}</span>
+                  <span>{currentRoomId}</span>
                 </li>
                 <li>
                   <h4>部屋名</h4>

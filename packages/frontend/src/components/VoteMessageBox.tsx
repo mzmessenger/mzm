@@ -1,10 +1,9 @@
 import React, { useState } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import styled from 'styled-components'
 import Add from '@material-ui/icons/Add'
 import Clear from '@material-ui/icons/Clear'
-import { State, store } from '../modules/index'
-import { sendMessage } from '../modules/socket'
+import { useRooms } from '../contexts/rooms/hooks'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 import TextArea from './atoms/TextArea'
 import InputText from './atoms/InputText'
 import Button from './atoms/Button'
@@ -59,10 +58,10 @@ const VoteMessageBox = ({
   onSave: (e: React.MouseEvent) => void
   onCancel: (e: React.MouseEvent) => void
 }) => {
-  const dispatch = useDispatch()
-  const currentRoomId = useSelector((state: State) => state.rooms.currentRoomId)
+  const { currentRoomId } = useRooms()
   const [text, setText] = useState('候補日')
   const [questions, setQuestions] = useState<string[]>(['4/1', '4/2', '4/3'])
+  const { sendMessage } = useDispatchSocket()
 
   const onChange = (e) => {
     setText(e.target.value)
@@ -92,7 +91,7 @@ const VoteMessageBox = ({
         }
       })
     const vote = { questions: q }
-    await sendMessage(text, currentRoomId, vote)(dispatch, store.getState)
+    await sendMessage(text, currentRoomId, vote)
     onSave(e)
   }
 

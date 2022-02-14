@@ -1,7 +1,8 @@
-import { SendSocketMessage } from '../type'
+import { ClientToSocketType } from 'mzm-shared/type/socket'
 
-export const sendSocket = (socket: WebSocket, message: SendSocketMessage) => {
+export const sendSocket = (socket: WebSocket, message: ClientToSocketType) => {
   if (!socket || socket.readyState !== WebSocket.OPEN) {
+    console.warn('socket is not ready:', socket, message)
     return
   }
   socket.send(JSON.stringify(message))

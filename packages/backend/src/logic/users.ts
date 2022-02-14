@@ -1,11 +1,15 @@
 import { ObjectId, WithId } from 'mongodb'
 import isEmpty from 'validator/lib/isEmpty'
+import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/type/socket'
 import * as config from '../config'
-import { Room as SendRoom } from '../types'
 import { logger } from '../lib/logger'
 import * as db from '../lib/db'
 import { createRoomIconPath } from '../lib/utils'
 import { enterRoom } from './rooms'
+
+type SendRoomType = FilterToClientType<
+  typeof TO_CLIENT_CMD.ROOMS_GET
+>['rooms'][number]
 
 export const isValidAccount = (account: string): boolean => {
   if (
@@ -50,7 +54,7 @@ export const initUser = async (userId: ObjectId, account: string) => {
   return user
 }
 
-export const getRooms = async (userId: string): Promise<SendRoom[]> => {
+export const getRooms = async (userId: string): Promise<SendRoomType[]> => {
   type AggregateType = WithId<db.Enter> & { room: WithId<db.Room>[] }
 
   const cursor = await db.collections.enter.aggregate<AggregateType>([
@@ -64,7 +68,7 @@ export const getRooms = async (userId: string): Promise<SendRoom[]> => {
       }
     }
   ])
-  const rooms: SendRoom[] = []
+  const rooms: SendRoomType[] = []
   for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
     const room = doc.room[0]
     rooms.push({

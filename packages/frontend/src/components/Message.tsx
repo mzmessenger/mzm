@@ -1,17 +1,17 @@
 import React, { useRef, useEffect, useState } from 'react'
-import { useSelector, useDispatch } from 'react-redux'
 import dayjs from 'dayjs'
 import styled from 'styled-components'
 import CreateIcon from '@material-ui/icons/Create'
 import ThumbUpIcon from '@material-ui/icons/ThumbUp'
+import { StateMessageType } from '../contexts/messages/constants'
 import { sanitize } from '../lib/sanitize'
 import { isReplied } from '../lib/util'
-import { State, store } from '../modules/index'
-import { startToEdit } from '../modules/ui'
-import { incrementIine } from '../modules/socket'
+import { useMessages } from '../contexts/messages/hooks'
+import { useUser } from '../contexts/user/hooks'
+import { useDispatchPostTextArea } from '../contexts/postTextArea/hooks'
+import { useDispatchSocket } from '../contexts/socket/hooks'
 import MessageBody from './atoms/MessageBody'
 import MessageVote from './atoms/MessageVote'
-import { Message } from '../type'
 
 type Props = {
   id: string
@@ -21,7 +21,7 @@ type Props = {
   userId: string
   userAccount: string
   icon: string
-  vote?: Message['vote']
+  vote?: StateMessageType['vote']
   updated: boolean
   createdAt: string
   beforeIine: number
@@ -47,7 +47,7 @@ const PresentationalMessage = ({
   startEditHandler
 }: Props) => {
   const [iineAction, setIineAction] = useState(false)
-  const day = dayjs(new Date(createdAt))
+  const day = dayjs(new Date(Number(createdAt)))
   const date = day.format(
     day.year() === new Date().getFullYear()
       ? 'MM/DD HH:mm:ss'
@@ -68,7 +68,7 @@ const PresentationalMessage = ({
     return () => {
       timer && clearTimeout(timer)
     }
-  }, [beforeIine, iine])
+  }, [beforeIine, iine, iineAction])
 
   let className = ''
   if (replied) {
@@ -107,18 +107,20 @@ const PresentationalMessage = ({
 }
 
 const MessageElement = ({ id }: { id: string }) => {
-  const myAccount = useSelector((state: State) => state.user.me.account)
-  const messageObj = useSelector(
-    (state: State) => state.messages.messages.byId[id]
-  )
+  const { me } = useUser()
+  const {
+    messages: { byId }
+  } = useMessages()
+  const { startToEdit } = useDispatchPostTextArea()
+  const { incrementIine } = useDispatchSocket()
 
-  const dispatch = useDispatch()
+  const messageObj = byId[id]
 
   const iineHandler = () => {
-    incrementIine(id)(dispatch, store.getState)
+    incrementIine(id)
   }
   const startEditHandler = () => {
-    dispatch(startToEdit(messageObj.id, messageObj.message))
+    startToEdit(messageObj.id, messageObj.message)
   }
   const prevIineRef = useRef<number>()
   useEffect(() => {
@@ -142,7 +144,7 @@ const MessageElement = ({ id }: { id: string }) => {
       updated={messageObj.updated}
       createdAt={messageObj.createdAt}
       beforeIine={prevIineRef.current}
-      myAccount={myAccount}
+      myAccount={me.account}
       iineHandler={iineHandler}
       startEditHandler={startEditHandler}
     />
