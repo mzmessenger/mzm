@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import Link from './atoms/Link'
 
 const recommended = ['要望室', 'test']
@@ -51,7 +51,7 @@ const Wrap = styled.div`
         display: flex;
         align-items: center;
         margin-top: 8px;
-        &:first-child {
+        &:first-of-type {
           margin-top: 0;
         }
         a {

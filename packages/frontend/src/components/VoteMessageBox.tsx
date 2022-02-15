@@ -1,12 +1,11 @@
 import React, { useState } from 'react'
-import styled from 'styled-components'
-import Add from '@material-ui/icons/Add'
-import Clear from '@material-ui/icons/Clear'
+import styled from '@emotion/styled'
+import { Add, Clear } from '@mui/icons-material'
 import { useRooms } from '../contexts/rooms/hooks'
 import { useDispatchSocket } from '../contexts/socket/hooks'
 import TextArea from './atoms/TextArea'
 import InputText from './atoms/InputText'
-import Button from './atoms/Button'
+import { Button } from './atoms/Button'
 import TransparentButton from './atoms/TransparentButton'
 
 const Question = ({

@@ -24,7 +24,6 @@
   },
   "devDependencies": {
     "@types/bunyan": "^1.8.8",
-    "@types/dotenv": "^8.2.0",
     "@types/ioredis": "^4.28.8",
     "@types/jest": "^27.4.0",
     "@types/node": "^17.0.17",

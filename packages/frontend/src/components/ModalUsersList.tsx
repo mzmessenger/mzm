@@ -1,6 +1,6 @@
 import React, { useRef, useState } from 'react'
-import styled from 'styled-components'
-import CancelIcon from '@material-ui/icons/Cancel'
+import styled from '@emotion/styled'
+import CancelIcon from '@mui/icons-material/Cancel'
 import Modal, { ModalProps } from './atoms/Modal'
 import { useRooms, useDispatchRooms } from '../contexts/rooms/hooks'
 
@@ -48,7 +48,7 @@ const ModalUsersList = ({ open, onClose, roomId }: Props) => {
           <CancelIcon className="cancel" onClick={onClose} />
         </header>
         <div className="count">{users?.count || 0}</div>
-        <div className="users" onScroll={onScroll}>
+        <div className="users scroll-styled-y" onScroll={onScroll}>
           <ul ref={listWrapRef}>
             {list}
             <li className="last" ref={listBottomRef}></li>

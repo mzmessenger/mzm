@@ -1,7 +1,9 @@
 import React from 'react'
-import styled from 'styled-components'
-import TwitterIcon from '@material-ui/icons/Twitter'
-import GitHubIcon from '@material-ui/icons/GitHub'
+import styled from '@emotion/styled'
+import {
+  Twitter as TwitterIcon,
+  GitHub as GitHubIcon
+} from '@mui/icons-material'
 import Header from '../atoms/LoginHeader'
 import Link from '../atoms/Link'
 

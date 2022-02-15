@@ -1,5 +1,5 @@
 import React, { lazy } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { useRooms } from '../contexts/rooms/hooks'
 import InputArea from './InputArea'
 import Messages from './Messages'
@@ -9,7 +9,7 @@ const ContentMessage = () => {
   return (
     <>
       <div className="messages">
-        <Messages className="messages-inner" />
+        <Messages className="messages-inner scroll-styled-y" />
       </div>
       <InputArea />
     </>

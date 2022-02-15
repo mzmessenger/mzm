@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useMemo } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { useDispatchSocket } from '../../contexts/socket/hooks'
 import { useUser } from '../../contexts/user/hooks'
 import { useMessages, useDispatchMessages } from '../../contexts/messages/hooks'
@@ -236,7 +236,7 @@ export default styled(MessageVote)`
       height: 32px;
       margin: 0 1em 0 0;
     }
-    label:last-child {
+    label:last-of-type {
       margin: 0;
     }
     input[type='radio'] {

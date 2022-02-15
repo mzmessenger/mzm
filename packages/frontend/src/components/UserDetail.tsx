@@ -1,6 +1,6 @@
 import React from 'react'
-import styled from 'styled-components'
-import Clear from '@material-ui/icons/Clear'
+import styled from '@emotion/styled'
+import Clear from '@mui/icons-material/Clear'
 import { useUi, useDispatchUi } from '../contexts/ui/hooks'
 
 const UserDetail = () => {

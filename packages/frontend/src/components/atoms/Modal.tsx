@@ -1,20 +1,22 @@
 import React from 'react'
-import styled from 'styled-components'
-import Modal from '@material-ui/core/Modal'
+import styled from '@emotion/styled'
+import Modal from '@mui/material/Modal'
 
 export type ModalProps = {
   open: boolean
+  style?: React.CSSProperties
   onClose: () => void
 }
 
 const ModalBase = ({
   open,
+  style,
   onClose,
   children
 }: ModalProps & { children?: React.ReactNode }) => {
   return (
     <Modal open={open} onClose={onClose}>
-      <ModalInner>{children}</ModalInner>
+      <ModalInner style={style}>{children}</ModalInner>
     </Modal>
   )
 }
