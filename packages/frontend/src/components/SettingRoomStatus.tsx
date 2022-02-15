@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import CheckIcon from '@mui/icons-material/Check'
 import { useRooms, useDispatchRooms } from '../contexts/rooms/hooks'
 import { useDispatchSocket } from '../contexts/socket/hooks'

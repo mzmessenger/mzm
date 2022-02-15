@@ -1,5 +1,5 @@
 import React, { useRef, useEffect } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { useDispatchSocket } from '../contexts/socket/hooks'
 import { useRooms } from '../contexts/rooms/hooks'
 import MessageElement from './Message'
@@ -74,10 +74,10 @@ const Wrap = styled.div`
   .message {
     background: var(--color-background);
     margin: 4px;
-    :first-child {
+    :forst-of-type {
       margin-top: 0;
     }
-    :last-child {
+    :last-of-type {
       margin-bottom: 0;
     }
   }

@@ -1,6 +1,6 @@
 import React, { useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { useDispatchRooms } from '../../contexts/rooms/hooks'
 import { getRoomName } from '../../lib/util'
 import { useDispatchSocket } from '../../contexts/socket/hooks'

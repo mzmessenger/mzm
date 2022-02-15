@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useState } from 'react'
 import dayjs from 'dayjs'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import {
   Create as CreateIcon,
   ThumbUp as ThumbUpIcon

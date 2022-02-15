@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import Add from '@mui/icons-material/Add'
 import CreateRoom from './ModalCreateRoom'
 

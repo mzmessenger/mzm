@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import Clear from '@mui/icons-material/Clear'
 import { useUi, useDispatchUi } from '../contexts/ui/hooks'
 

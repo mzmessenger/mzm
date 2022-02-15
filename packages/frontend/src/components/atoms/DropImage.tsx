@@ -1,5 +1,5 @@
 import React, { useEffect, useRef } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import ImageIcon from '@mui/icons-material/Image'
 
 const DropImage = ({ onloadFile }: { onloadFile: (file: string) => void }) => {

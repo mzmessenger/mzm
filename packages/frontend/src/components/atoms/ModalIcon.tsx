@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import Modal from './Modal'
 import Button from './Button'
 

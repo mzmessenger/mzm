@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { useUi } from '../../contexts/ui/hooks'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import Header from '../atoms/Header'

@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { useNavigate } from 'react-router-dom'
 import { useRooms, useDispatchRooms } from '../contexts/rooms/hooks'
 import { Room } from '../contexts/rooms/constants'

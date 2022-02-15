@@ -1,5 +1,5 @@
 import React, { useState, useCallback } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { Home, DirectionsRun } from '@mui/icons-material'
 import { WIDTH_MOBILE } from '../lib/constants'
 import { useDispatchSocket } from '../contexts/socket/hooks'

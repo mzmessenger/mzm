@@ -33,8 +33,6 @@
   "dependencies": {
     "@emotion/react": "^11.7.1",
     "@emotion/styled": "^11.6.0",
-    "@material-ui/core": "^4.11.0",
-    "@material-ui/icons": "^4.9.1",
     "@mui/icons-material": "^5.4.1",
     "@mui/material": "^5.4.1",
     "comlink": "^4.3.0",
@@ -46,7 +44,6 @@
     "react": "^17.0.2",
     "react-dom": "^17.0.2",
     "react-router-dom": "^6.2.1",
-    "styled-components": "^5.2.0",
     "validator": "^13.7.0"
   }
 }

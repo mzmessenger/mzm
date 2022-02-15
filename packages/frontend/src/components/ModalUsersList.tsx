@@ -1,5 +1,5 @@
 import React, { useRef, useState } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
 import Modal, { ModalProps } from './atoms/Modal'
 import { useRooms, useDispatchRooms } from '../contexts/rooms/hooks'

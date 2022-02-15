@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { useSearch, useDispatchSearch } from '../contexts/search/hooks'
 import InputText from './atoms/InputText'
 import Button from './atoms/TransparentButton'

@@ -1,5 +1,5 @@
 import React, { useState, useCallback, lazy } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { WIDTH_MOBILE } from '../lib/constants'
 import { useUser, useDispatchUser } from '../contexts/user/hooks'
 import Button from './atoms/Button'

@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import {
   LinkOff as LinkOffIcon,
   Twitter as TwitterIcon,
@@ -89,7 +89,7 @@ const Wrap = styled.div`
     flex-direction: column;
     margin: 0 0 0 1em;
   }
-  .login-account:first-child {
+  .login-account:first-of-type {
     margin-left: 0;
   }
 

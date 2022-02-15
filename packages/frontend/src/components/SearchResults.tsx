@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { useNavigate } from 'react-router-dom'
 import TransparentButton from './atoms/TransparentButton'
 import Home from '@mui/icons-material/Home'
@@ -44,7 +44,7 @@ const SearchRoomElem = ({
 
 const RoomWrap = styled.div`
   padding: 4px 8px 0;
-  &:last-child {
+  &:last-of-type {
     padding-bottom: 4px;
   }
 

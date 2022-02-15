@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
 import { WIDTH_MOBILE } from '../lib/constants'
 import { useDispatchUi } from '../contexts/ui/hooks'
@@ -109,7 +109,7 @@ const Wrap = styled.div`
         display: flex;
         > li {
           padding-left: 1em;
-          &:first-child {
+          &:first-of-type {
             padding-left: 0;
           }
         }

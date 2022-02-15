@@ -1,5 +1,5 @@
 import React from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
 import { useUi, useDispatchUi } from '../contexts/ui/hooks'
 import { useUser } from '../contexts/user/hooks'

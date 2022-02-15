@@ -1,5 +1,5 @@
 import React, { lazy } from 'react'
-import styled from 'styled-components'
+import styled from '@emotion/styled'
 import { useRooms } from '../contexts/rooms/hooks'
 import InputArea from './InputArea'
 import Messages from './Messages'
