@@ -5,7 +5,7 @@ import { WIDTH_MOBILE } from '../lib/constants'
 import { useDispatchSocket } from '../contexts/socket/hooks'
 import { useRooms, useDispatchRooms } from '../contexts/rooms/hooks'
 import DropImage from './atoms/DropImage'
-import Button from './atoms/Button'
+import { Button } from './atoms/Button'
 import ModalIcon from './atoms/ModalIcon'
 import SettingRoomStatus from './SettingRoomStatus'
 

@@ -2,14 +2,12 @@ import React, { useState } from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
 import { WIDTH_MOBILE } from '../../lib/constants'
-import { useSearch } from '../../contexts/search/hooks'
 import { useUi, useDispatchUi } from '../../contexts/ui/hooks'
 import ResizerX from './ResizerX'
 import MenuIcon from './MobileMenuIcon'
 import Rooms from '../Rooms'
 import RoomNavi from '../RoomNavi'
-import SearchInput from '../SearchInput'
-import SearchResult from '../SearchResults'
+import { SearchInput } from '../search'
 
 const WIDTH_KEY = 'mzm:menu:width'
 const MIN_WIDTH = 240
@@ -17,7 +15,6 @@ const MIN_WIDTH = 240
 const Menu = () => {
   const { menuStatus, device } = useUi()
   const { closeMenu, openSettings } = useDispatchUi()
-  const { query } = useSearch()
   const className = menuStatus === 'open' ? 'menu open' : 'menu'
   const [width, _setWidth] = useState(
     localStorage.getItem(WIDTH_KEY)
@@ -51,13 +48,8 @@ const Menu = () => {
         </header>
         <SearchInput />
         <div className="contents">
-          {query && <SearchResult />}
-          {!query && (
-            <>
-              <RoomNavi />
-              <Rooms />
-            </>
-          )}
+          <RoomNavi />
+          <Rooms />
         </div>
       </div>
     </Wrap>

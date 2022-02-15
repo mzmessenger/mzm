@@ -103,7 +103,7 @@ const Rooms = () => {
   )
 
   return (
-    <Wrap>
+    <Wrap className="scroll-styled-y">
       {allIds.map((r) => (
         <DropZone
           key={r}

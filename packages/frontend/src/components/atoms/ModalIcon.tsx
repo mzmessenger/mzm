@@ -1,7 +1,7 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react'
 import styled from '@emotion/styled'
 import Modal from './Modal'
-import Button from './Button'
+import { Button } from './Button'
 
 type Props = {
   image: string

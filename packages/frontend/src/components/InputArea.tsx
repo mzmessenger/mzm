@@ -7,7 +7,7 @@ import {
   usePostTextArea,
   useDispatchPostTextArea
 } from '../contexts/postTextArea/hooks'
-import Button from './atoms/Button'
+import { Button } from './atoms/Button'
 import ResizerY from './atoms/ResizerY'
 import TextArea from './atoms/TextArea'
 import VoteMessageBox from './VoteMessageBox'

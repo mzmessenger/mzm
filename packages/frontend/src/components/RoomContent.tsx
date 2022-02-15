@@ -9,7 +9,7 @@ const ContentMessage = () => {
   return (
     <>
       <div className="messages">
-        <Messages className="messages-inner" />
+        <Messages className="messages-inner scroll-styled-y" />
       </div>
       <InputArea />
     </>

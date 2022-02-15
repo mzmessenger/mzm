@@ -4,7 +4,7 @@ import styled from '@emotion/styled'
 import { useUser, useDispatchUser } from '../../contexts/user/hooks'
 import Header from '../atoms/LoginHeader'
 import InputText from '../atoms/InputText'
-import Button from '../atoms/Button'
+import { Button } from '../atoms/Button'
 
 const ERROR_TXT =
   '入力された値が半角英数字以外か、すでに存在するアカウントです。'

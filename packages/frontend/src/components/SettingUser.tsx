@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import { useDispatchUser } from '../contexts/user/hooks'
-import Button from './atoms/Button'
+import { Button } from './atoms/Button'
 import SettingAccount from './SettingAccount'
 
 const SettingUser = () => {

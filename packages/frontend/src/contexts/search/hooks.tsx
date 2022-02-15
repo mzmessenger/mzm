@@ -10,6 +10,7 @@ export const useDispatchSearch = () => {
 }
 
 export const useSearchForContext = () => {
+  const [showModal, setShowModal] = useState(false)
   const [query, setQuery] = useState('')
   const [scroll, setScroll] = useState<string>(null)
   const [total, setTotal] = useState(0)
@@ -19,17 +20,23 @@ export const useSearchForContext = () => {
 
   const state = useMemo(() => {
     return {
+      showModal,
       query,
       results,
       total
     }
-  }, [query, results, total])
+  }, [query, showModal, results, total])
 
   const cancel = () => {
     setQuery('')
+    setShowModal(false)
     setScroll(null)
     setResults([])
     setTotal(0)
+  }
+
+  const open = () => {
+    setShowModal(true)
   }
 
   const search = async (q: string) => {
@@ -87,6 +94,7 @@ export const useSearchForContext = () => {
 
   return {
     state,
+    open: useCallback(open, []),
     cancel: useCallback(cancel, []),
     search: useCallback(search, []),
     searchNext: useCallback(searchNext, [query, results, scroll])

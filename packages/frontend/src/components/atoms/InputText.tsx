@@ -1,17 +1,14 @@
 import React, { ChangeEvent } from 'react'
 import styled from '@emotion/styled'
 
-const InputText = ({
-  value,
-  onChange,
-  error,
-  style
-}: {
+export type Props = {
   value: string
   onChange: (e: ChangeEvent<HTMLInputElement>) => void
   error?: boolean
   style?: React.CSSProperties
-}) => {
+}
+
+const InputText: React.FC<Props> = ({ value, onChange, error, style }) => {
   return (
     <Wrap style={style} className={error ? 'error' : ''}>
       <input type="text" value={value} onChange={onChange} />

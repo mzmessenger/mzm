@@ -5,7 +5,7 @@ import { useRooms } from '../contexts/rooms/hooks'
 import { useDispatchSocket } from '../contexts/socket/hooks'
 import TextArea from './atoms/TextArea'
 import InputText from './atoms/InputText'
-import Button from './atoms/Button'
+import { Button } from './atoms/Button'
 import TransparentButton from './atoms/TransparentButton'
 
 const Question = ({
