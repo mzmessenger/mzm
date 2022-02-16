@@ -27,8 +27,7 @@ const useRouter = () => {
 
   useEffect(() => {
     try {
-      const res = location.pathname.match(/\/rooms\/(.+)/) || ''
-      const room = decodeURIComponent(res[1])
+      const room = getRoomName(location.pathname)
 
       if (!login && (location.pathname === '/' || room)) {
         fetchMyInfo()

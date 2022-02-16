@@ -76,9 +76,10 @@ export const useRoomsForContext = () => {
   const enterRoom = async (
     roomName: string,
     getMessages: ReturnType<typeof useDispatchSocket>['getMessages'],
-    enterRoom: ReturnType<typeof useDispatchSocket>['enterRoom'],
+    enterRoomMessage: ReturnType<typeof useDispatchSocket>['enterRoom'],
     closeMenu: ReturnType<typeof useDispatchUi>['closeMenu']
   ) => {
+    console.log('enterroom')
     const room = Object.values(state.rooms.byId).find(
       (r) => r.name === roomName
     )
@@ -86,7 +87,7 @@ export const useRoomsForContext = () => {
       changeRoom(room.id, getMessages, closeMenu)
       return
     }
-    enterRoom(roomName)
+    enterRoomMessage(roomName)
     closeMenu()
   }
 
@@ -208,7 +209,7 @@ export const useRoomsForContext = () => {
       getRooms()
     }
     let loading = false
-    if (room && !room.receivedMessages && !loading) {
+    if (!room || (!room.receivedMessages && !room.loading)) {
       getMessages(id)
       loading = true
     }
