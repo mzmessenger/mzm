@@ -28,7 +28,7 @@ const MessageBody = ({ className, message, html }: Props) => {
       const url = new URL(href)
       if (url.host === location.host) {
         navigate(url.pathname)
-        const roomName = getRoomName(decodeURIComponent(url.pathname))
+        const roomName = getRoomName(url.pathname)
         enterRoom(roomName, getMessages, enterRoomSocket, closeMenu)
       } else {
         window.open(url.href, '_blank')

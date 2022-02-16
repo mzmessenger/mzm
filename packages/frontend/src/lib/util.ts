@@ -12,7 +12,7 @@ export const isReplied = (account: string, message: string) => {
   return new RegExp(`([\\s]+|^)@${account}(?:[^a-z]|$)`).test(message)
 }
 
-export const getRoomName = (path: string) => {
-  const roomName = path.match(/rooms\/(.+)($|\/)/) && RegExp.$1
-  return roomName
+export const getRoomName = (pathname: string) => {
+  const res = pathname.match(/\/rooms\/(.+)/) || ''
+  return res[1] ? decodeURIComponent(res[1]) : ''
 }
