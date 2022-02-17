@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { VoteAnswerTypeEnum } from '../../../type'
-import { VoteAnswerType } from '../../../contexts/messages/constants'
+import { VoteAnswerType } from '../../../../contexts/messages/constants'
+import { VoteAnswerTypeEnum } from './constants'
 
 type Props = {
   className?: string

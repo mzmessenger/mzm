@@ -1,76 +1,23 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
-import { useUser } from '../../../contexts/user/hooks'
+import { useDispatchSocket } from '../../../../contexts/socket/hooks'
+import { useUser } from '../../../../contexts/user/hooks'
 import {
   useMessages,
   useDispatchMessages
-} from '../../../contexts/messages/hooks'
-import { StateMessageType } from '../../../contexts/messages/constants'
-import { VoteAnswerTypeEnum } from '../../../type'
+} from '../../../../contexts/messages/hooks'
+import { VoteAnswerTypeEnum } from './constants'
 import { VoteAnswer } from './VoteAnswer'
+import { VoteAnswerBar } from './VoteAnswerBar'
+import { RadioButton } from './RadioButton'
 
-const RadioButton = ({
-  name,
-  value,
-  checked,
-  onClick
-}: {
-  name: string
-  value: 0 | 1 | 2
-  checked: number
-  onClick: (e) => void
-}) => {
-  const checkedFlg = checked === value
-  const type =
-    value === 0
-      ? VoteAnswerTypeEnum.ok
-      : value === 1
-      ? VoteAnswerTypeEnum.ng
-      : value === 2
-      ? VoteAnswerTypeEnum.na
-      : ''
-
-  return (
-    <label>
-      <input
-        type="radio"
-        value={value}
-        name={name}
-        defaultChecked={checkedFlg}
-        onClick={onClick}
-      />
-      <span className={checkedFlg ? 'checked' : ''}>{type}</span>
-    </label>
-  )
-}
-
-const VoteAnswerBar = ({
-  className,
-  numerator,
-  denominator
-}: {
-  className?: string
-  numerator: number
-  denominator: number
-}) => {
-  return (
-    <li
-      className={`vote-answer-bar ${className}`}
-      style={{ width: `${(numerator / denominator) * 100 || 0}%` }}
-    ></li>
-  )
-}
-
-const Question = ({
-  messageId,
-  text,
-  index
-}: {
+type Props = {
   messageId: string
   text: string
   index: number
-}) => {
+}
+
+export const Question: React.FC<Props> = ({ messageId, text, index }) => {
   const { me } = useUser()
   const {
     voteAnswers: { byId }
@@ -109,24 +56,24 @@ const Question = ({
   }
 
   return (
-    <div className="question">
+    <Wrap>
       <form className="question-form">
         <div>
           <p>{text}</p>
         </div>
         <ul className="vote-answer-bar-wrap">
           <VoteAnswerBar
-            className="ok"
+            className="vote-answer-bar ok"
             numerator={ok.length}
             denominator={answers.length}
           />
           <VoteAnswerBar
-            className="ng"
+            className="vote-answer-bar ng"
             numerator={ng.length}
             denominator={answers.length}
           />
           <VoteAnswerBar
-            className="na"
+            className="vote-answer-bar na"
             numerator={na.length}
             denominator={answers.length}
           />
@@ -157,36 +104,15 @@ const Question = ({
         <VoteAnswer type={VoteAnswerTypeEnum.ng} answers={ng} />
         <VoteAnswer type={VoteAnswerTypeEnum.na} answers={na} />
       </ul>
-    </div>
-  )
-}
-
-type Props = {
-  className?: string
-  messageId: string
-  vote?: StateMessageType['vote']
-}
-
-export const MessageVote = ({ messageId, className, vote }: Props) => {
-  return (
-    <Wrap className={className}>
-      {vote.questions.map((q, i) => (
-        <Question messageId={messageId} key={i} text={q.text} index={i} />
-      ))}
     </Wrap>
   )
 }
 
 const Wrap = styled.div`
-  display: flex;
-  min-width: 200px;
-
-  .question {
-    min-width: 100px;
-    border: 1px solid var(--color-border);
-    padding: 0 1em;
-    margin: 1em 2em 0 0;
-  }
+  max-width: 240px;
+  min-width: 210px;
+  border: 1px solid var(--color-border);
+  padding: 0 1em;
 
   .question-form {
     display: flex;
@@ -231,35 +157,5 @@ const Wrap = styled.div`
     justify-content: space-between;
     margin: 1rem 0 0 0;
     height: 100%;
-
-    label {
-      display: flex;
-      align-items: center;
-      width: 32px;
-      height: 32px;
-      margin: 0 1em 0 0;
-    }
-    label:last-of-type {
-      margin: 0;
-    }
-    input[type='radio'] {
-      display: none;
-    }
-    span.checked {
-      background: #b54a4a;
-      text-shadow: 0 0 1px rgba(0, 0, 0, 0.7);
-    }
-    span {
-      cursor: pointer;
-      flex: 1;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      border-radius: 3px;
-      background: var(--color-background-secondary);
-      color: var(--color-on-background-secondary);
-      width: 100%;
-      height: 100%;
-    }
   }
 `

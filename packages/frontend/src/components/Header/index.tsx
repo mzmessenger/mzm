@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useUi, useDispatchUi } from '../../contexts/ui/hooks'
+import { useDispatchUi } from '../../contexts/ui/hooks'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import { Link } from '../atoms/Link'
 import { MobileMenuIcon } from '../atoms/MobileMenuIcon'
@@ -11,7 +11,6 @@ type Props = {
 }
 
 export const Header: React.FC<Props> = ({ style }) => {
-  const { device } = useUi()
   const { openMenu } = useDispatchUi()
 
   const onClick = () => openMenu()
@@ -25,7 +24,7 @@ export const Header: React.FC<Props> = ({ style }) => {
       <div className="profile">
         <MyInfo />
       </div>
-      {device === 'mobile' && <MobileMenuIcon onClick={onClick} />}
+      <MobileMenuIcon className="menu-icon" onClick={onClick} />
     </Wrap>
   )
 }
@@ -44,6 +43,10 @@ const Wrap = styled.header`
     font-weight: 500;
   }
 
+  .menu-icon {
+    display: none;
+  }
+
   & > a {
     display: flex;
     text-decoration: none;
@@ -54,6 +57,9 @@ const Wrap = styled.header`
     padding: 0 8px 0 16px;
     > .profile {
       display: none;
+    }
+    > .menu-icon {
+      display: block;
     }
   }
 `
