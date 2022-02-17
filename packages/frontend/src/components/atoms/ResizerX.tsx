@@ -1,15 +1,13 @@
 import React, { useState, useRef } from 'react'
 import styled from '@emotion/styled'
 
-const ResizerX = ({
-  width,
-  setWidth,
-  style
-}: {
+type Props = {
   width: number
   setWidth: (w: number) => void
   style?: React.CSSProperties
-}) => {
+}
+
+export const ResizerX: React.FC<Props> = ({ width, setWidth, style }) => {
   const timerRef = useRef(0)
   const [defaultWidth, setDefault] = useState(width)
   const [diff, setDiff] = useState(0)
@@ -46,7 +44,6 @@ const ResizerX = ({
     ></Wrap>
   )
 }
-export default ResizerX
 
 const Wrap = styled.div`
   min-width: 8px;

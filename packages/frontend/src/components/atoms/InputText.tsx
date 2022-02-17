@@ -8,14 +8,18 @@ export type Props = {
   style?: React.CSSProperties
 }
 
-const InputText: React.FC<Props> = ({ value, onChange, error, style }) => {
+export const InputText: React.FC<Props> = ({
+  value,
+  onChange,
+  error,
+  style
+}) => {
   return (
     <Wrap style={style} className={error ? 'error' : ''}>
       <input type="text" value={value} onChange={onChange} />
     </Wrap>
   )
 }
-export default InputText
 
 const Wrap = styled.div`
   display: flex;
@@ -32,8 +36,9 @@ const Wrap = styled.div`
     resize: none;
     border: none;
     appearance: none;
-    font-size: 16px;
-    padding: 10px;
+    font-size: 14px;
+    padding: 2px 1em 2px 1em;
+    height: 28px;
     flex: 1;
   }
 `

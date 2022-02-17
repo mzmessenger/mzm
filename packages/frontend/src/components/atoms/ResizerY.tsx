@@ -1,13 +1,12 @@
 import React, { useState, useRef } from 'react'
 import styled from '@emotion/styled'
 
-const ResizerY = ({
-  height,
-  setHeight
-}: {
+type Props = {
   height: number
   setHeight: (h: number) => void
-}) => {
+}
+
+export const ResizerY: React.FC<Props> = ({ height, setHeight }) => {
   const timerRef = useRef(0)
   const [defaultHeight, setDefault] = useState(height)
   const [diff, setDiff] = useState(0)
@@ -42,7 +41,6 @@ const ResizerY = ({
     ></Wrap>
   )
 }
-export default ResizerY
 
 const Wrap = styled.div`
   width: 100%;

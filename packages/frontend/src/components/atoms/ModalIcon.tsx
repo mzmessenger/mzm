@@ -1,6 +1,6 @@
 import React, { useRef, useState, useEffect, useCallback } from 'react'
 import styled from '@emotion/styled'
-import Modal from './Modal'
+import { ModalBase } from './Modal'
 import { Button } from './Button'
 
 type Props = {
@@ -64,7 +64,12 @@ const getMoveTo = (
   return { x: currentX, y: currentY }
 }
 
-export default function ModalIcon({ image, open, onSave, onCancel }: Props) {
+export const ModalIcon: React.FC<Props> = ({
+  image,
+  open,
+  onSave,
+  onCancel
+}) => {
   const canvasRef = useRef<HTMLCanvasElement>(null)
   const sendImgRef = useRef<HTMLCanvasElement>(null)
   const imgRef = useRef<HTMLImageElement>(null)
@@ -300,7 +305,7 @@ export default function ModalIcon({ image, open, onSave, onCancel }: Props) {
     size > 1000 * 1000 ? `${size / 1000 / 1000}MB` : `${size / 1000}KB`
 
   return (
-    <Modal open={open} onClose={() => {}}>
+    <ModalBase open={open} onClose={() => {}}>
       <Wrap className={drag ? 'drag' : ''}>
         <img
           src={image}
@@ -384,7 +389,7 @@ export default function ModalIcon({ image, open, onSave, onCancel }: Props) {
           </Button>
         </div>
       </Wrap>
-    </Modal>
+    </ModalBase>
   )
 }
 

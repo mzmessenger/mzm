@@ -3,7 +3,7 @@ import styled from '@emotion/styled'
 import Clear from '@mui/icons-material/Clear'
 import { useUi, useDispatchUi } from '../contexts/ui/hooks'
 
-const UserDetail = () => {
+export const UserDetail = () => {
   const { userDetail } = useUi()
   const { closeUserDetail } = useDispatchUi()
 
@@ -25,7 +25,6 @@ const UserDetail = () => {
     </Wrap>
   )
 }
-export default UserDetail
 
 const Wrap = styled.div`
   background-color: var(--color-surface);

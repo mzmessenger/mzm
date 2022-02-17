@@ -20,3 +20,10 @@ export const IconButton = styled.button`
     transition: background-color 0.1s ease-in;
   }
 `
+
+export const TransparentButton = styled.button`
+  background-color: transparent;
+  border: none;
+  color: var(--color-on-primary);
+  border-radius: 3px;
+`

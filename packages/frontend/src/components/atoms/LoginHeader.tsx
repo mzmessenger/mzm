@@ -1,15 +1,14 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import Link from './Link'
+import { Link } from './Link'
 
-const LoginHeader = () => {
+export const LoginHeader = () => {
   return (
     <Header>
       <Link to="/">MZM (β)</Link>
     </Header>
   )
 }
-export default LoginHeader
 
 const Header = styled.header`
   width: 100vw;
