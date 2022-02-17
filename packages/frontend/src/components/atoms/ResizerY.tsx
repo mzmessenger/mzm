@@ -41,7 +41,6 @@ export const ResizerY: React.FC<Props> = ({ height, setHeight }) => {
     ></Wrap>
   )
 }
-export default ResizerY
 
 const Wrap = styled.div`
   width: 100%;

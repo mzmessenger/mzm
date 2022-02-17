@@ -11,6 +11,7 @@ import { Button } from '../../atoms/Button'
 import { ResizerY } from '../../atoms/ResizerY'
 import { TextArea } from '../../atoms/TextArea'
 import { VoteMessageBox } from './VoteMessageBox'
+import { useNumberLocalStorage } from '../../../lib/hooks/useLocalStorage'
 
 const HEIGHT_KEY = 'mzm:input:height'
 
@@ -22,19 +23,10 @@ export const InputArea = () => {
     inputMode === 'normal' ? txt.split('\n').length : editTxt.split('\n').length
   )
   const textareaRef = useRef(null)
-  const [height, _setHeight] = useState(
-    localStorage.getItem(HEIGHT_KEY)
-      ? parseInt(localStorage.getItem(HEIGHT_KEY), 10)
-      : 68
-  )
+  const [height, setHeight] = useNumberLocalStorage(HEIGHT_KEY, 68)
   const [showVote, setShowVote] = useState(false)
 
   const { sendMessage, sendModifyMessage } = useDispatchSocket()
-
-  const setHeight = (h: number) => {
-    _setHeight(h)
-    localStorage.setItem(HEIGHT_KEY, `${h}`)
-  }
 
   useEffect(() => {
     if (inputMode === 'edit') {

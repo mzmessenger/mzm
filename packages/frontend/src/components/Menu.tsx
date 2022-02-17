@@ -1,7 +1,8 @@
-import React, { useState } from 'react'
+import React from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
 import { WIDTH_MOBILE } from '../lib/constants'
+import { useNumberLocalStorage } from '../lib/hooks/useLocalStorage'
 import { useUi, useDispatchUi } from '../contexts/ui/hooks'
 import { ResizerX } from './atoms/ResizerX'
 import { MobileMenuIcon } from './atoms/MobileMenuIcon'
@@ -16,18 +17,13 @@ export const Menu = () => {
   const { menuStatus, device } = useUi()
   const { closeMenu, openSettings } = useDispatchUi()
   const className = menuStatus === 'open' ? 'menu open' : 'menu'
-  const [width, _setWidth] = useState(
-    localStorage.getItem(WIDTH_KEY)
-      ? parseInt(localStorage.getItem(WIDTH_KEY), 10)
-      : MIN_WIDTH
-  )
+  const [width, _setWidth] = useNumberLocalStorage(WIDTH_KEY, MIN_WIDTH)
 
   const setWidth = (w: number) => {
     if (w < MIN_WIDTH) {
       w = MIN_WIDTH
     }
     _setWidth(w)
-    localStorage.setItem(WIDTH_KEY, `${w}`)
   }
   const isMobile = device === 'mobile'
   const onClickMenu = () => closeMenu()
