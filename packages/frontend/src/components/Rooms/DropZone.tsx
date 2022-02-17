@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react'
+import React, { useState } from 'react'
 import { Room } from '../../contexts/rooms/constants'
 import { RoomElem } from './RoomElem'
 
