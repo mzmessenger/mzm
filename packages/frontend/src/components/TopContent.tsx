@@ -1,10 +1,10 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import Link from './atoms/Link'
+import { Link } from './atoms/Link'
 
 const recommended = ['要望室', 'test']
 
-const TopContent = () => {
+export const TopContent = () => {
   return (
     <Wrap>
       <div className="content">
@@ -24,7 +24,6 @@ const TopContent = () => {
     </Wrap>
   )
 }
-export default TopContent
 
 const Wrap = styled.div`
   width: 100%;

@@ -2,7 +2,11 @@ import React, { useEffect, useRef } from 'react'
 import styled from '@emotion/styled'
 import ImageIcon from '@mui/icons-material/Image'
 
-const DropImage = ({ onloadFile }: { onloadFile: (file: string) => void }) => {
+type Props = {
+  onloadFile: (file: string) => void
+}
+
+export const DropImage: React.FC<Props> = ({ onloadFile }) => {
   const fileInputRef = useRef(null)
 
   // ターゲット以外の場所にdropしてしまった時にブラウザで画像を開かないように
@@ -82,7 +86,6 @@ const DropImage = ({ onloadFile }: { onloadFile: (file: string) => void }) => {
     </Wrap>
   )
 }
-export default DropImage
 
 const Wrap = styled.div`
   border: dashed 2px var(--color-border);

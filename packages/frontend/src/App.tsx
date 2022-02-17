@@ -18,18 +18,16 @@ const Init = React.memo(() => {
 const App = () => {
   const { login } = useUser()
   const Top = login
-    ? lazy(() => import('./components/pages/Top'))
-    : lazy(() => import('./components/pages/Login'))
+    ? lazy(() => import('./pages/Top'))
+    : lazy(() => import('./pages/Login'))
   const Room = login
-    ? lazy(() => import('./components/pages/Room'))
-    : lazy(() => import('./components/pages/Login'))
+    ? lazy(() => import('./pages/Room'))
+    : lazy(() => import('./pages/Login'))
 
-  const PageSignup = lazy(() => import('./components/pages/Signup'))
-  const PageTos = lazy(() => import('./components/pages/Tos'))
-  const PagePrivacyPolicy = lazy(
-    () => import('./components/pages/PrivacyPolicy')
-  )
-  const LoginSuccess = lazy(() => import('./components/pages/LoginSuccess'))
+  const PageSignup = lazy(() => import('./pages/Signup'))
+  const PageTos = lazy(() => import('./pages/Tos'))
+  const PagePrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
+  const LoginSuccess = lazy(() => import('./pages/LoginSuccess'))
 
   return (
     <>

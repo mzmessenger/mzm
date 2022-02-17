@@ -10,30 +10,31 @@ type Props = {
   className?: string
 }
 
-const TextArea = (
-  {
-    value,
-    rows = 1,
-    onChange = () => {},
-    onKeyDown = () => {},
-    style = {},
-    className = ''
-  }: Props,
-  ref?: React.Ref<HTMLTextAreaElement>
-) => {
-  return (
-    <Wrap style={style} className={className}>
-      <textarea
-        rows={rows}
-        value={value}
-        onChange={onChange}
-        onKeyDown={onKeyDown}
-        ref={ref}
-      />
-    </Wrap>
-  )
-}
-export default forwardRef<HTMLTextAreaElement, Props>(TextArea)
+export const TextArea = forwardRef<HTMLTextAreaElement, Props>(
+  (
+    {
+      value,
+      rows = 1,
+      onChange = () => {},
+      onKeyDown = () => {},
+      style = {},
+      className = ''
+    },
+    ref
+  ) => {
+    return (
+      <Wrap style={style} className={className}>
+        <textarea
+          rows={rows}
+          value={value}
+          onChange={onChange}
+          onKeyDown={onKeyDown}
+          ref={ref}
+        />
+      </Wrap>
+    )
+  }
+)
 
 const Wrap = styled.div`
   border-radius: 5px;
