@@ -1,7 +1,7 @@
 import React, { ChangeEvent, KeyboardEvent, forwardRef } from 'react'
 import styled from '@emotion/styled'
 
-type Props = {
+export type Props = {
   value: string
   rows?: number
   onChange?: (e: ChangeEvent<HTMLTextAreaElement>) => void

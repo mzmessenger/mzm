@@ -11,7 +11,7 @@ import { createUserIconPath } from '../lib/utils'
 import { ObjectId } from 'mongodb'
 
 export const signUp = async (req: Request) => {
-  const body = req.body as Partial<REQUEST['/api/user/signup']['POST']['BODY']>
+  const body = req.body as Partial<REQUEST['/api/user/signup']['POST']['body']>
   const account = popParam(body.account)
   if (!account) {
     throw new BadRequest('account is empty')

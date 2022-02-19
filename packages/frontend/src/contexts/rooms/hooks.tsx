@@ -207,6 +207,7 @@ export const useRoomsForContext = () => {
   const enterSuccess = (
     id: string,
     name: string,
+    description: string,
     iconUrl: string,
     getRooms: ReturnType<typeof useDispatchSocket>['getRooms'],
     getMessages: ReturnType<typeof useDispatchSocket>['getMessages']
@@ -223,7 +224,7 @@ export const useRoomsForContext = () => {
     }
     dispatch({
       type: Actions.EnterRoomSuccess,
-      payload: { id: id, name: name, iconUrl, loading }
+      payload: { id: id, name: name, iconUrl, description, loading }
     })
   }
 
@@ -330,6 +331,16 @@ export const useRoomsForContext = () => {
     dispatch({ type: Actions.SetRoomStatus, payload: { id, status } })
   }
 
+  const setRoomDescription = (roomId: string, description: string) => {
+    dispatch({
+      type: Actions.SetRoomDescription,
+      payload: {
+        roomId,
+        description
+      }
+    })
+  }
+
   return {
     state,
     getRoomMessages: useCallback(getRoomMessages, []),
@@ -350,6 +361,7 @@ export const useRoomsForContext = () => {
     toggleRoomSetting: useCallback(toggleRoomSetting, []),
     closeRoomSetting: useCallback(closeRoomSetting, []),
     uploadIcon: useCallback(uploadIcon, []),
-    setRoomStatus: useCallback(setRoomStatus, [])
+    setRoomStatus: useCallback(setRoomStatus, []),
+    setRoomDescription: useCallback(setRoomDescription, [])
   } as const
 }

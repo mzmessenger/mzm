@@ -19,6 +19,8 @@ export const socket = async (req: Request) => {
     return _socket.getRooms(user)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_ENTER) {
     return _socket.enterRoom(user, data)
+  } else if (data.cmd === TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION) {
+    return _socket.updateRoomDescription(user, data)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_READ) {
     return _socket.readMessage(user, data)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_SORT) {

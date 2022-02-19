@@ -11,6 +11,7 @@ import unescape from 'validator/lib/unescape'
 import trim from 'validator/lib/trim'
 import isEmpty from 'validator/lib/isEmpty'
 import isNumeric from 'validator/lib/isNumeric'
+import { logger } from '../../lib/logger'
 import * as db from '../../lib/db'
 import * as config from '../../config'
 import {
@@ -307,6 +308,7 @@ export const enterRoom = async (
     cmd: TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS,
     id: room._id.toHexString(),
     name: room.name,
+    description: room.description ?? '',
     iconUrl: createRoomIconPath(room)
   }
 }
@@ -390,6 +392,9 @@ export const closeRoom = async (
   user: string,
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_CLOSE>
 ) => {
+  if (!data.roomId) {
+    return
+  }
   const roomId = new ObjectId(data.roomId)
 
   const general = await db.collections.rooms.findOne({
@@ -401,12 +406,42 @@ export const closeRoom = async (
   }
 
   await db.collections.rooms.updateOne(
-    { _id: new ObjectId(data.roomId) },
+    { _id: roomId },
     { $set: { status: db.RoomStatusEnum.CLOSE, updatedBy: new ObjectId(user) } }
   )
 
   addUpdateSearchRoomQueue([data.roomId])
   // @todo 伝播
+}
+
+export const updateRoomDescription = async (
+  user: string,
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION>
+) => {
+  logger.info('updateRoomDescription', data.roomId, data.description)
+  const roomId = new ObjectId(data.roomId)
+
+  if (
+    !data.roomId ||
+    !data.description ||
+    data.description.length > config.room.MAX_ROOM_DESCRIPTION_LENGTH
+  ) {
+    logger.info('updateRoomDescription:invalid', data.roomId, data.description)
+    return
+  }
+
+  await db.collections.rooms.updateOne(
+    { _id: roomId },
+    { $set: { description: data.description, updatedBy: new ObjectId(user) } }
+  )
+
+  const users = await getAllUserIdsInRoom(roomId.toHexString())
+  const send: ToClientType = {
+    cmd: TO_CLIENT_CMD.ROOMS_UPDATE_DESCRIPTION,
+    roomId: data.roomId,
+    descrioption: data.description
+  }
+  addQueueToUsers(users, send)
 }
 
 const isAnswer = (answer: number): answer is db.VoteAnswer['answer'] => {

@@ -66,6 +66,7 @@ export const room = {
   MESSAGE_LIMIT: 20,
   MAX_ROOM_NAME_LENGTH: 30,
   MIN_ROOM_NAME_LENGTH: 1,
+  MAX_ROOM_DESCRIPTION_LENGTH: 5000,
   BANNED_ROOM_NAME: ['undefined', 'null', 'NaN'],
   BANNED_CHARS_REGEXP_IN_ROOM_NAME: /^@|\/|\\|\s|&|\?|=/,
   BANNED_UNICODE_REGEXP_IN_ROOM_NAME: new RegExp(unicode.join('|'))

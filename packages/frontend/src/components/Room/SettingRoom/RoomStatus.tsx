@@ -1,8 +1,8 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import CheckIcon from '@mui/icons-material/Check'
-import { useRooms, useDispatchRooms } from '../../contexts/rooms/hooks'
-import { useDispatchSocket } from '../../contexts/socket/hooks'
+import { useRooms, useDispatchRooms } from '../../../contexts/rooms/hooks'
+import { useDispatchSocket } from '../../../contexts/socket/hooks'
 
 export const SettingRoomStatus = () => {
   const {

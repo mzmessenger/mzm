@@ -8,9 +8,8 @@ import {
   TO_SERVER_CMD,
   FilterSocketToBackendType
 } from 'mzm-shared/type/socket'
-import { mongoSetup, getMockType } from '../../../jest/testUtil'
+import { mongoSetup } from '../../../jest/testUtil'
 import * as db from '../../lib/db'
-import * as socket from './socket'
 import * as logicMessages from '../../logic/messages'
 import {
   addMessageQueue,
@@ -19,6 +18,7 @@ import {
   addUpdateSearchRoomQueue
 } from '../../lib/provider'
 import * as config from '../../config'
+import * as socket from './socket'
 
 let mongoServer = null
 
@@ -46,12 +46,15 @@ test('sendMessage', async () => {
   const message = 'post'
 
   const insertedIdMock = new ObjectId()
-  const saveMessageMock = getMockType(logicMessages.saveMessage)
+  const saveMessageMock = jest.mocked(logicMessages.saveMessage)
   saveMessageMock.mockClear()
-  saveMessageMock.mockResolvedValueOnce({ insertedId: insertedIdMock })
-  const addQueueToUsersMock = getMockType(addQueueToUsers)
+  saveMessageMock.mockResolvedValueOnce({
+    insertedId: insertedIdMock,
+    acknowledged: null
+  })
+  const addQueueToUsersMock = jest.mocked(addQueueToUsers)
   addQueueToUsersMock.mockClear()
-  const addUnreadQueueMock = getMockType(addUnreadQueue)
+  const addUnreadQueueMock = jest.mocked(addUnreadQueue)
   addUnreadQueueMock.mockClear()
 
   await socket.sendMessage(userId.toHexString(), {
@@ -84,11 +87,11 @@ test('fail: sendMessage', async () => {
   const beforeCount = await db.collections.messages.countDocuments()
   const message = 'a'.repeat(config.message.MAX_MESSAGE_LENGTH + 1)
 
-  const saveMessageMock = getMockType(logicMessages.saveMessage)
+  const saveMessageMock = jest.mocked(logicMessages.saveMessage)
   saveMessageMock.mockClear()
-  const addQueueToUsersMock = getMockType(addQueueToUsers)
+  const addQueueToUsersMock = jest.mocked(addQueueToUsers)
   addQueueToUsersMock.mockClear()
-  const addUnreadQueueMock = getMockType(addUnreadQueue)
+  const addUnreadQueueMock = jest.mocked(addUnreadQueue)
   addUnreadQueueMock.mockClear()
 
   await socket.sendMessage(userId.toHexString(), {
@@ -128,7 +131,7 @@ test('modifyMessage', async () => {
 
   const [created] = await Promise.all([message, user])
 
-  const addQueueToUsersMock = getMockType(addQueueToUsers)
+  const addQueueToUsersMock = jest.mocked(addQueueToUsers)
   addQueueToUsersMock.mockClear()
 
   await socket.modifyMessage(userId.toHexString(), {
@@ -169,7 +172,7 @@ test('readMessage', async () => {
     })
   ])
 
-  const addMessageQueueMock = getMockType(addMessageQueue)
+  const addMessageQueueMock = jest.mocked(addMessageQueue)
   addMessageQueueMock.mockClear()
 
   await socket.readMessage(userId.toHexString(), {
@@ -211,7 +214,7 @@ test('iine', async () => {
 })
 
 test('openRoom', async () => {
-  const queueMock = getMockType(addUpdateSearchRoomQueue)
+  const queueMock = jest.mocked(addUpdateSearchRoomQueue)
   queueMock.mockClear()
 
   const userId = new ObjectId()
@@ -237,7 +240,7 @@ test('openRoom', async () => {
 })
 
 test('closeRoom', async () => {
-  const queueMock = getMockType(addUpdateSearchRoomQueue)
+  const queueMock = jest.mocked(addUpdateSearchRoomQueue)
   queueMock.mockClear()
 
   const userId = new ObjectId()
@@ -459,4 +462,20 @@ test('removeVoteAnswer', async () => {
     .toArray()
 
   expect(answers.length).toStrictEqual(0)
+})
+
+test('fail: updateRoomDescription over length', async () => {
+  const userId = new ObjectId()
+  const roomId = new ObjectId()
+
+  const addQueueToUsersMock = jest.mocked(addQueueToUsers)
+  addQueueToUsersMock.mockClear()
+
+  await socket.updateRoomDescription(userId.toHexString(), {
+    cmd: TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION,
+    description: 'a'.repeat(config.room.MAX_ROOM_DESCRIPTION_LENGTH + 1),
+    roomId: roomId.toHexString()
+  })
+
+  expect(addQueueToUsersMock).toBeCalledTimes(0)
 })

@@ -23,6 +23,7 @@ export type Room = {
   id: string
   name: string
   iconUrl: string
+  description: string
   unread: number
   replied: number
   messages: string[]
@@ -45,6 +46,7 @@ export type State = {
   currentRoomId: string
   currentRoomName: string
   currentRoomIcon: string
+  currentRoomDescription: string
   scrollTargetIndex: number | 'bottom'
   openRoomSetting: boolean
 }
@@ -62,12 +64,14 @@ export const INITIAL_STATE: State = {
   currentRoomId: '',
   currentRoomName: initCurrentRoomName,
   currentRoomIcon: null,
+  currentRoomDescription: null,
   scrollTargetIndex: 'bottom',
   openRoomSetting: false
 } as const
 
 export const Actions = {
   SetRooms: 'roomAction:setRooms',
+  SetRoomDescription: 'roomAction:setRoomDescription',
   SetRoomOrder: 'roomAction:setRoomOrder',
   ReceiveMessage: 'roomAction:receiveMessage',
   ReceiveMessages: 'roomAction:receiveMessages',
@@ -96,6 +100,13 @@ export type ActionType =
       }
     }
   | {
+      type: typeof Actions.SetRoomDescription
+      payload: {
+        roomId: string
+        description: string
+      }
+    }
+  | {
       type: typeof Actions.ReceiveMessage
       payload: {
         messageId: string
@@ -106,7 +117,13 @@ export type ActionType =
     }
   | {
       type: typeof Actions.EnterRoomSuccess
-      payload: { id: string; name: string; iconUrl: string; loading: boolean }
+      payload: {
+        id: string
+        name: string
+        iconUrl: string
+        description: string
+        loading: boolean
+      }
     }
   | {
       type: typeof Actions.ExitRoom
