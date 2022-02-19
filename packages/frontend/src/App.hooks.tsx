@@ -216,6 +216,7 @@ const useWebSocket = (url: string) => {
       receiveMessages,
       receiveRooms,
       reloadMessage,
+      setRoomDescription,
       setRoomOrder,
       setVoteAnswers,
       updateIine

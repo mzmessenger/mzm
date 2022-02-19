@@ -20,14 +20,14 @@ export const RoomInfo = () => {
     users: { byId }
   } = useRooms()
   const { getUsers, toggleRoomSetting } = useDispatchRooms()
-  const users = byId[currentRoomId]
   const { openUserDetail } = useDispatchUi()
   const [open, setOpen] = useState(false)
-
-  const name = currentRoomName || ''
   const description = useMemo(() => {
     return currentRoomDescription ? currentRoomDescription.substring(0, 20) : ''
   }, [currentRoomDescription])
+
+  const users = byId[currentRoomId]
+  const name = currentRoomName || ''
 
   useEffect(() => {
     if (currentRoomId) {

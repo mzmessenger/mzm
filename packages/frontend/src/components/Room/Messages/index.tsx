@@ -7,10 +7,11 @@ import { MessageElement } from './Message'
 export const Messages = ({ className }) => {
   const {
     currentRoomId,
-    rooms: { byId },
+    rooms: {
+      byId: { [currentRoomId]: currentRoom }
+    },
     scrollTargetIndex
   } = useRooms()
-  const currentRoom = byId[currentRoomId]
   const wrapRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const topRef = useRef<HTMLDivElement>(null)

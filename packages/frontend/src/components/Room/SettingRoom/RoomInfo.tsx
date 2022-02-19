@@ -1,6 +1,8 @@
-import React from 'react'
+import React, { useMemo, useEffect, useState } from 'react'
 import styled from '@emotion/styled'
 import { TextArea, Props as TextAreaProps } from '../../atoms/TextArea'
+import { MessageBody } from '../../atoms/MessageBody'
+import { convertToHtml } from '../../../lib/markdown'
 
 export type Props = {
   edit: boolean
@@ -10,8 +12,42 @@ export type Props = {
   onChangeDescription: TextAreaProps['onChange']
 }
 
+const Description: React.FC<{ description: string }> = (props) => {
+  const [description, setDescription] = useState('')
+
+  useEffect(() => {
+    if (!props.description) {
+      setDescription('')
+      return
+    }
+
+    convertToHtml(props.description).then((html) => {
+      setDescription(html)
+    })
+  }, [props.description])
+
+  if (!props.description) {
+    return <div className="item">部屋の説明</div>
+  }
+
+  return (
+    <div className="item">
+      <MessageBody message={props.description} html={description} />
+    </div>
+  )
+}
+
 export const RoomInfo: React.FC<Props> = (props) => {
-  const description = props.description ?? '部屋の説明'
+  const rows = useMemo(() => {
+    const minRows = 5
+    if (!props.description) {
+      return minRows
+    }
+
+    const d = props.description.split('\n').length
+    const rows = d <= minRows ? minRows : d
+    return rows
+  }, [props.description])
 
   return (
     <Wrap>
@@ -30,10 +66,10 @@ export const RoomInfo: React.FC<Props> = (props) => {
             style={{ marginTop: '0.3em' }}
             onChange={props.onChangeDescription}
             value={props.description}
-            rows={props.description.split('\n').length}
+            rows={rows}
           />
         )}
-        {!props.edit && <p className="item">{description}</p>}
+        {!props.edit && <Description description={props.description} />}
       </div>
     </Wrap>
   )
@@ -60,6 +96,10 @@ const Wrap = styled.div`
       border-radius: 4px;
       border: 1px solid var(--color-border);
       font-size: 16px;
+
+      p {
+        margin: 0 0 0.5em 0;
+      }
     }
   }
 
@@ -67,6 +107,7 @@ const Wrap = styled.div`
     line-height: 1.7;
     white-space: pre-wrap;
   }
+
   .room-name {
     word-break: break-word;
   }

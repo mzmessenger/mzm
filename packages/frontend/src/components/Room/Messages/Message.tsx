@@ -1,66 +1,45 @@
-import React, { useRef, useEffect, useState } from 'react'
-import dayjs from 'dayjs'
+import React, { useEffect, useState, useRef, useMemo } from 'react'
 import styled from '@emotion/styled'
 import {
   Create as CreateIcon,
   ThumbUp as ThumbUpIcon
 } from '@mui/icons-material'
-import { StateMessageType } from '../../../contexts/messages/constants'
 import { sanitize } from '../../../lib/sanitize'
-import { isReplied } from '../../../lib/util'
-import { useMessages } from '../../../contexts/messages/hooks'
-import { useUser } from '../../../contexts/user/hooks'
-import { useDispatchPostTextArea } from '../../../contexts/postTextArea/hooks'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
-import { MessageBody } from './MessageBody'
+import { MessageBody } from '../../atoms/MessageBody'
 import { MessageVote } from './MessageVote'
+import { useMessage } from './Message.hooks'
 
 type Props = {
   id: string
-  message: string
-  iine: number
-  html: string
-  userId: string
-  userAccount: string
-  icon: string
-  vote?: StateMessageType['vote']
-  updated: boolean
-  createdAt: string
-  beforeIine: number
-  myAccount: string
-  iineHandler: (event: React.MouseEvent) => void
-  startEditHandler: (event: React.MouseEvent) => void
 }
 
-const PresentationalMessage: React.FC<Props> = ({
-  id,
-  message,
-  iine,
-  html,
-  userId,
-  userAccount,
-  icon,
-  vote,
-  updated,
-  createdAt,
-  beforeIine,
-  myAccount,
-  iineHandler,
-  startEditHandler
-}) => {
+export const MessageElement: React.FC<Props> = (props) => {
+  const {
+    message,
+    iine,
+    html,
+    icon,
+    vote,
+    updated,
+    date,
+    account,
+    replied,
+    myAccount,
+    iineHandler,
+    startEditHandler
+  } = useMessage(props.id)
+
+  const firstIineRef = useRef<number>()
+  useEffect(() => {
+    firstIineRef.current = iine ?? undefined
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const [iineAction, setIineAction] = useState(false)
-  const day = dayjs(new Date(Number(createdAt)))
-  const date = day.format(
-    day.year() === new Date().getFullYear()
-      ? 'MM/DD HH:mm:ss'
-      : 'YYYY/MM/DD HH:mm:ss'
-  )
-  const account = userAccount ? userAccount : userId
-  const replied = isReplied(myAccount, message)
 
   useEffect(() => {
     let timer = null
-    if (beforeIine !== undefined && beforeIine !== iine && !iineAction) {
+    if (firstIineRef !== undefined && firstIineRef.current !== iine) {
       setIineAction(true)
       timer = setTimeout(() => {
         setIineAction(false)
@@ -69,18 +48,27 @@ const PresentationalMessage: React.FC<Props> = ({
 
     return () => {
       timer && clearTimeout(timer)
+      setIineAction(false)
     }
-  }, [beforeIine, iine, iineAction])
+  }, [iine])
 
-  let className = ''
-  if (replied) {
-    className += ' replied'
-  }
-  if (iine >= 20) {
-    className += ' iine-max'
-  }
-  if (iineAction) {
-    className += ' kururi'
+  const className = useMemo(() => {
+    const classNames = []
+    if (replied) {
+      classNames.push('replied')
+    }
+    if (iine >= 20) {
+      classNames.push('iine-max')
+    }
+    if (iineAction) {
+      classNames.push('kururi')
+    }
+
+    return classNames.join(' ')
+  }, [replied, iine, iineAction])
+
+  if (!message) {
+    return <></>
   }
 
   return (
@@ -89,7 +77,7 @@ const PresentationalMessage: React.FC<Props> = ({
       <div className="header">
         <div className="account">{account}</div>
         <div className="iine icon" onClick={iineHandler}>
-          <ThumbUpIcon />
+          <ThumbUpIcon className="thumbup" />
           {iine !== 0 && <div className="num">{iine}</div>}
         </div>
         <div className="actions">
@@ -100,7 +88,9 @@ const PresentationalMessage: React.FC<Props> = ({
         <time>{date}</time>
       </div>
       <MessageBody className="body" message={message} html={sanitize(html)} />
-      {vote && <MessageVote messageId={id} className="vote" vote={vote} />}
+      {vote && (
+        <MessageVote messageId={props.id} className="vote" vote={vote} />
+      )}
       <div className="footer">
         {updated && <div className="updated">(編集済み)</div>}
       </div>
@@ -108,59 +98,14 @@ const PresentationalMessage: React.FC<Props> = ({
   )
 }
 
-export const MessageElement = ({ id }: { id: string }) => {
-  const { me } = useUser()
-  const {
-    messages: { byId }
-  } = useMessages()
-  const { startToEdit } = useDispatchPostTextArea()
-  const { incrementIine } = useDispatchSocket()
-
-  const messageObj = byId[id]
-
-  const iineHandler = () => {
-    incrementIine(id)
-  }
-  const startEditHandler = () => {
-    startToEdit(messageObj.id, messageObj.message)
-  }
-  const prevIineRef = useRef<number>()
-  useEffect(() => {
-    prevIineRef.current = messageObj ? messageObj.iine : undefined
-  })
-
-  if (!messageObj) {
-    return <></>
-  }
-
-  return (
-    <PresentationalMessage
-      id={messageObj.id}
-      message={messageObj.message}
-      iine={messageObj.iine}
-      html={messageObj.html}
-      userId={messageObj.userId}
-      userAccount={messageObj.userAccount}
-      icon={messageObj.icon}
-      vote={messageObj.vote}
-      updated={messageObj.updated}
-      createdAt={messageObj.createdAt}
-      beforeIine={prevIineRef.current}
-      myAccount={me.account}
-      iineHandler={iineHandler}
-      startEditHandler={startEditHandler}
-    />
-  )
-}
-
 const MessageWrap = styled.div`
   --icon-size: 32px;
 
-  padding: 10px 15px 10px;
+  padding: 0.5em 1em 0.5em;
   border-radius: 1px;
   color: #dcddde;
   display: grid;
-  grid-template-columns: calc(var(--icon-size) + 16px);
+  grid-template-columns: calc(var(--icon-size) + 1em);
   grid-template-areas:
     'icon message-header'
     'icon message-body'
@@ -177,21 +122,27 @@ const MessageWrap = styled.div`
     background: var(--color-replied);
   }
 
-  .header,
   .user-icon {
-    margin: 4px 0 0 0;
+    margin: 0.4em 0 0 0;
   }
 
   .header {
     grid-area: message-header;
+    min-height: 1.5em;
     display: flex;
+    align-items: flex-end;
+    .account: {
+      height: 100%;
+    }
     .iine {
+      height: 100%;
       display: flex;
       align-items: center;
-      margin-left: 8px;
+      margin: 0 0 0 1em;
       .num {
-        margin-left: 6px;
+        margin-left: 0.3em;
         color: #2789ff;
+        font-size: 0.9rem;
       }
     }
     .actions {

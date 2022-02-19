@@ -166,7 +166,7 @@ export const reducer = (
       state.rooms.byId[action.payload.room].messages = [
         ...state.rooms.byId[action.payload.room].messages
       ]
-      return { ...state }
+      return state
     }
     case Actions.ToggleSetting:
       return { ...state, openRoomSetting: !state.openRoomSetting }
