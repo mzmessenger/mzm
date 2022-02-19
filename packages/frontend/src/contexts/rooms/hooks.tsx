@@ -1,5 +1,6 @@
 import { useContext, useReducer, useCallback } from 'react'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
+import type { RESPONSE } from 'mzm-shared/type/api'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useDispatchUi } from '../ui/hooks'
 import type { useUser } from '../user/hooks'
@@ -38,14 +39,18 @@ export const useRoomsForContext = () => {
       },
       body: JSON.stringify({ name })
     })
-    if (res.status === 200) {
-      const room: { id: string; name: string } = await res.json()
-      getRooms()
-      dispatch({
-        type: Actions.CreateRoom,
-        payload: { id: room.id, name: room.name }
-      })
+
+    if (res.status !== 200) {
+      return res
     }
+
+    const room = (await res.json()) as RESPONSE['/api/rooms']['POST']
+    getRooms()
+    dispatch({
+      type: Actions.CreateRoom,
+      payload: { id: room.id, name: room.name }
+    })
+
     return res
   }
 
@@ -79,7 +84,6 @@ export const useRoomsForContext = () => {
     enterRoomMessage: ReturnType<typeof useDispatchSocket>['enterRoom'],
     closeMenu: ReturnType<typeof useDispatchUi>['closeMenu']
   ) => {
-    console.log('enterroom')
     const room = Object.values(state.rooms.byId).find(
       (r) => r.name === roomName
     )
@@ -231,14 +235,16 @@ export const useRoomsForContext = () => {
       }
     })
 
-    if (res.status === 200) {
-      res.json().then((body) => {
-        dispatch({
-          type: Actions.SetRoomUsers,
-          payload: { room: roomId, users: body.users, count: body.count }
-        })
-      })
+    if (res.status !== 200) {
+      return res
     }
+
+    res.json().then((body: RESPONSE['/api/rooms/:roomid/users']['GET']) => {
+      dispatch({
+        type: Actions.SetRoomUsers,
+        payload: { room: roomId, users: body.users, count: body.count }
+      })
+    })
 
     return res
   }
@@ -265,7 +271,7 @@ export const useRoomsForContext = () => {
       return res
     }
 
-    res.json().then((body) => {
+    res.json().then((body: RESPONSE['/api/rooms/:roomid/users']['GET']) => {
       dispatch({
         type: Actions.SetNextRoomUsers,
         payload: { room: roomId, users: body.users }
@@ -304,7 +310,8 @@ export const useRoomsForContext = () => {
     })
 
     if (res.ok) {
-      const { id, version } = await res.json()
+      const { id, version } =
+        (await res.json()) as RESPONSE['/api/icon/rooms/:roomname']['POST']
       dispatch({ type: Actions.SetIcon, payload: { id, version } })
     }
 

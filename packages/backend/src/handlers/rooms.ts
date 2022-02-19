@@ -1,6 +1,7 @@
 import { Request } from 'express'
 import { ObjectId, WithId } from 'mongodb'
 import isEmpty from 'validator/lib/isEmpty'
+import type { RESPONSE } from 'mzm-shared/type/api'
 import * as config from '../config'
 import { BadRequest } from '../lib/errors'
 import { getRequestUserId } from '../lib/utils'
@@ -15,7 +16,7 @@ import {
 
 export const createRoom = async (
   req: Request
-): Promise<{ id: string; name: string }> => {
+): Promise<RESPONSE['/api/rooms']['POST']> => {
   const user = getRequestUserId(req)
   const name = popParam(decodeURIComponent(req.body.name))
   const valid = isValidateRoomName(name)
@@ -68,16 +69,11 @@ export const exitRoom = async (req: Request) => {
   })
 }
 
-type EnterUser = {
-  userId: string
-  account: string
-  icon: string
-  enterId: string
-}
+type EnterUser = RESPONSE['/api/rooms/:roomid/users']['GET']['users'][number]
 
 export const getUsers = async (
   req: Request
-): Promise<{ count: number; users: EnterUser[] }> => {
+): Promise<RESPONSE['/api/rooms/:roomid/users']['GET']> => {
   const room = popParam(req.params.roomid)
   if (isEmpty(room)) {
     throw new BadRequest({ reason: 'room is empty' })
@@ -137,7 +133,9 @@ export const getUsers = async (
   return { count, users }
 }
 
-export const search = async (req: Request) => {
+export const search = async (
+  req: Request
+): Promise<RESPONSE['/api/rooms/search']['GET']> => {
   const _query = popParam(
     typeof req.query.query === 'string' ? req.query.query : null
   )

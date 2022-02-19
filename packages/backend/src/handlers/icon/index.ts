@@ -2,6 +2,7 @@ import { promisify } from 'util'
 import { Request } from 'express'
 import { request } from 'undici'
 import { ObjectId } from 'mongodb'
+import { RESPONSE } from 'mzm-shared/type/api'
 import { NotFound, BadRequest } from '../../lib/errors'
 import { popParam, getRequestUserId } from '../../lib/utils'
 import * as storage from '../../lib/storage'
@@ -93,7 +94,9 @@ type MulterFile = {
   path: string
 }
 
-export const uploadUserIcon = async (req: Request & { file: MulterFile }) => {
+export const uploadUserIcon = async (
+  req: Request & { file: MulterFile }
+): Promise<RESPONSE['/api/icon/user']['POST']> => {
   const userId = getRequestUserId(req)
   if (!userId) {
     throw new NotFound('not found')
@@ -145,7 +148,9 @@ export const uploadUserIcon = async (req: Request & { file: MulterFile }) => {
   }
 }
 
-export const uploadRoomIcon = async (req: Request & { file: MulterFile }) => {
+export const uploadRoomIcon = async (
+  req: Request & { file: MulterFile }
+): Promise<RESPONSE['/api/icon/rooms/:roomname']['POST']> => {
   const roomName = popParam(req.params.roomname)
   if (!roomName) {
     throw new BadRequest(`no room id`)

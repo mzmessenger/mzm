@@ -13,6 +13,10 @@
     "./type/socket": {
       "import": "./dist/esm/type/socket.js",
       "require": "./dist/type/socket.js"
+    },
+    "./type/api": {
+      "import": "./dist/esm/type/api.js",
+      "require": "./dist/type/api.js"
     }
   },
   "scripts": {

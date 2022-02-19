@@ -1,4 +1,5 @@
 import { useState, useContext, useMemo, useCallback } from 'react'
+import { RESPONSE } from 'mzm-shared/type/api'
 import { SearchContext, SearchDispatchContext } from './index'
 
 export const useSearch = () => {
@@ -55,7 +56,8 @@ export const useSearchForContext = () => {
       return res
     }
 
-    const { hits, scroll, total } = await res.json()
+    const { hits, scroll, total } =
+      (await res.json()) as RESPONSE['/api/rooms/search']['GET']
 
     setResults(hits)
     setScroll(scroll)
@@ -82,7 +84,8 @@ export const useSearchForContext = () => {
     })
 
     if (res.ok) {
-      const { hits, scroll, total } = await res.json()
+      const { hits, scroll, total } =
+        (await res.json()) as RESPONSE['/api/rooms/search']['GET']
 
       setResults([...results, ...hits])
       setScroll(scroll)
