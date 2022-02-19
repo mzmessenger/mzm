@@ -42,3 +42,42 @@ export type RESPONSE = {
     }
   }
 }
+
+export type REQUEST = {
+  '/api/rooms': {
+    POST: {
+      body: {
+        name: string
+      }
+    }
+  }
+  '/api/rooms/enter': {
+    DELETE: {
+      body: {
+        room: string
+      }
+    }
+  }
+  '/api/rooms/:roomid/users': {
+    GET: {
+      query: {
+        threshold: string
+      }
+    }
+  }
+  '/api/rooms/search': {
+    GET: {
+      query: {
+        query?: string
+        scroll?: string
+      }
+    }
+  }
+  '/api/user/signup': {
+    POST: {
+      body: {
+        account: string
+      }
+    }
+  }
+}

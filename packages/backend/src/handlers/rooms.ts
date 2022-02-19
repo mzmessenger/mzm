@@ -1,7 +1,7 @@
 import { Request } from 'express'
 import { ObjectId, WithId } from 'mongodb'
 import isEmpty from 'validator/lib/isEmpty'
-import type { RESPONSE } from 'mzm-shared/type/api'
+import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import * as config from '../config'
 import { BadRequest } from '../lib/errors'
 import { getRequestUserId } from '../lib/utils'
@@ -18,7 +18,8 @@ export const createRoom = async (
   req: Request
 ): Promise<RESPONSE['/api/rooms']['POST']> => {
   const user = getRequestUserId(req)
-  const name = popParam(decodeURIComponent(req.body.name))
+  const body = req.body as Partial<REQUEST['/api/rooms']['POST']['body']>
+  const name = popParam(decodeURIComponent(body.name))
   const valid = isValidateRoomName(name)
   if (!valid.valid) {
     throw new BadRequest({ reason: valid.reason })
@@ -47,8 +48,11 @@ export const enterRoom = async (req: Request) => {
 }
 
 export const exitRoom = async (req: Request) => {
+  const body = req.body as Partial<
+    REQUEST['/api/rooms/enter']['DELETE']['body']
+  >
   const user = getRequestUserId(req)
-  const room = popParam(req.body.room)
+  const room = popParam(body.room)
   if (isEmpty(room)) {
     throw new BadRequest({ reason: 'room is empty' })
   }
@@ -95,8 +99,12 @@ export const getUsers = async (
     }
   ]
 
+  const reqQuery = req.query as Partial<
+    REQUEST['/api/rooms/:roomid/users']['GET']['query']
+  >
+
   const threshold = popParam(
-    typeof req.query.threshold === 'string' ? req.query.threshold : null
+    typeof reqQuery.threshold === 'string' ? reqQuery.threshold : null
   )
   if (threshold) {
     query.push({
@@ -136,12 +144,13 @@ export const getUsers = async (
 export const search = async (
   req: Request
 ): Promise<RESPONSE['/api/rooms/search']['GET']> => {
-  const _query = popParam(
-    typeof req.query.query === 'string' ? req.query.query : null
-  )
+  const query = req.query as Partial<
+    REQUEST['/api/rooms/search']['GET']['query']
+  >
+  const _query = popParam(typeof query.query === 'string' ? query.query : null)
 
   const scroll = popParam(
-    typeof req.query.scroll === 'string' ? req.query.scroll : null
+    typeof query.scroll === 'string' ? query.scroll : null
   )
 
   // @todo multi query

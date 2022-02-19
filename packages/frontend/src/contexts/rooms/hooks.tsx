@@ -1,6 +1,6 @@
 import { useContext, useReducer, useCallback } from 'react'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
-import type { RESPONSE } from 'mzm-shared/type/api'
+import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useDispatchUi } from '../ui/hooks'
 import type { useUser } from '../user/hooks'
@@ -31,13 +31,16 @@ export const useRoomsForContext = () => {
     name: string,
     getRooms: ReturnType<typeof useDispatchSocket>['getRooms']
   ) => {
+    const body: REQUEST['/api/rooms']['POST']['body'] = {
+      name
+    }
     const res = await fetch('/api/rooms', {
       method: 'POST',
       mode: 'cors',
       headers: {
         'Content-Type': 'application/json; charset=utf-8'
       },
-      body: JSON.stringify({ name })
+      body: JSON.stringify(body)
     })
 
     if (res.status !== 200) {
@@ -99,13 +102,14 @@ export const useRoomsForContext = () => {
     roomId: string,
     getRooms: ReturnType<typeof useDispatchSocket>['getRooms']
   ) => {
+    const body: REQUEST['/api/rooms/enter']['DELETE']['body'] = { room: roomId }
     const res = await fetch('/api/rooms/enter', {
       method: 'DELETE',
       mode: 'cors',
       headers: {
         'Content-Type': 'application/json; charset=utf-8'
       },
-      body: JSON.stringify({ room: roomId })
+      body: JSON.stringify(body)
     })
     if (res.status === 200) {
       getRooms()
@@ -258,7 +262,11 @@ export const useRoomsForContext = () => {
       return
     }
     const lastId = users[users.length - 1].enterId
-    const query = new URLSearchParams([['threshold', lastId]])
+    const init: [
+      keyof REQUEST['/api/rooms/:roomid/users']['GET']['query'],
+      string
+    ][] = [['threshold', lastId]]
+    const query = new URLSearchParams(init)
     const res = await fetch(`/api/rooms/${roomId}/users?${query.toString()}`, {
       method: 'GET',
       mode: 'cors',

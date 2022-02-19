@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from '@emotion/styled'
+import type { REQUEST } from 'mzm-shared/type/api'
 import { useUser, useDispatchUser } from '../contexts/user/hooks'
 import { LoginHeader as Header } from '../components/atoms/LoginHeader'
 import { InputText } from '../components/atoms/InputText'
@@ -40,13 +41,15 @@ const Signup = () => {
       return
     }
 
+    const body: REQUEST['/api/user/signup']['POST']['body'] = { account: txt }
+
     const res = await fetch('/api/user/signup', {
       method: 'POST',
       mode: 'cors',
       headers: {
         'Content-Type': 'application/json; charset=utf-8'
       },
-      body: JSON.stringify({ account: txt })
+      body: JSON.stringify(body)
     })
 
     if (res.status === 200) {
