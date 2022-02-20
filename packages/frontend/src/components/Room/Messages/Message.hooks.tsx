@@ -16,6 +16,10 @@ export const useMessage = (id: string) => {
   const { startToEdit } = useDispatchPostTextArea()
   const { incrementIine } = useDispatchSocket()
 
+  const myAccount = useMemo(() => {
+    return me?.account ?? ''
+  }, [me])
+
   const { message, iine, html, icon, vote, updated, date, account, replied } =
     useMemo(() => {
       const init = {
@@ -39,10 +43,9 @@ export const useMessage = (id: string) => {
           ? 'MM/DD HH:mm:ss'
           : 'YYYY/MM/DD HH:mm:ss'
       )
-      const account = messageObj.userAccount
-        ? messageObj?.userAccount ?? ''
-        : message?.userId ?? ''
-      const replied = isReplied(me.account, messageObj.message)
+      const account = messageObj.userAccount ?? ''
+
+      const replied = isReplied(myAccount, messageObj.message)
 
       return {
         ...messageObj,
@@ -50,7 +53,7 @@ export const useMessage = (id: string) => {
         account,
         replied
       }
-    }, [messageObj, me.account])
+    }, [messageObj, myAccount])
 
   const iineHandler = useCallback(() => {
     incrementIine(id)
@@ -76,7 +79,7 @@ export const useMessage = (id: string) => {
     date,
     replied,
     beforeIine: prevIineRef.current,
-    myAccount: me.account,
+    myAccount,
     iineHandler,
     startEditHandler
   } as const
