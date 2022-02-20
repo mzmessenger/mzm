@@ -3,37 +3,9 @@ import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
 import { ModalProps, ModalBase } from '../atoms/Modal'
 import { useRooms, useDispatchRooms } from '../../contexts/rooms/hooks'
+import { useIntersectionObserver } from '../../lib/hooks/useIntersectionObserver'
 
 type Props = ModalProps & { roomId: string }
-
-const useIntersectionObserver = () => {
-  const [node, setNode] = useState<Element>(null)
-  const [isIntersecting, setIsIntersecting] = useState<boolean>(false)
-
-  const observerRef = useRef(
-    new IntersectionObserver(
-      ([entry]) => {
-        setIsIntersecting(entry.isIntersecting)
-      },
-      {
-        rootMargin: '10px',
-        threshold: 1.0
-      }
-    )
-  )
-
-  useEffect(() => {
-    if (node) {
-      observerRef.current.observe(node)
-    }
-    return () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      observerRef.current?.disconnect()
-    }
-  }, [node])
-
-  return [setNode, isIntersecting] as const
-}
 
 export const ModalUsersList: React.FC<Props> = ({ open, onClose, roomId }) => {
   const {

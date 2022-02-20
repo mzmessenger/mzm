@@ -1,7 +1,8 @@
-import React, { useRef, useEffect } from 'react'
+import React, { useRef, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
 import { useDispatchSocket } from '../../../contexts/socket/hooks'
 import { useRooms } from '../../../contexts/rooms/hooks'
+import { useIntersectionObserver } from '../../../lib/hooks/useIntersectionObserver'
 import { MessageElement } from './Message'
 
 export const Messages = ({ className }) => {
@@ -14,13 +15,18 @@ export const Messages = ({ className }) => {
   } = useRooms()
   const wrapRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
-  const topRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef(0)
   const { getHistory } = useDispatchSocket()
 
-  const messages = currentRoom?.messages || []
+  const [intersectionRef, isIntersecting] = useIntersectionObserver()
 
-  const logFlg = messages.length > 0 && currentRoom.existHistory
+  const messages = useMemo(() => {
+    return currentRoom?.messages || []
+  }, [currentRoom?.messages])
+
+  const existHistoryFlg = useMemo(() => {
+    return messages.length > 0 && currentRoom.existHistory
+  }, [currentRoom.existHistory, messages.length])
 
   const messageElements = messages.map((m) => {
     return (
@@ -37,33 +43,36 @@ export const Messages = ({ className }) => {
     if (scrollTargetIndex === 'bottom') {
       bottomRef.current.scrollIntoView()
     } else if (typeof scrollTargetIndex === 'number') {
-      const target = logFlg ? scrollTargetIndex + 1 : scrollTargetIndex
+      const target = existHistoryFlg ? scrollTargetIndex + 1 : scrollTargetIndex
       const dom = wrapRef.current.querySelector(`.message:nth-child(${target})`)
       if (dom) {
         dom.scrollIntoView()
       }
     }
-  }, [logFlg, messages.length, scrollTargetIndex])
+  }, [existHistoryFlg, messages.length, scrollTargetIndex])
 
-  const onScroll = () => {
-    if (!logFlg) {
+  useEffect(() => {
+    if (!isIntersecting || !existHistoryFlg) {
       return
     }
-    clearTimeout(timerRef.current)
+    if (timerRef.current) {
+      clearTimeout(timerRef.current)
+    }
     timerRef.current = window.setTimeout(() => {
-      const wrapRect = wrapRef.current.getBoundingClientRect()
-      const topRect = topRef.current.getBoundingClientRect()
-      const margin = 10
-      if (wrapRect.top - topRect.bottom <= margin) {
-        const oldestId = currentRoom.messages[0]
-        getHistory(oldestId, currentRoomId)
-      }
+      const oldestId = currentRoom.messages[0]
+      getHistory(oldestId, currentRoomId)
     }, 300)
-  }
+  }, [
+    currentRoom.messages,
+    currentRoomId,
+    getHistory,
+    isIntersecting,
+    existHistoryFlg
+  ])
 
   return (
-    <Wrap ref={wrapRef} className={className} onScroll={onScroll}>
-      <div ref={topRef} style={{ visibility: 'hidden' }} />
+    <Wrap ref={wrapRef} className={className}>
+      <div ref={intersectionRef} style={{ visibility: 'hidden' }} />
       {messageElements}
       <div ref={bottomRef} style={{ visibility: 'hidden' }} />
     </Wrap>
