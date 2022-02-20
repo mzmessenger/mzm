@@ -128,7 +128,7 @@ export const getUsers = async (
     const user: EnterUser = {
       userId: doc.userId.toHexString(),
       account: 'removed',
-      icon: null,
+      icon: createUserIconPath('removed'),
       enterId: doc._id.toHexString()
     }
     if (doc.user && doc.user[0]) {

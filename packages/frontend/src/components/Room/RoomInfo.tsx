@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useMemo } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import styled from '@emotion/styled'
 import { Home, Person, ExpandMore } from '@mui/icons-material'
 import { useDispatchUi } from '../../contexts/ui/hooks'
@@ -52,6 +52,10 @@ export const RoomInfo = () => {
     toggleRoomSetting()
   }
 
+  const onClose = useCallback(() => {
+    setOpen(false)
+  }, [setOpen])
+
   return (
     <Wrap>
       <div className="room-icon">
@@ -71,11 +75,7 @@ export const RoomInfo = () => {
       <div className={expandClassName.join(' ')} onClick={onExpandClick}>
         <ExpandMore className="icon" />
       </div>
-      <ModalUsersList
-        open={open}
-        onClose={() => setOpen(false)}
-        roomId={currentRoomId}
-      />
+      <ModalUsersList open={open} onClose={onClose} roomId={currentRoomId} />
     </Wrap>
   )
 }

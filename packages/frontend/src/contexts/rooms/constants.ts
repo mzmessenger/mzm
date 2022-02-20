@@ -42,6 +42,7 @@ export type State = {
   users: {
     byId: { [key: string]: { count: number; users: RoomUser[] | readonly [] } }
     allIds: string[]
+    loading: boolean
   }
   currentRoomId: string
   currentRoomName: string
@@ -60,7 +61,7 @@ export const INITIAL_STATE: State = {
     allIds: [] as State['rooms']['allIds'],
     order: [] as State['rooms']['order']
   },
-  users: { byId: {}, allIds: [] as State['users']['allIds'] },
+  users: { byId: {}, allIds: [] as State['users']['allIds'], loading: false },
   currentRoomId: '',
   currentRoomName: initCurrentRoomName,
   currentRoomIcon: null,
@@ -86,6 +87,7 @@ export const Actions = {
   ToggleSetting: 'roomAction:toggleSetting',
   CloseSetting: 'roomAction:closeSetting',
   SetIcon: 'roomAction:setIcon',
+  FetchStartRoomUsers: 'roomAction:fetchStartRoomUsers',
   SetRoomUsers: 'roomAction:setRoomUsers',
   SetNextRoomUsers: 'roomAction:setNextRoomUsers',
   SetRoomStatus: 'roomAction:setRoomStatus'
@@ -185,4 +187,7 @@ export type ActionType =
   | {
       type: typeof Actions.SetRoomStatus
       payload: { id: string; status: 'open' | 'close' }
+    }
+  | {
+      type: typeof Actions.FetchStartRoomUsers
     }

@@ -178,6 +178,7 @@ export const reducer = (
       if (!state.users.allIds.includes(action.payload.room)) {
         state.users.allIds = [...state.users.allIds, action.payload.room]
       }
+      state.users.loading = false
       return { ...state }
     }
     case Actions.SetNextRoomUsers: {
@@ -186,6 +187,7 @@ export const reducer = (
         ...users,
         users: [...users.users, ...action.payload.users]
       }
+      state.users.loading = false
       return { ...state }
     }
     case Actions.SetRoomStatus: {
@@ -194,6 +196,10 @@ export const reducer = (
         ...room,
         status: action.payload.status
       }
+      return { ...state }
+    }
+    case Actions.FetchStartRoomUsers: {
+      state.users.loading = true
       return { ...state }
     }
     default:

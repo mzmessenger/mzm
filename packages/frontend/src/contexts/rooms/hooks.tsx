@@ -232,6 +232,10 @@ export const useRoomsForContext = () => {
     if (!roomId) {
       return
     }
+    if (state.users.loading) {
+      return
+    }
+    dispatch({ type: Actions.FetchStartRoomUsers })
     const res = await fetch(`/api/rooms/${roomId}/users`, {
       method: 'GET',
       mode: 'cors',
@@ -258,16 +262,26 @@ export const useRoomsForContext = () => {
     if (!roomId) {
       return
     }
+
+    if (state.users.loading) {
+      return
+    }
+
     const { users, count } = state.users.byId[roomId]
     if (users.length >= count) {
       return
     }
+    dispatch({ type: Actions.FetchStartRoomUsers })
+
     const lastId = users[users.length - 1].enterId
+
     const init: [
       keyof REQUEST['/api/rooms/:roomid/users']['GET']['query'],
       string
     ][] = [['threshold', lastId]]
+
     const query = new URLSearchParams(init)
+
     const res = await fetch(`/api/rooms/${roomId}/users?${query.toString()}`, {
       method: 'GET',
       mode: 'cors',
@@ -355,7 +369,10 @@ export const useRoomsForContext = () => {
     receiveMessages: useCallback(receiveMessages, []),
     enterSuccess: useCallback(enterSuccess, [state.rooms.byId]),
     getUsers: useCallback(getUsers, []),
-    getNextUsers: useCallback(getNextUsers, [state.users.byId]),
+    getNextUsers: useCallback(getNextUsers, [
+      state.users.byId,
+      state.users.loading
+    ]),
     alreadyRead: useCallback(alreadyRead, []),
     reloadMessage: useCallback(reloadMessage, []),
     toggleRoomSetting: useCallback(toggleRoomSetting, []),
