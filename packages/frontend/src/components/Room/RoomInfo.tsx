@@ -33,7 +33,8 @@ export const RoomInfo = () => {
     if (currentRoomId) {
       getUsers(currentRoomId)
     }
-  }, [currentRoomId, getUsers])
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [currentRoomId])
 
   const clickUser = (user) => {
     openUserDetail(user.id, user.account, user.icon)

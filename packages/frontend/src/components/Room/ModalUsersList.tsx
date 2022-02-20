@@ -20,10 +20,10 @@ export const ModalUsersList: React.FC<Props> = ({ open, onClose, roomId }) => {
   const [intersectionRef, isIntersecting] = useIntersectionObserver()
 
   useEffect(() => {
+    if (loading) {
+      return
+    }
     if (isIntersecting) {
-      if (loading) {
-        return
-      }
       setLoading(true)
       getNextUsers(roomId).then(() => setLoading(false))
     }
@@ -47,7 +47,9 @@ export const ModalUsersList: React.FC<Props> = ({ open, onClose, roomId }) => {
         <div className="users">
           <ul ref={listWrapRef} className="scroll-styled-y">
             {list}
-            <li className="last" ref={intersectionRef}></li>
+            {open && list.length > 0 && (
+              <li className="last" ref={intersectionRef}></li>
+            )}
           </ul>
         </div>
       </ModalInner>
