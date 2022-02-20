@@ -10,7 +10,7 @@ export const useIntersectionObserver = () => {
         setIsIntersecting(entry.isIntersecting)
       },
       {
-        rootMargin: '10px',
+        rootMargin: '-10px',
         threshold: 1.0
       }
     )

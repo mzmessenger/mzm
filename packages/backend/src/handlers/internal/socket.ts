@@ -442,6 +442,8 @@ export const updateRoomDescription = async (
     descrioption: data.description
   }
   addQueueToUsers(users, send)
+
+  addUpdateSearchRoomQueue([data.roomId])
 }
 
 const isAnswer = (answer: number): answer is db.VoteAnswer['answer'] => {

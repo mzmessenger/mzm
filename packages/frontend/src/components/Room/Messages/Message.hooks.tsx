@@ -40,8 +40,8 @@ export const useMessage = (id: string) => {
           : 'YYYY/MM/DD HH:mm:ss'
       )
       const account = messageObj.userAccount
-        ? messageObj.userAccount
-        : message.userId
+        ? messageObj?.userAccount ?? ''
+        : message?.userId ?? ''
       const replied = isReplied(me.account, messageObj.message)
 
       return {

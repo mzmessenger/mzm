@@ -16,7 +16,7 @@ export const useSearchForContext = () => {
   const [scroll, setScroll] = useState<string>(null)
   const [total, setTotal] = useState(0)
   const [results, setResults] = useState<
-    { id: string; name: string; iconUrl: string }[]
+    RESPONSE['/api/rooms/search']['GET']['hits']
   >([])
 
   const state = useMemo(() => {

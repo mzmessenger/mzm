@@ -25,8 +25,8 @@ export const Messages = ({ className }) => {
   }, [currentRoom?.messages])
 
   const existHistoryFlg = useMemo(() => {
-    return messages.length > 0 && currentRoom.existHistory
-  }, [currentRoom.existHistory, messages.length])
+    return messages.length > 0 && currentRoom?.existHistory
+  }, [currentRoom?.existHistory, messages.length])
 
   const messageElements = messages.map((m) => {
     return (
@@ -41,7 +41,7 @@ export const Messages = ({ className }) => {
       return
     }
     if (scrollTargetIndex === 'bottom') {
-      bottomRef.current.scrollIntoView()
+      bottomRef.current?.scrollIntoView()
     } else if (typeof scrollTargetIndex === 'number') {
       const target = existHistoryFlg ? scrollTargetIndex + 1 : scrollTargetIndex
       const dom = wrapRef.current.querySelector(`.message:nth-child(${target})`)
@@ -52,27 +52,23 @@ export const Messages = ({ className }) => {
   }, [existHistoryFlg, messages.length, scrollTargetIndex])
 
   useEffect(() => {
-    if (!isIntersecting || !existHistoryFlg) {
+    if (!isIntersecting || !existHistoryFlg || messages.length <= 0) {
       return
     }
     if (timerRef.current) {
       clearTimeout(timerRef.current)
     }
     timerRef.current = window.setTimeout(() => {
-      const oldestId = currentRoom.messages[0]
+      const oldestId = messages[0]
       getHistory(oldestId, currentRoomId)
     }, 300)
-  }, [
-    currentRoom.messages,
-    currentRoomId,
-    getHistory,
-    isIntersecting,
-    existHistoryFlg
-  ])
+  }, [messages, currentRoomId, getHistory, isIntersecting, existHistoryFlg])
 
   return (
     <Wrap ref={wrapRef} className={className}>
-      <div ref={intersectionRef} style={{ visibility: 'hidden' }} />
+      {messages.length > 0 && (
+        <div ref={intersectionRef} style={{ visibility: 'hidden' }} />
+      )}
       {messageElements}
       <div ref={bottomRef} style={{ visibility: 'hidden' }} />
     </Wrap>

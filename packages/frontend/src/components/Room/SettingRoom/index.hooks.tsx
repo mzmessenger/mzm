@@ -15,7 +15,7 @@ export const useSettiongRooms = () => {
   const [image, setImage] = useState('')
   const [open, setOpen] = useState(false)
   const [edit, setEdit] = useState(false)
-  const [description, setDescription] = useState(room.description)
+  const [description, setDescription] = useState(room?.description || '')
 
   const { name, isGeneral } = useMemo(() => {
     const name = currentRoomName || ''
@@ -65,7 +65,7 @@ export const useSettiongRooms = () => {
     if (room.description !== description) {
       updateRoomDescription(currentRoomId, description)
     }
-  }, [currentRoomId, description, room.description, updateRoomDescription])
+  }, [currentRoomId, description, room?.description, updateRoomDescription])
 
   const onCancel = useCallback(() => {
     setImage('')
