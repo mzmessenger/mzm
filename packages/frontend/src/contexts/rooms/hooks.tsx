@@ -368,7 +368,7 @@ export const useRoomsForContext = () => {
     receiveMessage: useCallback(receiveMessage, [state.currentRoomId]),
     receiveMessages: useCallback(receiveMessages, []),
     enterSuccess: useCallback(enterSuccess, [state.rooms.byId]),
-    getUsers: useCallback(getUsers, []),
+    getUsers: useCallback(getUsers, [state.users.loading]),
     getNextUsers: useCallback(getNextUsers, [
       state.users.byId,
       state.users.loading

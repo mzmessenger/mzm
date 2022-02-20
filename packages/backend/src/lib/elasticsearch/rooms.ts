@@ -4,6 +4,7 @@ import { lock, release } from '../redis'
 import * as config from '../../config'
 import * as db from '../db'
 import { client as es } from './index'
+import { createRoomIconPath } from '../utils'
 
 const settings = {
   index: { max_ngram_diff: 2 },
@@ -92,6 +93,10 @@ export type RoomMappingsProperties = {
     ngram: string
     kuromoji: string
   }
+  description: {
+    ngram: string
+    kuromoji: string
+  }
 } & Pick<db.Room, 'status'>
 
 export type RoomMappings = {
@@ -160,8 +165,6 @@ export const insertRooms = async (roomIds: string[]) => {
     | RoomMappingsProperties
   const body: Body[] = []
 
-  // @todo ignore general
-
   for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
     body.push({
       index: {
@@ -171,6 +174,10 @@ export const insertRooms = async (roomIds: string[]) => {
     })
     body.push({
       name: { kuromoji: doc.name, ngram: doc.name },
+      description: {
+        kuromoji: doc.description || '',
+        ngram: doc.description || ''
+      },
       status:
         doc.status === db.RoomStatusEnum.OPEN
           ? db.RoomStatusEnum.OPEN
@@ -196,5 +203,83 @@ export const insertRooms = async (roomIds: string[]) => {
       }
     })
     logger.error(JSON.stringify(erroredDocuments))
+  }
+}
+
+export const searchRoom = async (
+  query: string | null,
+  scroll: string | null
+) => {
+  // @todo multi query
+  const must: object[] = []
+
+  if (query) {
+    const roomsQuery = {
+      bool: {
+        should: [
+          {
+            simple_query_string: {
+              fields: ['name.kuromoji', 'description.kuromoji'],
+              query: query,
+              default_operator: 'and'
+            }
+          }
+        ]
+      }
+    }
+    roomsQuery.bool.should.push({
+      simple_query_string: {
+        query: query,
+        fields: ['name.ngram', 'description.ngram'],
+        default_operator: 'and'
+      }
+    })
+    must.push(roomsQuery)
+  }
+
+  const body: { [key: string]: object | string | number } = {
+    query: {
+      bool: {
+        must: must,
+        filter: [{ match: { status: db.RoomStatusEnum.OPEN } }]
+      }
+    },
+    sort: [{ _id: 'asc' }]
+  }
+
+  if (scroll) {
+    body.search_after = [scroll]
+  }
+
+  const { body: resBody } = await es.search({
+    index: config.elasticsearch.alias.room,
+    size: config.elasticsearch.size.room,
+    body: body
+  })
+
+  const ids = resBody.hits.hits.map((elem) => new ObjectId(elem._id))
+  const cursor = await db.collections.rooms.find({ _id: { $in: ids } })
+
+  type ResRoom = Pick<db.Room, 'name' | 'description'> & {
+    id: string
+    iconUrl: string
+  }
+  const rooms: ResRoom[] = []
+  for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
+    rooms.push({
+      id: doc._id.toHexString(),
+      name: doc.name,
+      description: doc.description,
+      iconUrl: createRoomIconPath(doc)
+    })
+  }
+
+  const total = resBody.hits.total.value
+
+  return {
+    query: query,
+    hits: rooms,
+    total: total,
+    scroll: rooms.length > 0 ? rooms[rooms.length - 1].id : null
   }
 }

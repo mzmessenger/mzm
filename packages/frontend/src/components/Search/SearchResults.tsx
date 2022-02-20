@@ -16,7 +16,11 @@ export const SearchResult = () => {
       <ul>
         {results.map((e) => (
           <li key={e.id}>
-            <SearchRoomElement name={e.name} iconUrl={e.iconUrl} />
+            <SearchRoomElement
+              name={e.name}
+              iconUrl={e.iconUrl}
+              description={e.description}
+            />
           </li>
         ))}
       </ul>

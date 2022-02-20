@@ -5,7 +5,12 @@ export type RESPONSE = {
   '/api/rooms/search': {
     GET: {
       query: string
-      hits: { id: string; name: string; iconUrl: string }[]
+      hits: {
+        id: string
+        name: string
+        iconUrl: string
+        description?: string
+      }[]
       total: number
       scroll: string | null
     }

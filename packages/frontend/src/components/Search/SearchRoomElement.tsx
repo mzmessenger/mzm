@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from '@emotion/styled'
 import { Home, Forward } from '@mui/icons-material'
@@ -11,15 +11,21 @@ import { IconButton } from '../atoms/Button'
 export const SearchRoomElement: React.FC<{
   name: string
   iconUrl: string
-}> = ({ name, iconUrl }) => {
+  description?: string
+}> = (props) => {
   const navigate = useNavigate()
   const { enterRoom } = useDispatchRooms()
   const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
   const { cancel } = useDispatchSearch()
   const { closeMenu } = useDispatchUi()
+
+  const description = useMemo(() => {
+    return props.description ? props.description.substring(0, 40) : ''
+  }, [props.description])
+
   const onClick = () => {
-    enterRoom(name, getMessages, enterRoomSocket, closeMenu).then(() => {
-      navigate(`/rooms/${name}`)
+    enterRoom(props.name, getMessages, enterRoomSocket, closeMenu).then(() => {
+      navigate(`/rooms/${props.name}`)
       cancel()
     })
   }
@@ -28,9 +34,11 @@ export const SearchRoomElement: React.FC<{
     <RoomWrap className="search-room-elem">
       <div className="room-info">
         <div className="room-icon">
-          {iconUrl ? <img src={iconUrl} /> : <Home />}
+          {props.iconUrl ? <img src={props.iconUrl} /> : <Home />}
         </div>
-        <div className="room-name">{name}</div>
+        <div className="room-name">{props.name}</div>
+        <div className="divider"></div>
+        <div className="room-description">{description}</div>
       </div>
       <div className="buttons">
         <IconButton onClick={onClick}>
@@ -70,6 +78,17 @@ const RoomWrap = styled.div`
   }
 
   .room-name {
+    min-width: 100px;
+  }
+
+  .divider {
+    width: 1px;
+    height: 60%;
+    margin: 0 1em;
+    background: var(--color-on-secondary);
+  }
+
+  .room-description {
     flex: 1;
   }
 

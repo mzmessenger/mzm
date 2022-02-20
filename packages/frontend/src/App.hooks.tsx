@@ -33,10 +33,6 @@ const useRouter = () => {
         fetchMyInfo()
       }
 
-      if (login && room) {
-        enterRoom(room, getMessages, enterRoomSocket, closeMenu)
-      }
-
       if (room) {
         document.title = `MZM (${room})`
       } else {
