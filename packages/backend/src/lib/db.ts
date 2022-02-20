@@ -68,6 +68,7 @@ export const RoomStatusEnum = {
 
 export type Room = {
   name: string
+  description?: string
   createdBy: string
   updatedBy?: ObjectId
   icon?: {

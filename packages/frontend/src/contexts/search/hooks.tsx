@@ -1,4 +1,5 @@
 import { useState, useContext, useMemo, useCallback } from 'react'
+import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { SearchContext, SearchDispatchContext } from './index'
 
 export const useSearch = () => {
@@ -41,7 +42,9 @@ export const useSearchForContext = () => {
 
   const search = async (q: string) => {
     setQuery(q)
-    const params = new URLSearchParams([['query', q]])
+    const init: [keyof REQUEST['/api/rooms/search']['GET']['query'], string][] =
+      [['query', q]]
+    const params = new URLSearchParams(init)
 
     const res = await fetch(`/api/rooms/search?${params.toString()}`, {
       method: 'GET',
@@ -55,7 +58,8 @@ export const useSearchForContext = () => {
       return res
     }
 
-    const { hits, scroll, total } = await res.json()
+    const { hits, scroll, total } =
+      (await res.json()) as RESPONSE['/api/rooms/search']['GET']
 
     setResults(hits)
     setScroll(scroll)
@@ -68,10 +72,14 @@ export const useSearchForContext = () => {
     if (!query || !scroll) {
       return
     }
-    const params = new URLSearchParams([
-      ['query', query],
-      ['scroll', scroll]
-    ])
+
+    const init: [keyof REQUEST['/api/rooms/search']['GET']['query'], string][] =
+      [
+        ['query', query],
+        ['scroll', scroll]
+      ]
+
+    const params = new URLSearchParams(init)
 
     const res = await fetch(`/api/rooms/search?${params.toString()}`, {
       method: 'GET',
@@ -82,7 +90,8 @@ export const useSearchForContext = () => {
     })
 
     if (res.ok) {
-      const { hits, scroll, total } = await res.json()
+      const { hits, scroll, total } =
+        (await res.json()) as RESPONSE['/api/rooms/search']['GET']
 
       setResults([...results, ...hits])
       setScroll(scroll)

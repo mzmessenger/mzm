@@ -12,6 +12,7 @@ export const TO_CLIENT_CMD = {
   ROOMS_ENTER_FAIL: 'rooms:enter:fail',
   ROOMS_READ: 'rooms:read',
   ROOMS_SORT_SUCCESS: 'rooms:sort:success',
+  ROOMS_UPDATE_DESCRIPTION: 'rooms:update:description',
   VOTE_ANSWERS: 'vote:answers'
 } as const
 
@@ -56,6 +57,7 @@ export type ToClientType =
       rooms: {
         id: string
         name: string
+        description: string
         iconUrl: string
         unread: number
         replied: number
@@ -82,6 +84,7 @@ export type ToClientType =
       id: string
       name: string
       iconUrl: string
+      description: string
     }
   | {
       user: string
@@ -119,6 +122,12 @@ export type ToClientType =
       messageId: string
       answers: VoteType['answers']
     }
+  | {
+      user?: string
+      cmd: typeof TO_CLIENT_CMD.ROOMS_UPDATE_DESCRIPTION
+      roomId: string
+      descrioption: string
+    }
 
 export const TO_SERVER_CMD = {
   CONNECTION: 'socket:connection',
@@ -128,6 +137,7 @@ export const TO_SERVER_CMD = {
   ROOMS_SORT: 'rooms:sort',
   ROOMS_OPEN: 'rooms:open',
   ROOMS_CLOSE: 'rooms:close',
+  ROOMS_UPDATE_DESCRIPTION: 'rooms:update:description',
   MESSAGE_SEND: 'message:send',
   MESSAGE_IINE: 'message:iine',
   MESSAGE_MODIFY: 'message:modify',
@@ -150,6 +160,7 @@ export type ClientToSocketType =
   | SortRooms
   | OpenRoom
   | CloseRoom
+  | UpdateRoomsDescription
   | SendVoteAnswer
   | RemoveVoteAnswer
 
@@ -158,18 +169,7 @@ export type SocketToBackendType =
       cmd: typeof TO_SERVER_CMD.CONNECTION
       payload: { user: string; twitterUserName: string }
     }
-  | GetRooms
-  | SendMessage
-  | ModifyMessage
-  | IineMessage
-  | GetMessages
-  | EnterRoom
-  | ReadMessage
-  | SortRooms
-  | OpenRoom
-  | CloseRoom
-  | SendVoteAnswer
-  | RemoveVoteAnswer
+  | ClientToSocketType
 
 type GetRooms = {
   cmd: typeof TO_SERVER_CMD.ROOMS_GET
@@ -222,6 +222,12 @@ type SortRooms = {
 type OpenRoom = { cmd: typeof TO_SERVER_CMD.ROOMS_OPEN; roomId: string }
 
 type CloseRoom = { cmd: typeof TO_SERVER_CMD.ROOMS_CLOSE; roomId: string }
+
+type UpdateRoomsDescription = {
+  cmd: typeof TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION
+  roomId: string
+  description: string
+}
 
 type SendVoteAnswer = {
   cmd: typeof TO_SERVER_CMD.VOTE_ANSWER_SEND

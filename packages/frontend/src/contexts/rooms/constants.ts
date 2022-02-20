@@ -23,6 +23,7 @@ export type Room = {
   id: string
   name: string
   iconUrl: string
+  description: string
   unread: number
   replied: number
   messages: string[]
@@ -41,10 +42,12 @@ export type State = {
   users: {
     byId: { [key: string]: { count: number; users: RoomUser[] | readonly [] } }
     allIds: string[]
+    loading: boolean
   }
   currentRoomId: string
   currentRoomName: string
   currentRoomIcon: string
+  currentRoomDescription: string
   scrollTargetIndex: number | 'bottom'
   openRoomSetting: boolean
 }
@@ -58,16 +61,18 @@ export const INITIAL_STATE: State = {
     allIds: [] as State['rooms']['allIds'],
     order: [] as State['rooms']['order']
   },
-  users: { byId: {}, allIds: [] as State['users']['allIds'] },
+  users: { byId: {}, allIds: [] as State['users']['allIds'], loading: false },
   currentRoomId: '',
   currentRoomName: initCurrentRoomName,
   currentRoomIcon: null,
+  currentRoomDescription: null,
   scrollTargetIndex: 'bottom',
   openRoomSetting: false
 } as const
 
 export const Actions = {
   SetRooms: 'roomAction:setRooms',
+  SetRoomDescription: 'roomAction:setRoomDescription',
   SetRoomOrder: 'roomAction:setRoomOrder',
   ReceiveMessage: 'roomAction:receiveMessage',
   ReceiveMessages: 'roomAction:receiveMessages',
@@ -82,6 +87,7 @@ export const Actions = {
   ToggleSetting: 'roomAction:toggleSetting',
   CloseSetting: 'roomAction:closeSetting',
   SetIcon: 'roomAction:setIcon',
+  FetchStartRoomUsers: 'roomAction:fetchStartRoomUsers',
   SetRoomUsers: 'roomAction:setRoomUsers',
   SetNextRoomUsers: 'roomAction:setNextRoomUsers',
   SetRoomStatus: 'roomAction:setRoomStatus'
@@ -96,6 +102,13 @@ export type ActionType =
       }
     }
   | {
+      type: typeof Actions.SetRoomDescription
+      payload: {
+        roomId: string
+        description: string
+      }
+    }
+  | {
       type: typeof Actions.ReceiveMessage
       payload: {
         messageId: string
@@ -106,7 +119,13 @@ export type ActionType =
     }
   | {
       type: typeof Actions.EnterRoomSuccess
-      payload: { id: string; name: string; iconUrl: string; loading: boolean }
+      payload: {
+        id: string
+        name: string
+        iconUrl: string
+        description: string
+        loading: boolean
+      }
     }
   | {
       type: typeof Actions.ExitRoom
@@ -168,4 +187,7 @@ export type ActionType =
   | {
       type: typeof Actions.SetRoomStatus
       payload: { id: string; status: 'open' | 'close' }
+    }
+  | {
+      type: typeof Actions.FetchStartRoomUsers
     }

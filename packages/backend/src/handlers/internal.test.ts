@@ -18,7 +18,8 @@ import {
   openRoom,
   closeRoom,
   sendVoteAnswer,
-  removeVoteAnswer
+  removeVoteAnswer,
+  updateRoomDescription
 } from './internal/socket'
 
 test.each([
@@ -34,7 +35,8 @@ test.each([
   [TO_SERVER_CMD.ROOMS_OPEN, openRoom],
   [TO_SERVER_CMD.ROOMS_CLOSE, closeRoom],
   [TO_SERVER_CMD.VOTE_ANSWER_SEND, sendVoteAnswer],
-  [TO_SERVER_CMD.VOTE_ANSWER_REMOVE, removeVoteAnswer]
+  [TO_SERVER_CMD.VOTE_ANSWER_REMOVE, removeVoteAnswer],
+  [TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION, updateRoomDescription]
 ])('socket %s', async (cmd, called: any) => {
   const userId = new ObjectId()
   const body = { cmd }

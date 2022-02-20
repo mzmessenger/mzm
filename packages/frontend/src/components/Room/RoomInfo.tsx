@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react'
+import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import styled from '@emotion/styled'
 import { Home, Person, ExpandMore } from '@mui/icons-material'
 import { useDispatchUi } from '../../contexts/ui/hooks'
@@ -14,15 +14,19 @@ export const RoomInfo = () => {
   const {
     currentRoomId,
     currentRoomName,
+    currentRoomDescription,
     currentRoomIcon,
     openRoomSetting,
     users: { byId }
   } = useRooms()
   const { getUsers, toggleRoomSetting } = useDispatchRooms()
-  const users = byId[currentRoomId]
   const { openUserDetail } = useDispatchUi()
   const [open, setOpen] = useState(false)
+  const description = useMemo(() => {
+    return currentRoomDescription ? currentRoomDescription.substring(0, 20) : ''
+  }, [currentRoomDescription])
 
+  const users = byId[currentRoomId]
   const name = currentRoomName || ''
 
   useEffect(() => {
@@ -48,12 +52,18 @@ export const RoomInfo = () => {
     toggleRoomSetting()
   }
 
+  const onClose = useCallback(() => {
+    setOpen(false)
+  }, [setOpen])
+
   return (
     <Wrap>
       <div className="room-icon">
         <RoomIcon iconUrl={currentRoomIcon} />
       </div>
       <span className="room-name">{name}</span>
+      <div className="divider"></div>
+      <span className="room-description">{description}</span>
       <div className="space"></div>
       <div className="room-users">
         <div className="room-users-info" onClick={() => setOpen(true)}>
@@ -65,11 +75,7 @@ export const RoomInfo = () => {
       <div className={expandClassName.join(' ')} onClick={onExpandClick}>
         <ExpandMore className="icon" />
       </div>
-      <ModalUsersList
-        open={open}
-        onClose={() => setOpen(false)}
-        roomId={currentRoomId}
-      />
+      <ModalUsersList open={open} onClose={onClose} roomId={currentRoomId} />
     </Wrap>
   )
 }
@@ -86,13 +92,35 @@ const Wrap = styled.div`
     flex: 1;
   }
 
+  .room-icon {
+    color: var(--color-on-guide);
+    width: 32px;
+    height: 32px;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    img {
+      width: 20px;
+      height: 20px;
+    }
+  }
+
   .room-name {
-    font-size: 18px;
-    line-height: 30px;
     max-width: 400px;
     overflow: hidden;
     white-space: nowrap;
     text-overflow: ellipsis;
+  }
+
+  .divider {
+    width: 1px;
+    height: 60%;
+    margin: 0 1em;
+    background: var(--color-on-secondary);
+  }
+
+  .room-description {
+    color: var(--color-on-secondary);
   }
 
   .room-users {
@@ -134,15 +162,6 @@ const Wrap = styled.div`
       cursor: pointer;
       color: var(--color-on-guide);
       margin: 0 8px 0;
-    }
-  }
-
-  .room-icon {
-    color: var(--color-on-guide);
-    margin: 0 8px 0 0;
-    img {
-      width: 20px;
-      height: 20px;
     }
   }
 

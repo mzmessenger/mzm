@@ -1,11 +1,12 @@
 #!/usr/bin/env node
-const { MongoClient } = require('mongodb')
+import { MongoClient } from 'mongodb'
+import yargs from 'yargs'
 
 /**
  * node -r esbuild-register ./bin/init_mongodb.ts --password=example --user=mzm --user_password=xxx --port=27018
  */
 
-const { password, user, user_password, port } = require('yargs')
+const { password, user, user_password, port } = yargs
   .option('password', {
     describe: 'root password',
     demandOption: true
@@ -37,11 +38,7 @@ const createUser = async (client, dbname, user, password) => {
 
 const main = async () => {
   const client = await MongoClient.connect(
-    `mongodb://root:${password}@localhost`,
-    {
-      useNewUrlParser: true,
-      useUnifiedTopology: true
-    }
+    `mongodb://root:${password}@localhost`
   )
 
   await createUser(client, 'mzm', user, user_password)

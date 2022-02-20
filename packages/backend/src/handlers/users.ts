@@ -1,5 +1,6 @@
 import { Request } from 'express'
 import isEmpty from 'validator/lib/isEmpty'
+import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { HEADERS } from 'mzm-shared/auth'
 import { getRequestUserId } from '../lib/utils'
 import { NotFound, BadRequest } from '../lib/errors'
@@ -10,7 +11,8 @@ import { createUserIconPath } from '../lib/utils'
 import { ObjectId } from 'mongodb'
 
 export const signUp = async (req: Request) => {
-  const account = popParam(req.body.account)
+  const body = req.body as Partial<REQUEST['/api/user/signup']['POST']['body']>
+  const account = popParam(body.account)
   if (!account) {
     throw new BadRequest('account is empty')
   }
@@ -32,7 +34,9 @@ export const signUp = async (req: Request) => {
   return { id: id, account: account }
 }
 
-export const getUserInfo = async (req: Request) => {
+export const getUserInfo = async (
+  req: Request
+): Promise<RESPONSE['/api/user/@me']['GET']> => {
   const id = getRequestUserId(req)
 
   const user = await db.collections.users.findOne(

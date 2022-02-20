@@ -1,9 +1,10 @@
-import React, { lazy } from 'react'
+import React from 'react'
 import styled from '@emotion/styled'
 import { useRooms } from '../../contexts/rooms/hooks'
 import { InputArea } from './InputArea'
 import { Messages } from './Messages'
 import { RoomInfo } from './RoomInfo'
+import { SettingRoom } from './SettingRoom'
 
 const ContentMessage = () => {
   return (
@@ -18,7 +19,6 @@ const ContentMessage = () => {
 
 export const RoomContent = () => {
   const { openRoomSetting } = useRooms()
-  const SettingRoom = lazy(() => import('./SettingRoom'))
 
   return (
     <Wrap className="room-content">

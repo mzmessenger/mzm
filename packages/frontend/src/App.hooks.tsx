@@ -98,7 +98,8 @@ const useWebSocket = (url: string) => {
     changeRoom,
     enterSuccess,
     alreadyRead,
-    setRoomOrder
+    setRoomOrder,
+    setRoomDescription
   } = useDispatchRooms()
 
   const account = me.account ?? ''
@@ -127,6 +128,9 @@ const useWebSocket = (url: string) => {
             currentRoomId,
             gMessages
           )
+        },
+        [TO_CLIENT_CMD.ROOMS_UPDATE_DESCRIPTION]: ({ ws, message }) => {
+          setRoomDescription(message.roomId, message.descrioption)
         },
         [TO_CLIENT_CMD.MESSAGE_RECEIVE]: ({ message }) => {
           addMessage(message.message).then(() => {
@@ -165,6 +169,7 @@ const useWebSocket = (url: string) => {
           enterSuccess(
             message.id,
             message.name,
+            message.description,
             message.iconUrl,
             gRooms,
             gMesssages
@@ -211,6 +216,7 @@ const useWebSocket = (url: string) => {
       receiveMessages,
       receiveRooms,
       reloadMessage,
+      setRoomDescription,
       setRoomOrder,
       setVoteAnswers,
       updateIine

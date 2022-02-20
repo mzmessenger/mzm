@@ -1,10 +1,10 @@
 import React, { useRef, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from '@emotion/styled'
-import { useDispatchRooms } from '../../../contexts/rooms/hooks'
-import { getRoomName } from '../../../lib/util'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
-import { useDispatchUi } from '../../../contexts/ui/hooks'
+import { useDispatchRooms } from '../../contexts/rooms/hooks'
+import { getRoomName } from '../../lib/util'
+import { useDispatchSocket } from '../../contexts/socket/hooks'
+import { useDispatchUi } from '../../contexts/ui/hooks'
 
 type Props = {
   className?: string
@@ -61,17 +61,25 @@ export const MessageBody: React.FC<Props> = ({ className, message, html }) => {
 const Wrap = styled.div`
   padding: 5px 0 0 0;
   word-break: break-all;
-  p {
+
+  > p,
+  > pre,
+  > a,
+  > ul {
+    margin: 0 0 0.7em 0;
+  }
+
+  > p {
     font-size: 14px;
     line-height: 1.7;
-    margin: 0;
     white-space: pre-wrap;
   }
-  a {
+
+  > a {
     color: var(--color-link);
   }
 
-  ul {
+  > ul {
     list-style-type: none;
     margin: 0;
     padding: 0;

@@ -1,74 +1,37 @@
-import React, { useState, useCallback } from 'react'
+import React from 'react'
 import styled from '@emotion/styled'
 import { Home, DirectionsRun } from '@mui/icons-material'
-import { WIDTH_MOBILE } from '../../lib/constants'
-import { useDispatchSocket } from '../../contexts/socket/hooks'
-import { useRooms, useDispatchRooms } from '../../contexts/rooms/hooks'
-import { DropImage } from '../atoms/DropImage'
-import { Button } from '../atoms/Button'
-import { ModalIcon } from '../atoms/ModalIcon'
-import { SettingRoomStatus } from './SettingRoomStatus'
+import { WIDTH_MOBILE } from '../../../lib/constants'
+import { DropImage } from '../../atoms/DropImage'
+import { Button } from '../../atoms/Button'
+import { ModalIcon } from '../../atoms/ModalIcon'
+import { useSettiongRooms } from './index.hooks'
+import { SettingRoomStatus } from './RoomStatus'
+import { RoomInfo } from './RoomInfo'
 
 const IconImage = ({ iconUrl }: { iconUrl: string }) => {
   return iconUrl ? <img src={iconUrl} /> : <Home />
 }
 
-const RoomSetting = () => {
+export const SettingRoom = () => {
   const {
-    currentRoomId,
-    currentRoomName,
-    rooms: { byId }
-  } = useRooms()
-  const { exitRoom, uploadIcon } = useDispatchRooms()
-  const room = byId[currentRoomId]
-  const [image, setImage] = useState('')
-  const [open, setOpen] = useState(false)
-  const [edit, setEdit] = useState(false)
-  const { getRooms } = useDispatchSocket()
-
-  const name = currentRoomName || ''
-  const iconUrl = room?.iconUrl
-  const isGeneral = name === 'general'
-
-  const onClick = () => {
-    exitRoom(currentRoomId, getRooms)
-  }
-
-  const onloadFile = (file: string) => {
-    setImage(file)
-    setOpen(true)
-  }
-
-  const onModalSave = useCallback(
-    (image: Blob) => {
-      uploadIcon(name, image).then((res) => {
-        if (res.ok) {
-          setOpen(false)
-        } else {
-          res.text().then((text) => {
-            alert(`アップロードにエラーが発生しました(${text})`)
-          })
-        }
-      })
-    },
-    [name, uploadIcon]
-  )
-
-  const onModalCancel = useCallback(() => {
-    setOpen(false)
-  }, [])
-
-  const onEdit = () => setEdit(true)
-
-  const onSave = () => {
-    setImage('')
-    setEdit(false)
-  }
-
-  const onCancel = () => {
-    setImage('')
-    setEdit(false)
-  }
+    id,
+    name,
+    description,
+    iconUrl,
+    isGeneral,
+    image,
+    open,
+    edit,
+    onExit,
+    onLoadFile,
+    onModalSave,
+    onModalCancel,
+    onEdit,
+    onSave,
+    onCancel,
+    onChangeDescription
+  } = useSettiongRooms()
 
   return (
     <Wrap>
@@ -77,21 +40,16 @@ const RoomSetting = () => {
         <div className="room-wrap">
           <div className="room-body">
             <div className="room-icon">
-              {edit && <DropImage onloadFile={onloadFile} />}
+              {edit && <DropImage onloadFile={onLoadFile} />}
               {!edit && <IconImage iconUrl={iconUrl} />}
             </div>
-            <div className="room-info">
-              <ul>
-                <li>
-                  <h4>ID</h4>
-                  <span>{currentRoomId}</span>
-                </li>
-                <li>
-                  <h4>部屋名</h4>
-                  <span className="room-name">{name}</span>
-                </li>
-              </ul>
-            </div>
+            <RoomInfo
+              id={id}
+              name={name}
+              description={description}
+              edit={edit}
+              onChangeDescription={onChangeDescription}
+            />
             <div className="button">
               {edit && (
                 <>
@@ -117,7 +75,7 @@ const RoomSetting = () => {
             </div>
           )}
           {!isGeneral && (
-            <div className="exit" onClick={onClick}>
+            <div className="exit" onClick={onExit}>
               <Button>
                 <DirectionsRun className="icon" />
                 退室する
@@ -135,7 +93,6 @@ const RoomSetting = () => {
     </Wrap>
   )
 }
-export default RoomSetting
 
 const Wrap = styled.div`
   padding: 8px 32px;
@@ -169,24 +126,6 @@ const Wrap = styled.div`
     img {
       border: 1px solid var(--color-border);
       border-radius: 4px;
-    }
-  }
-
-  .room-info {
-    flex: 1;
-    > ul {
-      list-style-type: none;
-      margin: 0;
-      padding: 0;
-      > li {
-        padding: 1em 1em 0;
-      }
-    }
-    span {
-      font-size: 16px;
-    }
-    .room-name {
-      word-break: break-word;
     }
   }
 

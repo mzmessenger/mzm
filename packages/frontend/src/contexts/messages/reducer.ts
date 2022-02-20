@@ -73,7 +73,7 @@ export const reducer = (
         iine: action.payload.iine
       }
 
-      return state
+      return { ...state }
     }
     case Actions.SetVoteAnswers: {
       state.voteAnswers = {

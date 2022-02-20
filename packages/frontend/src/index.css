@@ -3,6 +3,7 @@
   --navi-height: 40px;
   --color-primary: rgb(29, 161, 242);
   --color-on-primary: hsla(0, 100%, 100%, 0.9);
+  --color-on-secondary: hsla(0, 100%, 100%, 0.4);;
   --color-base: hsl(0, 0%, 0%);
   --color-background: #222429;
   --color-on-background: #e1e1e1;
@@ -19,6 +20,7 @@
   --color-link: rgb(27, 149, 224);
   --color-input-background: hsl(200, 12%, 85%, 0.24);
   --color-input: hsl(0, 100%, 100%, 0.9);
+  --color-label:  rgba(212, 218, 221, 0.27);
   --color-border: #5c6069;
   --color-border-clipper: #39f;
   --color-replied: #ffc;

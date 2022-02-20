@@ -16,6 +16,7 @@ export const reducer = (
           const room: Room = {
             id: r.id,
             name: r.name,
+            description: r.description,
             iconUrl: r.iconUrl,
             unread: r.unread,
             replied: r.replied,
@@ -33,6 +34,16 @@ export const reducer = (
       state.rooms.order = roomOrder
       return { ...state }
     }
+    case Actions.SetRoomDescription: {
+      const room = state.rooms.byId[action.payload.roomId]
+      if (room) {
+        state.rooms.byId[action.payload.roomId] = {
+          ...room,
+          description: action.payload.description
+        }
+      }
+      return { ...state }
+    }
     case Actions.SetRoomOrder: {
       state.rooms.order = [...action.payload.roomOrder]
       state.rooms.allIds = [...action.payload.allIds]
@@ -43,7 +54,8 @@ export const reducer = (
         ...state,
         currentRoomId: action.payload.id,
         currentRoomName: action.payload.name,
-        currentRoomIcon: ''
+        currentRoomIcon: '',
+        currentRoomDescription: ''
       }
     }
     case Actions.GetMessages: {
@@ -59,6 +71,7 @@ export const reducer = (
         currentRoomId: action.payload.id,
         currentRoomName: state.rooms.byId[action.payload.id].name,
         currentRoomIcon: state.rooms.byId[action.payload.id].iconUrl,
+        currentRoomDescription: state.rooms.byId[action.payload.id].description,
         scrollTargetIndex: 'bottom',
         openRoomSetting: false
       }
@@ -76,7 +89,8 @@ export const reducer = (
         ...state,
         currentRoomId: action.payload.id,
         currentRoomName: action.payload.name,
-        currentRoomIcon: action.payload.iconUrl
+        currentRoomIcon: action.payload.iconUrl,
+        currentRoomDescription: action.payload.description
       }
     }
     case Actions.ExitRoom: {
@@ -84,7 +98,8 @@ export const reducer = (
         ...state,
         currentRoomId: '',
         currentRoomName: '',
-        currentRoomIcon: ''
+        currentRoomIcon: '',
+        currentRoomDescription: ''
       }
     }
     case Actions.ReceiveMessage: {
@@ -151,7 +166,7 @@ export const reducer = (
       state.rooms.byId[action.payload.room].messages = [
         ...state.rooms.byId[action.payload.room].messages
       ]
-      return { ...state }
+      return state
     }
     case Actions.ToggleSetting:
       return { ...state, openRoomSetting: !state.openRoomSetting }
@@ -163,6 +178,7 @@ export const reducer = (
       if (!state.users.allIds.includes(action.payload.room)) {
         state.users.allIds = [...state.users.allIds, action.payload.room]
       }
+      state.users.loading = false
       return { ...state }
     }
     case Actions.SetNextRoomUsers: {
@@ -171,6 +187,7 @@ export const reducer = (
         ...users,
         users: [...users.users, ...action.payload.users]
       }
+      state.users.loading = false
       return { ...state }
     }
     case Actions.SetRoomStatus: {
@@ -179,6 +196,10 @@ export const reducer = (
         ...room,
         status: action.payload.status
       }
+      return { ...state }
+    }
+    case Actions.FetchStartRoomUsers: {
+      state.users.loading = true
       return { ...state }
     }
     default:

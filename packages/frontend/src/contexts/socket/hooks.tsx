@@ -261,6 +261,14 @@ export const useSocketForContext = () => {
     })
   }
 
+  const updateRoomDescription = (roomId: string, description: string) => {
+    sendSocket(ws.current, {
+      cmd: TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION,
+      roomId,
+      description
+    })
+  }
+
   return {
     state: {
       ws: ws.current
@@ -279,6 +287,7 @@ export const useSocketForContext = () => {
     closeRoom: useCallback(closeRoom, [ws]),
     getHistory: useCallback(getHistory, [ws]),
     removeVoteAnswer: useCallback(removeVoteAnswer, [ws]),
-    sendVoteAnswer: useCallback(sendVoteAnswer, [ws])
+    sendVoteAnswer: useCallback(sendVoteAnswer, [ws]),
+    updateRoomDescription: useCallback(updateRoomDescription, [ws])
   } as const
 }

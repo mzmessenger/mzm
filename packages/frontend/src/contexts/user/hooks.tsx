@@ -1,4 +1,5 @@
 import { useContext, useState, useMemo, useCallback } from 'react'
+import type { RESPONSE } from 'mzm-shared/type/api'
 import { UserContext, UserDispatchContext } from './index'
 
 export const useUser = () => {
@@ -51,13 +52,7 @@ export const useUserForContext = () => {
   const fetchMyInfo = useCallback(async () => {
     const res = await fetch('/api/user/@me', { credentials: 'include' })
     if (res.status === 200) {
-      const payload: {
-        account: string
-        id: string
-        icon: string
-        twitterUserName: string | null
-        githubUserName: string | null
-      } = await res.json()
+      const payload = (await res.json()) as RESPONSE['/api/user/@me']['GET']
 
       setLogin(true)
       setMe({
@@ -131,7 +126,7 @@ export const useUserForContext = () => {
       return res
     }
 
-    const { version } = await res.json()
+    const { version } = (await res.json()) as RESPONSE['/api/icon/user']['POST']
     const iconUrl = `/api/icon/user/${me.account}/${version}`
     setMe({
       ...me,
