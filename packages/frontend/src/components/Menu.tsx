@@ -38,9 +38,9 @@ export const Menu = () => {
       />
       <div className="wrapper">
         <header className="header">
-          <MobileMenuIcon onClick={onClickMenu} />
-          <div className="space"></div>
           <Settings className="settings" onClick={clickSettings} />
+          <div className="space"></div>
+          <MobileMenuIcon onClick={onClickMenu} />
         </header>
         <SearchInput />
         <div className="contents">

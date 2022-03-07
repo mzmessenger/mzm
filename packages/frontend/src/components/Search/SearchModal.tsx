@@ -38,8 +38,8 @@ export const SearchModal: React.FC = () => {
 }
 
 const ModalInner = styled.div`
-  max-width: 800px;
-  min-width: 700px;
+  max-width: 90vw;
+  min-width: 80vw;
   max-height: 90vh;
   border-radius: 3px;
   background-color: var(--color-background);

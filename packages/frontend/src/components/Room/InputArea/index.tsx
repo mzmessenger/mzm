@@ -1,6 +1,9 @@
 import React, { useState, useRef, useEffect } from 'react'
 import styled from '@emotion/styled'
 import Add from '@mui/icons-material/Add'
+import SendIcon from '@mui/icons-material/Send'
+import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined'
+import { WIDTH_MOBILE } from '../../../lib/constants'
 import { useRooms } from '../../../contexts/rooms/hooks'
 import { useDispatchSocket } from '../../../contexts/socket/hooks'
 import {
@@ -101,10 +104,18 @@ export const InputArea = () => {
             <div style={{ flex: '1' }}></div>
             {inputMode === 'edit' && (
               <CancelButton onClick={() => endToEdit()}>
-                キャンセル
+                <span className="text">キャンセル</span>
+                <span className="icon">
+                  <CancelOutlinedIcon />
+                </span>
               </CancelButton>
             )}
-            <SendButton type="submit">投稿</SendButton>
+            <SendButton type="submit">
+              <span className="text">投稿</span>
+              <span className="icon">
+                <SendIcon />
+              </span>
+            </SendButton>
           </div>
         </form>
       </div>
@@ -164,16 +175,69 @@ const Wrap = styled.div`
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    width: 100px;
   }
 `
 
 const SendButton = styled(Button)`
+  padding: 0 1em;
+  display: inline-flex;
+  justify-content: center;
   height: 40px;
+  .text {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 0.875rem;
+    margin-right: 0.5em;
+  }
+  .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  @media (max-width: ${WIDTH_MOBILE}px) {
+    border-radius: 50%;
+    width: 40px;
+    .text {
+      display: none;
+    }
+  }
 `
 
 const CancelButton = styled(Button)`
   margin-bottom: 8px;
+  padding: 0 1em;
+  display: inline-flex;
+  justify-content: center;
   height: 40px;
+  border: 1px solid #90caf9;
   background: var(--color-guide);
+
+  .text {
+    flex: 1;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+    font-size: 0.875rem;
+    margin-right: 0.5em;
+  }
+  .icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    height: 100%;
+  }
+
+  @media (max-width: ${WIDTH_MOBILE}px) {
+    border-radius: 50%;
+    width: 40px;
+    .text {
+      display: none;
+    }
+  }
 `
