@@ -4,7 +4,7 @@ export const Button = styled.button`
   background-color: var(--color-primary);
   border: none;
   color: var(--color-on-primary);
-  border-radius: 3px;
+  border-radius: 4px;
 `
 
 export const IconButton = styled.button`
