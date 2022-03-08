@@ -22,6 +22,23 @@ export default defineConfig({
             sizes: '144x144'
           }
         ]
+      },
+      workbox: {
+        navigateFallbackDenylist: [/\/api/, /\/auth/, /\/socket/],
+        runtimeCaching: [
+          {
+            urlPattern: /\/api/,
+            handler: 'NetworkOnly'
+          },
+          {
+            urlPattern: /\/auth/,
+            handler: 'NetworkOnly'
+          },
+          {
+            urlPattern: /\/socket/,
+            handler: 'NetworkOnly'
+          }
+        ]
       }
     })
   ],

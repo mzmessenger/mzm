@@ -98,7 +98,7 @@ const useWebSocket = (url: string) => {
     setRoomDescription
   } = useDispatchRooms()
 
-  const account = me.account ?? ''
+  const account = useMemo(() => me.account ?? '', [me.account])
 
   const messageHandlers: Parameters<typeof init>[0]['messageHandlers'] =
     useMemo(() => {
@@ -226,8 +226,10 @@ const useWebSocket = (url: string) => {
   }, [url, messageHandlers])
 
   useEffect(() => {
-    init(options)
-  }, [init, options])
+    if (account) {
+      init(options)
+    }
+  }, [account, init, options])
 }
 
 export const useApp = (url: string) => {
