@@ -42,13 +42,6 @@ export const useSocketForContext = () => {
   const reconnectInterval = useRef<number>(INIT_RECONNECT_INTERVAL)
   const reconnectAttempts = useRef<number>(0)
 
-  const init = (options: InitOptions) => {
-    if (!options.url || options.url === '') {
-      throw new Error('no url')
-    }
-    connect(options.url, options.messageHandlers)
-  }
-
   const close = useCallback((socket: WebSocket) => {
     if (
       socket &&
@@ -153,6 +146,16 @@ export const useSocketForContext = () => {
       })
     },
     [ws, setOnMessageHandlers, close]
+  )
+
+  const init = useCallback(
+    (options: InitOptions) => {
+      if (!options.url || options.url === '') {
+        throw new Error('no url')
+      }
+      connect(options.url, options.messageHandlers)
+    },
+    [connect]
   )
 
   const getMessages = (roomId: string, socket?: WebSocket) => {
