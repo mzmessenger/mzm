@@ -53,9 +53,11 @@ const useRouter = () => {
   ])
 
   useEffect(() => {
+    /*
     if (signup) {
       navigate('/signup')
     }
+    */
   }, [signup, navigate])
 }
 
@@ -80,7 +82,7 @@ const useResize = () => {
 const useWebSocket = (url: string) => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { me } = useUser()
+  const { login, me } = useUser()
   const { init, getMessages, getRooms, readMessages } = useDispatchSocket()
   const { closeMenu } = useDispatchUi()
   const { addMessage, modifyMessage, addMessages, updateIine, setVoteAnswers } =
@@ -98,7 +100,7 @@ const useWebSocket = (url: string) => {
     setRoomDescription
   } = useDispatchRooms()
 
-  const account = useMemo(() => me.account ?? '', [me.account])
+  const account = useMemo(() => me.account ?? '', [me])
 
   const messageHandlers: Parameters<typeof init>[0]['messageHandlers'] =
     useMemo(() => {
@@ -226,10 +228,10 @@ const useWebSocket = (url: string) => {
   }, [url, messageHandlers])
 
   useEffect(() => {
-    if (account) {
+    if (login) {
       init(options)
     }
-  }, [account, init, options])
+  }, [login, init, options])
 }
 
 export const useApp = (url: string) => {

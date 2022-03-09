@@ -32,22 +32,25 @@ const enterGeneral = async (userId: ObjectId) => {
   const general = await db.collections.rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
-  const existGeneral = await db.collections.enter.findOne({
-    userId: userId,
-    roomId: general._id
-  })
-  if (!existGeneral) {
-    await enterRoom(userId, general._id)
-  }
+  await enterRoom(userId, general._id)
 }
 
 export const initUser = async (userId: ObjectId, account: string) => {
   const [user] = await Promise.all([
-    db.collections.users.insertOne({
-      _id: userId,
-      account: account,
-      roomOrder: []
-    }),
+    db.collections.users.findOneAndUpdate(
+      {
+        _id: userId
+      },
+      {
+        $set: {
+          account: `${account}_${userId.toHexString()}`,
+          roomOrder: []
+        }
+      },
+      {
+        upsert: true
+      }
+    ),
     enterGeneral(userId)
   ])
   logger.info('[logic/user] initUser', userId, account)

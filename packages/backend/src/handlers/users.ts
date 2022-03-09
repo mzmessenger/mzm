@@ -1,42 +1,57 @@
 import { Request } from 'express'
 import isEmpty from 'validator/lib/isEmpty'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
-import { HEADERS } from 'mzm-shared/auth'
-import { getRequestUserId } from '../lib/utils'
+import {
+  getRequestUserId,
+  getRequestTwitterUserName,
+  getRequestGithubUserName
+} from '../lib/utils'
 import { NotFound, BadRequest } from '../lib/errors'
 import { popParam } from '../lib/utils'
-import { isValidAccount, initUser } from '../logic/users'
+import { isValidAccount } from '../logic/users'
 import * as db from '../lib/db'
 import { createUserIconPath } from '../lib/utils'
 import { ObjectId } from 'mongodb'
 
-export const signUp = async (req: Request) => {
-  const body = req.body as Partial<REQUEST['/api/user/signup']['POST']['body']>
-  const account = popParam(body.account)
+export const update = async (
+  req: Request
+): Promise<RESPONSE['/api/user/@me']['PUT']['body'][200]> => {
+  const body = req.body as Partial<REQUEST['/api/user/@me']['PUT']['body']>
+  const account = popParam(body?.account)
   if (!account) {
-    throw new BadRequest('account is empty')
+    throw new BadRequest<RESPONSE['/api/user/@me']['PUT']['body'][400]>(
+      'account is empty'
+    )
   }
   if (!isValidAccount(account)) {
-    throw new BadRequest('account is not valid')
-  }
-
-  const user = await db.collections.users.findOne({
-    account: { $regex: account, $options: 'i' }
-  })
-  if (user) {
-    throw new BadRequest('account is already created')
+    throw new BadRequest<RESPONSE['/api/user/@me']['PUT']['body'][400]>(
+      'account is not valid'
+    )
   }
 
   const id = getRequestUserId(req)
+  const user = await db.collections.users.findOne({
+    account: account
+  })
+  if (user && user._id.toHexString() !== id) {
+    throw new BadRequest<RESPONSE['/api/user/@me']['PUT']['body'][400]>(
+      `${account} is already exists`
+    )
+  }
+
   const userId = new ObjectId(id)
-  await initUser(userId, account)
+  await db.collections.users.findOneAndUpdate(
+    { _id: userId },
+    { $set: { account } },
+    { upsert: true }
+  )
 
   return { id: id, account: account }
 }
 
 export const getUserInfo = async (
   req: Request
-): Promise<RESPONSE['/api/user/@me']['GET']> => {
+): Promise<RESPONSE['/api/user/@me']['GET']['body'][200]> => {
   const id = getRequestUserId(req)
 
   const user = await db.collections.users.findOne(
@@ -44,17 +59,15 @@ export const getUserInfo = async (
     { projection: { account: 1, icon: 1 } }
   )
 
-  const twitter: string =
-    (req.headers[HEADERS.TIWTTER_USER_NAME] as string) || null
-  const github: string =
-    (req.headers[HEADERS.GITHUB_USER_NAME] as string) || null
+  const twitter = getRequestTwitterUserName(req)
+  const github = getRequestGithubUserName(req)
 
   if (!user || !user.account) {
-    throw new NotFound({
+    throw new NotFound<RESPONSE['/api/user/@me']['GET']['body'][404]>({
       reason: 'account is not found',
       id,
-      twitter,
-      github
+      twitterUserName: twitter,
+      githubUserName: github
     })
   }
 

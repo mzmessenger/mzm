@@ -13,12 +13,14 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
   consume()
 
   wss.on('connection', async function connection(ws: ExtWebSocket, req) {
-    const { userId, twitterUserName } = await requestAuthServer({
-      url: AUTH_SERVER,
-      headers: {
-        cookie: req.headers.cookie
+    const { userId, twitterUserName, githubUserName } = await requestAuthServer(
+      {
+        url: AUTH_SERVER,
+        headers: {
+          cookie: req.headers.cookie
+        }
       }
-    })
+    )
 
     if (!userId) {
       ws.close()
@@ -57,7 +59,7 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
 
     const data: SocketToBackendType = {
       cmd: TO_SERVER_CMD.CONNECTION,
-      payload: { user: userId, twitterUserName }
+      payload: { user: userId, twitterUserName, githubUserName }
     }
 
     requestSocketAPI(JSON.stringify(data), userId, id)

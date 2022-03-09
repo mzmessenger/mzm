@@ -50,6 +50,7 @@ export type ToClientType =
   | {
       cmd: typeof TO_CLIENT_CMD.SOCKET_CONNECTION
       user: string
+      signup: boolean
     }
   | {
       user: string
@@ -167,7 +168,7 @@ export type ClientToSocketType =
 export type SocketToBackendType =
   | {
       cmd: typeof TO_SERVER_CMD.CONNECTION
-      payload: { user: string; twitterUserName: string }
+      payload: { user: string; twitterUserName: string; githubUserName: string }
     }
   | ClientToSocketType
 

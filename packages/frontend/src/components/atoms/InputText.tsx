@@ -4,19 +4,20 @@ import styled from '@emotion/styled'
 export type Props = {
   value: string
   onChange: (e: ChangeEvent<HTMLInputElement>) => void
-  error?: boolean
+  errorText?: string
   style?: React.CSSProperties
 }
 
 export const InputText: React.FC<Props> = ({
   value,
   onChange,
-  error,
+  errorText,
   style
 }) => {
   return (
-    <Wrap style={style} className={error ? 'error' : ''}>
+    <Wrap style={style} className={errorText ? 'error' : ''}>
       <input type="text" value={value} onChange={onChange} />
+      {errorText && <p className="error-txt">{errorText}</p>}
     </Wrap>
   )
 }
@@ -40,5 +41,11 @@ const Wrap = styled.div`
     padding: 2px 1em 2px 1em;
     height: 28px;
     flex: 1;
+  }
+
+  .error-txt {
+    color: var(--color-error);
+    margin: 5px 0 0 0;
+    font-weight: 300;
   }
 `

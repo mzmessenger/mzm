@@ -39,11 +39,30 @@ export type RESPONSE = {
   }
   '/api/user/@me': {
     GET: {
-      id: string
-      account: string
-      icon: string
-      twitterUserName: string | null
-      githubUserName: string | null
+      body: {
+        200: {
+          id: string
+          account: string
+          icon: string
+          twitterUserName: string | null
+          githubUserName: string | null
+        }
+        404: {
+          reason: string
+          id: string
+          twitterUserName: string | null
+          githubUserName: string | null
+        }
+      }
+    }
+    PUT: {
+      body: {
+        200: {
+          id: string
+          account: string
+        }
+        400: string
+      }
     }
   }
 }
@@ -75,6 +94,13 @@ export type REQUEST = {
       query: {
         query?: string
         scroll?: string
+      }
+    }
+  }
+  '/api/user/@me': {
+    PUT: {
+      body: {
+        account: string
       }
     }
   }

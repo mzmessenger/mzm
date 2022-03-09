@@ -27,7 +27,7 @@ export const createApp = () => {
   app.get('/api/rooms/search', wrap(rooms.search))
   app.get('/api/rooms/:roomid/users', checkLogin, wrap(rooms.getUsers))
   app.get('/api/user/@me', checkLogin, wrap(user.getUserInfo))
-  app.post('/api/user/signup', checkLogin, jsonParser, wrap(user.signUp))
+  app.put('/api/user/@me', checkLogin, jsonParser, wrap(user.update))
   app.post(
     '/api/user/@me/account',
     checkLogin,

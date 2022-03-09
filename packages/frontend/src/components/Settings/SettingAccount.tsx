@@ -3,17 +3,38 @@ import styled from '@emotion/styled'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import { useUser, useDispatchUser } from '../../contexts/user/hooks'
 import { Button } from '../atoms/Button'
+import { InputText, Props as InputTextProps } from '../atoms/InputText'
 import { DropImage } from '../atoms/DropImage'
 import { SocialAccounts } from './SocialAccounts'
 import { ModalIcon } from '../atoms/ModalIcon'
 
+const ERROR_TXT =
+  '入力された値が半角英数字以外か、すでに存在するアカウントです。'
+
 export const SettingAccount = () => {
   const { me } = useUser()
-  const { uploadIcon } = useDispatchUser()
-
+  const { uploadIcon, updateUser } = useDispatchUser()
   const [open, setOpen] = useState(false)
   const [image, setImage] = useState('')
   const [edit, setEdit] = useState(false)
+  const [accountText, setAccountText] = useState(me.account ?? '')
+  const [accountErrorText, setAccountErrorText] = useState('')
+
+  const onSave = useCallback(() => {
+    setEdit(false)
+    if (me.account !== accountText) {
+      updateUser(accountText).then((res) => {
+        if (res.status === 400) {
+          setAccountErrorText(ERROR_TXT)
+        }
+      })
+    }
+  }, [accountText, me.account, updateUser])
+
+  const onCancel = useCallback(() => {
+    setEdit(false)
+    setAccountText(me.account ?? '')
+  }, [me.account])
 
   const onModalSave = useCallback(
     (image: Blob) => {
@@ -28,29 +49,31 @@ export const SettingAccount = () => {
         }
       })
     },
-    [uploadIcon]
+    [onSave, uploadIcon]
   )
 
   const onModalCancel = useCallback(() => {
     setOpen(false)
   }, [])
 
-  const onEdit = () => {
+  const onEdit = useCallback(() => {
     setEdit(true)
-  }
+  }, [])
 
-  const onSave = () => {
-    setEdit(false)
-  }
-
-  const onCancel = () => {
-    setEdit(false)
-  }
-
-  const onloadFile = (file: string) => {
+  const onloadFile = useCallback((file: string) => {
     setImage(file)
     setOpen(true)
-  }
+  }, [])
+
+  const onChangeAccount: InputTextProps['onChange'] = useCallback((e) => {
+    const value = e.currentTarget.value
+    if (/^[a-zA-Z\d]+$/.test(value)) {
+      setAccountText(value)
+      setAccountErrorText('')
+    } else {
+      setAccountErrorText(ERROR_TXT)
+    }
+  }, [])
 
   return (
     <Wrap>
@@ -65,7 +88,14 @@ export const SettingAccount = () => {
         </li>
         <li>
           <h4>ユーザー名</h4>
-          <span>{me.account}</span>
+          {edit && (
+            <InputText
+              value={accountText}
+              onChange={onChangeAccount}
+              errorText={accountErrorText}
+            />
+          )}
+          {!edit && <span>{accountText}</span>}
         </li>
         <li>
           <SocialAccounts />

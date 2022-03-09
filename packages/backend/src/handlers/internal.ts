@@ -1,9 +1,10 @@
 import { Request } from 'express'
 import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
+import { getRequestUserId } from '../lib/utils'
 import * as _socket from './internal/socket'
 
 export const socket = async (req: Request) => {
-  const user: string = req.headers['x-user-id'] as string
+  const user = getRequestUserId(req)
   const data = req.body as SocketToBackendType
   if (data.cmd === TO_SERVER_CMD.CONNECTION) {
     return await _socket.connection(user, data)
