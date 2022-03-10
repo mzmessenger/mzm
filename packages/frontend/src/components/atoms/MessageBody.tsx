@@ -1,10 +1,6 @@
-import React, { useRef, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React from 'react'
 import styled from '@emotion/styled'
-import { useDispatchRooms } from '../../contexts/rooms/hooks'
-import { getRoomName } from '../../lib/util'
-import { useDispatchSocket } from '../../contexts/socket/hooks'
-import { useDispatchUi } from '../../contexts/ui/hooks'
+import { useLinkClick } from '../../lib/hooks/useLinkClick'
 
 type Props = {
   className?: string
@@ -13,45 +9,12 @@ type Props = {
 }
 
 export const MessageBody: React.FC<Props> = ({ className, message, html }) => {
-  const navigate = useNavigate()
-  const { enterRoom } = useDispatchRooms()
-  const messageEl = useRef(null)
-  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
-  const { closeMenu } = useDispatchUi()
-
-  useEffect(() => {
-    if (!messageEl.current) {
-      return
-    }
-    const listener = (e) => {
-      const href = e.target.getAttribute('href')
-      const url = new URL(href)
-      if (url.host === location.host) {
-        navigate(url.pathname)
-        const roomName = getRoomName(url.pathname)
-        enterRoom(roomName, getMessages, enterRoomSocket, closeMenu)
-      } else {
-        window.open(url.href, '_blank')
-      }
-
-      e.preventDefault()
-      e.stopPropagation()
-    }
-    messageEl.current
-      .querySelectorAll('a')
-      .forEach((e) => e.addEventListener('click', listener))
-    return () => {
-      // eslint-disable-next-line react-hooks/exhaustive-deps
-      messageEl.current
-        ?.querySelectorAll('a')
-        .forEach((e) => e.removeEventListener('click', listener))
-    }
-  }, [closeMenu, enterRoom, enterRoomSocket, getMessages, messageEl, navigate])
+  const [messageRef] = useLinkClick()
 
   return (
     <Wrap
       className={className}
-      ref={messageEl}
+      ref={messageRef}
       attr-message={message}
       dangerouslySetInnerHTML={{ __html: html }}
     ></Wrap>

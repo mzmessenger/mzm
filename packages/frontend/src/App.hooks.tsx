@@ -10,20 +10,12 @@ import { useDispatchMessages } from './contexts/messages/hooks'
 import { sendSocket } from './lib/util'
 
 const useRouter = () => {
-  const navigate = useNavigate()
   const location = useLocation()
   const { login } = useUser()
   const { fetchMyInfo } = useDispatchUser()
   const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
   const { closeMenu } = useDispatchUi()
-  const { currentRoomName } = useRooms()
   const { enterRoom } = useDispatchRooms()
-
-  useEffect(() => {
-    if (login && currentRoomName === '') {
-      navigate('/')
-    }
-  }, [login, currentRoomName, navigate])
 
   useEffect(() => {
     try {
