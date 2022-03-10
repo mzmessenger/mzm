@@ -3,6 +3,7 @@ import styled from '@emotion/styled'
 import { TextArea, Props as TextAreaProps } from '../../atoms/TextArea'
 import { MessageBody } from '../../atoms/MessageBody'
 import { convertToHtml } from '../../../lib/markdown'
+import { WIDTH_MOBILE } from '../../../lib/constants'
 
 export type Props = {
   edit: boolean
@@ -110,5 +111,14 @@ const Wrap = styled.div`
 
   .room-name {
     word-break: break-word;
+  }
+
+  @media (max-width: ${WIDTH_MOBILE}px) {
+    margin-top: 1em;
+    padding: 0;
+
+    .info {
+      margin-top: 1em;
+    }
   }
 `

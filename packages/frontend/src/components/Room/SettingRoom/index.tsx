@@ -172,5 +172,13 @@ const Wrap = styled.div`
   @media (max-width: ${WIDTH_MOBILE}px) {
     padding-left: 0;
     padding-right: 0;
+
+    .room-body {
+      flex-direction: column;
+    }
+
+    .button {
+      margin-top: 1em;
+    }
   }
 `

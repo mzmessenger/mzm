@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
 import { useUi, useDispatchUi } from '../../contexts/ui/hooks'
@@ -8,7 +8,9 @@ export const MyInfo = () => {
   const { me } = useUser()
   const { isOpenSettings } = useUi()
   const { closeSettings, openSettings } = useDispatchUi()
-  const icon = me ? me.iconUrl : null
+  const icon = useMemo(() => {
+    return me ? me.iconUrl : null
+  }, [me])
 
   const clickSettings = () => {
     if (isOpenSettings) {
@@ -23,7 +25,7 @@ export const MyInfo = () => {
   return (
     <Wrap>
       <div className="profile-wrap">
-        <img className="icon-img" src={icon} width="20" height="20" />
+        {icon && <img className="icon-img" src={icon} width="20" height="20" />}
         <div className="profile">{m}</div>
         <Settings className="settings-icon" onClick={clickSettings} />
       </div>

@@ -12,7 +12,7 @@ import { sendSocket } from './lib/util'
 const useRouter = () => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, signup } = useUser()
+  const { login } = useUser()
   const { fetchMyInfo } = useDispatchUser()
   const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
   const { closeMenu } = useDispatchUi()
@@ -51,14 +51,6 @@ const useRouter = () => {
     closeMenu,
     location
   ])
-
-  useEffect(() => {
-    /*
-    if (signup) {
-      navigate('/signup')
-    }
-    */
-  }, [signup, navigate])
 }
 
 const useResize = () => {
@@ -83,6 +75,7 @@ const useWebSocket = (url: string) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { login, me } = useUser()
+  const { fetchMyInfo } = useDispatchUser()
   const { init, getMessages, getRooms, readMessages } = useDispatchSocket()
   const { closeMenu } = useDispatchUi()
   const { addMessage, modifyMessage, addMessages, updateIine, setVoteAnswers } =
@@ -105,7 +98,10 @@ const useWebSocket = (url: string) => {
   const messageHandlers: Parameters<typeof init>[0]['messageHandlers'] =
     useMemo(() => {
       return {
-        [TO_CLIENT_CMD.SOCKET_CONNECTION]: ({ ws }) => {
+        [TO_CLIENT_CMD.SOCKET_CONNECTION]: ({ ws, message }) => {
+          if (message.signup) {
+            fetchMyInfo()
+          }
           if (currentRoomName) {
             sendSocket(ws, {
               cmd: TO_SERVER_CMD.ROOMS_ENTER,
