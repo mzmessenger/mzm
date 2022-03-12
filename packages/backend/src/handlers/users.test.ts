@@ -57,10 +57,11 @@ test('update failed: exists account', async () => {
     roomOrder: []
   })
 
-  const body: Partial<REQUEST['/api/user/@me']['PUT']['body']> = {
-    account: 'exists'
-  }
-  const req = createRequest(userId, { body })
+  const req = createRequest<REQUEST['/api/user/@me']['PUT']['body']>(userId, {
+    body: {
+      account: 'exists'
+    }
+  })
 
   await expect(update(req)).rejects.toThrow(BadRequest)
 })

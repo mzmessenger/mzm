@@ -15,7 +15,7 @@ jest.mock('./common', () => {
   }
 })
 
-import { getMockType } from '../../../jest/testUtil'
+import { createXackMock } from '../../../jest/testUtil'
 import * as config from '../../config'
 import { JobType } from '../../types'
 import { client } from '../redis'
@@ -24,7 +24,7 @@ import { initConsumerGroup, consumeGroup } from './common'
 import { job, initJobConsumerGroup, consumeJob } from './job'
 
 test('initJobConsumerGroup', async () => {
-  const init = getMockType(initConsumerGroup)
+  const init = jest.mocked(initConsumerGroup)
 
   await initJobConsumerGroup()
 
@@ -33,7 +33,7 @@ test('initJobConsumerGroup', async () => {
 })
 
 test('consumeJob', async () => {
-  const consume = getMockType(consumeGroup)
+  const consume = jest.mocked(consumeGroup)
 
   await consumeJob()
 
@@ -42,11 +42,11 @@ test('consumeJob', async () => {
 })
 
 test(`job: ${JobType.SEARCH_ROOM}`, async () => {
-  const xack = getMockType(client.xack)
+  const xack = createXackMock(client.xack)
   xack.mockClear()
-  xack.mockResolvedValue('resolve')
+  xack.mockResolvedValue(1)
 
-  const logic = getMockType(syncSeachAllRooms)
+  const logic = jest.mocked(syncSeachAllRooms)
   logic.mockClear()
 
   await job('queue-id', [JobType.SEARCH_ROOM])
@@ -57,11 +57,11 @@ test(`job: ${JobType.SEARCH_ROOM}`, async () => {
 })
 
 test('job no-type', async () => {
-  const xack = getMockType(client.xack)
+  const xack = createXackMock(client.xack)
   xack.mockClear()
-  xack.mockResolvedValue('resolve')
+  xack.mockResolvedValue(1)
 
-  const logic = getMockType(syncSeachAllRooms)
+  const logic = jest.mocked(syncSeachAllRooms)
   logic.mockClear()
 
   await job('queue-id', ['no-type'])

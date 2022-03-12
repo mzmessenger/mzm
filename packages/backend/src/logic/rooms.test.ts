@@ -7,7 +7,7 @@ jest.mock('../lib/redis', () => {
 })
 
 import { ObjectId } from 'mongodb'
-import { mongoSetup, getMockType } from '../../jest/testUtil'
+import { mongoSetup } from '../../jest/testUtil'
 import * as config from '../config'
 import * as db from '../lib/db'
 import * as redis from '../lib/redis'
@@ -27,7 +27,7 @@ afterAll(async () => {
 })
 
 test('initGeneral', async () => {
-  const release = getMockType(redis.release)
+  const release = jest.mocked(redis.release)
   release.mockClear()
 
   let general = await db.collections.rooms
@@ -72,10 +72,10 @@ test('initGeneral', async () => {
 })
 
 test('initGeneral (locked)', async () => {
-  const lock = getMockType(redis.lock)
+  const lock = jest.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValue(false)
-  const release = getMockType(redis.release)
+  const release = jest.mocked(redis.release)
   release.mockClear()
 
   const originUpdate = db.collections.rooms.updateOne

@@ -8,21 +8,21 @@ jest.mock('../redis', () => {
     release: jest.fn()
   }
 })
-import { getMockType } from '../../../jest/testUtil'
+import { createXaddMock } from '../../../jest/testUtil'
 import * as redis from '../redis'
 import * as types from '../../types'
 import * as config from '../../config'
 
-const xadd = getMockType(redis.client.xadd)
+const xadd = createXaddMock(redis.client.xadd)
 
 import * as room from './room'
 
 test('addInitializeSearchRoomQueue', async () => {
   xadd.mockClear()
-  const lock = getMockType(redis.lock)
+  const lock = jest.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValue(true)
-  const release = getMockType(redis.release)
+  const release = jest.mocked(redis.release)
   release.mockClear()
 
   await room.addInitializeSearchRoomQueue()
@@ -39,10 +39,10 @@ test('addInitializeSearchRoomQueue', async () => {
 
 test('addInitializeSearchRoomQueue (locked)', async () => {
   xadd.mockClear()
-  const lock = getMockType(redis.lock)
+  const lock = jest.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValue(false)
-  const release = getMockType(redis.release)
+  const release = jest.mocked(redis.release)
   release.mockClear()
 
   await room.addInitializeSearchRoomQueue()
@@ -53,7 +53,7 @@ test('addInitializeSearchRoomQueue (locked)', async () => {
 
 test('addSyncSearchRoomQueue', async () => {
   xadd.mockClear()
-  const lock = getMockType(redis.lock)
+  const lock = jest.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValue(true)
 
@@ -67,10 +67,10 @@ test('addSyncSearchRoomQueue', async () => {
 
 test('addSyncSearchRoomQueue (locked)', async () => {
   xadd.mockClear()
-  const lock = getMockType(redis.lock)
+  const lock = jest.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValueOnce(false)
-  const release = getMockType(redis.release)
+  const release = jest.mocked(redis.release)
   release.mockClear()
 
   await room.addSyncSearchRoomQueue()

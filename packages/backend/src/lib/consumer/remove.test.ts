@@ -16,7 +16,7 @@ jest.mock('./common', () => {
 
 import { ObjectId } from 'mongodb'
 import * as config from '../../config'
-import { mongoSetup, getMockType } from '../../../jest/testUtil'
+import { createXackMock, mongoSetup } from '../../../jest/testUtil'
 import * as db from '../db'
 import { client } from '../redis'
 import { initConsumerGroup, consumeGroup } from './common'
@@ -36,7 +36,7 @@ afterAll(async () => {
 })
 
 test('initRemoveConsumerGroup', async () => {
-  const init = getMockType(initConsumerGroup)
+  const init = jest.mocked(initConsumerGroup)
 
   await initRemoveConsumerGroup()
 
@@ -45,7 +45,7 @@ test('initRemoveConsumerGroup', async () => {
 })
 
 test('consumeRemove', async () => {
-  const consume = getMockType(consumeGroup)
+  const consume = jest.mocked(consumeGroup)
 
   await consumeRemove()
 
@@ -54,9 +54,9 @@ test('consumeRemove', async () => {
 })
 
 test('remove', async () => {
-  const xack = getMockType(client.xack)
+  const xack = createXackMock(client.xack)
   xack.mockClear()
-  xack.mockResolvedValue('resolve')
+  xack.mockResolvedValue(1)
 
   const userId = new ObjectId()
   const roomIds = [new ObjectId(), new ObjectId()]

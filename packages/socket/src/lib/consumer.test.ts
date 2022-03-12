@@ -7,10 +7,9 @@ jest.mock('./redis', () => {
 })
 
 jest.mock('./sender')
-import { getMockType } from '../../jest/testUtil'
 import * as sender from './sender'
 
-const sendToUser = getMockType(sender.sendToUser)
+const sendToUser = jest.mocked(sender.sendToUser)
 
 import { parser } from './consumer'
 

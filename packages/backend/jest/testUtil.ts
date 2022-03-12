@@ -2,9 +2,24 @@ import assert from 'assert'
 import { Request } from 'express'
 import { MongoClient, ObjectId } from 'mongodb'
 import { MongoMemoryServer } from 'mongodb-memory-server'
+import { client as Redis } from '../src/lib/redis'
+import IORedis from 'ioredis'
 
-export const getMockType = (arg) => {
-  return <jest.Mock<typeof arg>>arg
+export const createXaddMock = (xadd: typeof Redis.xadd) => {
+  const mock =
+    jest.mocked<
+      (key: IORedis.KeyType, ...args: IORedis.ValueType[]) => Promise<string>
+    >(xadd)
+  return mock
+}
+
+export const createXackMock = (xack: typeof Redis.xack) => {
+  const mock =
+    jest.mocked<
+      (key: IORedis.KeyType, ...args: IORedis.ValueType[]) => Promise<number>
+    >(xack)
+
+  return mock
 }
 
 export const mongoSetup = async () => {
@@ -34,7 +49,7 @@ export const dropCollection = async (uri: string, name: string) => {
 
 type TestRequest = Request & { file?: { [key: string]: string | number } }
 
-export const createRequest = (
+export const createRequest = <T>(
   userId: ObjectId | null,
   {
     params,
@@ -44,7 +59,7 @@ export const createRequest = (
   }: {
     params?: { [key: string]: string }
     query?: { [key: string]: string }
-    body?: any
+    body?: Partial<T>
     file?: { [key: string]: string | number }
   }
 ): TestRequest => {
