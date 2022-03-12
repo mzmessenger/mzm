@@ -37,7 +37,7 @@ test('initUser', async () => {
   // user
   const foundUser = await db.collections.users.findOne({ _id: userId })
   expect(userId.toHexString()).toStrictEqual(foundUser._id.toHexString())
-  expect(account).toStrictEqual(foundUser.account)
+  expect(`${account}_${userId.toHexString()}`).toStrictEqual(foundUser.account)
 
   // default room
   const foundRooms = await db.collections.enter
