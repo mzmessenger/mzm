@@ -173,5 +173,8 @@ const Wrap = styled.div`
         display: none;
       }
     }
+    .room-description {
+      display: none;
+    }
   }
 `

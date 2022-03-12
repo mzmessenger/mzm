@@ -10,28 +10,37 @@ interface HttpResponse {
   status: number
 }
 
-export class BadRequest extends HttpError implements HttpResponse {
+export class BadRequest<T extends Object | string>
+  extends HttpError
+  implements HttpResponse
+{
   readonly status: number = 400
 
-  constructor(res: Object | string) {
+  constructor(res: T) {
     super('Bad Request')
     this.res = res
   }
 }
 
-export class Forbidden extends HttpError implements HttpResponse {
+export class Forbidden<T extends Object | string>
+  extends HttpError
+  implements HttpResponse
+{
   readonly status: number = 403
 
-  constructor(res: Object | string) {
+  constructor(res: T) {
     super('Forbidden')
     this.res = res
   }
 }
 
-export class NotFound extends HttpError implements HttpResponse {
+export class NotFound<T extends Object | string>
+  extends HttpError
+  implements HttpResponse
+{
   readonly status: number = 404
 
-  constructor(res: Object | string) {
+  constructor(res: T) {
     super('Not Found')
     this.res = res
   }

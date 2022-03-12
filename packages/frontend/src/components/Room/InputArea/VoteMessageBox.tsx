@@ -86,7 +86,7 @@ export const VoteMessageBox: React.FC<{
 
 const VoteWrap = styled.div`
   position: absolute;
-  width: 400px;
+  max-width: 400px;
   bottom: calc(100% + 8px);
   background: var(--color-background);
   margin: 4px;

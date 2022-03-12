@@ -24,7 +24,6 @@ const App = () => {
     ? lazy(() => import('./pages/Room'))
     : lazy(() => import('./pages/Login'))
 
-  const PageSignup = lazy(() => import('./pages/Signup'))
   const PageTos = lazy(() => import('./pages/Tos'))
   const PagePrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
   const LoginSuccess = lazy(() => import('./pages/LoginSuccess'))
@@ -50,14 +49,6 @@ const App = () => {
             }
           />
         </Route>
-        <Route
-          path="/signup"
-          element={
-            <WithSuspense>
-              <PageSignup />
-            </WithSuspense>
-          }
-        />
         <Route
           path="/tos"
           element={

@@ -1,5 +1,5 @@
 import { useContext, useState, useMemo, useCallback } from 'react'
-import type { RESPONSE } from 'mzm-shared/type/api'
+import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { UserContext, UserDispatchContext } from './index'
 
 export const useUser = () => {
@@ -19,8 +19,6 @@ type MyInfo = {
 }
 
 export const useUserForContext = () => {
-  const [signup, setSignup] = useState(false)
-  const [signupAccount, setSignupAccount] = useState('')
   const [login, setLogin] = useState(false)
   const [me, setMe] = useState<MyInfo>({
     id: '',
@@ -32,16 +30,35 @@ export const useUserForContext = () => {
 
   const state = useMemo(() => {
     return {
-      signup,
-      signupAccount,
+      signup: me.account !== '',
       login,
       me
     }
-  }, [signup, signupAccount, login, me])
+  }, [login, me])
 
-  const signupUser = (account: string) => {
-    setSignup(true)
-    setSignupAccount(account)
+  const updateUser = async (account: string) => {
+    const body: REQUEST['/api/user/@me']['PUT']['body'] = { account }
+
+    const res = await fetch('/api/user/@me', {
+      method: 'PUT',
+      mode: 'cors',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: JSON.stringify(body)
+    })
+
+    if (res.status === 200) {
+      res.json().then((json: RESPONSE['/api/user/@me']['PUT']['body'][200]) => {
+        setMe({
+          ...me,
+          account: json.account,
+          iconUrl: `/api/icon/user/${json.account}`
+        })
+      })
+    }
+
+    return res
   }
 
   const logout = () => {
@@ -52,12 +69,25 @@ export const useUserForContext = () => {
   const fetchMyInfo = useCallback(async () => {
     const res = await fetch('/api/user/@me', { credentials: 'include' })
     if (res.status === 200) {
-      const payload = (await res.json()) as RESPONSE['/api/user/@me']['GET']
+      const payload =
+        (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][200]
 
       setLogin(true)
       setMe({
         ...payload,
         iconUrl: payload.icon
+      })
+    } else if (res.status === 404) {
+      const payload =
+        (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][404]
+
+      setLogin(true)
+      setMe({
+        id: payload.id,
+        account: '',
+        twitterUserName: payload.twitterUserName,
+        githubUserName: payload.githubUserName,
+        iconUrl: ''
       })
     } else if (res.status === 403) {
       logout()
@@ -138,7 +168,7 @@ export const useUserForContext = () => {
 
   return {
     state,
-    signupUser: useCallback(signupUser, []),
+    updateUser: useCallback(updateUser, []),
     logout: useCallback(logout, []),
     fetchMyInfo,
     removeTwitter: useCallback(removeTwitter, [fetchMyInfo, me]),

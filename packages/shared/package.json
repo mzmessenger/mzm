@@ -17,16 +17,22 @@
     "./type/api": {
       "import": "./dist/esm/type/api.js",
       "require": "./dist/type/api.js"
+    },
+    "./validator": {
+      "import": "./dist/esm/validator/index.js",
+      "require": "./dist/validator/index.js"
     }
   },
   "scripts": {
     "format": "prettier --write auth type ./*.{js,json}",
     "build": "tsc --build tsconfig.json",
     "build-esm": "tsc --build tsconfig.esm.json",
-    "test": "eslint --ext .ts,.js auth type"
+    "pretest": "eslint --ext .ts,.js auth type validator",
+    "test": "jest --maxWorkers=50% --config=./jest.config.js"
   },
   "license": "MIT",
   "dependencies": {
-    "undici": "^4.14.1"
+    "undici": "^4.14.1",
+    "validator": "^13.7.0"
   }
 }

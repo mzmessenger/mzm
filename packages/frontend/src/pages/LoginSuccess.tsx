@@ -1,21 +1,12 @@
 import React, { useEffect } from 'react'
-import { useDispatchUser } from '../contexts/user/hooks'
+import { useNavigate } from 'react-router-dom'
 
 const LoginSuccess = () => {
-  const { fetchMyInfo, signupUser } = useDispatchUser()
+  const navigate = useNavigate()
 
   useEffect(() => {
-    fetchMyInfo().then((res) => {
-      if (res.status === 404) {
-        return res
-          .json()
-          .then((body: { id: string; twitter?: string; github?: string }) => {
-            const account = body.twitter || body.github || ''
-            signupUser(account)
-          })
-      }
-    })
-  }, [fetchMyInfo, signupUser])
+    navigate('/')
+  }, [navigate])
 
   return <></>
 }

@@ -1,8 +1,21 @@
-import React from 'react'
+import React, { useMemo } from 'react'
 import styled from '@emotion/styled'
-import { Link } from './atoms/Link'
+import { useLinkClick } from '../lib/hooks/useLinkClick'
 
 const recommended = ['要望室', 'test']
+
+const LinkElem = (props: { name: string }) => {
+  const [ref] = useLinkClick()
+  const url = useMemo(() => {
+    return `${window.location.protocol}//${window.location.host}/rooms/${props.name}`
+  }, [props.name])
+
+  return (
+    <div className="room" ref={ref}>
+      <a href={url}>{props.name}</a>
+    </div>
+  )
+}
 
 export const TopContent = () => {
   return (
@@ -13,9 +26,7 @@ export const TopContent = () => {
             <h2>おすすめ部屋</h2>
             <div className="rooms">
               {recommended.map((e) => (
-                <div className="room" key={e}>
-                  <Link to={`/rooms/${e}`}>{e}</Link>
-                </div>
+                <LinkElem key={e} name={e} />
               ))}
             </div>
           </div>

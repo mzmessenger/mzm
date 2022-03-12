@@ -11,7 +11,7 @@ import { mongoSetup } from '../../jest/testUtil'
 import * as config from '../config'
 import * as db from '../lib/db'
 import { initGeneral } from './rooms'
-import { isValidAccount, initUser, getAllUserIdsInRoom } from './users'
+import { initUser, getAllUserIdsInRoom } from './users'
 
 let mongoServer = null
 
@@ -26,41 +26,6 @@ afterAll(async () => {
   await mongoServer.stop()
 })
 
-test.each([
-  ['valid1234'],
-  ['valid_1234'],
-  ['a-ho-ge'],
-  ['yx-'],
-  ['a'.repeat(config.account.MAX_LENGTH)]
-])('isValidAccount success (%s)', (arg: string) => {
-  const isValid = isValidAccount(arg)
-  expect(isValid).toStrictEqual(true)
-})
-
-test.each([
-  ['  aaaa'],
-  ['test test'],
-  ['a@hoge'],
-  ['&amp;aa%&gt;&lt;'],
-  ['@hoge'],
-  ['insert'],
-  ['update'],
-  ['find'],
-  ['remove'],
-  ['removed'],
-  ['X-'],
-  ['x-'],
-  ['here'],
-  ['online'],
-  ['all'],
-  ['channel'],
-  ['a'],
-  ['a'.repeat(config.account.MAX_LENGTH + 1)]
-])('isValidAccount fail (%s)', (arg: string) => {
-  const isValid = isValidAccount(arg)
-  expect(isValid).toStrictEqual(false)
-})
-
 test('initUser', async () => {
   await initGeneral()
 
@@ -72,7 +37,7 @@ test('initUser', async () => {
   // user
   const foundUser = await db.collections.users.findOne({ _id: userId })
   expect(userId.toHexString()).toStrictEqual(foundUser._id.toHexString())
-  expect(account).toStrictEqual(foundUser.account)
+  expect(`${account}_${userId.toHexString()}`).toStrictEqual(foundUser.account)
 
   // default room
   const foundRooms = await db.collections.enter

@@ -31,7 +31,8 @@ import {
 import { saveMessage, getMessages } from '../../logic/messages'
 import {
   getAllUserIdsInRoom,
-  getRooms as getRoomsLogic
+  getRooms as getRoomsLogic,
+  initUser
 } from '../../logic/users'
 import {
   isValidateRoomName,
@@ -39,13 +40,27 @@ import {
   enterRoom as logicEnterRoom
 } from '../../logic/rooms'
 
-export const connection = (
+export const connection = async (
   userId: string,
-  _data: FilterSocketToBackendType<typeof TO_SERVER_CMD.CONNECTION>
-): ToClientType => {
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.CONNECTION>
+): Promise<ToClientType> => {
+  const id = new ObjectId(userId)
+  const user = await db.collections.users.findOne({
+    _id: id
+  })
+
+  let signup = false
+
+  if (!user || !user.account || user.account === '') {
+    const account = data.payload.twitterUserName || data.payload.githubUserName
+    await initUser(id, account)
+    signup = true
+  }
+
   return {
     cmd: TO_CLIENT_CMD.SOCKET_CONNECTION,
-    user: userId
+    user: userId,
+    signup
   }
 }
 

@@ -9,6 +9,20 @@ export const getRequestUserId = (req: IncomingMessage | Request): string => {
   return user
 }
 
+export const getRequestTwitterUserName = (
+  req: IncomingMessage | Request
+): string | null => {
+  const twitter = (req.headers[HEADERS.TIWTTER_USER_NAME] as string) ?? null
+  return twitter
+}
+
+export const getRequestGithubUserName = (
+  req: IncomingMessage | Request
+): string | null => {
+  const github = (req.headers[HEADERS.GITHUB_USER_NAME] as string) ?? null
+  return github
+}
+
 export const popParam = (param: string): string => {
   if (!param) {
     return ''

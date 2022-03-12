@@ -4,6 +4,7 @@ import CancelIcon from '@mui/icons-material/Cancel'
 import { ModalProps, ModalBase } from '../atoms/Modal'
 import { useRooms, useDispatchRooms } from '../../contexts/rooms/hooks'
 import { useIntersectionObserver } from '../../lib/hooks/useIntersectionObserver'
+import { WIDTH_MOBILE } from '../../lib/constants'
 
 type Props = ModalProps & { roomId: string }
 
@@ -58,7 +59,7 @@ export const ModalUsersList: React.FC<Props> = ({ open, onClose, roomId }) => {
 }
 
 const ModalInner = styled.form`
-  width: 440px;
+  max-width: 440px;
   border-radius: 3px;
   background-color: var(--color-background);
   color: var(--color-on-background);
@@ -104,5 +105,10 @@ const ModalInner = styled.form`
       height: 20px;
       margin: 0 1em 0 0;
     }
+  }
+
+  @media (max-width: ${WIDTH_MOBILE}px) {
+    min-width: 80vw;
+    max-width: 80vw;
   }
 `
