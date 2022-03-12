@@ -1,6 +1,7 @@
 import { Request } from 'express'
 import isEmpty from 'validator/lib/isEmpty'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
+import { isValidAccount } from 'mzm-shared/validator'
 import {
   getRequestUserId,
   getRequestTwitterUserName,
@@ -8,7 +9,6 @@ import {
 } from '../lib/utils'
 import { NotFound, BadRequest } from '../lib/errors'
 import { popParam } from '../lib/utils'
-import { isValidAccount } from '../logic/users'
 import * as db from '../lib/db'
 import { createUserIconPath } from '../lib/utils'
 import { ObjectId } from 'mongodb'

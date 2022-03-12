@@ -23,11 +23,12 @@ export const InputText: React.FC<Props> = ({
 }
 
 const Wrap = styled.div`
-  display: flex;
   min-height: 40px;
 
   &.error {
-    border: solid 1px var(--color-error);
+    input {
+      border: solid 1px var(--color-error);
+    }
   }
 
   input {

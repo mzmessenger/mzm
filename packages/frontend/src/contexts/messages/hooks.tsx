@@ -1,5 +1,5 @@
 import { useContext, useReducer, useCallback } from 'react'
-import { MessageType } from 'mzm-shared/type/socket'
+import type { MessageType } from 'mzm-shared/type/socket'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useUser } from '../user/hooks'
 import { convertToHtml } from '../../lib/markdown'

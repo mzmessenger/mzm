@@ -1,5 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import styled from '@emotion/styled'
+import { isValidAccount } from 'mzm-shared/validator'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import { useUser, useDispatchUser } from '../../contexts/user/hooks'
 import { Button } from '../atoms/Button'
@@ -8,8 +9,7 @@ import { DropImage } from '../atoms/DropImage'
 import { SocialAccounts } from './SocialAccounts'
 import { ModalIcon } from '../atoms/ModalIcon'
 
-const ERROR_TXT =
-  '入力された値が半角英数字以外か、すでに存在するアカウントです。'
+const ERROR_TXT = '利用できない文字が含まれるか、すでに存在するアカウントです。'
 
 export const SettingAccount = () => {
   const { me } = useUser()
@@ -67,8 +67,8 @@ export const SettingAccount = () => {
 
   const onChangeAccount: InputTextProps['onChange'] = useCallback((e) => {
     const value = e.currentTarget.value
-    if (/^[a-zA-Z\d]+$/.test(value)) {
-      setAccountText(value)
+    setAccountText(value)
+    if (isValidAccount(value)) {
       setAccountErrorText('')
     } else {
       setAccountErrorText(ERROR_TXT)

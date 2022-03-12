@@ -1,5 +1,4 @@
 import { ObjectId, WithId } from 'mongodb'
-import isEmpty from 'validator/lib/isEmpty'
 import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/type/socket'
 import * as config from '../config'
 import { logger } from '../lib/logger'
@@ -10,23 +9,6 @@ import { enterRoom } from './rooms'
 type SendRoomType = FilterToClientType<
   typeof TO_CLIENT_CMD.ROOMS_GET
 >['rooms'][number]
-
-export const isValidAccount = (account: string): boolean => {
-  if (
-    isEmpty(account, { ignore_whitespace: true }) ||
-    /.*(insert|update|find|remove).*/.test(account) ||
-    /^(here|all|online|channel)$/.test(account) ||
-    /^(X|x)-/.test(account)
-  ) {
-    return false
-  } else if (
-    account.length < config.account.MIN_LENGTH ||
-    account.length > config.account.MAX_LENGTH
-  ) {
-    return false
-  }
-  return /^[a-zA-Z\d_-]+$/.test(account)
-}
 
 const enterGeneral = async (userId: ObjectId) => {
   const general = await db.collections.rooms.findOne({

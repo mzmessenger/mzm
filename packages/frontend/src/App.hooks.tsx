@@ -192,6 +192,7 @@ const useWebSocket = (url: string) => {
       currentRoomId,
       currentRoomName,
       enterSuccess,
+      fetchMyInfo,
       getMessages,
       getRooms,
       location.pathname,
