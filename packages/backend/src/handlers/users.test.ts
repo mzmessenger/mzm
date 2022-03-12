@@ -1,10 +1,11 @@
 jest.mock('../lib/logger')
 
 import { ObjectId } from 'mongodb'
+import type { REQUEST } from 'mzm-shared/type/api'
 import { mongoSetup, dropCollection, createRequest } from '../../jest/testUtil'
 import { BadRequest, NotFound } from '../lib/errors'
 import * as db from '../lib/db'
-import { getUserInfo, updateAccount } from './users'
+import { update, getUserInfo, updateAccount } from './users'
 
 let mongoServer = null
 let mongoUri = null
@@ -23,6 +24,46 @@ afterAll(async () => {
 
 beforeEach(async () => {
   return dropCollection(mongoUri, db.COLLECTION_NAMES.MESSAGES)
+})
+
+test('update', async () => {
+  const userId = new ObjectId()
+  const account = `aaa-${userId.toHexString()}`
+
+  await db.collections.users.insertOne({ _id: userId, account, roomOrder: [] })
+
+  const body: Partial<REQUEST['/api/user/@me']['PUT']['body']> = {
+    account: 'changed-account'
+  }
+  const req = createRequest(userId, { body })
+
+  const user = await update(req)
+
+  const found = await db.collections.users.findOne({ _id: userId })
+
+  expect(user.id).toStrictEqual(found._id.toHexString())
+  expect(user.account).toStrictEqual(found.account)
+  expect(found.account).toStrictEqual(body.account)
+})
+
+test('update failed: exists account', async () => {
+  const userId = new ObjectId()
+  const account = 'aaa'
+
+  await db.collections.users.insertOne({ _id: userId, account, roomOrder: [] })
+  await db.collections.users.insertOne({
+    _id: new ObjectId(),
+    account: 'exists',
+    roomOrder: []
+  })
+
+  const req = createRequest<REQUEST['/api/user/@me']['PUT']['body']>(userId, {
+    body: {
+      account: 'exists'
+    }
+  })
+
+  await expect(update(req)).rejects.toThrow(BadRequest)
 })
 
 test('getUserInfo', async () => {

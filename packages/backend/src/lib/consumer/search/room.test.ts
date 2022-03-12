@@ -21,7 +21,7 @@ jest.mock('../../elasticsearch/rooms', () => {
 })
 
 import { ObjectId } from 'mongodb'
-import { getMockType } from '../../../../jest/testUtil'
+import { createXackMock } from '../../../../jest/testUtil'
 import * as config from '../../../config'
 import { RoomQueueType } from '../../../types'
 import { client } from '../../redis'
@@ -34,7 +34,7 @@ import {
 } from './room'
 
 test('initSearchRoomConsumerGroup', async () => {
-  const init = getMockType(initConsumerGroup)
+  const init = jest.mocked(initConsumerGroup)
 
   await initSearchRoomConsumerGroup()
 
@@ -43,7 +43,7 @@ test('initSearchRoomConsumerGroup', async () => {
 })
 
 test('consumeSearchRooms', async () => {
-  const consume = getMockType(consumeGroup)
+  const consume = jest.mocked(consumeGroup)
 
   await consumeSearchRooms()
 
@@ -64,11 +64,11 @@ test.each([
     ]
   ]
 ])(`searchRooms: %s`, async (_type, logic, messages) => {
-  const xack = getMockType(client.xack)
+  const xack = createXackMock(client.xack)
   xack.mockClear()
-  xack.mockResolvedValue('resolve')
+  xack.mockResolvedValue(1)
 
-  const logicMock = getMockType(logic)
+  const logicMock = jest.mocked(logic)
   logicMock.mockClear()
 
   await searchRooms('queue-id', messages)
@@ -79,11 +79,11 @@ test.each([
 })
 
 test('search no-type', async () => {
-  const xack = getMockType(client.xack)
+  const xack = createXackMock(client.xack)
   xack.mockClear()
-  xack.mockResolvedValue('resolve')
+  xack.mockResolvedValue(1)
 
-  const logic = getMockType(esLogic.initAlias)
+  const logic = jest.mocked(esLogic.initAlias)
   logic.mockClear()
 
   await searchRooms('queue-id', ['no-type'])

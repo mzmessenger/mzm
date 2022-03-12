@@ -50,7 +50,7 @@ jest.mock('../lib/provider/index', () => {
   }
 })
 
-import { mongoSetup, getMockType } from '../../jest/testUtil'
+import { mongoSetup } from '../../jest/testUtil'
 import { init } from './server'
 import * as db from '../lib/db'
 import * as config from '../config'
@@ -91,12 +91,12 @@ test('init', async () => {
   expect.assertions(mocks.length * 2 + 3)
 
   for (const [init, consume] of mocks) {
-    const initMock = getMockType(init)
+    const initMock = jest.mocked(init)
     initMock.mockClear()
-    initMock.mockResolvedValue('resolve init')
-    const consumeMock = getMockType(consume)
+    initMock.mockResolvedValue()
+    const consumeMock = jest.mocked(consume)
     consumeMock.mockClear()
-    consumeMock.mockResolvedValue('resolve consume')
+    consumeMock.mockResolvedValue()
   }
 
   await init()

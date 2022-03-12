@@ -8,12 +8,12 @@ jest.mock('../redis', () => {
 })
 import { ObjectId } from 'mongodb'
 import { ToClientType } from 'mzm-shared/type/socket'
-import { getMockType } from '../../../jest/testUtil'
+import { createXaddMock } from '../../../jest/testUtil'
 import { client } from '../redis'
 import * as config from '../../config'
 import { addQueueToUsers, addUnreadQueue, addRepliedQueue } from './index'
 
-const xadd = getMockType(client.xadd)
+const xadd = createXaddMock(client.xadd)
 
 test('addQueueToUsers', async () => {
   xadd.mockClear()

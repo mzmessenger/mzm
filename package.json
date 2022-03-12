@@ -5,6 +5,7 @@
     "packages/*"
   ],
   "scripts": {
+    "test": "npm test --workspaces --if-present",
     "start-auth": "npm start -w packages/auth",
     "start-socket": "npm start -w packages/socket",
     "start-backend": "npm start -w packages/backend",

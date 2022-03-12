@@ -3,7 +3,7 @@ jest.mock('./internal/socket')
 
 import { ObjectId } from 'mongodb'
 import { TO_SERVER_CMD } from 'mzm-shared/type/socket'
-import { getMockType, createRequest } from '../../jest/testUtil'
+import { createRequest } from '../../jest/testUtil'
 import { socket } from './internal'
 import {
   connection,
@@ -42,7 +42,7 @@ test.each([
   const body = { cmd }
   const req = createRequest(userId, { body })
 
-  const calledMock = getMockType(called)
+  const calledMock = jest.mocked(called)
   calledMock.mockClear()
 
   await socket(req)

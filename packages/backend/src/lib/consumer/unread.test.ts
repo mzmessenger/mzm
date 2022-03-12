@@ -16,7 +16,7 @@ jest.mock('./common', () => {
 
 import { ObjectId } from 'mongodb'
 import * as config from '../../config'
-import { mongoSetup, getMockType } from '../../../jest/testUtil'
+import { createXackMock, mongoSetup } from '../../../jest/testUtil'
 import { UnreadQueue } from '../../types'
 import * as db from '../db'
 import * as redis from '../redis'
@@ -37,7 +37,7 @@ afterAll(async () => {
 })
 
 test('initUnreadConsumerGroup', async () => {
-  const init = getMockType(initConsumerGroup)
+  const init = jest.mocked(initConsumerGroup)
 
   await initUnreadConsumerGroup()
 
@@ -46,7 +46,7 @@ test('initUnreadConsumerGroup', async () => {
 })
 
 test('consumeUnread', async () => {
-  const consume = getMockType(consumeGroup)
+  const consume = jest.mocked(consumeGroup)
 
   await consumeUnread()
 
@@ -55,9 +55,9 @@ test('consumeUnread', async () => {
 })
 
 test('increment', async () => {
-  const xack = getMockType(redis.client.xack)
+  const xack = createXackMock(redis.client.xack)
   xack.mockClear()
-  xack.mockResolvedValue('resolve')
+  xack.mockResolvedValue(1)
 
   const maxIndex = 1
   const maxValue = 100

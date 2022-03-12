@@ -16,7 +16,7 @@ jest.mock('./common', () => {
 
 import { ObjectId } from 'mongodb'
 import * as config from '../../config'
-import { mongoSetup, getMockType } from '../../../jest/testUtil'
+import { createXackMock, mongoSetup } from '../../../jest/testUtil'
 import { ReplyQueue } from '../../types'
 import * as db from '../db'
 import { client } from '../redis'
@@ -37,7 +37,7 @@ afterAll(async () => {
 })
 
 test('initReplyConsumerGroup', async () => {
-  const init = getMockType(initConsumerGroup)
+  const init = jest.mocked(initConsumerGroup)
 
   await initReplyConsumerGroup()
 
@@ -46,7 +46,7 @@ test('initReplyConsumerGroup', async () => {
 })
 
 test('consumeReply', async () => {
-  const consume = getMockType(consumeGroup)
+  const consume = jest.mocked(consumeGroup)
 
   await consumeReply()
 
@@ -55,9 +55,9 @@ test('consumeReply', async () => {
 })
 
 test('reply', async () => {
-  const xack = getMockType(client.xack)
+  const xack = createXackMock(client.xack)
   xack.mockClear()
-  xack.mockResolvedValue('resolve')
+  xack.mockResolvedValue(1)
 
   const userId = new ObjectId()
   await db.collections.users.insertOne({
