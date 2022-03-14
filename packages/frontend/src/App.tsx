@@ -2,12 +2,13 @@ import React, { Suspense, lazy } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useApp } from './App.hooks'
 import { useUser } from './contexts/user/hooks'
+import { Loading } from './components/Loading'
 
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const url = `${protocol}//${window.location.host}/socket`
 
 const WithSuspense: React.FC = ({ children }) => {
-  return <Suspense fallback={<div>Loading...</div>}>{children}</Suspense>
+  return <Suspense fallback={<Loading />}>{children}</Suspense>
 }
 
 const Init = React.memo(() => {

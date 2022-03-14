@@ -23,7 +23,8 @@ export const InputText: React.FC<Props> = ({
 }
 
 const Wrap = styled.div`
-  min-height: 40px;
+  display: flex;
+  flex-direction: column;
 
   &.error {
     input {
@@ -32,6 +33,7 @@ const Wrap = styled.div`
   }
 
   input {
+    min-height: 28px;
     border-radius: 3px;
     background-color: var(--color-input-background);
     color: var(--color-input);
@@ -40,7 +42,6 @@ const Wrap = styled.div`
     appearance: none;
     font-size: 14px;
     padding: 2px 1em 2px 1em;
-    height: 28px;
     flex: 1;
   }
 

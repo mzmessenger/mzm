@@ -3,10 +3,10 @@ import { useUi } from '../contexts/ui/hooks'
 import { Menu } from '../components/Menu'
 import { RoomContent } from '../components/Room'
 import { PageWrapper } from '../components/PageWrapper'
-import { UserDetail } from '../components/UserDetail'
+import { ModalUserProfile } from '../components/ModalUserProfile'
 
 const PageRoom = () => {
-  const { isOpenSettings, isOpenUserDetail } = useUi()
+  const { isOpenSettings } = useUi()
   const Settings = lazy(() => import('../components/Settings'))
 
   return (
@@ -19,7 +19,7 @@ const PageRoom = () => {
           <Menu />
         </>
       )}
-      {isOpenUserDetail && <UserDetail />}
+      <ModalUserProfile />
     </PageWrapper>
   )
 }

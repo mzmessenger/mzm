@@ -20,40 +20,51 @@ export const useMessage = (id: string) => {
     return me?.account ?? ''
   }, [me])
 
-  const { message, iine, html, icon, vote, updated, date, account, replied } =
-    useMemo(() => {
-      const init = {
-        message: '',
-        iine: 0,
-        html: '',
-        icon: '',
-        vote: null,
-        updated: '',
-        date: '',
-        account: '',
-        replied: false
-      }
-      if (!messageObj) {
-        return init
-      }
+  const {
+    message,
+    iine,
+    html,
+    icon,
+    vote,
+    updated,
+    date,
+    account,
+    userId,
+    replied
+  } = useMemo(() => {
+    const init = {
+      message: '',
+      iine: 0,
+      html: '',
+      icon: '',
+      vote: null,
+      updated: '',
+      date: '',
+      account: 'removed',
+      userId: '',
+      replied: false
+    }
+    if (!messageObj) {
+      return init
+    }
 
-      const day = dayjs(new Date(Number(messageObj.createdAt)))
-      const date = day.format(
-        day.year() === new Date().getFullYear()
-          ? 'MM/DD HH:mm:ss'
-          : 'YYYY/MM/DD HH:mm:ss'
-      )
-      const account = messageObj.userAccount ?? ''
+    const day = dayjs(new Date(Number(messageObj.createdAt)))
+    const date = day.format(
+      day.year() === new Date().getFullYear()
+        ? 'MM/DD HH:mm:ss'
+        : 'YYYY/MM/DD HH:mm:ss'
+    )
+    const account = messageObj.userAccount ?? ''
 
-      const replied = isReplied(myAccount, messageObj.message)
+    const replied = isReplied(myAccount, messageObj.message)
 
-      return {
-        ...messageObj,
-        date,
-        account,
-        replied
-      }
-    }, [messageObj, myAccount])
+    return {
+      ...messageObj,
+      date,
+      account,
+      replied
+    }
+  }, [messageObj, myAccount])
 
   const iineHandler = useCallback(() => {
     incrementIine(id)
@@ -71,6 +82,7 @@ export const useMessage = (id: string) => {
   return {
     message,
     account,
+    userId,
     iine,
     html,
     icon,
@@ -79,7 +91,6 @@ export const useMessage = (id: string) => {
     date,
     replied,
     beforeIine: prevIineRef.current,
-    myAccount,
     iineHandler,
     startEditHandler
   } as const
