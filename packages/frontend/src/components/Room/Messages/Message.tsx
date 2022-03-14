@@ -1,13 +1,10 @@
 import React, { useEffect, useState, useRef, useMemo } from 'react'
 import styled from '@emotion/styled'
-import {
-  Create as CreateIcon,
-  ThumbUp as ThumbUpIcon
-} from '@mui/icons-material'
 import { sanitize } from '../../../lib/sanitize'
 import { MessageBody } from '../../atoms/MessageBody'
 import { MessageVote } from './MessageVote'
 import { useMessage } from './Message.hooks'
+import { MessageHeader } from './MessageHeader'
 
 type Props = {
   id: string
@@ -23,8 +20,8 @@ export const MessageElement: React.FC<Props> = (props) => {
     updated,
     date,
     account,
+    userId,
     replied,
-    myAccount,
     iineHandler,
     startEditHandler
   } = useMessage(props.id)
@@ -74,19 +71,15 @@ export const MessageElement: React.FC<Props> = (props) => {
   return (
     <MessageWrap className={className}>
       <img className="user-icon" src={icon} />
-      <div className="header">
-        <div className="account">{account}</div>
-        <div className="iine icon" onClick={iineHandler}>
-          <ThumbUpIcon className="thumbup" />
-          {iine !== 0 && <div className="num">{iine}</div>}
-        </div>
-        <div className="actions">
-          <div className="icon">
-            {myAccount === account && <CreateIcon onClick={startEditHandler} />}
-          </div>
-        </div>
-        <time>{date}</time>
-      </div>
+      <MessageHeader
+        id={userId}
+        account={account}
+        icon={icon}
+        iine={iine}
+        date={date}
+        iineHandler={iineHandler}
+        startEditHandler={startEditHandler}
+      />
       <MessageBody className="body" message={message} html={sanitize(html)} />
       {vote && (
         <MessageVote messageId={props.id} className="vote" vote={vote} />
@@ -124,44 +117,6 @@ const MessageWrap = styled.div`
 
   .user-icon {
     margin: 0.4em 0 0 0;
-  }
-
-  .header {
-    grid-area: message-header;
-    min-height: 1.5em;
-    display: flex;
-    align-items: flex-end;
-    .account: {
-      height: 100%;
-    }
-    .iine {
-      height: 100%;
-      display: flex;
-      align-items: center;
-      margin: 0 0 0 1em;
-      .num {
-        margin-left: 0.3em;
-        color: #2789ff;
-        font-size: 0.9rem;
-      }
-    }
-    .actions {
-      visibility: hidden;
-      flex: 1;
-      display: flex;
-      justify-content: flex-end;
-    }
-    .icon {
-      cursor: pointer;
-      svg {
-        font-size: 1rem;
-        opacity: 0.7;
-      }
-    }
-    time {
-      margin-left: 16px;
-      letter-spacing: 0;
-    }
   }
 
   .body {
