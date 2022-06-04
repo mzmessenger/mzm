@@ -1,4 +1,4 @@
-import React, { createContext } from 'react'
+import React, { createContext, PropsWithChildren } from 'react'
 
 import { INITIAL_STATE } from './constants'
 import { useMessagesForContext } from './hooks'
@@ -14,7 +14,9 @@ export const MessagesDispatchContext = createContext<DispatchContextType>(
   {} as DispatchContextType
 )
 
-export const MessagesProvider: React.FC = ({ children }) => {
+export const MessagesProvider: React.FC<PropsWithChildren<unknown>> = ({
+  children
+}) => {
   const { state, ...dispatchActions } = useMessagesForContext()
 
   return (

@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { PropsWithChildren } from 'react'
 import styled from '@emotion/styled'
 import Modal from '@mui/material/Modal'
 
@@ -8,7 +8,7 @@ export type ModalProps = {
   onClose: () => void
 }
 
-export const ModalBase: React.FC<ModalProps> = ({
+export const ModalBase: React.FC<PropsWithChildren<ModalProps>> = ({
   open,
   style,
   onClose,

@@ -16,10 +16,10 @@ export const initConsumerGroup = async (stream: string, groupName: string) => {
 
   // create consumer group
   try {
-    await client.xgroup('setid', stream, groupName, '$')
+    await client.xgroup('SETID', stream, groupName, '$')
   } catch (e) {
     try {
-      await client.xgroup('create', stream, groupName, '$', 'MKSTREAM')
+      await client.xgroup('CREATE', stream, groupName, '$', 'MKSTREAM')
     } catch (e) {
       if (e?.toSring().includes('already exists')) {
         return
@@ -62,13 +62,13 @@ export const consumeGroup = async (
 ) => {
   try {
     const res = await client.xreadgroup(
-      'group',
+      'GROUP',
       groupName,
       consumerName,
-      'BLOCK',
-      '10',
       'COUNT',
       '100',
+      'BLOCK',
+      '10',
       'STREAMS',
       stream,
       '>'

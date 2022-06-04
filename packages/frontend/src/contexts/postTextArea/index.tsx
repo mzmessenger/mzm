@@ -1,4 +1,4 @@
-import React, { createContext } from 'react'
+import React, { createContext, PropsWithChildren } from 'react'
 
 import { usePostTextAreaForContext } from './hooks'
 
@@ -17,7 +17,9 @@ export const PostTextAreaDispatchContext = createContext<DispatchContextType>(
   {} as DispatchContextType
 )
 
-export const PostTextAreaProvider: React.FC = ({ children }) => {
+export const PostTextAreaProvider: React.FC<PropsWithChildren<unknown>> = ({
+  children
+}) => {
   const { state, ...dispatchActions } = usePostTextAreaForContext()
 
   return (

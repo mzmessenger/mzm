@@ -1,4 +1,4 @@
-import React, { createContext } from 'react'
+import React, { createContext, PropsWithChildren } from 'react'
 
 import { useUserForContext } from './hooks'
 
@@ -10,7 +10,9 @@ export const UserDispatchContext = createContext<DispatchContextType>(
   {} as DispatchContextType
 )
 
-export const UserProvider: React.FC = ({ children }) => {
+export const UserProvider: React.FC<PropsWithChildren<unknown>> = ({
+  children
+}) => {
   const { state, ...dispatchActions } = useUserForContext()
 
   return (

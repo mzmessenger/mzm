@@ -1,4 +1,4 @@
-import React, { createContext } from 'react'
+import React, { createContext, PropsWithChildren } from 'react'
 
 import { useUiForContext } from './hooks'
 
@@ -10,7 +10,9 @@ export const UiDispatchContext = createContext<DispatchContextType>(
   {} as DispatchContextType
 )
 
-export const UiProvider: React.FC = ({ children }) => {
+export const UiProvider: React.FC<PropsWithChildren<unknown>> = ({
+  children
+}) => {
   const { state, ...dispatchActions } = useUiForContext()
 
   return (

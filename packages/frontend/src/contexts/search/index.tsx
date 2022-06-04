@@ -1,4 +1,4 @@
-import React, { createContext } from 'react'
+import React, { createContext, PropsWithChildren } from 'react'
 
 import { useSearchForContext } from './hooks'
 
@@ -12,7 +12,9 @@ export const SearchDispatchContext = createContext<DispatchContextType>(
   {} as DispatchContextType
 )
 
-export const SearchProvider: React.FC = ({ children }) => {
+export const SearchProvider: React.FC<PropsWithChildren<unknown>> = ({
+  children
+}) => {
   const { state, ...dispatchActions } = useSearchForContext()
 
   return (

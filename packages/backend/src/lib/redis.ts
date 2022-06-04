@@ -16,7 +16,7 @@ export const connect = async () => {
   })
 }
 
-export let client: Redis.Redis = null
+export let client: Redis = null
 
 export const lock = async (key: string, val: string, millisec: number) => {
   try {
