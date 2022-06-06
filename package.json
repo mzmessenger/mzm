@@ -17,14 +17,14 @@
     "build-docker-image-frontend": "docker build -f packages/frontend/Dockerfile -t mzm-frontend ."
   },
   "devDependencies": {
-    "@types/jest": "^28.1.0",
+    "@types/jest": "^28.1.1",
     "@typescript-eslint/eslint-plugin": "^5.27.0",
     "@typescript-eslint/parser": "^5.27.0",
     "esbuild": "^0.14.42",
     "esbuild-register": "^3.3.3",
     "eslint": "^8.17.0",
     "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-jest": "^26.4.6",
+    "eslint-plugin-jest": "^26.5.3",
     "eslint-plugin-prettier": "^4.0.0",
     "jest": "^28.1.0",
     "prettier": "^2.6.2",
