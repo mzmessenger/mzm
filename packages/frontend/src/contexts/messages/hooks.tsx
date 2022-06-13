@@ -89,11 +89,12 @@ export const useMessagesForContext = () => {
     })
   }
 
-  const removeMessage = (message: MessageType) => {
+  const removeMessage = async (message: MessageType) => {
+    const converted = await convertMessage(message)
     return dispatch({
       type: Actions.RemoveMessage,
       payload: {
-        message
+        message: converted
       }
     })
   }

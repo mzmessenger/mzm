@@ -141,8 +141,9 @@ const useWebSocket = (url: string) => {
           })
         },
         [TO_CLIENT_CMD.MESSAGE_REMOVE]: ({ message }) => {
-          removeMessage(message.message)
-          reloadMessage(message.room)
+          removeMessage(message.message).then(() => {
+            reloadMessage(message.room)
+          })
         },
         [TO_CLIENT_CMD.MESSAGES_ROOM]: ({ message }) => {
           addMessages(message.messages).then(() => {
