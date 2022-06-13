@@ -1,7 +1,7 @@
 import { Request } from 'express'
 import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
-import { getRequestUserId } from '../lib/utils'
-import * as _socket from './internal/socket'
+import { getRequestUserId } from '../lib/utils.js'
+import * as _socket from './internal/socket.js'
 
 export const socket = async (req: Request) => {
   const user = getRequestUserId(req)

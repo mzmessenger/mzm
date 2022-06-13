@@ -1,7 +1,7 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
-import { MONGODB_URI } from '../config'
-import { logger } from './logger'
+import { MONGODB_URI } from '../config.js'
+import { logger } from './logger.js'
 
 export const collections: {
   rooms: Collection<Room>

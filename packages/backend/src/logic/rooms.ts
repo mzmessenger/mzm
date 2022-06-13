@@ -1,10 +1,10 @@
 import { ObjectId, WithId } from 'mongodb'
-import isEmpty from 'validator/lib/isEmpty'
-import * as db from '../lib/db'
-import { logger } from '../lib/logger'
-import { lock, release } from '../lib/redis'
-import * as config from '../config'
-import { addUpdateSearchRoomQueue } from '../lib/provider'
+import isEmpty from 'validator/lib/isEmpty.js'
+import * as db from '../lib/db.js'
+import { logger } from '../lib/logger.js'
+import { lock, release } from '../lib/redis.js'
+import * as config from '../config.js'
+import { addUpdateSearchRoomQueue } from '../lib/provider/index.js'
 
 export const initGeneral = async () => {
   const lockKey = config.lock.INIT_GENERAL_ROOM

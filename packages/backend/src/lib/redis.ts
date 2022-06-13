@@ -1,5 +1,5 @@
 import Redis from 'ioredis'
-import * as config from '../config'
+import * as config from '../config.js'
 
 const releaseScript = `if redis.call("get",KEYS[1]) == ARGV[1] then
     return redis.call("del",KEYS[1])

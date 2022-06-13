@@ -1,8 +1,8 @@
 import { ObjectId } from 'mongodb'
-import { client, lock, release } from '../redis'
-import { logger } from '../logger'
-import { RoomQueueType, JobType } from '../../types'
-import * as config from '../../config'
+import { client, lock, release } from '../redis.js'
+import { logger } from '../logger.js'
+import { RoomQueueType, JobType } from '../../types.js'
+import * as config from '../../config.js'
 
 export const addInitializeSearchRoomQueue = async () => {
   const lockKey = config.lock.INIT_SEARCH_ROOM_QUEUE

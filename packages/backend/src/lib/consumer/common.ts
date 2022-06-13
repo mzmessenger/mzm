@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb'
-import { client, lock, release } from '../redis'
-import { logger } from '../logger'
-import * as config from '../../config'
+import { client, lock, release } from '../redis.js'
+import { logger } from '../logger.js'
+import * as config from '../../config.js'
 
 export const initConsumerGroup = async (stream: string, groupName: string) => {
   const lockKey =

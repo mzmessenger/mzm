@@ -6,20 +6,16 @@ import {
   TO_CLIENT_CMD,
   ToClientType
 } from 'mzm-shared/type/socket'
-import escape from 'validator/lib/escape'
-import unescape from 'validator/lib/unescape'
-import trim from 'validator/lib/trim'
-import isEmpty from 'validator/lib/isEmpty'
-import isNumeric from 'validator/lib/isNumeric'
-import { logger } from '../../lib/logger'
-import * as db from '../../lib/db'
-import * as config from '../../config'
+import validator from 'validator'
+import { logger } from '../../lib/logger.js'
+import * as db from '../../lib/db.js'
+import * as config from '../../config.js'
 import {
   popParam,
   createUserIconPath,
   createRoomIconPath,
   repliedAccounts
-} from '../../lib/utils'
+} from '../../lib/utils.js'
 import {
   addMessageQueue,
   addQueueToUsers,
@@ -27,18 +23,18 @@ import {
   addRepliedQueue,
   addUpdateSearchRoomQueue,
   addVoteQueue
-} from '../../lib/provider/index'
-import { saveMessage, getMessages } from '../../logic/messages'
+} from '../../lib/provider/index.js'
+import { saveMessage, getMessages } from '../../logic/messages.js'
 import {
   getAllUserIdsInRoom,
   getRooms as getRoomsLogic,
   initUser
-} from '../../logic/users'
+} from '../../logic/users.js'
 import {
   isValidateRoomName,
   createRoom,
   enterRoom as logicEnterRoom
-} from '../../logic/rooms'
+} from '../../logic/rooms.js'
 
 export const connection = async (
   userId: string,
@@ -85,10 +81,10 @@ export const sendMessage = async (
   user: string,
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_SEND>
 ) => {
-  const message = escape(trim(data.message))
-  const room = escape(trim(data.room))
+  const message = validator.escape(validator.trim(data.message))
+  const room = validator.escape(validator.trim(data.room))
   // todo: send bad request
-  if (isEmpty(message) || isEmpty(room)) {
+  if (validator.isEmpty(message) || validator.isEmpty(room)) {
     return
   }
 
@@ -99,7 +95,7 @@ export const sendMessage = async (
     const questions = []
     for (const q of data.vote.questions) {
       if (
-        isEmpty(q.text) ||
+        validator.isEmpty(q.text) ||
         q.text.length > config.vote.MAX_QUESTION_LENGTH ||
         length > config.vote.MAX_QUESTION_NUM
       ) {
@@ -198,10 +194,10 @@ export const modifyMessage = async (
   user: string,
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_MODIFY>
 ) => {
-  const message = escape(trim(data.message))
-  const id = escape(trim(data.id))
+  const message = validator.escape(validator.trim(data.message))
+  const id = validator.escape(validator.trim(data.id))
   // todo: send bad request
-  if (isEmpty(message) || isEmpty(id)) {
+  if (validator.isEmpty(message) || validator.isEmpty(id)) {
     return
   }
   const targetId = new ObjectId(id)
@@ -250,9 +246,9 @@ export const removeMessage = async (
   user: string,
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_REMOVE>
 ) => {
-  const id = escape(trim(data.id))
+  const id = escape(validator.trim(data.id))
   // todo: send bad request
-  if (isEmpty(id)) {
+  if (validator.isEmpty(id)) {
     return
   }
   const targetId = new ObjectId(id)
@@ -301,9 +297,9 @@ export const getMessagesFromRoom = async (
   user: string,
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGES_ROOM>
 ): Promise<ToClientType> => {
-  const room = escape(trim(data.room))
+  const room = escape(validator.trim(data.room))
   // todo: send bad request
-  if (isEmpty(room)) {
+  if (validator.isEmpty(room)) {
     return
   }
   const filter: Pick<db.Enter, 'userId' | 'roomId'> = {
@@ -317,7 +313,7 @@ export const getMessagesFromRoom = async (
   }
   let id = null
   if (data.id) {
-    id = escape(trim(data.id))
+    id = escape(validator.trim(data.id))
   }
   const { existHistory, messages } = await getMessages(room, id)
   const send: ToClientType = {
@@ -336,7 +332,7 @@ export const enterRoom = async (
 ): Promise<ToClientType> => {
   let room: WithId<db.Room> = null
   if (data.id) {
-    const id = escape(trim(data.id))
+    const id = escape(validator.trim(data.id))
     room = await db.collections.rooms.findOne({ _id: new ObjectId(id) })
   } else if (data.name) {
     const name = popParam(decodeURIComponent(data.name))
@@ -385,7 +381,7 @@ export const readMessage = async (
   user: string,
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_READ>
 ) => {
-  if (isEmpty(data.room)) {
+  if (validator.isEmpty(data.room)) {
     // todo BadRequest
     return
   }
@@ -532,8 +528,8 @@ export const sendVoteAnswer = async (
   }
 
   if (
-    !isNumeric(`${data.index}`, { no_symbols: true }) ||
-    !isNumeric(`${data.answer}`, { no_symbols: true })
+    !validator.isNumeric(`${data.index}`, { no_symbols: true }) ||
+    !validator.isNumeric(`${data.answer}`, { no_symbols: true })
   ) {
     // todo: send bad request
     return
@@ -583,7 +579,7 @@ export const removeVoteAnswer = async (
     // todo: send bad request
     return
   }
-  if (!isNumeric(`${data.index}`, { no_symbols: true })) {
+  if (!validator.isNumeric(`${data.index}`, { no_symbols: true })) {
     // todo: send bad request
     return
   }

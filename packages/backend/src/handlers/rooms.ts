@@ -1,18 +1,18 @@
 import { Request } from 'express'
 import { ObjectId, WithId } from 'mongodb'
-import isEmpty from 'validator/lib/isEmpty'
+import isEmpty from 'validator/lib/isEmpty.js'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
-import * as config from '../config'
-import { BadRequest } from '../lib/errors'
-import { getRequestUserId } from '../lib/utils'
-import * as db from '../lib/db'
-import { searchRoom } from '../lib/elasticsearch/rooms'
-import { popParam, createUserIconPath } from '../lib/utils'
+import * as config from '../config.js'
+import { BadRequest } from '../lib/errors.js'
+import { getRequestUserId } from '../lib/utils.js'
+import * as db from '../lib/db.js'
+import { searchRoom } from '../lib/elasticsearch/rooms.js'
+import { popParam, createUserIconPath } from '../lib/utils.js'
 import {
   isValidateRoomName,
   enterRoom as enterRoomLogic,
   createRoom as createRoomLogic
-} from '../logic/rooms'
+} from '../logic/rooms.js'
 
 export const createRoom = async (
   req: Request

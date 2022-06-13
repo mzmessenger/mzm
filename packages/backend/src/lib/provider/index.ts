@@ -1,13 +1,13 @@
-import { client } from '../redis'
-import { logger } from '../logger'
+import { client } from '../redis.js'
+import { logger } from '../logger.js'
 import { ToClientType } from 'mzm-shared/type/socket'
-import { UnreadQueue, ReplyQueue, VoteQueue } from '../../types'
-import * as config from '../../config'
+import { UnreadQueue, ReplyQueue, VoteQueue } from '../../types.js'
+import * as config from '../../config.js'
 export {
   addInitializeSearchRoomQueue,
   addUpdateSearchRoomQueue,
   addSyncSearchRoomQueue
-} from './room'
+} from './room.js'
 
 export const addMessageQueue = async (data: ToClientType) => {
   const message = JSON.stringify(data)

@@ -1,10 +1,10 @@
 import { ObjectId, WithId } from 'mongodb'
-import unescape from 'validator/lib/unescape'
+import unescape from 'validator/lib/unescape.js'
 import { MessageType } from 'mzm-shared/type/socket'
-import * as config from '../config'
-import * as db from '../lib/db'
-import { createUserIconPath } from '../lib/utils'
-import { getVoteAnswers } from './vote'
+import * as config from '../config.js'
+import * as db from '../lib/db.js'
+import { createUserIconPath } from '../lib/utils.js'
+import { getVoteAnswers } from './vote.js'
 
 export const saveMessage = async (
   message: string,

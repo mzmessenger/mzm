@@ -1,8 +1,8 @@
 import { ObjectId } from 'mongodb'
-import { redis } from './redis'
-import { logger } from './logger'
-import * as db from './db'
-import { REMOVE_STREAM } from '../config'
+import { redis } from './redis.js'
+import { logger } from './logger.js'
+import * as db from './db.js'
+import { REMOVE_STREAM } from '../config.js'
 
 const REMOVE_STREAM_TO_CHAT = 'stream:backend:remove:user'
 const REMOVE_GROUP = 'group:auth:remove:user'

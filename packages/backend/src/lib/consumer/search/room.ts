@@ -1,12 +1,12 @@
-import * as config from '../../../config'
-import { logger } from '../../logger'
-import { client as redis } from '../../redis'
+import * as config from '../../../config.js'
+import { logger } from '../../logger.js'
+import { client as redis } from '../../redis.js'
 import {
   initAlias,
   insertRooms as _insertRooms
-} from '../../elasticsearch/rooms'
-import { initConsumerGroup, createParser, consumeGroup } from '../common'
-import { RoomQueueType } from '../../../types'
+} from '../../elasticsearch/rooms.js'
+import { initConsumerGroup, createParser, consumeGroup } from '../common.js'
+import { RoomQueueType } from '../../../types.js'
 
 const STREAM = config.stream.ELASTICSEARCH_ROOMS
 const ELASTICSEARCH_ROOMS_GROUP = 'group:elasticsearch:rooms'

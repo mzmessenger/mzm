@@ -1,10 +1,10 @@
 import { ObjectId, WithId } from 'mongodb'
 import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/type/socket'
-import * as config from '../config'
-import { logger } from '../lib/logger'
-import * as db from '../lib/db'
-import { createRoomIconPath } from '../lib/utils'
-import { enterRoom } from './rooms'
+import * as config from '../config.js'
+import { logger } from '../lib/logger.js'
+import * as db from '../lib/db.js'
+import { createRoomIconPath } from '../lib/utils.js'
+import { enterRoom } from './rooms.js'
 
 type SendRoomType = FilterToClientType<
   typeof TO_CLIENT_CMD.ROOMS_GET

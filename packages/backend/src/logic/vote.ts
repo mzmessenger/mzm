@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb'
 import { MessageType } from 'mzm-shared/type/socket'
-import * as db from '../lib/db'
-import { createUserIconPath } from '../lib/utils'
+import * as db from '../lib/db.js'
+import { createUserIconPath } from '../lib/utils.js'
 
 export const getVoteAnswers = async (messageId: ObjectId) => {
   const answers: MessageType['vote']['answers'] = []

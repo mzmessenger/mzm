@@ -3,6 +3,7 @@
   "name": "mzm-auth",
   "version": "1.0.1",
   "main": "index.js",
+  "type": "module",
   "scripts": {
     "prestart": "npm run build",
     "start": "node dist/server.js | bunyan",

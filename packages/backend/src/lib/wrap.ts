@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import { StreamWrapResponse } from '../types'
+import { StreamWrapResponse } from '../types.js'
 
 interface WrapFn {
   (req: Request): Promise<object | void>

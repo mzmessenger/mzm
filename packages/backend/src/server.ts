@@ -3,13 +3,13 @@ import http from 'http'
 import { once } from 'events'
 import schedule from 'node-schedule'
 
-import { WORKER_NUM, PORT } from './config'
-import { logger } from './lib/logger'
-import * as redis from './lib/redis'
-import * as db from './lib/db'
-import { init } from './logic/server'
-import { addSyncSearchRoomQueue } from './lib/provider'
-import { createApp } from './app'
+import { WORKER_NUM, PORT } from './config.js'
+import { logger } from './lib/logger.js'
+import * as redis from './lib/redis.js'
+import * as db from './lib/db.js'
+import { init } from './logic/server.js'
+import { addSyncSearchRoomQueue } from './lib/provider/index.js'
+import { createApp } from './app.js'
 
 schedule.scheduleJob('0 * * * *', () => {
   try {
