@@ -71,7 +71,6 @@ export const getMessages = async (
   const messages: MessageType[] = []
   for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
     const [user] = doc.user
-    // @todo write test
     const messageStr = doc.removed ? '' : unescape(doc.message)
     const message: MessageType = {
       id: doc._id.toHexString(),
@@ -86,7 +85,6 @@ export const getMessages = async (
       icon: createUserIconPath(user?.account, user?.icon?.version)
     }
 
-    // @todo write test
     if (!doc.removed && doc.vote) {
       const questions = doc.vote.questions.map((q) => {
         return { text: q.text }
