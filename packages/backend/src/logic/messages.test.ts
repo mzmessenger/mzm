@@ -85,6 +85,7 @@ test('getMessages', async () => {
       userId,
       iine: i,
       updated: false,
+      removed: false,
       createdAt: new Date(),
       updatedAt: null
     }
@@ -139,6 +140,7 @@ test('getMessages just', async () => {
       userId,
       iine: 0,
       updated: false,
+      removed: false,
       createdAt: new Date(),
       updatedAt: null
     }

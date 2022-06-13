@@ -5,6 +5,7 @@ export const TO_CLIENT_CMD = {
   SOCKET_CONNECTION: 'socket:connection',
   MESSAGE_RECEIVE: 'message:receive',
   MESSAGE_MODIFY: 'message:modify',
+  MESSAGE_REMOVE: 'message:remove',
   MESSAGE_IINE: 'message:iine',
   MESSAGES_ROOM: 'messages:room',
   ROOMS_GET: 'rooms',
@@ -34,6 +35,7 @@ export type MessageType = {
   message: string
   iine: number
   updated: boolean
+  removed: boolean
   createdAt: string
   updatedAt: string | null
   userAccount: string
@@ -102,6 +104,12 @@ export type ToClientType =
     }
   | {
       user: string
+      cmd: typeof TO_CLIENT_CMD.MESSAGE_REMOVE
+      message: MessageType
+      room: string
+    }
+  | {
+      user: string
       cmd: typeof TO_CLIENT_CMD.ROOMS_READ
       room: string
     }
@@ -142,6 +150,7 @@ export const TO_SERVER_CMD = {
   MESSAGE_SEND: 'message:send',
   MESSAGE_IINE: 'message:iine',
   MESSAGE_MODIFY: 'message:modify',
+  MESSAGE_REMOVE: 'message:remove',
   MESSAGES_ROOM: 'messages:room',
   VOTE_ANSWER_SEND: 'vote:answer:send',
   VOTE_ANSWER_REMOVE: 'vote:answer:remove'
@@ -154,6 +163,7 @@ export type ClientToSocketType =
   | GetRooms
   | SendMessage
   | ModifyMessage
+  | RemoveMessage
   | IineMessage
   | GetMessages
   | EnterRoom
@@ -191,6 +201,11 @@ type ModifyMessage = {
   cmd: typeof TO_SERVER_CMD.MESSAGE_MODIFY
   id: string
   message: string
+}
+
+type RemoveMessage = {
+  cmd: typeof TO_SERVER_CMD.MESSAGE_REMOVE
+  id: string
 }
 
 type IineMessage = {

@@ -25,6 +25,7 @@ export const saveMessage = async (
     userId: new ObjectId(userId),
     iine: 0,
     updated: false,
+    removed: false,
     createdAt: new Date(),
     updatedAt: null
   }
@@ -70,19 +71,23 @@ export const getMessages = async (
   const messages: MessageType[] = []
   for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
     const [user] = doc.user
+    // @todo write test
+    const messageStr = doc.removed ? '' : unescape(doc.message)
     const message: MessageType = {
       id: doc._id.toHexString(),
-      message: unescape(doc.message),
+      message: messageStr,
       iine: doc.iine ? doc.iine : 0,
       userId: doc.userId.toHexString(),
       updated: doc.updated ? doc.updated : false,
+      removed: doc.removed ? doc.removed : false,
       createdAt: doc.createdAt.getTime().toString(),
       updatedAt: doc.updatedAt ? doc.updatedAt.getTime().toString() : null,
       userAccount: user ? user.account : null,
       icon: createUserIconPath(user?.account, user?.icon?.version)
     }
 
-    if (doc.vote) {
+    // @todo write test
+    if (!doc.removed && doc.vote) {
       const questions = doc.vote.questions.map((q) => {
         return { text: q.text }
       })

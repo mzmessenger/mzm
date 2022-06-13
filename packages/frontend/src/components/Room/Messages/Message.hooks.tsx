@@ -14,7 +14,7 @@ export const useMessage = (id: string) => {
     }
   } = useMessages()
   const { startToEdit } = useDispatchPostTextArea()
-  const { incrementIine } = useDispatchSocket()
+  const { incrementIine, sendDeleteMessage } = useDispatchSocket()
 
   const myAccount = useMemo(() => {
     return me?.account ?? ''
@@ -27,6 +27,7 @@ export const useMessage = (id: string) => {
     icon,
     vote,
     updated,
+    removed,
     date,
     account,
     userId,
@@ -38,7 +39,8 @@ export const useMessage = (id: string) => {
       html: '',
       icon: '',
       vote: null,
-      updated: '',
+      updated: false,
+      removed: false,
       date: '',
       account: 'removed',
       userId: '',
@@ -70,6 +72,10 @@ export const useMessage = (id: string) => {
     incrementIine(id)
   }, [incrementIine, id])
 
+  const deleteHandler = useCallback(() => {
+    sendDeleteMessage(id)
+  }, [id, sendDeleteMessage])
+
   const startEditHandler = useCallback(() => {
     startToEdit(id, message)
   }, [id, message, startToEdit])
@@ -88,10 +94,12 @@ export const useMessage = (id: string) => {
     icon,
     vote,
     updated,
+    removed,
     date,
     replied,
     beforeIine: prevIineRef.current,
     iineHandler,
+    deleteHandler,
     startEditHandler
   } as const
 }

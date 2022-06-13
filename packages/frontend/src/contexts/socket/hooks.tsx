@@ -217,6 +217,14 @@ export const useSocketForContext = () => {
     sendSocket(ws.current, send)
   }
 
+  const sendDeleteMessage = (messageId: string) => {
+    const send: ClientToSocketType = {
+      cmd: TO_SERVER_CMD.MESSAGE_REMOVE,
+      id: messageId
+    }
+    sendSocket(ws.current, send)
+  }
+
   const readMessages = (roomId: string) => {
     sendSocket(ws.current, {
       cmd: TO_SERVER_CMD.ROOMS_READ,
@@ -276,7 +284,7 @@ export const useSocketForContext = () => {
     state: {
       ws: ws.current
     },
-    init: useCallback(init, [connect]),
+    init,
     connect,
     getMessages: useCallback(getMessages, [ws]),
     getRooms: useCallback(getRooms, [ws]),
@@ -284,6 +292,7 @@ export const useSocketForContext = () => {
     incrementIine: useCallback(incrementIine, [ws]),
     sendMessage: useCallback(sendMessage, [ws]),
     sendModifyMessage: useCallback(sendModifyMessage, [ws]),
+    sendDeleteMessage: useCallback(sendDeleteMessage, [ws]),
     enterRoom: useCallback(enterRoom, [ws]),
     readMessages: useCallback(readMessages, [ws]),
     openRoom: useCallback(openRoom, [ws]),

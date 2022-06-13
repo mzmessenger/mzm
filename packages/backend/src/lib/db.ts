@@ -106,6 +106,7 @@ export type Message = {
   roomId: ObjectId
   userId: ObjectId
   updated: boolean
+  removed: boolean
   createdAt: Date
   updatedAt: Date
   vote?: Vote

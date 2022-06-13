@@ -44,6 +44,7 @@ export const useMessagesForContext = () => {
         message: m.message,
         iine: m.iine,
         updated: m.updated,
+        removed: m.removed,
         createdAt: m.createdAt,
         updatedAt: m.updatedAt
       }
@@ -84,6 +85,15 @@ export const useMessagesForContext = () => {
       type: Actions.ModifyMessageSuccess,
       payload: {
         message: converted
+      }
+    })
+  }
+
+  const removeMessage = (message: MessageType) => {
+    return dispatch({
+      type: Actions.RemoveMessage,
+      payload: {
+        message
       }
     })
   }
@@ -157,6 +167,7 @@ export const useMessagesForContext = () => {
     addMessages: useCallback(addMessages, [convertMessage]),
     addMessage: useCallback(addMessage, [convertMessage]),
     modifyMessage: useCallback(modifyMessage, [convertMessage]),
+    removeMessage: useCallback(removeMessage, []),
     updateIine: useCallback(updateIine, []),
     setVoteAnswers: useCallback(setVoteAnswers, []),
     sendVoteAnswer: useCallback(sendVoteAnswer, []),
