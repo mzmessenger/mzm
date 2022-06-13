@@ -33,7 +33,11 @@ const Description: React.FC<{ description: string }> = (props) => {
 
   return (
     <div className="item">
-      <MessageBody message={props.description} html={description} />
+      <MessageBody
+        removed={false}
+        message={props.description}
+        html={description}
+      />
     </div>
   )
 }

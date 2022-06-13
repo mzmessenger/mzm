@@ -1,4 +1,4 @@
-import React, { createContext } from 'react'
+import React, { createContext, PropsWithChildren } from 'react'
 
 import { useSocketForContext } from './hooks'
 
@@ -12,7 +12,9 @@ export const SocketDispatchContext = createContext<DispatchContextType>(
   {} as DispatchContextType
 )
 
-export const SocketProvider: React.FC = ({ children }) => {
+export const SocketProvider: React.FC<PropsWithChildren<unknown>> = ({
+  children
+}) => {
   const { state, ...dispatchActions } = useSocketForContext()
 
   return (

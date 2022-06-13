@@ -123,6 +123,7 @@ test('modifyMessage', async () => {
     roomId,
     userId,
     updated: false,
+    removed: false,
     message: 'insert',
     iine: 0,
     createdAt,
@@ -197,6 +198,7 @@ test('iine', async () => {
     message: 'iine',
     iine: 1,
     updated: false,
+    removed: false,
     createdAt: new Date(),
     updatedAt: null
   })
@@ -279,6 +281,7 @@ test('sendVoteAnswer (first time)', async () => {
     roomId: new ObjectId(),
     userId: userId,
     updated: false,
+    removed: false,
     createdAt: new Date(),
     updatedAt: null,
     vote: vote
@@ -313,6 +316,7 @@ test('sendVoteAnswer (second time)', async () => {
     roomId: new ObjectId(),
     userId: userId,
     updated: false,
+    removed: false,
     createdAt: new Date(),
     updatedAt: null,
     vote: vote
@@ -371,6 +375,7 @@ describe('sendVoteAnswer: BadRequest', () => {
       roomId: new ObjectId(),
       userId: userId,
       updated: false,
+      removed: false,
       createdAt: new Date(),
       updatedAt: null,
       vote: vote
@@ -432,6 +437,7 @@ test('removeVoteAnswer', async () => {
     roomId: new ObjectId(),
     userId: userId,
     updated: false,
+    removed: false,
     createdAt: new Date(),
     updatedAt: null,
     vote: vote

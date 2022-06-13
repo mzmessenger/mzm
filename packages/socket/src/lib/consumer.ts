@@ -39,10 +39,10 @@ export const consume = async (startId: string = '$') => {
 
   try {
     const res = await redis.xread(
-      'BLOCK',
-      '0',
       'COUNT',
       '100',
+      'BLOCK',
+      '0',
       'STREAMS',
       READ_STREAM,
       startId

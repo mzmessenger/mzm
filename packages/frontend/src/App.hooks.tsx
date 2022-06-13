@@ -70,8 +70,14 @@ const useWebSocket = (url: string) => {
   const { fetchMyInfo } = useDispatchUser()
   const { init, getMessages, getRooms, readMessages } = useDispatchSocket()
   const { closeMenu } = useDispatchUi()
-  const { addMessage, modifyMessage, addMessages, updateIine, setVoteAnswers } =
-    useDispatchMessages()
+  const {
+    addMessage,
+    modifyMessage,
+    removeMessage,
+    addMessages,
+    updateIine,
+    setVoteAnswers
+  } = useDispatchMessages()
   const { currentRoomId, currentRoomName } = useRooms()
   const {
     receiveRooms,
@@ -131,6 +137,11 @@ const useWebSocket = (url: string) => {
         },
         [TO_CLIENT_CMD.MESSAGE_MODIFY]: ({ message }) => {
           modifyMessage(message.message).then(() => {
+            reloadMessage(message.room)
+          })
+        },
+        [TO_CLIENT_CMD.MESSAGE_REMOVE]: ({ message }) => {
+          removeMessage(message.message).then(() => {
             reloadMessage(message.room)
           })
         },

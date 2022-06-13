@@ -14,6 +14,8 @@ export const socket = async (req: Request) => {
     return await _socket.iine(user, data)
   } else if (data.cmd === TO_SERVER_CMD.MESSAGE_MODIFY) {
     return _socket.modifyMessage(user, data)
+  } else if (data.cmd === TO_SERVER_CMD.MESSAGE_REMOVE) {
+    return _socket.removeMessage(user, data)
   } else if (data.cmd === TO_SERVER_CMD.MESSAGES_ROOM) {
     return _socket.getMessagesFromRoom(user, data)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_GET) {

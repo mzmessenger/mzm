@@ -4,25 +4,41 @@ import { useLinkClick } from '../../lib/hooks/useLinkClick'
 
 type Props = {
   className?: string
+  removed: boolean
   message: string
   html: string
 }
 
-export const MessageBody: React.FC<Props> = ({ className, message, html }) => {
+const RemovedMessageBody: React.FC = () => {
+  return <WrapRemoved>This message has been deleted!</WrapRemoved>
+}
+
+const WrapRemoved = styled.div`
+  margin: 0.7em 0 0.7em 0;
+  padding: 0.7em;
+  word-break: break-all;
+  background: var(--color-background-secondary);
+`
+
+export const MessageBody: React.FC<Props> = (props) => {
   const [messageRef] = useLinkClick()
+
+  if (props.removed) {
+    return <RemovedMessageBody />
+  }
 
   return (
     <Wrap
-      className={className}
+      className={props.className}
       ref={messageRef}
-      attr-message={message}
-      dangerouslySetInnerHTML={{ __html: html }}
+      attr-message={props.message}
+      dangerouslySetInnerHTML={{ __html: props.html }}
     ></Wrap>
   )
 }
 
 const Wrap = styled.div`
-  padding: 5px 0 0 0;
+  margin: 0.7em 0 0 0;
   word-break: break-all;
 
   > p,

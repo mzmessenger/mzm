@@ -46,6 +46,7 @@ export const Actions = {
   AddMessages: 'messageAction:addMessages',
   AddMessage: 'messageAction:addMessage',
   ModifyMessageSuccess: 'messageAction:modifyMessageSuccess',
+  RemoveMessage: 'messageAction:removeMessage',
   UpdateIine: 'messageAction:updateIine',
   SetVoteAnswers: 'messageAction:setVoteAnswers',
   SendVoteAnswer: 'messageAction:sendVoteAnswer',
@@ -63,6 +64,10 @@ export type ActionType =
     }
   | {
       type: typeof Actions.ModifyMessageSuccess
+      payload: { message: StateMessageType }
+    }
+  | {
+      type: typeof Actions.RemoveMessage
       payload: { message: StateMessageType }
     }
   | {

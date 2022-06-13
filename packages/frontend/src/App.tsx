@@ -1,4 +1,4 @@
-import React, { Suspense, lazy } from 'react'
+import React, { Suspense, lazy, PropsWithChildren } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useApp } from './App.hooks'
 import { useUser } from './contexts/user/hooks'
@@ -7,7 +7,7 @@ import { Loading } from './components/Loading'
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
 const url = `${protocol}//${window.location.host}/socket`
 
-const WithSuspense: React.FC = ({ children }) => {
+const WithSuspense: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   return <Suspense fallback={<Loading />}>{children}</Suspense>
 }
 

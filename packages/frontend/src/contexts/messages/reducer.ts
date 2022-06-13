@@ -66,6 +66,14 @@ export const reducer = (
       }
       return { ...state }
     }
+    case Actions.RemoveMessage: {
+      state.messages.byId[action.payload.message.id] = {
+        ...action.payload.message,
+        message: '',
+        html: ''
+      }
+      return { ...state }
+    }
     case Actions.UpdateIine: {
       const message = state.messages.byId[action.payload.message]
       state.messages.byId[action.payload.message] = {

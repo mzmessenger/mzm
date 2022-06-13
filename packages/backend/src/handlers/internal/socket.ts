@@ -135,6 +135,7 @@ export const sendMessage = async (
       message: unescape(message),
       iine: 0,
       updated: false,
+      removed: false,
       createdAt: Date.now().toString(),
       updatedAt: null,
       icon: createUserIconPath(u.account, u.icon?.version)
@@ -210,7 +211,7 @@ export const modifyMessage = async (
   })
 
   // todo: send bad request
-  if (from.userId.toHexString() !== user) {
+  if (from.userId.toHexString() !== user || from.removed === true) {
     return
   }
 
@@ -232,7 +233,59 @@ export const modifyMessage = async (
       iine: from.iine ? from.iine : 0,
       userId: from.userId.toHexString(),
       userAccount: u.account,
+      removed: false,
       updated: true,
+      createdAt: from.createdAt.getTime().toString(),
+      updatedAt: updatedAt.getTime().toString(),
+      icon: createUserIconPath(u.account, u.icon?.version)
+    },
+    room: from.roomId.toHexString()
+  }
+
+  const users = await getAllUserIdsInRoom(from.roomId.toHexString())
+  addQueueToUsers(users, send)
+}
+
+export const removeMessage = async (
+  user: string,
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_REMOVE>
+) => {
+  const id = escape(trim(data.id))
+  // todo: send bad request
+  if (isEmpty(id)) {
+    return
+  }
+  const targetId = new ObjectId(id)
+
+  const from = await db.collections.messages.findOne({
+    _id: targetId
+  })
+
+  // todo: send bad request
+  if (from.userId.toHexString() !== user) {
+    return
+  }
+
+  const updatedAt = new Date()
+  await db.collections.messages.updateOne(
+    { _id: targetId },
+    { $set: { removed: true, updatedAt } }
+  )
+
+  const u = await db.collections.users.findOne({
+    _id: new ObjectId(user)
+  })
+  const send: ToClientType = {
+    user: user,
+    cmd: TO_CLIENT_CMD.MESSAGE_REMOVE,
+    message: {
+      id: from._id.toHexString(),
+      message: '',
+      iine: from.iine ? from.iine : 0,
+      userId: from.userId.toHexString(),
+      userAccount: u.account,
+      updated: from.updated,
+      removed: true,
       createdAt: from.createdAt.getTime().toString(),
       updatedAt: updatedAt.getTime().toString(),
       icon: createUserIconPath(u.account, u.icon?.version)

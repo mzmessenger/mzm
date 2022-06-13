@@ -3,21 +3,17 @@ import { Request } from 'express'
 import { MongoClient, ObjectId } from 'mongodb'
 import { MongoMemoryServer } from 'mongodb-memory-server'
 import { client as Redis } from '../src/lib/redis'
-import IORedis from 'ioredis'
+import { RedisKey, RedisValue } from 'ioredis'
 
 export const createXaddMock = (xadd: typeof Redis.xadd) => {
   const mock =
-    jest.mocked<
-      (key: IORedis.KeyType, ...args: IORedis.ValueType[]) => Promise<string>
-    >(xadd)
+    jest.mocked<(key: RedisKey, ...args: RedisValue[]) => Promise<string>>(xadd)
   return mock
 }
 
 export const createXackMock = (xack: typeof Redis.xack) => {
   const mock =
-    jest.mocked<
-      (key: IORedis.KeyType, ...args: IORedis.ValueType[]) => Promise<number>
-    >(xack)
+    jest.mocked<(key: RedisKey, ...args: RedisValue[]) => Promise<number>>(xack)
 
   return mock
 }

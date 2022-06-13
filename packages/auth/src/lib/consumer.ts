@@ -10,10 +10,10 @@ const REMOVE_GROUP = 'group:auth:remove:user'
 const initConsumerGroup = async (stream: string, groupName: string) => {
   // create consumer group
   try {
-    await redis.xgroup('setid', stream, groupName, '$')
+    await redis.xgroup('SETID', stream, groupName, '$')
   } catch (e) {
     try {
-      await redis.xgroup('create', stream, groupName, '$', 'MKSTREAM')
+      await redis.xgroup('CREATE', stream, groupName, '$', 'MKSTREAM')
     } catch (e) {
       if (e.toSring().includes('already exists')) {
         return
@@ -68,12 +68,12 @@ export const parser = async (read) => {
 export const consume = async () => {
   try {
     const res = await redis.xreadgroup(
-      'group',
+      'GROUP',
       REMOVE_GROUP,
       'consume-auth',
-      'BLOCK',
-      '100',
       'COUNT',
+      '100',
+      'BLOCK',
       '100',
       'STREAMS',
       REMOVE_STREAM,

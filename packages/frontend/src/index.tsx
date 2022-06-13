@@ -1,6 +1,6 @@
 import React from 'react'
 import { registerSW } from 'virtual:pwa-register'
-import ReactDom from 'react-dom'
+import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
 import 'normalize.css'
 import 'highlight.js/styles/base16/onedark.css'
@@ -8,13 +8,14 @@ import './index.css'
 import { Provider as ContextProvider } from './contexts'
 import App from './App'
 
-ReactDom.render(
+const root = createRoot(document.getElementById('root'))
+
+root.render(
   <BrowserRouter>
     <ContextProvider>
       <App />
     </ContextProvider>
-  </BrowserRouter>,
-  document.getElementById('root')
+  </BrowserRouter>
 )
 
 const updateSW = registerSW({

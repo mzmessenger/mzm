@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import styled from '@emotion/styled'
 import { useLinkClick } from '../lib/hooks/useLinkClick'
 
-const recommended = ['要望室', 'test']
+const recommended = ['要望室', '雑談', 'test']
 
 const LinkElem = (props: { name: string }) => {
   const [ref] = useLinkClick()

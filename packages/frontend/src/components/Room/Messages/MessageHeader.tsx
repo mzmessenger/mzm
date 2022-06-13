@@ -2,7 +2,8 @@ import React, { useMemo } from 'react'
 import styled from '@emotion/styled'
 import {
   Create as CreateIcon,
-  ThumbUp as ThumbUpIcon
+  ThumbUp as ThumbUpIcon,
+  Delete as DeleteIcon
 } from '@mui/icons-material'
 import { IconButton } from '../../atoms/Button'
 import { useDispatchUi } from '../../../contexts/ui/hooks'
@@ -14,16 +15,50 @@ type Props = {
   icon: string
   iine?: number
   date: string
+  removed: boolean
   iineHandler: () => void
+  deleteHandler: () => void
   startEditHandler: React.MouseEventHandler
 }
 
-export const MessageHeader: React.FC<Props> = (props) => {
+const Actions: React.FC<{
+  account: Props['account']
+  iine: Props['iine']
+  iineHandler: Props['iineHandler']
+  deleteHandler: Props['deleteHandler']
+  startEditHandler: Props['startEditHandler']
+}> = (props) => {
   const { me } = useUser()
-  const { openUserDetail } = useDispatchUi()
   const myAccount = useMemo(() => {
     return me?.account ?? ''
   }, [me])
+
+  return (
+    <>
+      <IconButton className="iine icon" onClick={props.iineHandler}>
+        <ThumbUpIcon className="thumbup" />
+        {props.iine !== 0 && <div className="num">{props.iine}</div>}
+      </IconButton>
+      <div className="actions">
+        <div className="icon">
+          {myAccount === props.account && (
+            <>
+              <IconButton className="icon" onClick={props.deleteHandler}>
+                <DeleteIcon className="thumbup" />
+              </IconButton>
+              <IconButton className="modify icon">
+                <CreateIcon onClick={props.startEditHandler} />
+              </IconButton>
+            </>
+          )}
+        </div>
+      </div>
+    </>
+  )
+}
+
+export const MessageHeader: React.FC<Props> = (props) => {
+  const { openUserDetail } = useDispatchUi()
 
   const clickAccount = () => {
     openUserDetail(props.id, props.account, props.icon)
@@ -34,19 +69,16 @@ export const MessageHeader: React.FC<Props> = (props) => {
       <span className="account" onClick={clickAccount}>
         {props.account}
       </span>
-      <IconButton className="iine icon" onClick={props.iineHandler}>
-        <ThumbUpIcon className="thumbup" />
-        {props.iine !== 0 && <div className="num">{props.iine}</div>}
-      </IconButton>
-      <div className="actions">
-        <div className="icon">
-          {myAccount === props.account && (
-            <IconButton className="icon">
-              <CreateIcon onClick={props.startEditHandler} />
-            </IconButton>
-          )}
-        </div>
-      </div>
+      {props.removed && <div className="space"></div>}
+      {!props.removed && (
+        <Actions
+          account={props.account}
+          iine={props.iine}
+          iineHandler={props.iineHandler}
+          deleteHandler={props.deleteHandler}
+          startEditHandler={props.startEditHandler}
+        />
+      )}
       <time>{props.date}</time>
     </Wrap>
   )
@@ -79,11 +111,19 @@ const Wrap = styled.div`
     }
   }
 
+  .space {
+    flex: 1;
+  }
+
   .actions {
     visibility: hidden;
     flex: 1;
     display: flex;
     justify-content: flex-end;
+  }
+
+  .modify {
+    margin: 0 0 0 0.5em;
   }
 
   .icon {

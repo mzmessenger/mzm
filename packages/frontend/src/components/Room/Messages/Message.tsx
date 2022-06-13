@@ -18,11 +18,13 @@ export const MessageElement: React.FC<Props> = (props) => {
     icon,
     vote,
     updated,
+    removed,
     date,
     account,
     userId,
     replied,
     iineHandler,
+    deleteHandler,
     startEditHandler
   } = useMessage(props.id)
 
@@ -64,10 +66,6 @@ export const MessageElement: React.FC<Props> = (props) => {
     return classNames.join(' ')
   }, [replied, iine, iineAction])
 
-  if (!message) {
-    return <></>
-  }
-
   return (
     <MessageWrap className={className}>
       <img className="user-icon" src={icon} />
@@ -77,10 +75,17 @@ export const MessageElement: React.FC<Props> = (props) => {
         icon={icon}
         iine={iine}
         date={date}
+        removed={removed}
         iineHandler={iineHandler}
+        deleteHandler={deleteHandler}
         startEditHandler={startEditHandler}
       />
-      <MessageBody className="body" message={message} html={sanitize(html)} />
+      <MessageBody
+        className="body"
+        removed={removed}
+        message={message}
+        html={sanitize(html)}
+      />
       {vote && (
         <MessageVote messageId={props.id} className="vote" vote={vote} />
       )}

@@ -1,4 +1,4 @@
-import React, { createContext } from 'react'
+import React, { createContext, PropsWithChildren } from 'react'
 
 import { useRoomsForContext } from './hooks'
 import { INITIAL_STATE } from './constants'
@@ -11,7 +11,9 @@ export const RoomsDispatchContext = createContext<DispatchContextType>(
   {} as DispatchContextType
 )
 
-export const RoomsProvider: React.FC = ({ children }) => {
+export const RoomsProvider: React.FC<PropsWithChildren<unknown>> = ({
+  children
+}) => {
   const { state, ...dispatchActions } = useRoomsForContext()
 
   return (
