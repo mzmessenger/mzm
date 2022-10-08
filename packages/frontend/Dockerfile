@@ -4,7 +4,12 @@ FROM node:16 as builder
 WORKDIR /usr/app
 
 COPY ./package.json ./package-lock.json ./
-COPY ./packages/shared ./packages/shared
+COPY ./packages/shared/package.json \
+  ./packages/shared/tsconfig.json \
+  ./packages/shared/auth \
+  ./packages/shared/type \
+  ./packages/shared/validator \
+  ./packages/shared/
 COPY ./packages/frontend/package.json \
   ./packages/frontend/tsconfig.json \
   ./packages/frontend/vite.config.ts \
@@ -12,7 +17,7 @@ COPY ./packages/frontend/package.json \
 COPY ./packages/frontend/src/ ./packages/frontend/src/
 
 RUN npm install -w packages/frontend -w packages/shared
-RUN npm run build-esm -w packages/shared
+RUN npm run build -w packages/shared
 RUN npm run build -w packages/frontend
 
 # https://cloud.google.com/community/tutorials/deploy-react-nginx-cloud-run

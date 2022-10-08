@@ -12,8 +12,7 @@
     "format": "prettier --write src ./*.{js,json}",
     "lint": "eslint --ext .ts,.js src",
     "pretest": "npm run lint",
-    "jest": "jest --maxWorkers=50% --config=./jest.config.js",
-    "test-ci": "jest --maxWorkers=50% --config=./jest.config.js --forceExit",
+    "test-ci": "vitest run --config=./vitest.config.js",
     "test": "vitest run --config ./vitest.config.ts",
     "test:watch": "vitest --config ./vitest.config.ts"
   },

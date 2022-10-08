@@ -10,7 +10,7 @@
     "format": "prettier --write src ./*.{js,json}",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
     "pretest": "npm run lint",
-    "test": "vitest run --config=./vite.config.ts",
+    "test": "vitest run --config=./vitest.config.ts",
     "test:warth": "vitest --config=./vite.config.ts",
     "build": "vite build",
     "build-tsc": "tsc --build tsconfig.json"
