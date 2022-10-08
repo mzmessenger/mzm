@@ -13,7 +13,8 @@
     "jsx": "react",
     "paths": {
       "mzm-shared": ["../shared"]
-    }
+    },
+    "types": ["vite-plugin-pwa/client"]
   },
   "exclude": ["node_modules", "**/*.test.ts"],
   "references": [{ "path": "../shared" }]

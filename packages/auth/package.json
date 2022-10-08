@@ -22,7 +22,7 @@
     "express-session": "^1.17.3",
     "helmet": "^5.1.0",
     "ioredis": "^5.0.6",
-    "mongodb": "^4.7.0",
+    "mongodb": "^4.10.0",
     "passport": "^0.6.0",
     "passport-github": "^1.1.0",
     "passport-twitter": "^1.0.4"

@@ -1,38 +1,37 @@
-jest.mock('mzm-shared/auth')
-jest.mock('../lib/logger')
+import { vi, test, expect } from 'vitest'
+vi.mock('mzm-shared/auth')
+vi.mock('../lib/logger')
 
-import { Request, Response } from 'express'
+import { NextFunction, Request, Response } from 'express'
 import { HEADERS, requestAuthServer } from 'mzm-shared/auth'
 import { errorHandler, checkLogin } from './index'
 import * as HttpErrors from '../lib/errors'
 
-test('errorHandler (Internal Server Error)', (cb) => {
+test('errorHandler (Internal Server Error)', async () => {
   expect.assertions(4)
 
   const error = new Error('error!')
 
-  const send = jest.fn(function (arg) {
+  const send = vi.fn(function (arg) {
     expect(this.status.mock.calls.length).toBe(1)
     expect(this.send.mock.calls.length).toBe(1)
 
     expect(this.status.mock.calls[0][0]).toEqual(500)
     expect(arg).toEqual('Internal Server Error')
-
-    cb()
   })
 
-  const res = { status: jest.fn().mockReturnThis(), send }
+  const res = { status: vi.fn().mockReturnThis(), send }
 
-  errorHandler(error, {}, res as any as Response, jest.fn())
+  await errorHandler(error, {}, res as any as Response, vi.fn())
 })
 
 test.each([
   [{ error: new HttpErrors.BadRequest('BadRequest') }],
   [{ error: new HttpErrors.Forbidden('Forbidden') }]
-])('errorHandler (%s)', ({ error }) => {
+])('errorHandler (%s)', async ({ error }) => {
   expect.assertions(4)
 
-  const send = jest.fn(function (arg) {
+  const send = vi.fn(function (arg) {
     expect(this.status.mock.calls.length).toBe(1)
     expect(this.send.mock.calls.length).toBe(1)
 
@@ -40,55 +39,62 @@ test.each([
     expect(arg).toEqual(error.toResponse())
   })
 
-  const res = { status: jest.fn().mockReturnThis(), send }
+  const res = { status: vi.fn().mockReturnThis(), send }
 
-  errorHandler(error, {}, res as any as Response, jest.fn())
+  await errorHandler(error, {}, res as any as Response, vi.fn())
 })
 
-test('checkLogin (success)', (cb) => {
+test('checkLogin (success)', async () => {
   expect.assertions(4)
 
   const req = { headers: {} }
 
-  const mock = jest.mocked(requestAuthServer)
+  const mock = vi.mocked(requestAuthServer)
   mock.mockResolvedValueOnce({
     userId: 'aaa',
     twitterUserName: 'xxx',
     githubUserName: 'yyy'
   })
 
-  const next = jest.fn(() => {
+  const next = vi.fn(() => {
     expect('called').toEqual('called')
     expect(req.headers[HEADERS.USER_ID]).toEqual('aaa')
     expect(req.headers[HEADERS.TIWTTER_USER_NAME]).toEqual('xxx')
     expect(req.headers[HEADERS.GITHUB_USER_NAME]).toEqual('yyy')
-    cb()
   })
 
-  checkLogin(req as Request, {} as Response, next)
+  await checkLogin(req as Request, {} as Response, next)
 })
 
-test.each([[null], [undefined], ['']])('checkLogin send 401 (%s)', (userId) => {
-  expect.assertions(4)
+test.each([[null], [undefined], ['']])(
+  'checkLogin send 401 (%s)',
+  async (userId) => {
+    expect.assertions(4)
 
-  const req = { headers: {} }
+    const req = { headers: {} }
 
-  const mock = jest.mocked(requestAuthServer)
-  mock.mockResolvedValueOnce({
-    userId: userId,
-    twitterUserName: 'xxx',
-    githubUserName: 'yyy'
-  })
+    const mock = vi.mocked(requestAuthServer)
+    mock.mockResolvedValueOnce({
+      // @ts-expect-error
+      userId: userId,
+      twitterUserName: 'xxx',
+      githubUserName: 'yyy'
+    })
 
-  const send = jest.fn(function (arg) {
-    expect(this.status.mock.calls.length).toBe(1)
-    expect(this.send.mock.calls.length).toBe(1)
+    const send = vi.fn(function (arg) {
+      expect(this.status.mock.calls.length).toBe(1)
+      expect(this.send.mock.calls.length).toBe(1)
 
-    expect(this.status.mock.calls[0][0]).toEqual(401)
-    expect(arg).toEqual('not login')
-  })
+      expect(this.status.mock.calls[0][0]).toEqual(401)
+      expect(arg).toEqual('not login')
+    })
 
-  const res = { status: jest.fn().mockReturnThis(), send }
+    const res = { status: vi.fn().mockReturnThis(), send }
 
-  checkLogin(req as any as Request, res as any as Response, jest.fn())
-})
+    await checkLogin(
+      req as any as Request,
+      res as any as Response,
+      vi.fn() as any as NextFunction
+    )
+  }
+)

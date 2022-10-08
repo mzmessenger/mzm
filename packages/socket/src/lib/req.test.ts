@@ -1,8 +1,9 @@
-import { INTERNAL_API_URL } from '../config'
+import { vi, test, expect } from 'vitest'
+import { INTERNAL_API_URL } from '../config.js'
 
-jest.mock('./logger')
+vi.mock('./logger.js')
 
-const request = jest.fn((_url, _options) => {
+const request = vi.fn((_url, _options) => {
   return new Promise((resolve) => {
     resolve({
       statusCode: 200,
@@ -13,7 +14,7 @@ const request = jest.fn((_url, _options) => {
   })
 })
 
-jest.mock('undici', () => ({ request }))
+vi.mock('undici', () => ({ request }))
 
 import { requestSocketAPI } from './req'
 

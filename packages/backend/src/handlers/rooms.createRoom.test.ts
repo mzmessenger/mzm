@@ -1,33 +1,35 @@
-jest.mock('../lib/logger')
-jest.mock('../lib/redis', () => {
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+vi.mock('../lib/logger')
+vi.mock('../lib/redis', () => {
   return {
-    lock: jest.fn(() => Promise.resolve(true)),
-    release: jest.fn()
+    lock: vi.fn(() => Promise.resolve(true)),
+    release: vi.fn()
   }
 })
-jest.mock('../lib/elasticsearch/index', () => {
+vi.mock('../lib/elasticsearch/index', () => {
   return {
     client: {}
   }
 })
 
 import { ObjectId } from 'mongodb'
-import { mongoSetup, createRequest } from '../../jest/testUtil'
+import { mongoSetup, createRequest } from '../../test/testUtil'
 import * as db from '../lib/db'
 import { BadRequest } from '../lib/errors'
 import { createRoom } from './rooms'
 
-let mongoServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test.each([
@@ -45,8 +47,8 @@ test.each([
     _id: new ObjectId(id)
   })
 
-  expect(created.name).toStrictEqual(createdName)
-  expect(created.createdBy).toStrictEqual(userId.toHexString())
+  expect(created?.name).toStrictEqual(createdName)
+  expect(created?.createdBy).toStrictEqual(userId.toHexString())
 })
 
 test.each([

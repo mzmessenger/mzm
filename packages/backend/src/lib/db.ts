@@ -108,7 +108,7 @@ export type Message = {
   updated: boolean
   removed: boolean
   createdAt: Date
-  updatedAt: Date
+  updatedAt: Date | null
   vote?: Vote
 }
 

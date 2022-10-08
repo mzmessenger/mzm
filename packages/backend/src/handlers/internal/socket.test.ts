@@ -1,6 +1,16 @@
-jest.mock('../../lib/logger')
-jest.mock('../../logic/messages')
-jest.mock('../../lib/provider')
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import {
+  vi,
+  test,
+  expect,
+  beforeAll,
+  afterAll,
+  describe,
+  beforeEach
+} from 'vitest'
+vi.mock('../../lib/logger')
+vi.mock('../../logic/messages')
+vi.mock('../../lib/provider')
 
 import { ObjectId } from 'mongodb'
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
@@ -8,7 +18,7 @@ import {
   TO_SERVER_CMD,
   FilterSocketToBackendType
 } from 'mzm-shared/type/socket'
-import { mongoSetup } from '../../../jest/testUtil'
+import { mongoSetup } from '../../../test/testUtil'
 import * as db from '../../lib/db'
 import * as logicMessages from '../../logic/messages'
 import {
@@ -20,17 +30,17 @@ import {
 import * as config from '../../config'
 import * as socket from './socket'
 
-let mongoServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test('sendMessage', async () => {
@@ -46,15 +56,16 @@ test('sendMessage', async () => {
   const message = 'post'
 
   const insertedIdMock = new ObjectId()
-  const saveMessageMock = jest.mocked(logicMessages.saveMessage)
+  const saveMessageMock = vi.mocked(logicMessages.saveMessage)
   saveMessageMock.mockClear()
   saveMessageMock.mockResolvedValueOnce({
     insertedId: insertedIdMock,
+    // @ts-expect-error
     acknowledged: null
   })
-  const addQueueToUsersMock = jest.mocked(addQueueToUsers)
+  const addQueueToUsersMock = vi.mocked(addQueueToUsers)
   addQueueToUsersMock.mockClear()
-  const addUnreadQueueMock = jest.mocked(addUnreadQueue)
+  const addUnreadQueueMock = vi.mocked(addUnreadQueue)
   addUnreadQueueMock.mockClear()
 
   await socket.sendMessage(userId.toHexString(), {
@@ -87,11 +98,11 @@ test('fail: sendMessage', async () => {
   const beforeCount = await db.collections.messages.countDocuments()
   const message = 'a'.repeat(config.message.MAX_MESSAGE_LENGTH + 1)
 
-  const saveMessageMock = jest.mocked(logicMessages.saveMessage)
+  const saveMessageMock = vi.mocked(logicMessages.saveMessage)
   saveMessageMock.mockClear()
-  const addQueueToUsersMock = jest.mocked(addQueueToUsers)
+  const addQueueToUsersMock = vi.mocked(addQueueToUsers)
   addQueueToUsersMock.mockClear()
-  const addUnreadQueueMock = jest.mocked(addUnreadQueue)
+  const addUnreadQueueMock = vi.mocked(addUnreadQueue)
   addUnreadQueueMock.mockClear()
 
   await socket.sendMessage(userId.toHexString(), {
@@ -132,7 +143,7 @@ test('modifyMessage', async () => {
 
   const [created] = await Promise.all([message, user])
 
-  const addQueueToUsersMock = jest.mocked(addQueueToUsers)
+  const addQueueToUsersMock = vi.mocked(addQueueToUsers)
   addQueueToUsersMock.mockClear()
 
   await socket.modifyMessage(userId.toHexString(), {
@@ -145,12 +156,12 @@ test('modifyMessage', async () => {
     _id: created.insertedId
   })
 
-  expect(updated.message).toStrictEqual('modify')
-  expect(updated.roomId.toHexString()).toStrictEqual(roomId.toHexString())
-  expect(updated.userId.toHexString()).toStrictEqual(userId.toHexString())
-  expect(updated.createdAt.getTime()).toStrictEqual(createdAt.getTime())
-  expect(updated.updated).toStrictEqual(true)
-  expect(updated.updatedAt).not.toBeNull()
+  expect(updated?.message).toStrictEqual('modify')
+  expect(updated?.roomId.toHexString()).toStrictEqual(roomId.toHexString())
+  expect(updated?.userId.toHexString()).toStrictEqual(userId.toHexString())
+  expect(updated?.createdAt.getTime()).toStrictEqual(createdAt.getTime())
+  expect(updated?.updated).toStrictEqual(true)
+  expect(updated?.updatedAt).not.toBeNull()
 
   expect(addQueueToUsersMock.mock.calls.length).toStrictEqual(1)
 })
@@ -173,7 +184,7 @@ test('readMessage', async () => {
     })
   ])
 
-  const addMessageQueueMock = jest.mocked(addMessageQueue)
+  const addMessageQueueMock = vi.mocked(addMessageQueue)
   addMessageQueueMock.mockClear()
 
   await socket.readMessage(userId.toHexString(), {
@@ -183,8 +194,8 @@ test('readMessage', async () => {
 
   const updated = await db.collections.enter.findOne({ userId, roomId })
 
-  expect(updated.unreadCounter).toStrictEqual(0)
-  expect(updated.replied).toStrictEqual(0)
+  expect(updated?.unreadCounter).toStrictEqual(0)
+  expect(updated?.replied).toStrictEqual(0)
 
   expect(addMessageQueueMock.mock.calls.length).toStrictEqual(1)
 })
@@ -212,11 +223,11 @@ test('iine', async () => {
     _id: seed.insertedId
   })
 
-  expect(message.iine).toStrictEqual(2)
+  expect(message?.iine).toStrictEqual(2)
 })
 
 test('openRoom', async () => {
-  const queueMock = jest.mocked(addUpdateSearchRoomQueue)
+  const queueMock = vi.mocked(addUpdateSearchRoomQueue)
   queueMock.mockClear()
 
   const userId = new ObjectId()
@@ -236,13 +247,13 @@ test('openRoom', async () => {
     _id: insert.insertedId
   })
 
-  expect(updated.status).toStrictEqual(db.RoomStatusEnum.OPEN)
-  expect(updated.updatedBy).toStrictEqual(userId)
+  expect(updated?.status).toStrictEqual(db.RoomStatusEnum.OPEN)
+  expect(updated?.updatedBy).toStrictEqual(userId)
   expect(queueMock.call.length).toStrictEqual(1)
 })
 
 test('closeRoom', async () => {
-  const queueMock = jest.mocked(addUpdateSearchRoomQueue)
+  const queueMock = vi.mocked(addUpdateSearchRoomQueue)
   queueMock.mockClear()
 
   const userId = new ObjectId()
@@ -262,8 +273,8 @@ test('closeRoom', async () => {
     _id: insert.insertedId
   })
 
-  expect(updated.status).toStrictEqual(db.RoomStatusEnum.CLOSE)
-  expect(updated.updatedBy).toStrictEqual(userId)
+  expect(updated?.status).toStrictEqual(db.RoomStatusEnum.CLOSE)
+  expect(updated?.updatedBy).toStrictEqual(userId)
   expect(queueMock.call.length).toStrictEqual(1)
 })
 
@@ -353,12 +364,12 @@ test('sendVoteAnswer (second time)', async () => {
     _id: insertVote.insertedId
   })
 
-  expect(updated.answer).toStrictEqual(db.VoteAnswerEnum.NG)
+  expect(updated?.answer).toStrictEqual(db.VoteAnswerEnum.NG)
 })
 
 describe('sendVoteAnswer: BadRequest', () => {
-  let messageId: ObjectId = null
-  let userId: ObjectId = null
+  let messageId: ObjectId | null = null
+  let userId: ObjectId | null = null
 
   beforeEach(async () => {
     userId = new ObjectId()
@@ -384,15 +395,19 @@ describe('sendVoteAnswer: BadRequest', () => {
   })
 
   test('no messageId', async () => {
-    const before = await db.collections.voteAnswer.find({ messageId }).toArray()
+    const before = await db.collections.voteAnswer
+      .find({ messageId: messageId! })
+      .toArray()
 
-    await socket.sendVoteAnswer(userId.toHexString(), {
+    await socket.sendVoteAnswer(userId!.toHexString(), {
       cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
       index: 0,
       answer: db.VoteAnswerEnum.OK
     } as FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_SEND>)
 
-    const after = await db.collections.voteAnswer.find({ messageId }).toArray()
+    const after = await db.collections.voteAnswer
+      .find({ messageId: messageId! })
+      .toArray()
 
     expect(before.length).toStrictEqual(after.length)
   })
@@ -405,16 +420,17 @@ describe('sendVoteAnswer: BadRequest', () => {
       undefined
     ]
   ])('%s', async (_label, cmd, answer, index) => {
-    await socket.sendVoteAnswer(userId.toHexString(), {
-      messageId: messageId.toHexString(),
+    await socket.sendVoteAnswer(userId!.toHexString(), {
+      messageId: messageId!.toHexString(),
       cmd,
       answer,
+      // @ts-expect-error
       index
     })
 
     const answers = await db.collections.voteAnswer
       .find({
-        messageId: messageId
+        messageId: messageId!
       })
       .toArray()
 
@@ -474,7 +490,7 @@ test('fail: updateRoomDescription over length', async () => {
   const userId = new ObjectId()
   const roomId = new ObjectId()
 
-  const addQueueToUsersMock = jest.mocked(addQueueToUsers)
+  const addQueueToUsersMock = vi.mocked(addQueueToUsers)
   addQueueToUsersMock.mockClear()
 
   await socket.updateRoomDescription(userId.toHexString(), {

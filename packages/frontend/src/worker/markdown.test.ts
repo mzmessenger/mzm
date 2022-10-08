@@ -1,3 +1,4 @@
+import { test, expect } from 'vitest'
 import { Markdown } from './markdown'
 
 test.each([
@@ -13,23 +14,23 @@ test.each([
   ],
   [
     'simple link (top)',
-    'http://localhost',
-    '<p><a href="http://localhost">http://localhost</a></p>'
+    `http://${location.host}`,
+    `<p><a href="http://${location.host}">http://${location.host}</a></p>`
   ],
   [
     'simple link (room)',
-    'http://localhost/rooms/test',
-    '<p><a class="mzm-room-link" href="http://localhost/rooms/test">/rooms/test</a></p>'
+    `http://${location.host}/rooms/test`,
+    `<p><a class="mzm-room-link" href="http://${location.host}/rooms/test">/rooms/test</a></p>`
   ],
   [
     'simple  link (room:日本語)',
-    'http://localhost/rooms/要望室',
-    '<p><a class="mzm-room-link" href="http://localhost/rooms/%E8%A6%81%E6%9C%9B%E5%AE%A4">/rooms/要望室</a></p>'
+    `http://${location.host}/rooms/要望室`,
+    `<p><a class="mzm-room-link" href="http://${location.host}/rooms/%E8%A6%81%E6%9C%9B%E5%AE%A4">/rooms/要望室</a></p>`
   ],
   [
     'markdown link (room)',
-    '[localhost](https://localhost/rooms/test)',
-    '<p><a href="https://localhost/rooms/test">localhost</a></p>'
+    `[makrdownlink](https://${location.host}/rooms/test)`,
+    `<p><a href="https://${location.host}/rooms/test">makrdownlink</a></p>`
   ],
   [
     'marquee',

@@ -1,10 +1,6 @@
 module.exports = {
-  extends: [
-    'eslint:recommended',
-    'plugin:prettier/recommended',
-    'plugin:react-hooks/recommended'
-  ],
-  plugins: ['@typescript-eslint', 'react', 'react-hooks', 'jest'],
+  extends: ['eslint:recommended', 'prettier', 'plugin:react-hooks/recommended'],
+  plugins: ['@typescript-eslint', 'react', 'react-hooks'],
   parser: '@typescript-eslint/parser',
   parserOptions: {
     ecmaVersion: 2019,
@@ -17,8 +13,7 @@ module.exports = {
   env: {
     browser: true,
     es6: true,
-    node: true,
-    'jest/globals': true
+    node: true
   },
   rules: {
     'no-console': 'warn',

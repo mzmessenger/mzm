@@ -1,4 +1,4 @@
-import type { VoteStatusEnum } from './db'
+import type { VoteStatusEnum } from './db.js'
 
 export const TO_CLIENT_CMD = {
   CLIENT_RELOAD: 'client:reload',

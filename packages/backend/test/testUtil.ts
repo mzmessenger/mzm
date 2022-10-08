@@ -1,3 +1,4 @@
+import { vi } from 'vitest'
 import assert from 'assert'
 import { Request } from 'express'
 import { MongoClient, ObjectId } from 'mongodb'
@@ -7,13 +8,13 @@ import { RedisKey, RedisValue } from 'ioredis'
 
 export const createXaddMock = (xadd: typeof Redis.xadd) => {
   const mock =
-    jest.mocked<(key: RedisKey, ...args: RedisValue[]) => Promise<string>>(xadd)
+    vi.mocked<(key: RedisKey, ...args: RedisValue[]) => Promise<string>>(xadd)
   return mock
 }
 
 export const createXackMock = (xack: typeof Redis.xack) => {
   const mock =
-    jest.mocked<(key: RedisKey, ...args: RedisValue[]) => Promise<number>>(xack)
+    vi.mocked<(key: RedisKey, ...args: RedisValue[]) => Promise<number>>(xack)
 
   return mock
 }

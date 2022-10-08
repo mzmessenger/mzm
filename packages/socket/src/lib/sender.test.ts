@@ -1,11 +1,12 @@
-jest.mock('./logger')
+import { vi, test, expect } from 'vitest'
+vi.mock('./logger')
 import { ExtWebSocket } from '../types'
 import * as sender from './sender'
 
 test('removeSocket', () => {
   const id = 'id-1'
   const user = 'username'
-  const send = jest.fn()
+  const send = vi.fn()
   const socket = { id } as ExtWebSocket
 
   socket.send = send
@@ -19,7 +20,7 @@ test('removeSocket', () => {
 test('sendToUser', () => {
   sender.clear()
 
-  const send = jest.fn()
+  const send = vi.fn()
 
   const save = (id, user) => {
     const socket = { id } as ExtWebSocket

@@ -6,29 +6,18 @@
   "type": "module",
   "exports": {
     "./auth": "./dist/auth/index.js",
-    "./type/db": {
-      "import": "./dist/esm/type/db.js",
-      "require": "./dist/type/db.js"
-    },
-    "./type/socket": {
-      "import": "./dist/esm/type/socket.js",
-      "require": "./dist/type/socket.js"
-    },
-    "./type/api": {
-      "import": "./dist/esm/type/api.js",
-      "require": "./dist/type/api.js"
-    },
-    "./validator": {
-      "import": "./dist/esm/validator/index.js",
-      "require": "./dist/validator/index.js"
-    }
+    "./type/db": "./dist/type/db.js",
+    "./type/socket": "./dist/type/socket.js",
+    "./type/api": "./dist/type/api.js",
+    "./validator": "./dist/validator/index.js"
   },
   "scripts": {
     "format": "prettier --write auth type ./*.{js,json}",
     "build": "tsc --build tsconfig.json",
-    "build-esm": "tsc --build tsconfig.esm.json",
     "pretest": "eslint --ext .ts,.js auth type validator",
-    "test": "jest --maxWorkers=50% --config=./jest.config.js"
+    "lint": "eslint --ext .ts,.js auth type validator",
+    "test": "vitest run --config ./vitest.config.ts",
+    "test:watch": "vitest --config ./vitest.config.ts"
   },
   "license": "MIT",
   "dependencies": {

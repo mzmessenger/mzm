@@ -8,7 +8,7 @@ interface WrapFn {
 export const wrap = (fn: WrapFn) => {
   return (req: Request, res: Response, next: NextFunction) => {
     try {
-      fn(req)
+      return fn(req)
         .then((data) => res.status(200).json(data))
         .catch((e) => next(e))
     } catch (e) {

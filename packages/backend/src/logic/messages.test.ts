@@ -1,29 +1,31 @@
-jest.mock('../lib/logger')
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+vi.mock('../lib/logger')
 
 import { ObjectId } from 'mongodb'
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
-import { mongoSetup, dropCollection } from '../../jest/testUtil'
+import { mongoSetup, dropCollection } from '../../test/testUtil'
 import * as db from '../lib/db'
 import { saveMessage, getMessages } from './messages'
 import * as config from '../config'
 
-let mongoServer = null
-let mongoUri = null
+let mongoServer: MongoMemoryServer | null = null
+let mongoUri: string | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
   mongoUri = mongo.uri
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
-beforeEach(() => {
-  return dropCollection(mongoUri, db.COLLECTION_NAMES.MESSAGES)
+beforeEach(async () => {
+  await dropCollection(mongoUri!, db.COLLECTION_NAMES.MESSAGES)
 })
 
 test('saveMessage', async () => {
@@ -44,10 +46,10 @@ test('saveMessage', async () => {
 
   const found = await db.collections.messages.findOne({ _id: save.insertedId })
 
-  expect(found._id).toStrictEqual(save.insertedId)
-  expect(found.message).toStrictEqual(message)
-  expect(found.roomId.toHexString()).toStrictEqual(roomId.toHexString())
-  expect(found.userId.toHexString()).toStrictEqual(userId.toHexString())
+  expect(found?._id).toStrictEqual(save.insertedId)
+  expect(found?.message).toStrictEqual(message)
+  expect(found?.roomId.toHexString()).toStrictEqual(roomId.toHexString())
+  expect(found?.userId.toHexString()).toStrictEqual(userId.toHexString())
 })
 
 test.each([[''], ['a'.repeat(config.message.MAX_MESSAGE_LENGTH + 1)]])(
@@ -115,10 +117,10 @@ test('getMessages', async () => {
   for (const message of messages.messages) {
     expect(message.userId).toStrictEqual(userId.toHexString())
     expect(message.userAccount).toStrictEqual(account)
-    expect(messageMap.get(message.id).roomId.toHexString()).toStrictEqual(
+    expect(messageMap.get(message.id)?.roomId.toHexString()).toStrictEqual(
       roomId.toHexString()
     )
-    expect(message.iine).toStrictEqual(messageMap.get(message.id).iine)
+    expect(message.iine).toStrictEqual(messageMap.get(message.id)?.iine)
   }
 
   messages = await getMessages(roomId.toHexString(), messages.messages[0].id)
@@ -199,8 +201,8 @@ test('getMessages vote', async () => {
   expect(messages.messages.length).toStrictEqual(10)
 
   for (const message of messages.messages) {
-    expect(message.vote.questions.length).toStrictEqual(3)
-    expect(message.vote.status).toStrictEqual(VoteStatusEnum.OPEN)
+    expect(message.vote?.questions.length).toStrictEqual(3)
+    expect(message.vote?.status).toStrictEqual(VoteStatusEnum.OPEN)
   }
 })
 

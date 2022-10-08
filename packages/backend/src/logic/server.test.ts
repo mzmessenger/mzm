@@ -1,56 +1,58 @@
-jest.mock('../lib/logger')
-jest.mock('../lib/consumer/remove', () => {
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+vi.mock('../lib/logger')
+vi.mock('../lib/consumer/remove', () => {
   return {
-    initRemoveConsumerGroup: jest.fn(),
-    consumeRemove: jest.fn()
+    initRemoveConsumerGroup: vi.fn(),
+    consumeRemove: vi.fn()
   }
 })
-jest.mock('../lib/consumer/unread', () => {
+vi.mock('../lib/consumer/unread', () => {
   return {
-    initUnreadConsumerGroup: jest.fn(),
-    consumeUnread: jest.fn()
+    initUnreadConsumerGroup: vi.fn(),
+    consumeUnread: vi.fn()
   }
 })
-jest.mock('../lib/consumer/reply', () => {
+vi.mock('../lib/consumer/reply', () => {
   return {
-    initReplyConsumerGroup: jest.fn(),
-    consumeReply: jest.fn()
+    initReplyConsumerGroup: vi.fn(),
+    consumeReply: vi.fn()
   }
 })
-jest.mock('../lib/consumer/search/room', () => {
+vi.mock('../lib/consumer/search/room', () => {
   return {
-    initSearchRoomConsumerGroup: jest.fn(),
-    consumeSearchRooms: jest.fn()
+    initSearchRoomConsumerGroup: vi.fn(),
+    consumeSearchRooms: vi.fn()
   }
 })
-jest.mock('../lib/consumer/job', () => {
+vi.mock('../lib/consumer/job', () => {
   return {
-    initJobConsumerGroup: jest.fn(),
-    consumeJob: jest.fn()
+    initJobConsumerGroup: vi.fn(),
+    consumeJob: vi.fn()
   }
 })
-jest.mock('../lib/consumer/vote', () => {
+vi.mock('../lib/consumer/vote', () => {
   return {
-    initRenameConsumerGroup: jest.fn(),
-    consumeVote: jest.fn()
+    initRenameConsumerGroup: vi.fn(),
+    consumeVote: vi.fn()
   }
 })
-jest.mock('../lib/redis', () => {
+vi.mock('../lib/redis', () => {
   return {
     client: {
-      xadd: jest.fn()
+      xadd: vi.fn()
     },
-    lock: jest.fn(() => Promise.resolve(true)),
-    release: jest.fn()
+    lock: vi.fn(() => Promise.resolve(true)),
+    release: vi.fn()
   }
 })
-jest.mock('../lib/provider/index', () => {
+vi.mock('../lib/provider/index', () => {
   return {
-    addInitializeSearchRoomQueue: jest.fn()
+    addInitializeSearchRoomQueue: vi.fn()
   }
 })
 
-import { mongoSetup } from '../../jest/testUtil'
+import { mongoSetup } from '../../test/testUtil'
 import { init } from './server'
 import * as db from '../lib/db'
 import * as config from '../config'
@@ -62,17 +64,17 @@ import * as consumeJob from '../lib/consumer/job'
 import * as consumeVote from '../lib/consumer/vote'
 import { addInitializeSearchRoomQueue } from '../lib/provider/index'
 
-let mongoServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test('init', async () => {
@@ -91,10 +93,10 @@ test('init', async () => {
   expect.assertions(mocks.length * 2 + 3)
 
   for (const [init, consume] of mocks) {
-    const initMock = jest.mocked(init)
+    const initMock = vi.mocked(init)
     initMock.mockClear()
     initMock.mockResolvedValue()
-    const consumeMock = jest.mocked(consume)
+    const consumeMock = vi.mocked(consume)
     consumeMock.mockClear()
     consumeMock.mockResolvedValue()
   }
