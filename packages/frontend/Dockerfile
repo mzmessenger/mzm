@@ -4,12 +4,7 @@ FROM node:16 as builder
 WORKDIR /usr/app
 
 COPY ./package.json ./package-lock.json ./
-COPY ./packages/shared/package.json \
-  ./packages/shared/tsconfig.json \
-  ./packages/shared/auth \
-  ./packages/shared/type \
-  ./packages/shared/validator \
-  ./packages/shared/
+COPY ./packages/shared ./packages/shared
 COPY ./packages/frontend/package.json \
   ./packages/frontend/tsconfig.json \
   ./packages/frontend/vite.config.ts \

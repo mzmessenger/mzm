@@ -12,6 +12,6 @@
       "mzm-shared": ["../shared"]
     }
   },
-  "exclude": ["node_modules", "**/*.test.ts", "./jest/*"],
+  "exclude": ["node_modules", "**/*.test.ts", "./vitest.config.ts"],
   "references": [{ "path": "../shared" }]
 }
