@@ -1,35 +1,37 @@
-jest.mock('../lib/logger')
-jest.mock('../lib/redis', () => {
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+vi.mock('../lib/logger')
+vi.mock('../lib/redis', () => {
   return {
-    lock: jest.fn(() => Promise.resolve(true)),
-    release: jest.fn()
+    lock: vi.fn(() => Promise.resolve(true)),
+    release: vi.fn()
   }
 })
-jest.mock('../lib/elasticsearch/index', () => {
+vi.mock('../lib/elasticsearch/index', () => {
   return {
     client: {}
   }
 })
 
 import { ObjectId, WithId } from 'mongodb'
-import { mongoSetup, createRequest } from '../../jest/testUtil'
+import { mongoSetup, createRequest } from '../../test/testUtil'
 import * as config from '../config'
 import * as db from '../lib/db'
 import { initGeneral } from '../logic/rooms'
 import { BadRequest } from '../lib/errors'
 import { exitRoom, getUsers } from './rooms'
 
-let mongoServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test('exitRoom fail (general)', async () => {
@@ -44,12 +46,12 @@ test('exitRoom fail (general)', async () => {
 
   await db.collections.enter.insertOne({
     userId: userId,
-    roomId: general._id,
+    roomId: general!._id,
     unreadCounter: 0,
     replied: 0
   })
 
-  const body = { room: general._id.toHexString() }
+  const body = { room: general!._id.toHexString() }
   const req = createRequest(userId, { body })
 
   try {

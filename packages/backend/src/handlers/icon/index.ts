@@ -3,16 +3,17 @@ import { Request } from 'express'
 import { request } from 'undici'
 import { ObjectId } from 'mongodb'
 import { RESPONSE } from 'mzm-shared/type/api'
-import { NotFound, BadRequest } from '../../lib/errors'
-import { popParam, getRequestUserId } from '../../lib/utils'
-import * as storage from '../../lib/storage'
-import * as db from '../../lib/db'
-import { logger } from '../../lib/logger'
-import * as config from '../../config'
-import { StreamWrapResponse } from '../../types'
-import { isValidMimetype, createVersion } from './internal'
+import imageSize from 'image-size'
+import { NotFound, BadRequest } from '../../lib/errors.js'
+import { popParam, getRequestUserId } from '../../lib/utils.js'
+import * as storage from '../../lib/storage.js'
+import * as db from '../../lib/db.js'
+import { logger } from '../../lib/logger.js'
+import * as config from '../../config.js'
+import { StreamWrapResponse } from '../../types.js'
+import { isValidMimetype, createVersion } from './internal.js'
 
-const sizeOf = promisify(require('image-size'))
+const sizeOf = promisify(imageSize)
 
 const returnIconStream = async (key: string): StreamWrapResponse => {
   const head = await storage.headObject({ Key: key })
@@ -164,8 +165,8 @@ export const uploadRoomIcon = async (
   const dimensions = await sizeOf(file.path)
 
   if (
-    dimensions.width > config.icon.ROOM_ICON_PREFIX ||
-    dimensions.height > config.icon.ROOM_ICON_PREFIX
+    dimensions.width > config.icon.MAX_ROOM_ICON_SIZE ||
+    dimensions.height > config.icon.MAX_ROOM_ICON_SIZE
   ) {
     throw new BadRequest(`size over: ${config.icon.ROOM_ICON_PREFIX}`)
   } else if (dimensions.width !== dimensions.height) {

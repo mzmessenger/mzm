@@ -1,9 +1,10 @@
-jest.mock('undici', () => {
-  return { request: jest.fn() }
+import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+vi.mock('undici', () => {
+  return { request: vi.fn() }
 })
-jest.mock('image-size')
-jest.mock('../lib/logger')
-jest.mock('../lib/storage')
+vi.mock('image-size')
+vi.mock('../lib/logger')
+vi.mock('../lib/storage')
 
 import { Readable } from 'stream'
 import type { IncomingHttpHeaders } from 'http'
@@ -11,7 +12,7 @@ import type { MongoMemoryServer } from 'mongodb-memory-server'
 import { ObjectId, WithId } from 'mongodb'
 import { request } from 'undici'
 import sizeOf from 'image-size'
-import { mongoSetup, createRequest } from '../../jest/testUtil'
+import { mongoSetup, createRequest } from '../../test/testUtil'
 import * as db from '../lib/db'
 import * as storage from '../lib/storage'
 import * as config from '../config'
@@ -33,6 +34,7 @@ const createHeadObjectMockValue = (options: {
     ContentLength: options.ContentLength,
     LastModified: options.LastModified,
     CacheControl: options.CacheControl,
+    // @ts-expect-error
     $response: undefined
   }
 
@@ -42,35 +44,44 @@ const createHeadObjectMockValue = (options: {
 const createGetObjectMockValue = (options: { createReadStream: Readable }) => {
   const getObject: Awaited<ReturnType<typeof storage.getObject>> = {
     createReadStream: () => options.createReadStream,
+    // @ts-expect-error
     abort: undefined,
+    // @ts-expect-error
     eachPage: undefined,
+    // @ts-expect-error
     isPageable: undefined,
+    // @ts-expect-error
     send: undefined,
+    // @ts-expect-error
     on: undefined,
+    // @ts-expect-error
     onAsync: undefined,
+    // @ts-expect-error
     promise: undefined,
+    // @ts-expect-error
     startTime: undefined,
+    // @ts-expect-error
     httpRequest: undefined
   }
 
   return getObject
 }
 
-let mongoServer: MongoMemoryServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 beforeEach(() => {
-  jest.resetAllMocks()
+  vi.resetAllMocks()
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test('getUserIcon from storage', async () => {
@@ -87,7 +98,7 @@ test('getUserIcon from storage', async () => {
 
   const req = createRequest(null, { params: { account, version } })
 
-  const headObjectMock = jest.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject)
   const headers = createHeadObjectMockValue({
     ETag: 'etag',
     ContentType: 'image/png',
@@ -96,7 +107,7 @@ test('getUserIcon from storage', async () => {
     CacheControl: 'max-age=604800'
   })
   headObjectMock.mockResolvedValueOnce(headers)
-  const getObjectMock = jest.mocked(storage.getObject)
+  const getObjectMock = vi.mocked(storage.getObject)
   const readableStream = new Readable()
   const getObject = createGetObjectMockValue({
     createReadStream: readableStream
@@ -113,7 +124,7 @@ test('getUserIcon from storage', async () => {
     `${headers.ContentLength}`
   )
   expect(res.headers['last-modified']).toStrictEqual(
-    headers.LastModified.toUTCString()
+    headers.LastModified?.toUTCString()
   )
   expect(res.headers['cache-control']).toStrictEqual(headers.CacheControl)
   expect(res.stream).toStrictEqual(readableStream)
@@ -137,9 +148,9 @@ test.each([
     }
     await db.collections.users.insertOne(user)
 
-    const headObjectMock = jest.mocked(storage.headObject)
-    const getObjectMock = jest.mocked(storage.getObject)
-    const requestMock = jest.mocked(request)
+    const headObjectMock = vi.mocked(storage.headObject)
+    const getObjectMock = vi.mocked(storage.getObject)
+    const requestMock = vi.mocked(request)
     const headers: IncomingHttpHeaders = {
       ETag: 'etag',
       'content-type': 'image/png',
@@ -152,8 +163,10 @@ test.each([
       headers,
       body: readableStream,
       statusCode: 200,
+      // @ts-expect-error
       trailers: undefined,
       opaque: undefined,
+      // @ts-expect-error
       context: undefined
     })
 
@@ -187,9 +200,9 @@ test('getUserIcon from identicon: not found on storage', async () => {
   }
   await db.collections.users.insertOne(user)
 
-  const headObjectMock = jest.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject)
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
-  const requestMock = jest.mocked(request)
+  const requestMock = vi.mocked(request)
   const headers: IncomingHttpHeaders = {
     ETag: 'etag',
     'Content-Type': 'image/png',
@@ -202,13 +215,15 @@ test('getUserIcon from identicon: not found on storage', async () => {
     headers,
     body: readableStream,
     statusCode: 200,
+    // @ts-expect-error
     trailers: undefined,
     opaque: undefined,
+    // @ts-expect-error
     context: undefined
   })
 
   const req = createRequest(null, {
-    params: { account, version: user.icon.version }
+    params: { account, version: user.icon?.version || '' }
   })
 
   const res = await icon.getUserIcon(req)
@@ -227,7 +242,7 @@ test('getUserIcon BadRequest: no account', async () => {
 
   const version = '12345'
 
-  const req = createRequest(null, { params: { account: null, version } })
+  const req = createRequest(null, { params: { account: '', version } })
 
   try {
     await icon.getUserIcon(req)
@@ -245,14 +260,14 @@ test('uploadUserIcon', async () => {
     roomOrder: []
   })
 
-  const putObjectMock = jest.mocked(storage.putObject)
+  const putObjectMock = vi.mocked(storage.putObject)
   putObjectMock.mockResolvedValueOnce({} as any)
 
-  const sizeOfMock = jest.mocked(sizeOf)
+  const sizeOfMock = vi.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, { width: 100, height: 100 })
   })
-  const createBodyFromFilePath = jest.mocked(storage.createBodyFromFilePath)
+  const createBodyFromFilePath = vi.mocked(storage.createBodyFromFilePath)
   const readableStream = new Readable() as ReturnType<
     typeof storage.createBodyFromFilePath
   >
@@ -273,8 +288,8 @@ test('uploadUserIcon', async () => {
 
   const user = await db.collections.users.findOne({ _id: userId })
 
-  expect(typeof user.icon.version).toStrictEqual('string')
-  expect(res.version).toStrictEqual(user.icon.version)
+  expect(typeof user?.icon?.version).toStrictEqual('string')
+  expect(res.version).toStrictEqual(user?.icon?.version)
 })
 
 test.each([['image/gif'], ['image/svg+xml']])(
@@ -317,7 +332,7 @@ test('uploadUserIcon validation: size over', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = jest.mocked(sizeOf)
+  const sizeOfMock = vi.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_USER_ICON_SIZE + 1,
@@ -348,7 +363,7 @@ test('uploadUserIcon validation: not square', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = jest.mocked(sizeOf)
+  const sizeOfMock = vi.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_USER_ICON_SIZE - 1,
@@ -373,7 +388,9 @@ test('getRoomIcon', async () => {
   await db.collections.rooms.insertOne({
     _id: roomId,
     name,
+    // @ts-expect-error
     createdBy: null,
+    // @ts-expect-error
     updatedBy: null,
     icon: { key: 'iconkey', version },
     status: db.RoomStatusEnum.CLOSE
@@ -381,7 +398,7 @@ test('getRoomIcon', async () => {
 
   const req = createRequest(null, { params: { roomname: name, version } })
 
-  const headObjectMock = jest.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject)
   const headers = createHeadObjectMockValue({
     ETag: 'etag',
     ContentType: 'image/png',
@@ -390,7 +407,7 @@ test('getRoomIcon', async () => {
     CacheControl: 'max-age=604800'
   })
   headObjectMock.mockResolvedValueOnce(headers)
-  const getObjectMock = jest.mocked(storage.getObject)
+  const getObjectMock = vi.mocked(storage.getObject)
   const readableStream = new Readable()
   const getObject = createGetObjectMockValue({
     createReadStream: readableStream
@@ -407,7 +424,7 @@ test('getRoomIcon', async () => {
     `${headers.ContentLength}`
   )
   expect(res.headers['last-modified']).toStrictEqual(
-    headers.LastModified.toUTCString()
+    headers.LastModified?.toUTCString()
   )
   expect(res.headers['cache-control']).toStrictEqual(headers.CacheControl)
   expect(res.stream).toStrictEqual(readableStream)
@@ -418,7 +435,7 @@ test('getRoomIcon BadRequest: no room name', async () => {
 
   const version = '12345'
 
-  const req = createRequest(null, { params: { roomname: null, version } })
+  const req = createRequest(null, { params: { roomname: '', version } })
 
   try {
     await icon.getRoomIcon(req)
@@ -437,6 +454,7 @@ test('getRoomIcon NotFound: different version', async () => {
   await db.collections.rooms.insertOne({
     _id: roomId,
     name: name,
+    // @ts-expect-error
     createdBy: null,
     icon: { key: 'iconkey', version },
     status: db.RoomStatusEnum.CLOSE
@@ -463,12 +481,13 @@ test('getRoomIcon NotFound: not found on storage', async () => {
   await db.collections.rooms.insertOne({
     _id: roomId,
     name: name,
+    // @ts-expect-error
     createdBy: null,
     icon: { key: 'iconkey', version },
     status: db.RoomStatusEnum.CLOSE
   })
 
-  const headObjectMock = jest.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject)
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
 
   const req = createRequest(null, {
@@ -489,21 +508,22 @@ test('uploadRoomIcon', async () => {
   await db.collections.rooms.insertOne({
     _id: roomId,
     name,
+    // @ts-expect-error
     createdBy: null,
     status: db.RoomStatusEnum.CLOSE
   })
 
-  const putObjectMock = jest.mocked(storage.putObject)
+  const putObjectMock = vi.mocked(storage.putObject)
   putObjectMock.mockResolvedValueOnce({} as any)
 
-  const sizeOfMock = jest.mocked(sizeOf)
+  const sizeOfMock = vi.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_USER_ICON_SIZE,
       height: config.icon.MAX_USER_ICON_SIZE
     })
   })
-  const createBodyFromFilePath = jest.mocked(storage.createBodyFromFilePath)
+  const createBodyFromFilePath = vi.mocked(storage.createBodyFromFilePath)
   const readableStream = new Readable() as ReturnType<
     typeof storage.createBodyFromFilePath
   >
@@ -527,8 +547,8 @@ test('uploadRoomIcon', async () => {
 
   const room = await db.collections.rooms.findOne({ _id: roomId })
 
-  expect(typeof room.icon.version).toStrictEqual('string')
-  expect(res.version).toStrictEqual(room.icon.version)
+  expect(typeof room?.icon?.version).toStrictEqual('string')
+  expect(res.version).toStrictEqual(room?.icon?.version)
 })
 
 test.each([['image/gif'], ['image/svg+xml']])(
@@ -572,7 +592,7 @@ test('uploadRoomIcon: validation: size over ', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = jest.mocked(sizeOf)
+  const sizeOfMock = vi.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_ROOM_ICON_SIZE + 1,
@@ -603,7 +623,7 @@ test('uploadUserIcon validation: not square', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = jest.mocked(sizeOf)
+  const sizeOfMock = vi.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_ROOM_ICON_SIZE - 1,

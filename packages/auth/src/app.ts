@@ -7,7 +7,7 @@ import connectRedis from 'connect-redis'
 import { Strategy as TwitterStrategy } from 'passport-twitter'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import session from 'express-session'
-import { logger } from './lib/logger'
+import { logger } from './lib/logger.js'
 import {
   TWITTER_CONSUMER_KEY,
   TWITTER_CONSUMER_SECRET,
@@ -17,8 +17,8 @@ import {
   GITHUB_CALLBACK_URL,
   TRUST_PROXY,
   SESSION_PARSER
-} from './config'
-import * as handlers from './handlers'
+} from './config.js'
+import * as handlers from './handlers.js'
 
 type Options = {
   client: Redis

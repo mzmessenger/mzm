@@ -1,7 +1,7 @@
 import fs from 'fs'
 import { Readable } from 'stream'
 import AWS from 'aws-sdk'
-import * as config from '../config'
+import * as config from '../config.js'
 
 const credentials = new AWS.Credentials({
   accessKeyId: config.aws.AWS_ACCESS_KEY_ID,

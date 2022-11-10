@@ -1,15 +1,16 @@
-jest.mock('undici', () => {
-  return { request: jest.fn() }
-})
-jest.mock('../../lib/logger')
-jest.mock('../../lib/storage')
-
-import { Readable } from 'stream'
 import type { IncomingHttpHeaders } from 'http'
 import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, beforeEach, afterAll } from 'vitest'
+vi.mock('undici', () => {
+  return { request: vi.fn() }
+})
+vi.mock('../../lib/logger')
+vi.mock('../../lib/storage')
+
+import { Readable } from 'stream'
 import { ObjectId, WithId } from 'mongodb'
 import { request } from 'undici'
-import { mongoSetup, createRequest } from '../../../jest/testUtil'
+import { mongoSetup, createRequest } from '../../../test/testUtil'
 import { createGetObjectMockValue, createHeadObjectMockValue } from './testUtil'
 import * as db from '../../lib/db'
 import * as storage from '../../lib/storage'
@@ -18,21 +19,21 @@ import { getUserIcon } from './index'
 
 type ResponseBody = Awaited<ReturnType<typeof request>>['body']
 
-let mongoServer: MongoMemoryServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 beforeEach(() => {
-  jest.resetAllMocks()
+  vi.resetAllMocks()
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test('getUserIcon from storage', async () => {
@@ -49,7 +50,7 @@ test('getUserIcon from storage', async () => {
 
   const req = createRequest(null, { params: { account, version } })
 
-  const headObjectMock = jest.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject)
   const headers = createHeadObjectMockValue({
     ETag: 'etag',
     ContentType: 'image/png',
@@ -58,7 +59,7 @@ test('getUserIcon from storage', async () => {
     CacheControl: 'max-age=604800'
   })
   headObjectMock.mockResolvedValueOnce(headers)
-  const getObjectMock = jest.mocked(storage.getObject)
+  const getObjectMock = vi.mocked(storage.getObject)
   const readableStream = new Readable()
   const getObject = createGetObjectMockValue({
     createReadStream: readableStream
@@ -75,7 +76,7 @@ test('getUserIcon from storage', async () => {
     `${headers.ContentLength}`
   )
   expect(res.headers['last-modified']).toStrictEqual(
-    headers.LastModified.toUTCString()
+    headers.LastModified?.toUTCString()
   )
   expect(res.headers['cache-control']).toStrictEqual(headers.CacheControl)
   expect(res.stream).toStrictEqual(readableStream)
@@ -99,9 +100,9 @@ test.each([
     }
     await db.collections.users.insertOne(user)
 
-    const headObjectMock = jest.mocked(storage.headObject)
-    const getObjectMock = jest.mocked(storage.getObject)
-    const requestMock = jest.mocked(request)
+    const headObjectMock = vi.mocked(storage.headObject)
+    const getObjectMock = vi.mocked(storage.getObject)
+    const requestMock = vi.mocked(request)
     const headers: IncomingHttpHeaders = {
       ETag: 'etag',
       'content-type': 'image/png',
@@ -114,8 +115,10 @@ test.each([
       headers,
       body: readableStream,
       statusCode: 200,
+      // @ts-expect-error
       trailers: undefined,
       opaque: undefined,
+      // @ts-expect-error
       context: undefined
     })
 
@@ -149,9 +152,9 @@ test('getUserIcon from identicon: not found on storage', async () => {
   }
   await db.collections.users.insertOne(user)
 
-  const headObjectMock = jest.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject)
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
-  const requestMock = jest.mocked(request)
+  const requestMock = vi.mocked(request)
   const headers: IncomingHttpHeaders = {
     ETag: 'etag',
     'Content-Type': 'image/png',
@@ -164,13 +167,15 @@ test('getUserIcon from identicon: not found on storage', async () => {
     headers,
     body: readableStream,
     statusCode: 200,
+    // @ts-expect-error
     trailers: undefined,
     opaque: undefined,
+    // @ts-expect-error
     context: undefined
   })
 
   const req = createRequest(null, {
-    params: { account, version: user.icon.version }
+    params: { account, version: user?.icon?.version ?? '' }
   })
 
   const res = await getUserIcon(req)
@@ -189,7 +194,7 @@ test('getUserIcon BadRequest: no account', async () => {
 
   const version = '12345'
 
-  const req = createRequest(null, { params: { account: null, version } })
+  const req = createRequest(null, { params: { account: '', version } })
 
   try {
     await getUserIcon(req)

@@ -1,6 +1,6 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
-import { MONGODB_URI } from '../config'
-import { logger } from './logger'
+import { MONGODB_URI } from '../config.js'
+import { logger } from './logger.js'
 
 export const collections: {
   users: Collection<User>

@@ -1,8 +1,8 @@
 import { Request, Response, NextFunction } from 'express'
 import { HEADERS, requestAuthServer } from 'mzm-shared/auth'
-import { AUTH_SERVER } from '../config'
-import * as HttpErrors from '../lib/errors'
-import { logger } from '../lib/logger'
+import { AUTH_SERVER } from '../config.js'
+import * as HttpErrors from '../lib/errors.js'
+import { logger } from '../lib/logger.js'
 
 const allHttpErrors = Object.keys(HttpErrors).map((err) => HttpErrors[err])
 

@@ -1,14 +1,15 @@
-jest.mock('../logger')
-jest.mock('../redis', () => {
+import { vi, test, expect } from 'vitest'
+vi.mock('../logger')
+vi.mock('../redis', () => {
   return {
     client: {
-      xadd: jest.fn()
+      xadd: vi.fn()
     }
   }
 })
 import { ObjectId } from 'mongodb'
 import { ToClientType } from 'mzm-shared/type/socket'
-import { createXaddMock } from '../../../jest/testUtil'
+import { createXaddMock } from '../../../test/testUtil'
 import { client } from '../redis'
 import * as config from '../../config'
 import { addQueueToUsers, addUnreadQueue, addRepliedQueue } from './index'
@@ -21,7 +22,7 @@ test('addQueueToUsers', async () => {
   const users = ['5cc9d148139370d11b706624']
 
   const queue: ToClientType = {
-    user: null,
+    user: '',
     cmd: 'rooms',
     rooms: [],
     roomOrder: []

@@ -1,10 +1,10 @@
 import { ObjectId, WithId } from 'mongodb'
 import { Request, Response } from 'express'
 import { HEADERS } from 'mzm-shared/auth'
-import * as db from './lib/db'
-import { logger } from './lib/logger'
-import { redis } from './lib/redis'
-import { REMOVE_STREAM } from './config'
+import * as db from './lib/db.js'
+import { logger } from './lib/logger.js'
+import { redis } from './lib/redis.js'
+import { REMOVE_STREAM } from './config.js'
 
 type Serialized = WithId<db.User> & Request['user']
 type Deserialized = string

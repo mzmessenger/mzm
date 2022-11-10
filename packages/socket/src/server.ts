@@ -1,10 +1,10 @@
 import cluster from 'cluster'
-import WebSocket from 'ws'
+import { WebSocketServer } from 'ws'
 import { once } from 'events'
-import { WORKER_NUM, PORT } from './config'
-import logger from './lib/logger'
-import redis from './lib/redis'
-import { createApp } from './app'
+import { WORKER_NUM, PORT } from './config.js'
+import logger from './lib/logger.js'
+import redis from './lib/redis.js'
+import { createApp } from './app.js'
 
 if (cluster.isPrimary) {
   for (let i = 0; i < WORKER_NUM; i++) {
@@ -27,7 +27,7 @@ if (cluster.isPrimary) {
 
     await once(redis, 'ready')
 
-    const wss = new WebSocket.Server(
+    const wss = new WebSocketServer(
       {
         port: PORT
       },

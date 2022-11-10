@@ -1,3 +1,4 @@
+import { test, expect } from 'vitest'
 import { popParam, repliedAccounts } from './utils'
 
 test.each([
@@ -11,6 +12,7 @@ test.each([
   ['  aaaa', 'aaaa'],
   ['&aa%><', '&amp;aa%&gt;&lt;']
 ])('popParam (%s)', (arg, answer) => {
+  // @ts-expect-error
   const pop = popParam(arg)
   expect(pop).toStrictEqual(answer)
 })

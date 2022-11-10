@@ -1,10 +1,10 @@
 import { ObjectId } from 'mongodb'
-import { logger } from '../logger'
-import { lock, release } from '../redis'
-import * as config from '../../config'
-import * as db from '../db'
-import { client as es } from './index'
-import { createRoomIconPath } from '../utils'
+import { logger } from '../logger.js'
+import { lock, release } from '../redis.js'
+import * as config from '../../config.js'
+import * as db from '../db.js'
+import { client as es } from './index.js'
+import { createRoomIconPath } from '../utils.js'
 
 const settings = {
   index: { max_ngram_diff: 2 },

@@ -2,12 +2,12 @@ import type WebSocket from 'ws'
 import { v4 as uuid } from 'uuid'
 import { requestAuthServer } from 'mzm-shared/auth'
 import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
-import { requestSocketAPI } from './lib/req'
-import { saveSocket, removeSocket } from './lib/sender'
-import { consume } from './lib/consumer'
-import logger from './lib/logger'
-import { AUTH_SERVER } from './config'
-import { ExtWebSocket } from './types'
+import { requestSocketAPI } from './lib/req.js'
+import { saveSocket, removeSocket } from './lib/sender.js'
+import { consume } from './lib/consumer.js'
+import logger from './lib/logger.js'
+import { AUTH_SERVER } from './config.js'
+import { ExtWebSocket } from './types.js'
 
 export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
   consume()

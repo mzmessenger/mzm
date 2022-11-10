@@ -12,7 +12,7 @@ COPY ./packages/frontend/package.json \
 COPY ./packages/frontend/src/ ./packages/frontend/src/
 
 RUN npm install -w packages/frontend -w packages/shared
-RUN npm run build-esm -w packages/shared
+RUN npm run build -w packages/shared
 RUN npm run build -w packages/frontend
 
 # https://cloud.google.com/community/tutorials/deploy-react-nginx-cloud-run

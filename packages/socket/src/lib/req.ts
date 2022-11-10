@@ -1,7 +1,7 @@
 import { request } from 'undici'
 import { HEADERS } from 'mzm-shared/auth'
-import { INTERNAL_API_URL } from '../config'
-import logger from './logger'
+import { INTERNAL_API_URL } from '../config.js'
+import logger from './logger.js'
 
 // todo: retry
 export const requestSocketAPI = async (

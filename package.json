@@ -6,10 +6,11 @@
   ],
   "scripts": {
     "test": "npm test --workspaces --if-present",
+    "lint": "npm run lint --workspaces --if-present",
+    "format": "npm run format --workspaces --if-present",
     "start-auth": "npm start -w packages/auth",
     "start-socket": "npm start -w packages/socket",
     "start-backend": "npm start -w packages/backend",
-    "prestart-frontend": "npm run build-esm -w packages/shared",
     "start-frontend": "npm start -w packages/frontend",
     "build-docker-image-auth": "docker build -f packages/auth/Dockerfile -t mzm-auth .",
     "build-docker-image-socket": "docker build -f packages/socket/Dockerfile -t mzm-socket .",
@@ -17,17 +18,14 @@
     "build-docker-image-frontend": "docker build -f packages/frontend/Dockerfile -t mzm-frontend ."
   },
   "devDependencies": {
-    "@types/jest": "^28.1.1",
-    "@typescript-eslint/eslint-plugin": "^5.27.1",
-    "@typescript-eslint/parser": "^5.27.1",
-    "esbuild": "^0.14.43",
+    "@typescript-eslint/eslint-plugin": "^5.42.1",
+    "@typescript-eslint/parser": "^5.42.1",
+    "esbuild": "^0.15.13",
     "esbuild-register": "^3.3.3",
-    "eslint": "^8.17.0",
+    "eslint": "^8.27.0",
     "eslint-config-prettier": "^8.5.0",
-    "eslint-plugin-jest": "^26.5.3",
-    "eslint-plugin-prettier": "^4.0.0",
-    "jest": "^28.1.1",
-    "prettier": "^2.6.2",
-    "ts-jest": "^28.0.4"
+    "eslint-plugin-prettier": "^4.2.1",
+    "prettier": "^2.7.1",
+    "vitest": "^0.25.0"
   }
 }

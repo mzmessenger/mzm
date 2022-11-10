@@ -1,8 +1,9 @@
-import React, { lazy } from 'react'
+import React, { lazy, Suspense } from 'react'
 import { useUi } from '../contexts/ui/hooks'
 import { Menu } from '../components/Menu'
 import { PageWrapper } from '../components/PageWrapper'
 import { TopContent } from '../components/TopContent'
+// import Settings from '../components/Settings'
 
 const Top = () => {
   const { isOpenSettings } = useUi()
@@ -12,7 +13,9 @@ const Top = () => {
   return (
     <PageWrapper>
       {isOpenSettings ? (
-        <Settings />
+        <Suspense>
+          <Settings />
+        </Suspense>
       ) : (
         <>
           <TopContent />

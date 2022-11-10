@@ -3,6 +3,8 @@ import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vite'
 import path from 'path'
 
+const dirname = path.dirname(new URL(import.meta.url).pathname)
+
 export default defineConfig({
   plugins: [
     react(),
@@ -45,7 +47,7 @@ export default defineConfig({
   build: {
     emptyOutDir: true,
     sourcemap: true,
-    outDir: path.resolve(__dirname, 'dist')
+    outDir: path.resolve(dirname, 'dist')
   },
   root: path.resolve(__dirname, 'src'),
   server: {

@@ -1,29 +1,31 @@
-jest.mock('../lib/logger')
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+vi.mock('../lib/logger')
 
 import { ObjectId } from 'mongodb'
 import type { REQUEST } from 'mzm-shared/type/api'
-import { mongoSetup, dropCollection, createRequest } from '../../jest/testUtil'
+import { mongoSetup, dropCollection, createRequest } from '../../test/testUtil'
 import { BadRequest, NotFound } from '../lib/errors'
 import * as db from '../lib/db'
 import { update, getUserInfo, updateAccount } from './users'
 
-let mongoServer = null
-let mongoUri = null
+let mongoServer: MongoMemoryServer | null = null
+let mongoUri: string | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
   mongoUri = mongo.uri
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 beforeEach(async () => {
-  return dropCollection(mongoUri, db.COLLECTION_NAMES.MESSAGES)
+  dropCollection(mongoUri!, db.COLLECTION_NAMES.MESSAGES)
 })
 
 test('update', async () => {
@@ -41,9 +43,9 @@ test('update', async () => {
 
   const found = await db.collections.users.findOne({ _id: userId })
 
-  expect(user.id).toStrictEqual(found._id.toHexString())
-  expect(user.account).toStrictEqual(found.account)
-  expect(found.account).toStrictEqual(body.account)
+  expect(user.id).toStrictEqual(found?._id.toHexString())
+  expect(user.account).toStrictEqual(found?.account)
+  expect(found?.account).toStrictEqual(body.account)
 })
 
 test('update failed: exists account', async () => {
@@ -79,17 +81,21 @@ test('getUserInfo', async () => {
 
   const found = await db.collections.users.findOne({ _id: userId })
 
-  expect(user.id).toStrictEqual(found._id.toHexString())
-  expect(user.account).toStrictEqual(found.account)
+  expect(user.id).toStrictEqual(found?._id.toHexString())
+  expect(user.account).toStrictEqual(found?.account)
 })
 
 test('getUserInfo before signUp', async () => {
   expect.assertions(1)
 
   const userId = new ObjectId()
-  const account = null
+  const account = ''
 
-  await db.collections.users.insertOne({ _id: userId, account, roomOrder: [] })
+  await db.collections.users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
 
   const req = createRequest(userId, {})
 

@@ -1,33 +1,35 @@
-jest.mock('../lib/logger')
-jest.mock('../lib/redis', () => {
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+vi.mock('../lib/logger')
+vi.mock('../lib/redis', () => {
   return {
-    lock: jest.fn(() => Promise.resolve(true)),
-    release: jest.fn()
+    lock: vi.fn(() => Promise.resolve(true)),
+    release: vi.fn()
   }
 })
 
 import { ObjectId } from 'mongodb'
-import { mongoSetup } from '../../jest/testUtil'
+import { mongoSetup } from '../../test/testUtil'
 import * as config from '../config'
 import * as db from '../lib/db'
 import * as redis from '../lib/redis'
 import { initGeneral, enterRoom, isValidateRoomName } from './rooms'
 
-let mongoServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test('initGeneral', async () => {
-  const release = jest.mocked(redis.release)
+  const release = vi.mocked(redis.release)
   release.mockClear()
 
   let general = await db.collections.rooms
@@ -67,19 +69,19 @@ test('initGeneral', async () => {
   const updated = await db.collections.rooms.findOne({
     _id: general[0]._id
   })
-  expect(updated.name).toStrictEqual(config.room.GENERAL_ROOM_NAME)
-  expect(updated.status).toStrictEqual(db.RoomStatusEnum.OPEN)
+  expect(updated?.name).toStrictEqual(config.room.GENERAL_ROOM_NAME)
+  expect(updated?.status).toStrictEqual(db.RoomStatusEnum.OPEN)
 })
 
 test('initGeneral (locked)', async () => {
-  const lock = jest.mocked(redis.lock)
+  const lock = vi.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValue(false)
-  const release = jest.mocked(redis.release)
+  const release = vi.mocked(redis.release)
   release.mockClear()
 
   const originUpdate = db.collections.rooms.updateOne
-  const updateMock = jest.fn()
+  const updateMock = vi.fn()
   db.collections.rooms.updateOne = updateMock
 
   await initGeneral()

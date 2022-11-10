@@ -1,3 +1,4 @@
+import { test, expect } from 'vitest'
 import { isValidMimetype } from './internal'
 
 test.each([['image/png'], ['image/jpeg']])(

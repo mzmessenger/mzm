@@ -1,21 +1,22 @@
-jest.mock('../logger')
-jest.mock('../redis', () => {
+import { vi, test, expect } from 'vitest'
+vi.mock('../logger')
+vi.mock('../redis', () => {
   return {
     client: {
-      xack: jest.fn()
+      xack: vi.fn()
     }
   }
 })
-jest.mock('../../logic/rooms')
-jest.mock('./common', () => {
+vi.mock('../../logic/rooms')
+vi.mock('./common', () => {
   return {
-    initConsumerGroup: jest.fn(),
-    consumeGroup: jest.fn(),
-    createParser: jest.fn()
+    initConsumerGroup: vi.fn(),
+    consumeGroup: vi.fn(),
+    createParser: vi.fn()
   }
 })
 
-import { createXackMock } from '../../../jest/testUtil'
+import { createXackMock } from '../../../test/testUtil'
 import * as config from '../../config'
 import { JobType } from '../../types'
 import { client } from '../redis'
@@ -24,7 +25,7 @@ import { initConsumerGroup, consumeGroup } from './common'
 import { job, initJobConsumerGroup, consumeJob } from './job'
 
 test('initJobConsumerGroup', async () => {
-  const init = jest.mocked(initConsumerGroup)
+  const init = vi.mocked(initConsumerGroup)
 
   await initJobConsumerGroup()
 
@@ -33,7 +34,7 @@ test('initJobConsumerGroup', async () => {
 })
 
 test('consumeJob', async () => {
-  const consume = jest.mocked(consumeGroup)
+  const consume = vi.mocked(consumeGroup)
 
   await consumeJob()
 
@@ -46,7 +47,7 @@ test(`job: ${JobType.SEARCH_ROOM}`, async () => {
   xack.mockClear()
   xack.mockResolvedValue(1)
 
-  const logic = jest.mocked(syncSeachAllRooms)
+  const logic = vi.mocked(syncSeachAllRooms)
   logic.mockClear()
 
   await job('queue-id', [JobType.SEARCH_ROOM])
@@ -61,7 +62,7 @@ test('job no-type', async () => {
   xack.mockClear()
   xack.mockResolvedValue(1)
 
-  const logic = jest.mocked(syncSeachAllRooms)
+  const logic = vi.mocked(syncSeachAllRooms)
   logic.mockClear()
 
   await job('queue-id', ['no-type'])

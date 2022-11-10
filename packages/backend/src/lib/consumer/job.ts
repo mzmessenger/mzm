@@ -1,9 +1,9 @@
-import * as config from '../../config'
-import { JobType } from '../../types'
-import { logger } from '../logger'
-import { client } from '../redis'
-import { initConsumerGroup, createParser, consumeGroup } from './common'
-import { syncSeachAllRooms } from '../../logic/rooms'
+import * as config from '../../config.js'
+import { JobType } from '../../types.js'
+import { logger } from '../logger.js'
+import { client } from '../redis.js'
+import { initConsumerGroup, createParser, consumeGroup } from './common.js'
+import { syncSeachAllRooms } from '../../logic/rooms.js'
 
 const STREAM = config.stream.JOB
 const JOB_GROUP = 'group:job'

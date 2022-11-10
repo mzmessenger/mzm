@@ -1,12 +1,12 @@
 import cluster from 'cluster'
 import http from 'http'
 import { once } from 'events'
-import { logger } from './lib/logger'
-import { connect } from './lib/db'
-import { redis, sessionRedis } from './lib/redis'
-import { createApp } from './app'
-import { WORKER_NUM, PORT } from './config'
-import { initRemoveConsumerGroup, consume } from './lib/consumer'
+import { logger } from './lib/logger.js'
+import { connect } from './lib/db.js'
+import { redis, sessionRedis } from './lib/redis.js'
+import { createApp } from './app.js'
+import { WORKER_NUM, PORT } from './config.js'
+import { initRemoveConsumerGroup, consume } from './lib/consumer.js'
 
 if (cluster.isPrimary) {
   for (let i = 0; i < WORKER_NUM; i++) {

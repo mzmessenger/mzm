@@ -5,12 +5,11 @@
     "sourceMap": true,
     "noImplicitAny": false,
     "esModuleInterop": true,
-    "module": "commonjs",
-    "moduleResolution": "node",
+    "module": "NodeNext",
     "target": "esnext",
     "skipLibCheck": true,
     "composite": true,
     "forceConsistentCasingInFileNames": true
   },
-  "exclude": ["node_modules", "**/*.test.ts", "dist"]
+  "exclude": ["node_modules", "**/*.test.ts", "dist", "vitest.config.ts"]
 }

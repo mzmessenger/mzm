@@ -1,42 +1,44 @@
-jest.mock('../logger')
-jest.mock('../redis', () => {
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+vi.mock('../logger')
+vi.mock('../redis', () => {
   return {
     client: {
-      xack: jest.fn()
+      xack: vi.fn()
     }
   }
 })
-jest.mock('./common', () => {
+vi.mock('./common', () => {
   return {
-    initConsumerGroup: jest.fn(),
-    consumeGroup: jest.fn(),
-    createParser: jest.fn()
+    initConsumerGroup: vi.fn(),
+    consumeGroup: vi.fn(),
+    createParser: vi.fn()
   }
 })
 
 import { ObjectId } from 'mongodb'
 import * as config from '../../config'
-import { createXackMock, mongoSetup } from '../../../jest/testUtil'
+import { createXackMock, mongoSetup } from '../../../test/testUtil'
 import * as db from '../db'
 import { client } from '../redis'
 import { initConsumerGroup, consumeGroup } from './common'
 import { remove, initRemoveConsumerGroup, consumeRemove } from './remove'
 
-let mongoServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test('initRemoveConsumerGroup', async () => {
-  const init = jest.mocked(initConsumerGroup)
+  const init = vi.mocked(initConsumerGroup)
 
   await initRemoveConsumerGroup()
 
@@ -45,7 +47,7 @@ test('initRemoveConsumerGroup', async () => {
 })
 
 test('consumeRemove', async () => {
-  const consume = jest.mocked(consumeGroup)
+  const consume = vi.mocked(consumeGroup)
 
   await consumeRemove()
 

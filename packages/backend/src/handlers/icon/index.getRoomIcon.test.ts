@@ -1,35 +1,36 @@
-jest.mock('undici', () => {
-  return { request: jest.fn() }
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+vi.mock('undici', () => {
+  return { request: vi.fn() }
 })
-jest.mock('image-size')
-jest.mock('../../lib/logger')
-jest.mock('../../lib/storage')
+vi.mock('image-size')
+vi.mock('../../lib/logger')
+vi.mock('../../lib/storage')
 
 import { Readable } from 'stream'
-import type { MongoMemoryServer } from 'mongodb-memory-server'
 import { ObjectId } from 'mongodb'
-import { mongoSetup, createRequest } from '../../../jest/testUtil'
+import { mongoSetup, createRequest } from '../../../test/testUtil'
 import { createHeadObjectMockValue, createGetObjectMockValue } from './testUtil'
 import * as db from '../../lib/db'
 import * as storage from '../../lib/storage'
 import { BadRequest, NotFound } from '../../lib/errors'
 import { getRoomIcon } from './index'
 
-let mongoServer: MongoMemoryServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 beforeEach(() => {
-  jest.resetAllMocks()
+  vi.resetAllMocks()
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test('getRoomIcon', async () => {
@@ -40,15 +41,15 @@ test('getRoomIcon', async () => {
   await db.collections.rooms.insertOne({
     _id: roomId,
     name,
-    createdBy: null,
-    updatedBy: null,
+    createdBy: new ObjectId().toHexString(),
+    updatedBy: undefined,
     icon: { key: 'iconkey', version },
     status: db.RoomStatusEnum.CLOSE
   })
 
   const req = createRequest(null, { params: { roomname: name, version } })
 
-  const headObjectMock = jest.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject)
   const headers = createHeadObjectMockValue({
     ETag: 'etag',
     ContentType: 'image/png',
@@ -57,7 +58,7 @@ test('getRoomIcon', async () => {
     CacheControl: 'max-age=604800'
   })
   headObjectMock.mockResolvedValueOnce(headers)
-  const getObjectMock = jest.mocked(storage.getObject)
+  const getObjectMock = vi.mocked(storage.getObject)
   const readableStream = new Readable()
   const getObject = createGetObjectMockValue({
     createReadStream: readableStream
@@ -74,7 +75,7 @@ test('getRoomIcon', async () => {
     `${headers.ContentLength}`
   )
   expect(res.headers['last-modified']).toStrictEqual(
-    headers.LastModified.toUTCString()
+    headers.LastModified?.toUTCString()
   )
   expect(res.headers['cache-control']).toStrictEqual(headers.CacheControl)
   expect(res.stream).toStrictEqual(readableStream)
@@ -85,7 +86,7 @@ test('getRoomIcon BadRequest: no room name', async () => {
 
   const version = '12345'
 
-  const req = createRequest(null, { params: { roomname: null, version } })
+  const req = createRequest(null, { params: { roomname: '', version } })
 
   try {
     await getRoomIcon(req)
@@ -104,7 +105,7 @@ test('getRoomIcon NotFound: different version', async () => {
   await db.collections.rooms.insertOne({
     _id: roomId,
     name: name,
-    createdBy: null,
+    createdBy: new ObjectId().toHexString(),
     icon: { key: 'iconkey', version },
     status: db.RoomStatusEnum.CLOSE
   })
@@ -130,12 +131,12 @@ test('getRoomIcon NotFound: not found on storage', async () => {
   await db.collections.rooms.insertOne({
     _id: roomId,
     name: name,
-    createdBy: null,
+    createdBy: new ObjectId().toHexString(),
     icon: { key: 'iconkey', version },
     status: db.RoomStatusEnum.CLOSE
   })
 
-  const headObjectMock = jest.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject)
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
 
   const req = createRequest(null, {

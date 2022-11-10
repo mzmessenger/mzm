@@ -1,36 +1,38 @@
-jest.mock('undici', () => {
-  return { request: jest.fn() }
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+
+vi.mock('undici', () => {
+  return { request: vi.fn() }
 })
-jest.mock('image-size')
-jest.mock('../../lib/logger')
-jest.mock('../../lib/storage')
+vi.mock('image-size')
+vi.mock('../../lib/logger')
+vi.mock('../../lib/storage')
 
 import { Readable } from 'stream'
-import type { MongoMemoryServer } from 'mongodb-memory-server'
 import { ObjectId } from 'mongodb'
 import sizeOf from 'image-size'
-import { mongoSetup, createRequest } from '../../../jest/testUtil'
+import { mongoSetup, createRequest } from '../../../test/testUtil'
 import * as db from '../../lib/db'
 import * as storage from '../../lib/storage'
 import * as config from '../../config'
 import { BadRequest } from '../../lib/errors'
 import { uploadRoomIcon } from './index'
 
-let mongoServer: MongoMemoryServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 beforeEach(() => {
-  jest.resetAllMocks()
+  vi.resetAllMocks()
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test('uploadRoomIcon', async () => {
@@ -40,21 +42,21 @@ test('uploadRoomIcon', async () => {
   await db.collections.rooms.insertOne({
     _id: roomId,
     name,
-    createdBy: null,
+    createdBy: new ObjectId().toHexString(),
     status: db.RoomStatusEnum.CLOSE
   })
 
-  const putObjectMock = jest.mocked(storage.putObject)
+  const putObjectMock = vi.mocked(storage.putObject)
   putObjectMock.mockResolvedValueOnce({} as any)
 
-  const sizeOfMock = jest.mocked(sizeOf)
+  const sizeOfMock = vi.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_USER_ICON_SIZE,
       height: config.icon.MAX_USER_ICON_SIZE
     })
   })
-  const createBodyFromFilePath = jest.mocked(storage.createBodyFromFilePath)
+  const createBodyFromFilePath = vi.mocked(storage.createBodyFromFilePath)
   const readableStream = new Readable() as ReturnType<
     typeof storage.createBodyFromFilePath
   >
@@ -78,8 +80,8 @@ test('uploadRoomIcon', async () => {
 
   const room = await db.collections.rooms.findOne({ _id: roomId })
 
-  expect(typeof room.icon.version).toStrictEqual('string')
-  expect(res.version).toStrictEqual(room.icon.version)
+  expect(typeof room?.icon?.version).toStrictEqual('string')
+  expect(res.version).toStrictEqual(room?.icon?.version)
 })
 
 test.each([['image/gif'], ['image/svg+xml']])(
@@ -123,7 +125,7 @@ test('uploadRoomIcon: validation: size over ', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = jest.mocked(sizeOf)
+  const sizeOfMock = vi.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
     cb(null, {
       width: config.icon.MAX_ROOM_ICON_SIZE + 1,

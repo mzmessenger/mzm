@@ -1,29 +1,31 @@
-jest.mock('../lib/logger')
-jest.mock('../lib/redis', () => {
+import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+vi.mock('../lib/logger')
+vi.mock('../lib/redis', () => {
   return {
-    lock: jest.fn(() => Promise.resolve(true)),
-    release: jest.fn()
+    lock: vi.fn(() => Promise.resolve(true)),
+    release: vi.fn()
   }
 })
 
 import { ObjectId } from 'mongodb'
-import { mongoSetup } from '../../jest/testUtil'
+import { mongoSetup } from '../../test/testUtil'
 import * as config from '../config'
 import * as db from '../lib/db'
 import { initGeneral } from './rooms'
 import { initUser, getAllUserIdsInRoom } from './users'
 
-let mongoServer = null
+let mongoServer: MongoMemoryServer | null = null
 
 beforeAll(async () => {
   const mongo = await mongoSetup()
   mongoServer = mongo.mongoServer
-  return await db.connect(mongo.uri)
+  await db.connect(mongo.uri)
 })
 
 afterAll(async () => {
   await db.close()
-  await mongoServer.stop()
+  await mongoServer?.stop()
 })
 
 test('initUser', async () => {
@@ -36,8 +38,8 @@ test('initUser', async () => {
 
   // user
   const foundUser = await db.collections.users.findOne({ _id: userId })
-  expect(userId.toHexString()).toStrictEqual(foundUser._id.toHexString())
-  expect(`${account}_${userId.toHexString()}`).toStrictEqual(foundUser.account)
+  expect(userId.toHexString()).toStrictEqual(foundUser?._id.toHexString())
+  expect(`${account}_${userId.toHexString()}`).toStrictEqual(foundUser?.account)
 
   // default room
   const foundRooms = await db.collections.enter

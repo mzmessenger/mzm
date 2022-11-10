@@ -1,15 +1,16 @@
-jest.mock('./logger')
-jest.mock('./redis', () => {
+import { vi, test, expect } from 'vitest'
+vi.mock('./logger')
+vi.mock('./redis', () => {
   return {
-    xread: jest.fn(),
-    xdel: jest.fn()
+    xread: vi.fn(),
+    xdel: vi.fn()
   }
 })
 
-jest.mock('./sender')
+vi.mock('./sender')
 import * as sender from './sender'
 
-const sendToUser = jest.mocked(sender.sendToUser)
+const sendToUser = vi.mocked(sender.sendToUser)
 
 import { parser } from './consumer'
 

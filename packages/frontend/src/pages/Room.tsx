@@ -1,4 +1,4 @@
-import React, { lazy } from 'react'
+import React, { lazy, Suspense } from 'react'
 import { useUi } from '../contexts/ui/hooks'
 import { Menu } from '../components/Menu'
 import { RoomContent } from '../components/Room'
@@ -12,7 +12,9 @@ const PageRoom = () => {
   return (
     <PageWrapper>
       {isOpenSettings ? (
-        <Settings />
+        <Suspense>
+          <Settings />
+        </Suspense>
       ) : (
         <>
           <RoomContent />

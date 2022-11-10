@@ -1,9 +1,9 @@
 import { ObjectId } from 'mongodb'
-import * as config from '../../config'
-import * as db from '../db'
-import { client } from '../redis'
-import { logger } from '../logger'
-import { initConsumerGroup, createParser, consumeGroup } from './common'
+import * as config from '../../config.js'
+import * as db from '../db.js'
+import { client } from '../redis.js'
+import { logger } from '../logger.js'
+import { initConsumerGroup, createParser, consumeGroup } from './common.js'
 
 const REMOVE_STREAM = config.stream.REMOVE_USER
 const REMOVE_GROUP = 'group:backend:remove:user'

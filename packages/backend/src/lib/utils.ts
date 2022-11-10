@@ -1,8 +1,7 @@
 import type { IncomingMessage } from 'http'
 import type { Request } from 'express'
 import { HEADERS } from 'mzm-shared/auth'
-import escape from 'validator/lib/escape'
-import trim from 'validator/lib/trim'
+import validator from 'validator'
 
 export const getRequestUserId = (req: IncomingMessage | Request): string => {
   const user: string = req.headers[HEADERS.USER_ID] as string
@@ -27,7 +26,7 @@ export const popParam = (param: string): string => {
   if (!param) {
     return ''
   }
-  return escape(trim(param || '').trim())
+  return validator.escape(validator.trim(param || '').trim())
 }
 
 export const createUserIconPath = (

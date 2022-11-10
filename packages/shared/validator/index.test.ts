@@ -1,5 +1,6 @@
-import { ACCOUNT_STR } from './constants'
-import { isValidAccount } from './index'
+import { test, expect } from 'vitest'
+import { ACCOUNT_STR } from './constants.js'
+import { isValidAccount } from './index.js'
 
 test.each([
   ['valid1234'],

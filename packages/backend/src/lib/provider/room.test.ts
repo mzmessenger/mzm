@@ -1,14 +1,15 @@
-jest.mock('../logger')
-jest.mock('../redis', () => {
+import { vi, test, expect } from 'vitest'
+vi.mock('../logger')
+vi.mock('../redis', () => {
   return {
     client: {
-      xadd: jest.fn()
+      xadd: vi.fn()
     },
-    lock: jest.fn(() => Promise.resolve(true)),
-    release: jest.fn()
+    lock: vi.fn(() => Promise.resolve(true)),
+    release: vi.fn()
   }
 })
-import { createXaddMock } from '../../../jest/testUtil'
+import { createXaddMock } from '../../../test/testUtil'
 import * as redis from '../redis'
 import * as types from '../../types'
 import * as config from '../../config'
@@ -19,10 +20,10 @@ import * as room from './room'
 
 test('addInitializeSearchRoomQueue', async () => {
   xadd.mockClear()
-  const lock = jest.mocked(redis.lock)
+  const lock = vi.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValue(true)
-  const release = jest.mocked(redis.release)
+  const release = vi.mocked(redis.release)
   release.mockClear()
 
   await room.addInitializeSearchRoomQueue()
@@ -39,10 +40,10 @@ test('addInitializeSearchRoomQueue', async () => {
 
 test('addInitializeSearchRoomQueue (locked)', async () => {
   xadd.mockClear()
-  const lock = jest.mocked(redis.lock)
+  const lock = vi.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValue(false)
-  const release = jest.mocked(redis.release)
+  const release = vi.mocked(redis.release)
   release.mockClear()
 
   await room.addInitializeSearchRoomQueue()
@@ -53,7 +54,7 @@ test('addInitializeSearchRoomQueue (locked)', async () => {
 
 test('addSyncSearchRoomQueue', async () => {
   xadd.mockClear()
-  const lock = jest.mocked(redis.lock)
+  const lock = vi.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValue(true)
 
@@ -67,10 +68,10 @@ test('addSyncSearchRoomQueue', async () => {
 
 test('addSyncSearchRoomQueue (locked)', async () => {
   xadd.mockClear()
-  const lock = jest.mocked(redis.lock)
+  const lock = vi.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValueOnce(false)
-  const release = jest.mocked(redis.release)
+  const release = vi.mocked(redis.release)
   release.mockClear()
 
   await room.addSyncSearchRoomQueue()

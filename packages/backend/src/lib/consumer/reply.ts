@@ -1,10 +1,10 @@
 import { ObjectId } from 'mongodb'
-import * as config from '../../config'
-import { ReplyQueue } from '../../types'
-import * as db from '../db'
-import { client } from '../redis'
-import { logger } from '../logger'
-import { initConsumerGroup, createParser, consumeGroup } from './common'
+import * as config from '../../config.js'
+import { ReplyQueue } from '../../types.js'
+import * as db from '../db.js'
+import { client } from '../redis.js'
+import { logger } from '../logger.js'
+import { initConsumerGroup, createParser, consumeGroup } from './common.js'
 
 const STREAM = config.stream.REPLY
 const REPLY_GROUP = 'group:reply'
