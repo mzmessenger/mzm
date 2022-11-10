@@ -128,7 +128,7 @@ export const sendMessage = async (
       id: saved.insertedId.toHexString(),
       userId: user,
       userAccount: u.account,
-      message: unescape(message),
+      message: validator.unescape(message),
       iine: 0,
       updated: false,
       removed: false,
@@ -225,7 +225,7 @@ export const modifyMessage = async (
     cmd: TO_CLIENT_CMD.MESSAGE_MODIFY,
     message: {
       id: from._id.toHexString(),
-      message: unescape(message),
+      message: validator.unescape(message),
       iine: from.iine ? from.iine : 0,
       userId: from.userId.toHexString(),
       userAccount: u.account,
@@ -246,7 +246,7 @@ export const removeMessage = async (
   user: string,
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_REMOVE>
 ) => {
-  const id = escape(validator.trim(data.id))
+  const id = validator.escape(validator.trim(data.id))
   // todo: send bad request
   if (validator.isEmpty(id)) {
     return
@@ -297,7 +297,7 @@ export const getMessagesFromRoom = async (
   user: string,
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGES_ROOM>
 ): Promise<ToClientType> => {
-  const room = escape(validator.trim(data.room))
+  const room = validator.escape(validator.trim(data.room))
   // todo: send bad request
   if (validator.isEmpty(room)) {
     return
@@ -313,7 +313,7 @@ export const getMessagesFromRoom = async (
   }
   let id = null
   if (data.id) {
-    id = escape(validator.trim(data.id))
+    id = validator.escape(validator.trim(data.id))
   }
   const { existHistory, messages } = await getMessages(room, id)
   const send: ToClientType = {
@@ -332,7 +332,7 @@ export const enterRoom = async (
 ): Promise<ToClientType> => {
   let room: WithId<db.Room> = null
   if (data.id) {
-    const id = escape(validator.trim(data.id))
+    const id = validator.escape(validator.trim(data.id))
     room = await db.collections.rooms.findOne({ _id: new ObjectId(id) })
   } else if (data.name) {
     const name = popParam(decodeURIComponent(data.name))
