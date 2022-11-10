@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/node
-FROM node:16 as builder
+FROM node:18 as builder
 
 WORKDIR /usr/app
 
@@ -12,7 +12,7 @@ COPY ./packages/auth/src/ ./packages/auth/src/
 
 RUN npm install -w packages/auth -w packages/shared && npm run -w packages/auth cleanbuild
 
-FROM node:16-alpine
+FROM node:18-alpine
 
 WORKDIR /usr/app
 
