@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/node
-FROM node:16 as builder
+FROM node:18 as builder
 
 WORKDIR /usr/app
 
