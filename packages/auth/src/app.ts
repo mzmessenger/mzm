@@ -1,5 +1,5 @@
-import express from 'express'
-import { Response } from 'express'
+import express, { type Request, type Response } from 'express'
+import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import passport from 'passport'
 import type { Redis } from 'ioredis'
@@ -74,13 +74,28 @@ export const createApp = ({ client }: Options) => {
     )
   )
 
+  app.post('/auth/jwt/refresh', cookieParser(), (req, res) => {
+    return handlers.jwtRefresh(req, res)
+  })
+
+  const callbackHandler = (
+    req: Request & { user: handlers.SerializeUser },
+    res: Response
+  ) => {
+    return res
+      .cookie('mzm-jwt-token', req.user.accessToken)
+      .cookie('mzm-jwt-refresh-token', req.user.refreshToken, {
+        secure: true,
+        httpOnly: true
+      })
+      .redirect('/login/success')
+  }
+
   app.get('/auth/twitter', passport.authenticate('twitter'))
   app.get(
     '/auth/twitter/callback',
     passport.authenticate('twitter', { failureRedirect: '/' }),
-    (req, res) => {
-      res.redirect('/login/success')
-    }
+    callbackHandler
   )
   app.delete('/auth/twitter', handlers.remoteTwitter)
 
@@ -88,17 +103,16 @@ export const createApp = ({ client }: Options) => {
   app.get(
     '/auth/github/callback',
     passport.authenticate('github', { failureRedirect: '/' }),
-    (req, res) => {
-      res.redirect('/login/success')
-    }
+    callbackHandler
   )
   app.delete('/auth/github', handlers.remoteGithub)
 
   app.get('/auth', handlers.auth)
 
-  app.get('/auth/logout', (req: any, res: Response) => {
-    req.logout()
-    res.redirect('/')
+  app.get('/auth/logout', (req: Request, res: Response) => {
+    req.logout(() => {
+      res.redirect('/')
+    })
   })
 
   app.delete('/auth/user', handlers.remove)

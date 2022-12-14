@@ -138,3 +138,7 @@ export const vote = {
   MAX_QUESTION_NUM: 5,
   MAX_QUESTION_LENGTH: 100
 } as const
+
+export const JWT = {
+  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET
+} as const

@@ -4,10 +4,20 @@ import { HEADERS } from 'mzm-shared/auth'
 import * as db from './lib/db.js'
 import { logger } from './lib/logger.js'
 import { redis } from './lib/redis.js'
+import {
+  decodeRefreshToken,
+  createAccessToken,
+  createTokens,
+  type RefeshToken
+} from './lib/token.js'
 import { REMOVE_STREAM } from './config.js'
 
-type Serialized = WithId<db.User> & Request['user']
-type Deserialized = string
+export type SerializeUser = WithId<db.User> &
+  Request['user'] & {
+    accessToken: string
+    refreshToken: string
+  }
+type SerializedUser = string
 type RequestUser = WithId<db.User>
 type PassportRequest = Request & { user?: RequestUser }
 
@@ -38,15 +48,15 @@ export const auth = (req: PassportRequest, res: Response) => {
 }
 
 export const serializeUser = (
-  user: Serialized,
+  user: SerializeUser,
   // eslint-disable-next-line no-unused-vars
-  done: (err, user: Deserialized) => void
+  done: (err, user: SerializedUser) => void
 ) => {
   done(null, user._id.toHexString())
 }
 
 export const deserializeUser = (
-  user: Deserialized,
+  user: SerializedUser,
   // eslint-disable-next-line no-unused-vars
   done: (err, user?: RequestUser) => void
 ) => {
@@ -58,12 +68,34 @@ export const deserializeUser = (
     .catch((err) => done(err))
 }
 
+export const jwtRefresh = async (req, res) => {
+  try {
+    const decode = await decodeRefreshToken(
+      req.cookies['mzm-jwt-refresh-token']
+    )
+
+    const user = await db.collections.users.findOne({
+      _id: new ObjectId((decode as RefeshToken).user._id)
+    })
+
+    const accessToken = await createAccessToken({
+      _id: user._id.toHexString(),
+      twitterId: user.twitterId,
+      githubId: user.githubId
+    })
+
+    res.status(200).json({ accessToken })
+  } catch (e) {
+    return res.status(401).send('not login')
+  }
+}
+
 export const loginTwitter = async (
   req: PassportRequest,
   twitterId: string,
   twitterUserName: string,
   // eslint-disable-next-line no-unused-vars
-  cb: (error: any, user?: Serialized) => void
+  cb: (error: any, user?: SerializeUser) => void
 ) => {
   try {
     const filter: { _id: ObjectId } | Pick<db.User, 'twitterId'> = req.user
@@ -88,12 +120,17 @@ export const loginTwitter = async (
       username: twitterUserName
     })
 
-    if (updated.value) {
-      cb(null, updated.value)
-    } else {
-      const user = await db.collections.users.findOne(filter)
-      cb(null, user)
-    }
+    const user = updated.value
+      ? updated.value
+      : await db.collections.users.findOne(filter)
+
+    const { accessToken, refreshToken } = await createTokens({
+      _id: user._id.toHexString(),
+      twitterId: user.twitterId,
+      githubId: user.githubId
+    })
+
+    cb(null, { ...user, accessToken, refreshToken })
   } catch (e) {
     logger.error('[auth:update:twitter] error:', twitterId, twitterUserName)
     cb(e)
@@ -105,7 +142,7 @@ export const loginGithub = async (
   githubId: string,
   githubUserName: string,
   // eslint-disable-next-line no-unused-vars
-  cb: (error: any, user?: Serialized) => void
+  cb: (error: any, user?: SerializeUser) => void
 ) => {
   try {
     const filter: { _id: ObjectId } | Pick<db.User, 'githubId'> = req.user
@@ -128,12 +165,18 @@ export const loginGithub = async (
       id: githubId,
       username: githubUserName
     })
-    if (updated.value) {
-      cb(null, updated.value)
-    } else {
-      const user = await db.collections.users.findOne(filter)
-      cb(null, user)
-    }
+
+    const user = updated.value
+      ? updated.value
+      : await db.collections.users.findOne(filter)
+
+    const { accessToken, refreshToken } = await createTokens({
+      _id: user._id.toHexString(),
+      twitterId: user.twitterId,
+      githubId: user.githubId
+    })
+
+    cb(null, { ...user, accessToken, refreshToken })
   } catch (e) {
     logger.error('[auth:update:github] error:', githubId, githubUserName)
     cb(e)

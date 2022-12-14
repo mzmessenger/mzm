@@ -1,6 +1,7 @@
 import { useContext, useState, useMemo, useCallback } from 'react'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { UserContext, UserDispatchContext } from './index'
+import { useAuth } from '../../lib/hooks/useAuth'
 
 export const useUser = () => {
   return useContext(UserContext)
@@ -19,6 +20,7 @@ type MyInfo = {
 }
 
 export const useUserForContext = () => {
+  const { getAccessToken, refreshToken } = useAuth()
   const [login, setLogin] = useState(false)
   const [me, setMe] = useState<MyInfo>({
     id: '',
@@ -66,8 +68,14 @@ export const useUserForContext = () => {
     setLogin(false)
   }
 
-  const fetchMyInfo = useCallback(async () => {
-    const res = await fetch('/api/user/@me', { credentials: 'include' })
+  const _fetchMyInfo = async (accessToken: string) => {
+    const res = await fetch('/api/user/@me', {
+      credentials: 'include',
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
+    })
+
     if (res.status === 200) {
       const payload =
         (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][200]
@@ -92,6 +100,18 @@ export const useUserForContext = () => {
     } else if (res.status === 403) {
       logout()
     }
+    return res
+  }
+
+  const fetchMyInfo = useCallback(async () => {
+    const accessToken = await getAccessToken()
+    const res = await _fetchMyInfo(accessToken)
+
+    if (res.status === 402) {
+      const { accessToken } = await refreshToken()
+      return await _fetchMyInfo(accessToken)
+    }
+
     return res
   }, [])
 

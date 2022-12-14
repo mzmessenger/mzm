@@ -50,3 +50,8 @@ export const SESSION_PARSER: SessionOptions = {
 export const TRUST_PROXY = process.env.TRUST_PROXY ?? 1
 
 export const SESSION_NAME = process.env.SESSION_NAME ?? 'mzm'
+
+export const JWT = {
+  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
+  refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET
+} as const
