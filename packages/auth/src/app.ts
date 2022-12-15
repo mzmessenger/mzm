@@ -97,7 +97,7 @@ export const createApp = ({ client }: Options) => {
     passport.authenticate('twitter', { failureRedirect: '/' }),
     callbackHandler
   )
-  app.delete('/auth/twitter', handlers.remoteTwitter)
+  app.delete('/auth/twitter', handlers.removeTwitter)
 
   app.get('/auth/github', passport.authenticate('github'))
   app.get(
@@ -105,7 +105,7 @@ export const createApp = ({ client }: Options) => {
     passport.authenticate('github', { failureRedirect: '/' }),
     callbackHandler
   )
-  app.delete('/auth/github', handlers.remoteGithub)
+  app.delete('/auth/github', handlers.removeGithub)
 
   app.get('/auth', handlers.auth)
 

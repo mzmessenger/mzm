@@ -1,6 +1,5 @@
 import { Request, Response, NextFunction } from 'express'
-import jwt from 'jsonwebtoken'
-import { HEADERS, requestAuthServer } from 'mzm-shared/auth'
+import { HEADERS, requestAuthServer, verifyAccessToken } from 'mzm-shared/auth'
 import { AUTH_SERVER, JWT } from '../config.js'
 import * as HttpErrors from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
@@ -15,7 +14,11 @@ export const errorHandler = (err, _req, res: Response, _next) => {
   logger.error('[Internal Server Error]', err)
 }
 
-export const checkJwt = (req: Request, res: Response, next: NextFunction) => {
+export const checkAccessToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
   const authorizationHeaderKey = Object.prototype.hasOwnProperty.call(
     req.headers,
     'Authorization'
@@ -27,28 +30,26 @@ export const checkJwt = (req: Request, res: Response, next: NextFunction) => {
     return res.status(401).send('no authorization header')
   }
 
-  const [, _credentials] = authorization.split(' ')
-  const credentials = (_credentials ?? '').trim()
-  if (!credentials) {
+  const [, credentials] = authorization.split(' ')
+  const accessToken = (credentials ?? '').trim()
+  if (!accessToken) {
     return res.status(401).send('no authorization header')
   }
-  jwt.verify(
-    credentials,
-    JWT.accessTokenSecret,
-    {
-      algorithms: ['HS256']
-    },
-    (err, decoded) => {
+
+  verifyAccessToken(accessToken, JWT.accessTokenSecret)
+    .then(({ err, decoded }) => {
       if (err) {
         return res.status(402).send('token expired')
       }
       if (!decoded) {
         return res.status(401).send('not login')
       }
-      req.headers[HEADERS.USER_ID] = (decoded as any).user._id
+      req.headers[HEADERS.USER_ID] = decoded.user._id
       next()
-    }
-  )
+    })
+    .catch(() => {
+      return res.status(401).send('not login')
+    })
 }
 
 export const checkLogin = (req: Request, res: Response, next: NextFunction) => {

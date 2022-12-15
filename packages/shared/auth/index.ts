@@ -1,5 +1,5 @@
 import type { IncomingHttpHeaders } from 'http'
-import type { Request, Response, NextFunction } from 'express'
+import type { AccessToken } from '../type/auth.js'
 import jwt from 'jsonwebtoken'
 import { request } from 'undici'
 
@@ -36,15 +36,18 @@ export const requestAuthServer = async (options: RequestOptions) => {
 
 type VeryfyAccessToken =
   | {
-      err: unknown
+      err: jwt.VerifyErrors
       decoded: null
     }
   | {
       err: null
-      decoded: { user: { _id: string } }
+      decoded: AccessToken
     }
 
-const veryfyAccessToken = (accessToken: string, accessTokenSecret: string) => {
+const verifyAccessTokenAsync = (
+  accessToken: string,
+  accessTokenSecret: string
+) => {
   return new Promise<VeryfyAccessToken>((resolve) => {
     jwt.verify(
       accessToken,
@@ -58,38 +61,34 @@ const veryfyAccessToken = (accessToken: string, accessTokenSecret: string) => {
         }
         return resolve({
           err: null,
-          // @todo type
-          decoded: decoded as { user: { _id: string } }
+          decoded: decoded as AccessToken
         })
       }
     )
   })
 }
 
-export const checkJwt = async (
+export const verifyAccessToken = async (
   accessToken: string,
   accessTokenSecret: string
 ): Promise<
   | {
-      err: {
-        status: number
-        message: string
-      }
+      err: jwt.VerifyErrors
       decoded: null
     }
   | {
       err: null
-      decoded: { user: { _id: string } }
+      decoded: AccessToken
     }
 > => {
-  const { err, decoded } = await veryfyAccessToken(
+  const { err, decoded } = await verifyAccessTokenAsync(
     accessToken,
     accessTokenSecret
   )
 
   if (err) {
     return {
-      err: { status: 402, message: 'token expired' },
+      err,
       decoded: null
     }
   }

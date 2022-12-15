@@ -1,6 +1,6 @@
 import type WebSocket from 'ws'
 import { v4 as uuid } from 'uuid'
-import { checkJwt } from 'mzm-shared/auth'
+import { verifyAccessToken } from 'mzm-shared/auth'
 import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
 import { requestSocketAPI } from './lib/req.js'
 import { saveSocket, removeSocket } from './lib/sender.js'
@@ -18,17 +18,15 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
 
     const url = new URL(req.url, `http://${req.headers.host}`)
     if (url.searchParams.has('token')) {
-      const { err, decoded } = await checkJwt(
+      const { err, decoded } = await verifyAccessToken(
         url.searchParams.get('token'),
         'accessTokenSecret'
       )
-      if (err) {
-        return
+      if (!err && decoded) {
+        userId = decoded.user._id
+        twitterUserName = decoded.user.twitterUserName
+        githubUserName = decoded.user.githubUserName
       }
-      userId = decoded.user._id
-      // @todo
-      twitterUserName = ''
-      githubUserName = ''
     }
     logger.info('[ws:connection]', userId)
 

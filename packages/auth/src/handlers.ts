@@ -81,7 +81,9 @@ export const jwtRefresh = async (req, res) => {
     const accessToken = await createAccessToken({
       _id: user._id.toHexString(),
       twitterId: user.twitterId,
-      githubId: user.githubId
+      twitterUserName: user.twitterUserName,
+      githubId: user.githubId,
+      githubUserName: user.githubUserName
     })
 
     res.status(200).json({ accessToken })
@@ -127,7 +129,9 @@ export const loginTwitter = async (
     const { accessToken, refreshToken } = await createTokens({
       _id: user._id.toHexString(),
       twitterId: user.twitterId,
-      githubId: user.githubId
+      twitterUserName: user.twitterUserName,
+      githubId: user.githubId,
+      githubUserName: user.githubUserName
     })
 
     cb(null, { ...user, accessToken, refreshToken })
@@ -173,7 +177,9 @@ export const loginGithub = async (
     const { accessToken, refreshToken } = await createTokens({
       _id: user._id.toHexString(),
       twitterId: user.twitterId,
-      githubId: user.githubId
+      twitterUserName: user.twitterUserName,
+      githubId: user.githubId,
+      githubUserName: user.githubUserName
     })
 
     cb(null, { ...user, accessToken, refreshToken })
@@ -183,7 +189,7 @@ export const loginGithub = async (
   }
 }
 
-export const remoteTwitter = async (req: PassportRequest, res: Response) => {
+export const removeTwitter = async (req: PassportRequest, res: Response) => {
   if (!req.user) {
     res.status(401).send('not auth')
   }
@@ -207,7 +213,7 @@ export const remoteTwitter = async (req: PassportRequest, res: Response) => {
   res.status(200).send('ok')
 }
 
-export const remoteGithub = async (req: PassportRequest, res: Response) => {
+export const removeGithub = async (req: PassportRequest, res: Response) => {
   if (!req.user) {
     res.status(401).send('not auth')
   }

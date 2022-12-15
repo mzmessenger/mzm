@@ -8,7 +8,11 @@ import * as rooms from './handlers/rooms.js'
 import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import * as internal from './handlers/internal.js'
-import { checkJwt, checkLogin, errorHandler } from './middleware/index.js'
+import {
+  checkAccessTokenMiddleware,
+  checkLogin,
+  errorHandler
+} from './middleware/index.js'
 
 const iconUpload = multer({
   dest: MULTER_PATH,
@@ -26,7 +30,7 @@ export const createApp = () => {
   app.delete('/api/rooms/enter', checkLogin, jsonParser, wrap(rooms.exitRoom))
   app.get('/api/rooms/search', wrap(rooms.search))
   app.get('/api/rooms/:roomid/users', checkLogin, wrap(rooms.getUsers))
-  app.get('/api/user/@me', checkJwt, wrap(user.getUserInfo))
+  app.get('/api/user/@me', checkAccessTokenMiddleware, wrap(user.getUserInfo))
   app.put('/api/user/@me', checkLogin, jsonParser, wrap(user.update))
   app.post(
     '/api/user/@me/account',
