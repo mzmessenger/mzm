@@ -111,7 +111,10 @@ export const createApp = ({ client }: Options) => {
 
   app.get('/auth/logout', (req: Request, res: Response) => {
     req.logout(() => {
-      res.redirect('/')
+      res
+        .clearCookie('mzm-jwt-token')
+        .clearCookie('mzm-jwt-refresh-token')
+        .redirect('/')
     })
   })
 

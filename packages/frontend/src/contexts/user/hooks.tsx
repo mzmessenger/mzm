@@ -1,7 +1,7 @@
 import { useContext, useState, useMemo, useCallback } from 'react'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { UserContext, UserDispatchContext } from './index'
-import { useAuth } from '../../lib/hooks/useAuth'
+import { useAuthForContext } from '../auth/hooks'
 
 export const useUser = () => {
   return useContext(UserContext)
@@ -20,7 +20,7 @@ type MyInfo = {
 }
 
 export const useUserForContext = () => {
-  const { getAccessToken, refreshToken } = useAuth()
+  const { getAccessToken } = useAuthForContext()
   const [login, setLogin] = useState(false)
   const [me, setMe] = useState<MyInfo>({
     id: '',
@@ -108,7 +108,7 @@ export const useUserForContext = () => {
     const res = await _fetchMyInfo(accessToken)
 
     if (res.status === 402) {
-      const { accessToken } = await refreshToken()
+      const accessToken = await getAccessToken()
       return await _fetchMyInfo(accessToken)
     }
 

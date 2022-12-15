@@ -6,6 +6,7 @@ import { UiProvider } from './ui'
 import { PostTextAreaProvider } from './postTextArea'
 import { MessagesProvider } from './messages'
 import { RoomsProvider } from './rooms'
+import { AuthProvider } from './auth'
 
 export const Provider: React.FC<PropsWithChildren<unknown>> = ({
   children
@@ -17,7 +18,9 @@ export const Provider: React.FC<PropsWithChildren<unknown>> = ({
           <SearchProvider>
             <MessagesProvider>
               <RoomsProvider>
-                <PostTextAreaProvider>{children}</PostTextAreaProvider>
+                <PostTextAreaProvider>
+                  <AuthProvider>{children}</AuthProvider>
+                </PostTextAreaProvider>
               </RoomsProvider>
             </MessagesProvider>
           </SearchProvider>

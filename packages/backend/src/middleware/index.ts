@@ -28,7 +28,7 @@ export const checkJwt = (req: Request, res: Response, next: NextFunction) => {
   }
 
   const [, _credentials] = authorization.split(' ')
-  const credentials = _credentials.trim()
+  const credentials = (_credentials ?? '').trim()
   if (!credentials) {
     return res.status(401).send('no authorization header')
   }

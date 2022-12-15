@@ -14,6 +14,7 @@ import {
   INIT_RECONNECT_INTERVAL,
   MAX_RECONNECT
 } from './constants'
+import { useAuthForContext } from '../auth/hooks'
 
 export const useSocket = () => {
   return useContext(SocketContext)
@@ -38,6 +39,7 @@ type InitOptions = {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export const useSocketForContext = () => {
+  const { getAccessToken } = useAuthForContext()
   const ws = useRef<WebSocket>(null)
   const reconnectInterval = useRef<number>(INIT_RECONNECT_INTERVAL)
   const reconnectAttempts = useRef<number>(0)
@@ -83,11 +85,10 @@ export const useSocketForContext = () => {
   )
 
   const connect = useCallback(
-    (connectUrl: string, handlers: MessageHandlers) => {
+    async (connectUrl: string, handlers: MessageHandlers) => {
       if (ws.current) {
         return
       }
-
       const reconnect = async () => {
         const counter = reconnectAttempts.current + 1
         reconnectAttempts.current = counter
@@ -113,7 +114,8 @@ export const useSocketForContext = () => {
         reconnectInterval.current = newInterval
       }
 
-      const socketInstance = new WebSocket(connectUrl)
+      const token = await getAccessToken()
+      const socketInstance = new WebSocket(connectUrl + `?token=${token}`)
       ws.current = socketInstance
 
       socketInstance.addEventListener('open', () => {
@@ -145,7 +147,7 @@ export const useSocketForContext = () => {
         }
       })
     },
-    [ws, setOnMessageHandlers, close]
+    [getAccessToken, setOnMessageHandlers, close]
   )
 
   const init = useCallback(
@@ -153,6 +155,7 @@ export const useSocketForContext = () => {
       if (!options.url || options.url === '') {
         throw new Error('no url')
       }
+
       connect(options.url, options.messageHandlers)
     },
     [connect]

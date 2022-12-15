@@ -1,26 +1,36 @@
 import type WebSocket from 'ws'
 import { v4 as uuid } from 'uuid'
-import { requestAuthServer } from 'mzm-shared/auth'
+import { checkJwt } from 'mzm-shared/auth'
 import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
 import { requestSocketAPI } from './lib/req.js'
 import { saveSocket, removeSocket } from './lib/sender.js'
 import { consume } from './lib/consumer.js'
 import logger from './lib/logger.js'
-import { AUTH_SERVER } from './config.js'
 import { ExtWebSocket } from './types.js'
 
 export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
   consume()
 
   wss.on('connection', async function connection(ws: ExtWebSocket, req) {
-    const { userId, twitterUserName, githubUserName } = await requestAuthServer(
-      {
-        url: AUTH_SERVER,
-        headers: {
-          cookie: req.headers.cookie
-        }
+    let userId = null
+    let twitterUserName = null
+    let githubUserName = null
+
+    const url = new URL(req.url, `http://${req.headers.host}`)
+    if (url.searchParams.has('token')) {
+      const { err, decoded } = await checkJwt(
+        url.searchParams.get('token'),
+        'accessTokenSecret'
+      )
+      if (err) {
+        return
       }
-    )
+      userId = decoded.user._id
+      // @todo
+      twitterUserName = ''
+      githubUserName = ''
+    }
+    logger.info('[ws:connection]', userId)
 
     if (!userId) {
       ws.close()

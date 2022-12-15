@@ -15,5 +15,3 @@ export const REDIS = {
     enableOfflineQueue: false
   }
 }
-
-export const AUTH_SERVER = process.env.AUTH_SERVER

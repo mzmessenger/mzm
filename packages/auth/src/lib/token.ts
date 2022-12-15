@@ -27,7 +27,7 @@ export const createAccessToken = (user: {
       payload,
       JWT.accessTokenSecret,
       {
-        expiresIn: '1m'
+        expiresIn: '10m'
       },
       (err, token) => {
         if (err) {

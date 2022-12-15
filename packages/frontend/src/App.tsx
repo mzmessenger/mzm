@@ -11,12 +11,8 @@ const WithSuspense: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   return <Suspense fallback={<Loading />}>{children}</Suspense>
 }
 
-const Init = React.memo(() => {
-  useApp(url)
-  return <></>
-})
-
 const App = () => {
+  useApp(url)
   const { login } = useUser()
   const Top = login
     ? lazy(() => import('./pages/Top'))
@@ -75,7 +71,6 @@ const App = () => {
           }
         />
       </Routes>
-      <Init />
     </>
   )
 }
