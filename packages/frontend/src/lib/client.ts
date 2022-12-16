@@ -11,7 +11,7 @@ type Options = { accessToken: string; headers?: FetchInit['headers'] } & (
     }
 )
 
-export const createClient = async <T>(
+export const createApiClient = async <T>(
   url: string,
   options: Options,
   parser: (res: Awaited<ReturnType<typeof fetch>>) => Promise<T>

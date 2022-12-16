@@ -1,4 +1,5 @@
 import type { IncomingHttpHeaders } from 'http'
+import type { Request } from 'express'
 import type { AccessToken } from '../type/auth.js'
 import jwt from 'jsonwebtoken'
 import { request } from 'undici'
@@ -88,4 +89,21 @@ export const verifyAccessToken = async (
     }
   }
   return { err: null, decoded }
+}
+
+export const parseAuthorizationHeader = (req: Request) => {
+  const authorizationHeaderKey = Object.prototype.hasOwnProperty.call(
+    req.headers,
+    'Authorization'
+  )
+    ? 'Authorization'
+    : 'authorization'
+  const authorization = req.headers[authorizationHeaderKey] as string
+  if (!authorization) {
+    return null
+  }
+
+  const [, credentials] = authorization.split(' ')
+  const token = (credentials ?? '').trim()
+  return token
 }

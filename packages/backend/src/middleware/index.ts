@@ -1,5 +1,9 @@
 import { Request, Response, NextFunction } from 'express'
-import { requestAuthServer, verifyAccessToken } from 'mzm-shared/auth/index'
+import {
+  requestAuthServer,
+  verifyAccessToken,
+  parseAuthorizationHeader
+} from 'mzm-shared/auth/index'
 import { HEADERS } from 'mzm-shared/auth/constants'
 import { AUTH_SERVER, JWT } from '../config.js'
 import * as HttpErrors from '../lib/errors.js'
@@ -20,19 +24,7 @@ export const checkAccessToken = (
   res: Response,
   next: NextFunction
 ) => {
-  const authorizationHeaderKey = Object.prototype.hasOwnProperty.call(
-    req.headers,
-    'Authorization'
-  )
-    ? 'Authorization'
-    : 'authorization'
-  const authorization = req.headers[authorizationHeaderKey] as string
-  if (!authorization) {
-    return res.status(401).send('no authorization header')
-  }
-
-  const [, credentials] = authorization.split(' ')
-  const accessToken = (credentials ?? '').trim()
+  const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
     return res.status(401).send('no authorization header')
   }

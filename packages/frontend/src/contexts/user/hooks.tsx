@@ -2,7 +2,7 @@ import { useContext, useState, useCallback } from 'react'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { UserContext, UserDispatchContext } from './index'
 import { useDispatchAuth } from '../auth/hooks'
-import { createClient } from '../../lib/client'
+import { createApiClient } from '../../lib/client'
 
 export const useUser = () => {
   return useContext(UserContext)
@@ -63,7 +63,7 @@ export const useUserForContext = () => {
   const fetchMyInfo = useCallback(async () => {
     const { accessToken, user } = await getAccessToken()
 
-    return await createClient(
+    return await createApiClient(
       '/api/user/@me',
       {
         method: 'GET',
@@ -103,44 +103,50 @@ export const useUserForContext = () => {
     if (!socialAccount.twitterUserName || !socialAccount.githubUserName) {
       return
     }
-    const res = await fetch('/auth/twitter', {
-      method: 'DELETE',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const { accessToken } = await getAccessToken()
+    return await createApiClient(
+      '/auth/twitter',
+      {
+        method: 'DELETE',
+        accessToken
+      },
+      async (res) => {
+        if (res.status === 200) {
+          refreshToken().then((token) => {
+            setSocialAccount({
+              twitterUserName: token.user.twitterUserName,
+              githubUserName: token.user.githubUserName
+            })
+          })
+        }
+        return res
       }
-    })
-    if (res.status === 200) {
-      refreshToken().then((token) => {
-        setSocialAccount({
-          twitterUserName: token.user.twitterUserName,
-          githubUserName: token.user.githubUserName
-        })
-      })
-    }
-    return res
+    )
   }
 
   const removeGithub = async () => {
     if (!socialAccount.twitterUserName || !socialAccount.githubUserName) {
       return
     }
-    const res = await fetch('/auth/github', {
-      method: 'DELETE',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const { accessToken } = await getAccessToken()
+    return await createApiClient(
+      '/auth/github',
+      {
+        method: 'DELETE',
+        accessToken
+      },
+      async (res) => {
+        if (res.status === 200) {
+          refreshToken().then((token) => {
+            setSocialAccount({
+              twitterUserName: token.user.twitterUserName,
+              githubUserName: token.user.githubUserName
+            })
+          })
+        }
+        return res
       }
-    })
-    if (res.status === 200) {
-      refreshToken().then((token) => {
-        setSocialAccount({
-          twitterUserName: token.user.twitterUserName,
-          githubUserName: token.user.githubUserName
-        })
-      })
-    }
-    return res
+    )
   }
 
   const removeUser = async () => {
@@ -185,14 +191,16 @@ export const useUserForContext = () => {
       me,
       socialAccount
     },
-    updateUser: useCallback(updateUser, []),
+    updateUser: useCallback(updateUser, [me]),
     fetchMyInfo,
     removeTwitter: useCallback(removeTwitter, [
+      getAccessToken,
       refreshToken,
       socialAccount.githubUserName,
       socialAccount.twitterUserName
     ]),
     removeGithub: useCallback(removeGithub, [
+      getAccessToken,
       refreshToken,
       socialAccount.githubUserName,
       socialAccount.twitterUserName

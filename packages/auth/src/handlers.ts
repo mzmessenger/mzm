@@ -1,6 +1,10 @@
 import type { Request, Response } from 'express'
 import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
 import { ObjectId, WithId } from 'mongodb'
+import {
+  parseAuthorizationHeader,
+  verifyAccessToken
+} from 'mzm-shared/auth/index'
 import { HEADERS, COOKIES } from 'mzm-shared/auth/constants'
 import * as db from './lib/db.js'
 import { logger } from './lib/logger.js'
@@ -11,7 +15,7 @@ import {
   createTokens,
   type RefeshToken
 } from './lib/token.js'
-import { REMOVE_STREAM } from './config.js'
+import { JWT, REMOVE_STREAM } from './config.js'
 
 export type SerializeUser = WithId<db.User> &
   Request['user'] & {
@@ -201,19 +205,27 @@ export const loginGithub = async (
 }
 
 export const removeTwitter = async (req: PassportRequest, res: Response) => {
-  if (!req.user) {
-    res.status(401).send('not auth')
+  const accessToken = parseAuthorizationHeader(req)
+  const { err, decoded } = await verifyAccessToken(
+    accessToken,
+    JWT.accessTokenSecret
+  )
+
+  if (err || !decoded.user) {
+    return res.status(401).send('not auth token')
   }
 
-  const _id = new ObjectId(req.user._id)
+  const _id = new ObjectId(decoded.user._id)
   const user = await db.collections.users.findOne({ _id })
 
   if (!user.twitterId) {
     res.status(400).send('not linked')
+    return
   }
 
   if (!user.githubId) {
     res.status(400).send('can not remove')
+    return
   }
 
   await db.collections.users.updateOne(
@@ -225,19 +237,25 @@ export const removeTwitter = async (req: PassportRequest, res: Response) => {
 }
 
 export const removeGithub = async (req: PassportRequest, res: Response) => {
-  if (!req.user) {
-    res.status(401).send('not auth')
+  const accessToken = parseAuthorizationHeader(req)
+  const { err, decoded } = await verifyAccessToken(
+    accessToken,
+    JWT.accessTokenSecret
+  )
+
+  if (err || !decoded.user) {
+    return res.status(401).send('not auth token')
   }
 
   const _id = new ObjectId(req.user._id)
   const user = await db.collections.users.findOne({ _id })
 
   if (!user.githubId) {
-    res.status(400).send('not linked')
+    return res.status(400).send('not linked')
   }
 
   if (!user.githubId) {
-    res.status(400).send('can not remove')
+    return res.status(400).send('can not remove')
   }
 
   await db.collections.users.updateOne(
