@@ -2,6 +2,7 @@ import { useContext, useState, useMemo, useCallback } from 'react'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { UserContext, UserDispatchContext } from './index'
 import { useAuthForContext } from '../auth/hooks'
+import { createClient } from '../../lib/client'
 
 export const useUser = () => {
   return useContext(UserContext)
@@ -68,52 +69,44 @@ export const useUserForContext = () => {
     setLogin(false)
   }
 
-  const _fetchMyInfo = async (accessToken: string) => {
-    const res = await fetch('/api/user/@me', {
-      credentials: 'include',
-      headers: {
-        Authorization: `Bearer ${accessToken}`
-      }
-    })
-
-    if (res.status === 200) {
-      const payload =
-        (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][200]
-
-      setLogin(true)
-      setMe({
-        ...payload,
-        iconUrl: payload.icon
-      })
-    } else if (res.status === 404) {
-      const payload =
-        (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][404]
-
-      setLogin(true)
-      setMe({
-        id: payload.id,
-        account: '',
-        twitterUserName: payload.twitterUserName,
-        githubUserName: payload.githubUserName,
-        iconUrl: ''
-      })
-    } else if (res.status === 403) {
-      logout()
-    }
-    return res
-  }
-
   const fetchMyInfo = useCallback(async () => {
     const accessToken = await getAccessToken()
-    const res = await _fetchMyInfo(accessToken)
 
-    if (res.status === 402) {
-      const accessToken = await getAccessToken()
-      return await _fetchMyInfo(accessToken)
-    }
+    return await createClient(
+      '/api/user/@me',
+      {
+        method: 'GET',
+        accessToken
+      },
+      async (res) => {
+        if (res.status === 200) {
+          const payload =
+            (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][200]
 
-    return res
-  }, [])
+          setLogin(true)
+          setMe({
+            ...payload,
+            iconUrl: payload.icon
+          })
+        } else if (res.status === 404) {
+          const payload =
+            (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][404]
+
+          setLogin(true)
+          setMe({
+            id: payload.id,
+            account: '',
+            twitterUserName: payload.twitterUserName,
+            githubUserName: payload.githubUserName,
+            iconUrl: ''
+          })
+        } else if (res.status === 403) {
+          logout()
+        }
+        return res
+      }
+    )
+  }, [getAccessToken])
 
   const removeTwitter = async () => {
     if (!me || !me.twitterUserName || !me.githubUserName) {
