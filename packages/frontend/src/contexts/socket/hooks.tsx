@@ -114,8 +114,8 @@ export const useSocketForContext = () => {
         reconnectInterval.current = newInterval
       }
 
-      const token = await getAccessToken()
-      const socketInstance = new WebSocket(connectUrl + `?token=${token}`)
+      const { accessToken } = await getAccessToken()
+      const socketInstance = new WebSocket(connectUrl + `?token=${accessToken}`)
       ws.current = socketInstance
 
       socketInstance.addEventListener('open', () => {

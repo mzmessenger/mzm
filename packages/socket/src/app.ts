@@ -1,6 +1,6 @@
 import type WebSocket from 'ws'
 import { v4 as uuid } from 'uuid'
-import { verifyAccessToken } from 'mzm-shared/auth'
+import { verifyAccessToken } from 'mzm-shared/auth/index'
 import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
 import { requestSocketAPI } from './lib/req.js'
 import { saveSocket, removeSocket } from './lib/sender.js'

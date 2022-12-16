@@ -1,7 +1,7 @@
-import { useContext, useState, useMemo, useCallback } from 'react'
+import { useContext, useState, useCallback } from 'react'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { UserContext, UserDispatchContext } from './index'
-import { useAuthForContext } from '../auth/hooks'
+import { useDispatchAuth } from '../auth/hooks'
 import { createClient } from '../../lib/client'
 
 export const useUser = () => {
@@ -16,28 +16,24 @@ type MyInfo = {
   id: string
   account: string
   iconUrl: string
+}
+
+type SocialAccount = {
   twitterUserName: string | null
   githubUserName: string | null
 }
 
 export const useUserForContext = () => {
-  const { getAccessToken } = useAuthForContext()
-  const [login, setLogin] = useState(false)
+  const { getAccessToken, refreshToken, logout } = useDispatchAuth()
+  const [socialAccount, setSocialAccount] = useState<SocialAccount>({
+    twitterUserName: null,
+    githubUserName: null
+  })
   const [me, setMe] = useState<MyInfo>({
     id: '',
     account: '',
-    iconUrl: '',
-    twitterUserName: '',
-    githubUserName: ''
+    iconUrl: ''
   })
-
-  const state = useMemo(() => {
-    return {
-      signup: me.account !== '',
-      login,
-      me
-    }
-  }, [login, me])
 
   const updateUser = async (account: string) => {
     const body: REQUEST['/api/user/@me']['PUT']['body'] = { account }
@@ -64,13 +60,8 @@ export const useUserForContext = () => {
     return res
   }
 
-  const logout = () => {
-    location.href = '/auth/logout'
-    setLogin(false)
-  }
-
   const fetchMyInfo = useCallback(async () => {
-    const accessToken = await getAccessToken()
+    const { accessToken, user } = await getAccessToken()
 
     return await createClient(
       '/api/user/@me',
@@ -84,20 +75,20 @@ export const useUserForContext = () => {
         if (res.status === 200) {
           const payload = (await res.json()) as ResponseType[200]
 
-          setLogin(true)
           setMe({
             ...payload,
             iconUrl: payload.icon
           })
+          setSocialAccount({
+            twitterUserName: user.twitterUserName,
+            githubUserName: user.githubUserName
+          })
         } else if (res.status === 404) {
           const payload = (await res.json()) as ResponseType[404]
 
-          setLogin(true)
           setMe({
             id: payload.id,
             account: '',
-            twitterUserName: payload.twitterUserName,
-            githubUserName: payload.githubUserName,
             iconUrl: ''
           })
         } else if (res.status === 403) {
@@ -106,10 +97,10 @@ export const useUserForContext = () => {
         return res
       }
     )
-  }, [getAccessToken])
+  }, [getAccessToken, logout])
 
   const removeTwitter = async () => {
-    if (!me || !me.twitterUserName || !me.githubUserName) {
+    if (!socialAccount.twitterUserName || !socialAccount.githubUserName) {
       return
     }
     const res = await fetch('/auth/twitter', {
@@ -120,13 +111,18 @@ export const useUserForContext = () => {
       }
     })
     if (res.status === 200) {
-      fetchMyInfo()
+      refreshToken().then((token) => {
+        setSocialAccount({
+          twitterUserName: token.user.twitterUserName,
+          githubUserName: token.user.githubUserName
+        })
+      })
     }
     return res
   }
 
   const removeGithub = async () => {
-    if (!me || !me.twitterUserName || !me.githubUserName) {
+    if (!socialAccount.twitterUserName || !socialAccount.githubUserName) {
       return
     }
     const res = await fetch('/auth/github', {
@@ -137,7 +133,12 @@ export const useUserForContext = () => {
       }
     })
     if (res.status === 200) {
-      fetchMyInfo()
+      refreshToken().then((token) => {
+        setSocialAccount({
+          twitterUserName: token.user.twitterUserName,
+          githubUserName: token.user.githubUserName
+        })
+      })
     }
     return res
   }
@@ -151,7 +152,7 @@ export const useUserForContext = () => {
       }
     })
     if (res.status === 200) {
-      setLogin(false)
+      logout()
     }
     return res
   }
@@ -180,13 +181,23 @@ export const useUserForContext = () => {
   }
 
   return {
-    state,
+    state: {
+      me,
+      socialAccount
+    },
     updateUser: useCallback(updateUser, []),
-    logout: useCallback(logout, []),
     fetchMyInfo,
-    removeTwitter: useCallback(removeTwitter, [fetchMyInfo, me]),
-    removeGithub: useCallback(removeGithub, [fetchMyInfo, me]),
-    removeUser: useCallback(removeUser, []),
+    removeTwitter: useCallback(removeTwitter, [
+      refreshToken,
+      socialAccount.githubUserName,
+      socialAccount.twitterUserName
+    ]),
+    removeGithub: useCallback(removeGithub, [
+      refreshToken,
+      socialAccount.githubUserName,
+      socialAccount.twitterUserName
+    ]),
+    removeUser: useCallback(removeUser, [logout]),
     uploadIcon: useCallback(uploadIcon, [me])
   } as const
 }

@@ -12,20 +12,20 @@ export const Provider: React.FC<PropsWithChildren<unknown>> = ({
   children
 }) => {
   return (
-    <SocketProvider>
-      <UserProvider>
-        <UiProvider>
-          <SearchProvider>
-            <MessagesProvider>
-              <RoomsProvider>
-                <PostTextAreaProvider>
-                  <AuthProvider>{children}</AuthProvider>
-                </PostTextAreaProvider>
-              </RoomsProvider>
-            </MessagesProvider>
-          </SearchProvider>
-        </UiProvider>
-      </UserProvider>
-    </SocketProvider>
+    <AuthProvider>
+      <SocketProvider>
+        <UserProvider>
+          <UiProvider>
+            <SearchProvider>
+              <MessagesProvider>
+                <RoomsProvider>
+                  <PostTextAreaProvider>{children}</PostTextAreaProvider>
+                </RoomsProvider>
+              </MessagesProvider>
+            </SearchProvider>
+          </UiProvider>
+        </UserProvider>
+      </SocketProvider>
+    </AuthProvider>
   )
 }

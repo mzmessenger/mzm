@@ -9,7 +9,7 @@ import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import * as internal from './handlers/internal.js'
 import {
-  checkAccessTokenMiddleware,
+  checkAccessToken,
   checkLogin,
   errorHandler
 } from './middleware/index.js'
@@ -30,8 +30,8 @@ export const createApp = () => {
   app.delete('/api/rooms/enter', checkLogin, jsonParser, wrap(rooms.exitRoom))
   app.get('/api/rooms/search', wrap(rooms.search))
   app.get('/api/rooms/:roomid/users', checkLogin, wrap(rooms.getUsers))
-  app.get('/api/user/@me', checkAccessTokenMiddleware, wrap(user.getUserInfo))
-  app.put('/api/user/@me', checkLogin, jsonParser, wrap(user.update))
+  app.get('/api/user/@me', checkAccessToken, wrap(user.getUserInfo))
+  app.put('/api/user/@me', checkAccessToken, jsonParser, wrap(user.update))
   app.post(
     '/api/user/@me/account',
     checkLogin,

@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, PropsWithChildren } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useApp } from './App.hooks'
-import { useUser } from './contexts/user/hooks'
+import { useAuth } from './contexts/auth/hooks'
 import { Loading } from './components/Loading'
 
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
@@ -13,7 +13,7 @@ const WithSuspense: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
 
 const App = () => {
   useApp(url)
-  const { login } = useUser()
+  const { login } = useAuth()
   const Top = login
     ? lazy(() => import('./pages/Top'))
     : lazy(() => import('./pages/Login'))

@@ -9,11 +9,11 @@ import { WIDTH_MOBILE } from '../../lib/constants'
 import { useUser, useDispatchUser } from '../../contexts/user/hooks'
 
 export const SocialAccounts = () => {
-  const { me } = useUser()
+  const { socialAccount } = useUser()
   const { removeTwitter, removeGithub } = useDispatchUser()
 
-  const isTwitterLinked = !!me.twitterUserName
-  const isGithubLinked = !!me.githubUserName
+  const isTwitterLinked = !!socialAccount.twitterUserName
+  const isGithubLinked = !!socialAccount.githubUserName
 
   const onRemoveTwitter = () => {
     removeTwitter()

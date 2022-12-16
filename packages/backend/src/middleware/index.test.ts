@@ -1,5 +1,5 @@
 import { vi, test, expect } from 'vitest'
-vi.mock('mzm-shared/auth')
+vi.mock('mzm-shared/auth/index')
 vi.mock('../lib/logger')
 
 import { NextFunction, Request, Response } from 'express'

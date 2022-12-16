@@ -3,13 +3,7 @@ import { ObjectId } from 'mongodb'
 import isEmpty from 'validator/lib/isEmpty.js'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { isValidAccount } from 'mzm-shared/validator'
-import {
-  getRequestUserId,
-  getRequestTwitterUserName,
-  getRequestGithubUserName,
-  createUserIconPath,
-  popParam
-} from '../lib/utils.js'
+import { getRequestUserId, createUserIconPath, popParam } from '../lib/utils.js'
 import { NotFound, BadRequest } from '../lib/errors.js'
 import * as db from '../lib/db.js'
 
@@ -54,24 +48,17 @@ export const getUserInfo = async (req: Request) => {
     { projection: { account: 1, icon: 1 } }
   )
 
-  const twitter = getRequestTwitterUserName(req)
-  const github = getRequestGithubUserName(req)
-
   if (!user || !user.account) {
     throw new NotFound<ResponseType[404]>({
       reason: 'account is not found',
-      id,
-      twitterUserName: twitter,
-      githubUserName: github
+      id
     })
   }
 
   const response: ResponseType[200] = {
     id: user._id.toHexString(),
     account: user.account,
-    icon: createUserIconPath(user.account, user.icon?.version),
-    twitterUserName: twitter,
-    githubUserName: github
+    icon: createUserIconPath(user.account, user.icon?.version)
   }
 
   return response

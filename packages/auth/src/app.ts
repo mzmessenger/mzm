@@ -7,7 +7,7 @@ import connectRedis from 'connect-redis'
 import { Strategy as TwitterStrategy } from 'passport-twitter'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import session from 'express-session'
-import { COOKIES } from 'mzm-shared/auth'
+import { COOKIES } from 'mzm-shared/auth/constants'
 import { logger } from './lib/logger.js'
 import {
   TWITTER_CONSUMER_KEY,
@@ -75,8 +75,8 @@ export const createApp = ({ client }: Options) => {
     )
   )
 
-  app.post('/auth/refresh/token', cookieParser(), (req, res) => {
-    return handlers.jwtRefresh(req, res)
+  app.post('/auth/token/refresh', cookieParser(), (req, res) => {
+    return handlers.refreshAccessToken(req, res)
   })
 
   const callbackHandler = (

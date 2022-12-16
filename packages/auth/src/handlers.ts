@@ -69,8 +69,8 @@ export const deserializeUser = (
     .catch((err) => done(err))
 }
 
-export const jwtRefresh = async (req: Request, res: Response) => {
-  type ResponseType = AUTH_API_RESPONSE['/auth/refresh/token']['POST']['body']
+export const refreshAccessToken = async (req: Request, res: Response) => {
+  type ResponseType = AUTH_API_RESPONSE['/auth/token/refresh']['POST']['body']
   try {
     const decode = await verifyRefreshToken(req.cookies[COOKIES.REFRESH_TOKEN])
 
@@ -86,7 +86,16 @@ export const jwtRefresh = async (req: Request, res: Response) => {
       githubUserName: user.githubUserName
     })
 
-    const response: ResponseType[200] = { accessToken }
+    const response: ResponseType[200] = {
+      accessToken,
+      user: {
+        _id: user._id.toHexString(),
+        twitterId: user.twitterId,
+        twitterUserName: user.twitterUserName,
+        githubId: user.githubId,
+        githubUserName: user.githubUserName
+      }
+    }
     res.status(200).json(response)
   } catch (e) {
     const response: ResponseType[400] = 'not login'
@@ -130,8 +139,8 @@ export const loginTwitter = async (
 
     const { accessToken, refreshToken } = await createTokens({
       _id: user._id.toHexString(),
-      twitterId: user.twitterId,
-      twitterUserName: user.twitterUserName,
+      twitterId: twitterId,
+      twitterUserName: twitterUserName,
       githubId: user.githubId,
       githubUserName: user.githubUserName
     })
@@ -180,8 +189,8 @@ export const loginGithub = async (
       _id: user._id.toHexString(),
       twitterId: user.twitterId,
       twitterUserName: user.twitterUserName,
-      githubId: user.githubId,
-      githubUserName: user.githubUserName
+      githubId: githubId,
+      githubUserName: githubUserName
     })
 
     cb(null, { ...user, accessToken, refreshToken })
@@ -243,7 +252,13 @@ export const remove = async (req: PassportRequest, res: Response) => {
   logger.info('[remove]', req.user)
   if (req.user) {
     await redis.xadd(REMOVE_STREAM, '*', 'user', req.user._id.toHexString())
-    return res.status(200).send('ok')
+    return req.logout(() => {
+      res
+        .clearCookie(COOKIES.ACCESS_TOKEN)
+        .clearCookie(COOKIES.REFRESH_TOKEN)
+        .status(200)
+        .send('ok')
+    })
   }
   return res.status(401).send('not auth')
 }
