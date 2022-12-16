@@ -6,7 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.js",
-    "./auth": "./dist/auth/index.js",
+    "./auth/*": "./dist/auth/*.js",
     "./type/db": "./dist/type/db.js",
     "./type/socket": "./dist/type/socket.js",
     "./type/api": "./dist/type/api.js",

@@ -1,5 +1,6 @@
 import { Request, Response, NextFunction } from 'express'
-import { HEADERS, requestAuthServer, verifyAccessToken } from 'mzm-shared/auth'
+import { requestAuthServer, verifyAccessToken } from 'mzm-shared/auth'
+import { HEADERS } from 'mzm-shared/auth/constants'
 import { AUTH_SERVER, JWT } from '../config.js'
 import * as HttpErrors from '../lib/errors.js'
 import { logger } from '../lib/logger.js'

@@ -26,7 +26,7 @@ export const createAccessToken = (user: CreateAccessTokenArgs) => {
       payload,
       JWT.accessTokenSecret,
       {
-        expiresIn: '10m'
+        expiresIn: '30m'
       },
       (err, token) => {
         if (err) {
@@ -73,7 +73,7 @@ export const createTokens = async (user: CreateAccessTokenArgs) => {
   }
 }
 
-export const decodeRefreshToken = (token: string) => {
+export const verifyRefreshToken = (token: string) => {
   return new Promise<jwt.JwtPayload | string>((resolve, reject) => {
     jwt.verify(token, JWT.refreshTokenSecret, (err, decode) => {
       if (err) {

@@ -2,12 +2,7 @@ import type { IncomingHttpHeaders } from 'http'
 import type { AccessToken } from '../type/auth.js'
 import jwt from 'jsonwebtoken'
 import { request } from 'undici'
-
-export const HEADERS = {
-  USER_ID: 'x-user-id',
-  TIWTTER_USER_NAME: 'x-twitter-user-name',
-  GITHUB_USER_NAME: 'x-github-user-name'
-} as const
+import { HEADERS } from './constants.js'
 
 type RequestOptions = {
   url: string

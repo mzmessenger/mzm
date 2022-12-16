@@ -1,11 +1,12 @@
+import type { Request, Response } from 'express'
+import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
 import { ObjectId, WithId } from 'mongodb'
-import { Request, Response } from 'express'
-import { HEADERS } from 'mzm-shared/auth'
+import { HEADERS, COOKIES } from 'mzm-shared/auth/constants'
 import * as db from './lib/db.js'
 import { logger } from './lib/logger.js'
 import { redis } from './lib/redis.js'
 import {
-  decodeRefreshToken,
+  verifyRefreshToken,
   createAccessToken,
   createTokens,
   type RefeshToken
@@ -68,11 +69,10 @@ export const deserializeUser = (
     .catch((err) => done(err))
 }
 
-export const jwtRefresh = async (req, res) => {
+export const jwtRefresh = async (req: Request, res: Response) => {
+  type ResponseType = AUTH_API_RESPONSE['/auth/refresh/token']['POST']['body']
   try {
-    const decode = await decodeRefreshToken(
-      req.cookies['mzm-jwt-refresh-token']
-    )
+    const decode = await verifyRefreshToken(req.cookies[COOKIES.REFRESH_TOKEN])
 
     const user = await db.collections.users.findOne({
       _id: new ObjectId((decode as RefeshToken).user._id)
@@ -86,9 +86,11 @@ export const jwtRefresh = async (req, res) => {
       githubUserName: user.githubUserName
     })
 
-    res.status(200).json({ accessToken })
+    const response: ResponseType[200] = { accessToken }
+    res.status(200).json(response)
   } catch (e) {
-    return res.status(401).send('not login')
+    const response: ResponseType[400] = 'not login'
+    return res.status(401).send(response)
   }
 }
 

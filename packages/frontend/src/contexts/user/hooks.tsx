@@ -79,9 +79,10 @@ export const useUserForContext = () => {
         accessToken
       },
       async (res) => {
+        type ResponseType = RESPONSE['/api/user/@me']['GET']['body']
+
         if (res.status === 200) {
-          const payload =
-            (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][200]
+          const payload = (await res.json()) as ResponseType[200]
 
           setLogin(true)
           setMe({
@@ -89,8 +90,7 @@ export const useUserForContext = () => {
             iconUrl: payload.icon
           })
         } else if (res.status === 404) {
-          const payload =
-            (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][404]
+          const payload = (await res.json()) as ResponseType[404]
 
           setLogin(true)
           setMe({

@@ -112,3 +112,16 @@ export type REQUEST = {
     }
   }
 }
+
+export type AUTH_API_RESPONSE = {
+  '/auth/refresh/token': {
+    POST: {
+      body: {
+        200: {
+          accessToken: string
+        }
+        400: 'not login'
+      }
+    }
+  }
+}

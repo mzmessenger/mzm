@@ -7,6 +7,7 @@ import connectRedis from 'connect-redis'
 import { Strategy as TwitterStrategy } from 'passport-twitter'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import session from 'express-session'
+import { COOKIES } from 'mzm-shared/auth'
 import { logger } from './lib/logger.js'
 import {
   TWITTER_CONSUMER_KEY,
@@ -74,7 +75,7 @@ export const createApp = ({ client }: Options) => {
     )
   )
 
-  app.post('/auth/jwt/refresh', cookieParser(), (req, res) => {
+  app.post('/auth/refresh/token', cookieParser(), (req, res) => {
     return handlers.jwtRefresh(req, res)
   })
 
@@ -83,8 +84,8 @@ export const createApp = ({ client }: Options) => {
     res: Response
   ) => {
     return res
-      .cookie('mzm-jwt-token', req.user.accessToken)
-      .cookie('mzm-jwt-refresh-token', req.user.refreshToken, {
+      .cookie(COOKIES.ACCESS_TOKEN, req.user.accessToken)
+      .cookie(COOKIES.REFRESH_TOKEN, req.user.refreshToken, {
         secure: true,
         httpOnly: true
       })
@@ -112,8 +113,8 @@ export const createApp = ({ client }: Options) => {
   app.get('/auth/logout', (req: Request, res: Response) => {
     req.logout(() => {
       res
-        .clearCookie('mzm-jwt-token')
-        .clearCookie('mzm-jwt-refresh-token')
+        .clearCookie(COOKIES.ACCESS_TOKEN)
+        .clearCookie(COOKIES.REFRESH_TOKEN)
         .redirect('/')
     })
   })

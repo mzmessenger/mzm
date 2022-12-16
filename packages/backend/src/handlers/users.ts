@@ -13,20 +13,16 @@ import {
 import { NotFound, BadRequest } from '../lib/errors.js'
 import * as db from '../lib/db.js'
 
-export const update = async (
-  req: Request
-): Promise<RESPONSE['/api/user/@me']['PUT']['body'][200]> => {
+export const update = async (req: Request) => {
+  type ResponseType = RESPONSE['/api/user/@me']['PUT']['body']
+
   const body = req.body as Partial<REQUEST['/api/user/@me']['PUT']['body']>
   const account = popParam(body?.account)
   if (!account) {
-    throw new BadRequest<RESPONSE['/api/user/@me']['PUT']['body'][400]>(
-      'account is empty'
-    )
+    throw new BadRequest<ResponseType[400]>('account is empty')
   }
   if (!isValidAccount(account)) {
-    throw new BadRequest<RESPONSE['/api/user/@me']['PUT']['body'][400]>(
-      'account is not valid'
-    )
+    throw new BadRequest<ResponseType[400]>('account is not valid')
   }
 
   const id = getRequestUserId(req)
@@ -34,9 +30,7 @@ export const update = async (
     account: account
   })
   if (user && user._id.toHexString() !== id) {
-    throw new BadRequest<RESPONSE['/api/user/@me']['PUT']['body'][400]>(
-      `${account} is already exists`
-    )
+    throw new BadRequest<ResponseType[400]>(`${account} is already exists`)
   }
 
   const userId = new ObjectId(id)
@@ -46,12 +40,13 @@ export const update = async (
     { upsert: true }
   )
 
-  return { id: id, account: account }
+  const response: ResponseType[200] = { id: id, account: account }
+  return response
 }
 
-export const getUserInfo = async (
-  req: Request
-): Promise<RESPONSE['/api/user/@me']['GET']['body'][200]> => {
+export const getUserInfo = async (req: Request) => {
+  type ResponseType = RESPONSE['/api/user/@me']['GET']['body']
+
   const id = getRequestUserId(req)
 
   const user = await db.collections.users.findOne(
@@ -63,7 +58,7 @@ export const getUserInfo = async (
   const github = getRequestGithubUserName(req)
 
   if (!user || !user.account) {
-    throw new NotFound<RESPONSE['/api/user/@me']['GET']['body'][404]>({
+    throw new NotFound<ResponseType[404]>({
       reason: 'account is not found',
       id,
       twitterUserName: twitter,
@@ -71,13 +66,15 @@ export const getUserInfo = async (
     })
   }
 
-  return {
+  const response: ResponseType[200] = {
     id: user._id.toHexString(),
     account: user.account,
     icon: createUserIconPath(user.account, user.icon?.version),
     twitterUserName: twitter,
     githubUserName: github
   }
+
+  return response
 }
 
 export const updateAccount = async (req: Request) => {

@@ -1,6 +1,6 @@
 import type { IncomingMessage } from 'http'
 import type { Request } from 'express'
-import { HEADERS } from 'mzm-shared/auth'
+import { HEADERS } from 'mzm-shared/auth/constants'
 import validator from 'validator'
 
 export const getRequestUserId = (req: IncomingMessage | Request): string => {

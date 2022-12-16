@@ -1,5 +1,7 @@
+import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
+import { COOKIES } from 'mzm-shared/auth/constants'
 import { useState, useContext } from 'react'
-import jwt_decode, { JwtPayload } from 'jwt-decode'
+import jwt_decode, { type JwtPayload } from 'jwt-decode'
 import { AuthDispatchContext } from './index'
 
 export const useDispatchAuth = () => {
@@ -10,7 +12,7 @@ const createDefaultToken = () => {
   try {
     const [, token] = document.cookie
       .split(';')
-      .find((row) => row.includes('mzm-jwt-token'))
+      .find((row) => row.includes(COOKIES.ACCESS_TOKEN))
       .split('=')
     return token ?? ''
   } catch (e) {
@@ -23,13 +25,14 @@ export const useAuthForContext = () => {
   const [accessToken, setAccessToken] = useState<string>(defaultToken)
 
   const refreshToken = async () => {
-    const res = await fetch('/auth/jwt/refresh', {
+    type ResponseType = AUTH_API_RESPONSE['/auth/refresh/token']['POST']['body']
+
+    const res = await fetch('/auth/refresh/token', {
       credentials: 'include',
       method: 'POST'
     })
     if (res.status === 200) {
-      // @todo type
-      const body = (await res.json()) as { accessToken: string }
+      const body = (await res.json()) as ResponseType[200]
       setAccessToken(body.accessToken)
       return body
     }

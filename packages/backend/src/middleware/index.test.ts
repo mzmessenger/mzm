@@ -3,7 +3,8 @@ vi.mock('mzm-shared/auth')
 vi.mock('../lib/logger')
 
 import { NextFunction, Request, Response } from 'express'
-import { HEADERS, requestAuthServer } from 'mzm-shared/auth'
+import { HEADERS } from 'mzm-shared/auth/constants'
+import { requestAuthServer } from 'mzm-shared/auth/index'
 import { errorHandler, checkLogin } from './index'
 import * as HttpErrors from '../lib/errors'
 
