@@ -24,11 +24,23 @@ export const createApiClient = async <T>(
 
   const method = options.method ?? 'GET'
 
-  const res = await fetch(url, {
+  const init: FetchInit = {
     method,
     credentials: 'include',
-    headers
-  })
+    headers,
+    ...options
+  }
+
+  if (
+    (options.method === 'POST' ||
+      options.method === 'PUT' ||
+      options.method === 'DELETE') &&
+    options.body
+  ) {
+    init.body = options.body
+  }
+
+  const res = await fetch(url, init)
 
   return await parser(res)
 }

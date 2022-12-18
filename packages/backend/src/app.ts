@@ -34,7 +34,7 @@ export const createApp = () => {
   app.put('/api/user/@me', checkAccessToken, jsonParser, wrap(user.update))
   app.post(
     '/api/user/@me/account',
-    checkLogin,
+    checkAccessToken,
     jsonParser,
     wrap(user.updateAccount)
   )
@@ -43,14 +43,14 @@ export const createApp = () => {
   app.get('/api/icon/user/:account/:version', streamWrap(icon.getUserIcon))
   app.post(
     '/api/icon/user',
-    checkLogin,
+    checkAccessToken,
     iconUpload.single('icon'),
     wrap(icon.uploadUserIcon)
   )
   app.get('/api/icon/rooms/:roomname/:version', streamWrap(icon.getRoomIcon))
   app.post(
     '/api/icon/rooms/:roomname',
-    checkLogin,
+    checkAccessToken,
     iconUpload.single('icon'),
     wrap(icon.uploadRoomIcon)
   )

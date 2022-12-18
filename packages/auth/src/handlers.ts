@@ -267,16 +267,18 @@ export const removeGithub = async (req: PassportRequest, res: Response) => {
 }
 
 export const remove = async (req: PassportRequest, res: Response) => {
+  const accessToken = parseAuthorizationHeader(req)
+  const { err, decoded } = await verifyAccessToken(
+    accessToken,
+    JWT.accessTokenSecret
+  )
+  if (err || !decoded.user._id) {
+    return res.status(401).send('not auth token')
+  }
   logger.info('[remove]', req.user)
-  if (req.user) {
+  if (decoded.user._id) {
     await redis.xadd(REMOVE_STREAM, '*', 'user', req.user._id.toHexString())
-    return req.logout(() => {
-      res
-        .clearCookie(COOKIES.ACCESS_TOKEN)
-        .clearCookie(COOKIES.REFRESH_TOKEN)
-        .status(200)
-        .send('ok')
-    })
+    return res.status(200).send('ok')
   }
   return res.status(401).send('not auth')
 }

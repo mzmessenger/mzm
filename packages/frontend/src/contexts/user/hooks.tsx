@@ -38,26 +38,30 @@ export const useUserForContext = () => {
   const updateUser = async (account: string) => {
     const body: REQUEST['/api/user/@me']['PUT']['body'] = { account }
 
-    const res = await fetch('/api/user/@me', {
-      method: 'PUT',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const { accessToken } = await getAccessToken()
+    return await createApiClient(
+      '/api/user/@me',
+      {
+        method: 'PUT',
+        accessToken,
+        body: JSON.stringify(body)
       },
-      body: JSON.stringify(body)
-    })
+      async (res) => {
+        if (res.status === 200) {
+          res
+            .json()
+            .then((json: RESPONSE['/api/user/@me']['PUT']['body'][200]) => {
+              setMe({
+                ...me,
+                account: json.account,
+                iconUrl: `/api/icon/user/${json.account}`
+              })
+            })
+        }
 
-    if (res.status === 200) {
-      res.json().then((json: RESPONSE['/api/user/@me']['PUT']['body'][200]) => {
-        setMe({
-          ...me,
-          account: json.account,
-          iconUrl: `/api/icon/user/${json.account}`
-        })
-      })
-    }
-
-    return res
+        return res
+      }
+    )
   }
 
   const fetchMyInfo = useCallback(async () => {
@@ -150,26 +154,33 @@ export const useUserForContext = () => {
   }
 
   const removeUser = async () => {
-    const res = await fetch('/auth/user', {
-      method: 'DELETE',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const { accessToken } = await getAccessToken()
+    return await createApiClient(
+      '/auth/user',
+      {
+        method: 'DELETE',
+        accessToken
+      },
+      async (res) => {
+        if (res.status === 200) {
+          logout()
+        }
+        return res
       }
-    })
-    if (res.status === 200) {
-      logout()
-    }
-    return res
+    )
   }
 
   const uploadIcon = async (blob: Blob) => {
     const formData = new FormData()
     formData.append('icon', blob)
+    const { accessToken } = await getAccessToken()
     const res = await fetch('/api/icon/user', {
       method: 'POST',
       body: formData,
-      credentials: 'include'
+      credentials: 'include',
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
     })
 
     if (!res.ok) {

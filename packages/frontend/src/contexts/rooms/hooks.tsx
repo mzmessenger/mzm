@@ -4,6 +4,8 @@ import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useDispatchUi } from '../ui/hooks'
 import type { useUser } from '../user/hooks'
+import { useDispatchAuth } from '../auth/hooks'
+import { createApiClient } from '../../lib/client'
 import { RoomsContext, RoomsDispatchContext } from './index'
 import { INITIAL_STATE, Actions } from './constants'
 import { reducer } from './reducer'
@@ -18,6 +20,7 @@ export const useDispatchRooms = () => {
 
 export const useRoomsForContext = () => {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE)
+  const { getAccessToken } = useDispatchAuth()
 
   const getRoomMessages = (
     roomId: string,
@@ -326,10 +329,14 @@ export const useRoomsForContext = () => {
   const uploadIcon = async (name: string, blob: Blob) => {
     const formData = new FormData()
     formData.append('icon', blob)
+    const { accessToken } = await getAccessToken()
     const res = await fetch(`/api/icon/rooms/${name}`, {
       method: 'POST',
       body: formData,
-      credentials: 'include'
+      credentials: 'include',
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
     })
 
     if (res.ok) {
