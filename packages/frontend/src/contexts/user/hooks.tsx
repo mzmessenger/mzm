@@ -202,7 +202,7 @@ export const useUserForContext = () => {
       me,
       socialAccount
     },
-    updateUser: useCallback(updateUser, [me]),
+    updateUser: useCallback(updateUser, [getAccessToken, me]),
     fetchMyInfo,
     removeTwitter: useCallback(removeTwitter, [
       getAccessToken,
@@ -216,7 +216,7 @@ export const useUserForContext = () => {
       socialAccount.githubUserName,
       socialAccount.twitterUserName
     ]),
-    removeUser: useCallback(removeUser, [logout]),
-    uploadIcon: useCallback(uploadIcon, [me])
+    removeUser: useCallback(removeUser, [getAccessToken, logout]),
+    uploadIcon: useCallback(uploadIcon, [getAccessToken, me])
   } as const
 }

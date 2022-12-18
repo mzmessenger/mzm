@@ -381,10 +381,10 @@ export const useRoomsForContext = () => {
   return {
     state,
     getRoomMessages: useCallback(getRoomMessages, []),
-    createRoom: useCallback(createRoom, []),
+    createRoom: useCallback(createRoom, [getAccessToken]),
     changeRoom,
     enterRoom: useCallback(enterRoom, [changeRoom, state.rooms.byId]),
-    exitRoom: useCallback(exitRoom, []),
+    exitRoom: useCallback(exitRoom, [getAccessToken]),
     receiveRooms: useCallback(receiveRooms, []),
     setRoomOrder: useCallback(setRoomOrder, [state.rooms.allIds]),
     changeRoomOrder: useCallback(changeRoomOrder, [state.rooms.allIds]),
@@ -401,7 +401,7 @@ export const useRoomsForContext = () => {
     reloadMessage: useCallback(reloadMessage, []),
     toggleRoomSetting: useCallback(toggleRoomSetting, []),
     closeRoomSetting: useCallback(closeRoomSetting, []),
-    uploadIcon: useCallback(uploadIcon, []),
+    uploadIcon: useCallback(uploadIcon, [getAccessToken]),
     setRoomStatus: useCallback(setRoomStatus, []),
     setRoomDescription: useCallback(setRoomDescription, [])
   } as const

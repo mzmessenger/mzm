@@ -1,11 +1,10 @@
 import { Request, Response, NextFunction } from 'express'
 import {
-  requestAuthServer,
   verifyAccessToken,
   parseAuthorizationHeader
 } from 'mzm-shared/auth/index'
 import { HEADERS } from 'mzm-shared/auth/constants'
-import { AUTH_SERVER, JWT } from '../config.js'
+import { JWT } from '../config.js'
 import * as HttpErrors from '../lib/errors.js'
 import { logger } from '../lib/logger.js'
 
@@ -32,7 +31,7 @@ export const checkAccessToken = (
   verifyAccessToken(accessToken, JWT.accessTokenSecret)
     .then(({ err, decoded }) => {
       if (err) {
-        return res.status(402).send('token expired')
+        return res.status(401).send('not verify token')
       }
       if (!decoded) {
         return res.status(401).send('not login')
@@ -43,29 +42,4 @@ export const checkAccessToken = (
     .catch(() => {
       return res.status(401).send('not login')
     })
-}
-
-export const checkLogin = (req: Request, res: Response, next: NextFunction) => {
-  try {
-    requestAuthServer({
-      url: AUTH_SERVER,
-      headers: {
-        cookie: req.headers.cookie
-      }
-    })
-      .then(({ userId, twitterUserName, githubUserName }) => {
-        if (!userId) {
-          return res.status(401).send('not login')
-        }
-        req.headers[HEADERS.USER_ID] = userId
-        req.headers[HEADERS.TIWTTER_USER_NAME] = twitterUserName
-        req.headers[HEADERS.GITHUB_USER_NAME] = githubUserName
-        next()
-      })
-      .catch(() => {
-        return res.status(401).send('not login')
-      })
-  } catch (e) {
-    next(e)
-  }
 }

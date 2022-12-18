@@ -10,8 +10,6 @@ export const PORT = process.env.PORT ?? 3001
 
 export const WORKER_NUM = process.env.WORKER_NUM ?? 1
 
-export const AUTH_SERVER = process.env.AUTH_SERVER
-
 export const account = {
   MIN_LENGTH: 2,
   MAX_LENGTH: 30

@@ -1,34 +1,6 @@
-import type { IncomingHttpHeaders } from 'http'
 import type { Request } from 'express'
 import type { AccessToken } from '../type/auth.js'
 import jwt from 'jsonwebtoken'
-import { request } from 'undici'
-import { HEADERS } from './constants.js'
-
-type RequestOptions = {
-  url: string
-  headers: {
-    cookie: IncomingHttpHeaders['cookie']
-  }
-  bodyTimeout?: number
-  headersTimeout?: number
-}
-export const requestAuthServer = async (options: RequestOptions) => {
-  const { headers } = await request(`${options.url}/auth`, {
-    method: 'GET',
-    headers: {
-      cookie: options.headers.cookie
-    },
-    bodyTimeout: options.bodyTimeout ?? 1000 * 60 * 5,
-    headersTimeout: options.headersTimeout ?? 1000 * 60 * 5
-  })
-
-  const userId = headers[HEADERS.USER_ID] as string
-  const twitterUserName = headers[HEADERS.TIWTTER_USER_NAME] as string
-  const githubUserName = headers[HEADERS.GITHUB_USER_NAME] as string
-
-  return { userId, twitterUserName, githubUserName }
-}
 
 type VeryfyAccessToken =
   | {
@@ -105,5 +77,5 @@ export const parseAuthorizationHeader = (req: Request) => {
 
   const [, credentials] = authorization.split(' ')
   const token = (credentials ?? '').trim()
-  return token
+  return token !== '' ? token : null
 }
