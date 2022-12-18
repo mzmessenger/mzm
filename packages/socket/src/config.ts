@@ -15,3 +15,10 @@ export const REDIS = {
     enableOfflineQueue: false
   }
 }
+export const JWT = {
+  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
+  issuer: process.env.JWT_ISSURE ?? 'https://mzm.dev',
+  audience: process.env.JWT_AUDIENCE
+    ? process.env.JWT_AUDIENCE.split(',')
+    : (['https://mzm.dev'] as string[])
+} as const

@@ -14,14 +14,16 @@ type VeryfyAccessToken =
 
 const verifyAccessTokenAsync = (
   accessToken: string,
-  accessTokenSecret: string
+  accessTokenSecret: string,
+  options: jwt.VerifyOptions
 ) => {
   return new Promise<VeryfyAccessToken>((resolve) => {
     jwt.verify(
       accessToken,
       accessTokenSecret,
       {
-        algorithms: ['HS256']
+        algorithms: ['HS256'],
+        ...options
       },
       (err, decoded) => {
         if (err) {
@@ -38,7 +40,8 @@ const verifyAccessTokenAsync = (
 
 export const verifyAccessToken = async (
   accessToken: string,
-  accessTokenSecret: string
+  accessTokenSecret: string,
+  options: jwt.VerifyOptions
 ): Promise<
   | {
       err: jwt.VerifyErrors
@@ -51,7 +54,8 @@ export const verifyAccessToken = async (
 > => {
   const { err, decoded } = await verifyAccessTokenAsync(
     accessToken,
-    accessTokenSecret
+    accessTokenSecret,
+    options
   )
 
   if (err) {

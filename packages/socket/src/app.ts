@@ -6,6 +6,7 @@ import { requestSocketAPI } from './lib/req.js'
 import { saveSocket, removeSocket } from './lib/sender.js'
 import { consume } from './lib/consumer.js'
 import logger from './lib/logger.js'
+import { JWT } from './config.js'
 import { ExtWebSocket } from './types.js'
 
 export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
@@ -20,7 +21,11 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
     if (url.searchParams.has('token')) {
       const { err, decoded } = await verifyAccessToken(
         url.searchParams.get('token'),
-        'accessTokenSecret'
+        JWT.accessTokenSecret,
+        {
+          issuer: JWT.issuer,
+          audience: JWT.audience
+        }
       )
       if (!err && decoded) {
         userId = decoded.user._id

@@ -108,8 +108,6 @@ export const createApp = ({ client }: Options) => {
   )
   app.delete('/auth/github', handlers.removeGithub)
 
-  app.get('/auth', handlers.auth)
-
   app.get('/auth/logout', (req: Request, res: Response) => {
     req.logout(() => {
       res

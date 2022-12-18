@@ -52,7 +52,6 @@ export const useSocketForContext = () => {
     ) {
       ws.current.close()
     }
-    ws.current = null
   }, [])
 
   const setOnMessageHandlers = useCallback(
@@ -138,7 +137,6 @@ export const useSocketForContext = () => {
 
       socketInstance.addEventListener('error', (e) => {
         console.warn('ws error:', e)
-        close(socketInstance)
         try {
           close(socketInstance)
           reconnect()

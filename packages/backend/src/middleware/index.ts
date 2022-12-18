@@ -28,7 +28,10 @@ export const checkAccessToken = (
     return res.status(401).send('no authorization header')
   }
 
-  verifyAccessToken(accessToken, JWT.accessTokenSecret)
+  verifyAccessToken(accessToken, JWT.accessTokenSecret, {
+    issuer: JWT.issuer,
+    audience: JWT.audience
+  })
     .then(({ err, decoded }) => {
       if (err) {
         return res.status(401).send('not verify token')

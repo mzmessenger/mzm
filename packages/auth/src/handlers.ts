@@ -5,7 +5,7 @@ import {
   parseAuthorizationHeader,
   verifyAccessToken
 } from 'mzm-shared/auth/index'
-import { HEADERS, COOKIES } from 'mzm-shared/auth/constants'
+import { COOKIES } from 'mzm-shared/auth/constants'
 import * as db from './lib/db.js'
 import { logger } from './lib/logger.js'
 import { redis } from './lib/redis.js'
@@ -25,32 +25,6 @@ export type SerializeUser = WithId<db.User> &
 type SerializedUser = string
 type RequestUser = WithId<db.User>
 type PassportRequest = Request & { user?: RequestUser }
-
-export const auth = (req: PassportRequest, res: Response) => {
-  if (req.user) {
-    const id = req.user._id.toHexString()
-    res.setHeader(HEADERS.USER_ID, id)
-    res.setHeader(
-      'X-TWITTER-USER-ID',
-      req.user.twitterId ? req.user.twitterId : ''
-    )
-    res.setHeader(
-      HEADERS.TIWTTER_USER_NAME,
-      req.user.twitterUserName ? req.user.twitterUserName : ''
-    )
-    res.setHeader(
-      'X-GITHUB-USER-ID',
-      req.user.githubId ? req.user.githubId : ''
-    )
-    res.setHeader(
-      'X-GITHUB-USER-NAME',
-      req.user.githubUserName ? req.user.githubUserName : ''
-    )
-    logger.info('[auth] id:', id)
-    return res.status(200).send('ok')
-  }
-  res.status(401).send('not login')
-}
 
 export const serializeUser = (
   user: SerializeUser,
@@ -208,7 +182,11 @@ export const removeTwitter = async (req: PassportRequest, res: Response) => {
   const accessToken = parseAuthorizationHeader(req)
   const { err, decoded } = await verifyAccessToken(
     accessToken,
-    JWT.accessTokenSecret
+    JWT.accessTokenSecret,
+    {
+      issuer: JWT.issuer,
+      audience: JWT.audience
+    }
   )
 
   if (err || !decoded.user) {
@@ -240,7 +218,11 @@ export const removeGithub = async (req: PassportRequest, res: Response) => {
   const accessToken = parseAuthorizationHeader(req)
   const { err, decoded } = await verifyAccessToken(
     accessToken,
-    JWT.accessTokenSecret
+    JWT.accessTokenSecret,
+    {
+      issuer: JWT.issuer,
+      audience: JWT.audience
+    }
   )
 
   if (err || !decoded.user) {
@@ -270,7 +252,11 @@ export const remove = async (req: PassportRequest, res: Response) => {
   const accessToken = parseAuthorizationHeader(req)
   const { err, decoded } = await verifyAccessToken(
     accessToken,
-    JWT.accessTokenSecret
+    JWT.accessTokenSecret,
+    {
+      issuer: JWT.issuer,
+      audience: JWT.audience
+    }
   )
   if (err || !decoded.user._id) {
     return res.status(401).send('not auth token')
