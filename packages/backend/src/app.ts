@@ -8,11 +8,7 @@ import * as rooms from './handlers/rooms.js'
 import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import * as internal from './handlers/internal.js'
-import {
-  checkAccessToken,
-  checkLogin,
-  errorHandler
-} from './middleware/index.js'
+import { checkAccessToken, errorHandler } from './middleware/index.js'
 
 const iconUpload = multer({
   dest: MULTER_PATH,
@@ -25,11 +21,21 @@ export const createApp = () => {
   const app = express()
   app.use(helmet())
 
-  app.post('/api/rooms', checkLogin, jsonParser, wrap(rooms.createRoom))
-  app.post('/api/rooms/enter', checkLogin, jsonParser, wrap(rooms.enterRoom))
-  app.delete('/api/rooms/enter', checkLogin, jsonParser, wrap(rooms.exitRoom))
+  app.post('/api/rooms', checkAccessToken, jsonParser, wrap(rooms.createRoom))
+  app.post(
+    '/api/rooms/enter',
+    checkAccessToken,
+    jsonParser,
+    wrap(rooms.enterRoom)
+  )
+  app.delete(
+    '/api/rooms/enter',
+    checkAccessToken,
+    jsonParser,
+    wrap(rooms.exitRoom)
+  )
   app.get('/api/rooms/search', wrap(rooms.search))
-  app.get('/api/rooms/:roomid/users', checkLogin, wrap(rooms.getUsers))
+  app.get('/api/rooms/:roomid/users', checkAccessToken, wrap(rooms.getUsers))
   app.get('/api/user/@me', checkAccessToken, wrap(user.getUserInfo))
   app.put('/api/user/@me', checkAccessToken, jsonParser, wrap(user.update))
   app.post(
