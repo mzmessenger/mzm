@@ -22,7 +22,6 @@
     "dotenv": "^16.0.3",
     "ioredis": "^5.2.4",
     "undici": "^5.12.0",
-    "uuid": "^9.0.0",
     "ws": "^8.11.0"
   },
   "devDependencies": {
