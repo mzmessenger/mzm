@@ -16,7 +16,7 @@ export const requestSocketAPI = async (
       'Content-type': 'application/json',
       [HEADERS.USER_ID]: user,
       'x-socket-id': id,
-      Authorization: `Bearer: ${token}`
+      Authorization: `Bearer ${token}`
     },
     method: 'POST',
     body: body,

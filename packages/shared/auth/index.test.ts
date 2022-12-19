@@ -7,7 +7,7 @@ import { parseAuthorizationHeader } from './index'
 test('parseAuthorizationHeader', async () => {
   const req = {
     headers: {
-      Authorization: 'Bearer: accesstoken'
+      Authorization: 'Bearer accesstoken'
     }
   }
 

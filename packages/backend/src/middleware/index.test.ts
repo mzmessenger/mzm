@@ -59,7 +59,7 @@ test('checkAccessToken (success)', async () => {
 
   const req = {
     headers: {
-      Authorization: 'Bearer: accesstoken'
+      Authorization: 'Bearer accesstoken'
     }
   }
 
@@ -119,7 +119,7 @@ test('checkAccessToken verify token error', async () => {
 
   const req = {
     headers: {
-      Authorization: 'Bearer: accesstoken'
+      Authorization: 'Bearer accesstoken'
     }
   }
 
