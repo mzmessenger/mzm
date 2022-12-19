@@ -3,6 +3,7 @@ import { useNavigate, useLocation } from 'react-router-dom'
 import { TO_CLIENT_CMD, TO_SERVER_CMD } from 'mzm-shared/type/socket'
 import { useDispatchSocket } from './contexts/socket/hooks'
 import { useUser, useDispatchUser } from './contexts/user/hooks'
+import { useAuth, useDispatchAuth } from './contexts/auth/hooks'
 import { getRoomName } from './lib/util'
 import { useDispatchUi } from './contexts/ui/hooks'
 import { useRooms, useDispatchRooms } from './contexts/rooms/hooks'
@@ -10,19 +11,20 @@ import { useDispatchMessages } from './contexts/messages/hooks'
 import { sendSocket } from './lib/util'
 
 const useRouter = () => {
-  const location = useLocation()
-  const { login } = useUser()
+  const { login } = useAuth()
+  const { getAccessToken } = useDispatchAuth()
   const { fetchMyInfo } = useDispatchUser()
-  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
-  const { closeMenu } = useDispatchUi()
-  const { enterRoom } = useDispatchRooms()
 
   useEffect(() => {
     try {
       const room = getRoomName(location.pathname)
 
-      if (!login && (location.pathname === '/' || room)) {
-        fetchMyInfo()
+      if (!login) {
+        getAccessToken().then(({ accessToken }) => {
+          if (accessToken) {
+            fetchMyInfo()
+          }
+        })
       }
 
       if (room) {
@@ -33,16 +35,7 @@ const useRouter = () => {
     } catch (e) {
       console.error(e)
     }
-  }, [
-    login,
-    location.pathname,
-    fetchMyInfo,
-    enterRoom,
-    getMessages,
-    enterRoomSocket,
-    closeMenu,
-    location
-  ])
+  }, [login, getAccessToken, fetchMyInfo])
 }
 
 const useResize = () => {
@@ -66,7 +59,8 @@ const useResize = () => {
 const useWebSocket = (url: string) => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login, me } = useUser()
+  const { login } = useAuth()
+  const { me } = useUser()
   const { fetchMyInfo } = useDispatchUser()
   const { init, getMessages, getRooms, readMessages } = useDispatchSocket()
   const { closeMenu } = useDispatchUi()
@@ -214,6 +208,7 @@ const useWebSocket = (url: string) => {
       receiveMessages,
       receiveRooms,
       reloadMessage,
+      removeMessage,
       setRoomDescription,
       setRoomOrder,
       setVoteAnswers,
@@ -235,11 +230,7 @@ const useWebSocket = (url: string) => {
 }
 
 export const useApp = (url: string) => {
-  const { login } = useUser()
-
   useRouter()
   useResize()
   useWebSocket(url)
-
-  return { login }
 }

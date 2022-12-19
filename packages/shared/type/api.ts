@@ -44,14 +44,10 @@ export type RESPONSE = {
           id: string
           account: string
           icon: string
-          twitterUserName: string | null
-          githubUserName: string | null
         }
         404: {
           reason: string
           id: string
-          twitterUserName: string | null
-          githubUserName: string | null
         }
       }
     }
@@ -108,6 +104,26 @@ export type REQUEST = {
     POST: {
       body: {
         account: string
+      }
+    }
+  }
+}
+
+export type AUTH_API_RESPONSE = {
+  '/auth/token/refresh': {
+    POST: {
+      body: {
+        200: {
+          accessToken: string
+          user: {
+            _id: string
+            twitterId?: string
+            twitterUserName?: string
+            githubId?: string
+            githubUserName?: string
+          }
+        }
+        400: 'not login'
       }
     }
   }

@@ -10,8 +10,6 @@ export const PORT = process.env.PORT ?? 3001
 
 export const WORKER_NUM = process.env.WORKER_NUM ?? 1
 
-export const AUTH_SERVER = process.env.AUTH_SERVER
-
 export const account = {
   MIN_LENGTH: 2,
   MAX_LENGTH: 30
@@ -137,4 +135,13 @@ export const lock = {
 export const vote = {
   MAX_QUESTION_NUM: 5,
   MAX_QUESTION_LENGTH: 100
+} as const
+
+export const JWT = {
+  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
+  internalAccessTokenSecret: process.env.INTERNAL_ACCESS_TOKEN_SECRET,
+  issuer: process.env.JWT_ISSURE ?? 'https://mzm.dev',
+  audience: process.env.JWT_AUDIENCE
+    ? process.env.JWT_AUDIENCE.split(',')
+    : (['https://mzm.dev'] as string[])
 } as const

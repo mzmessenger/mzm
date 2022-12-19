@@ -1,6 +1,8 @@
-import { useContext, useState, useMemo, useCallback } from 'react'
+import { useContext, useState, useCallback } from 'react'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { UserContext, UserDispatchContext } from './index'
+import { useDispatchAuth } from '../auth/hooks'
+import { createApiClient } from '../../lib/client'
 
 export const useUser = () => {
   return useContext(UserContext)
@@ -14,142 +16,171 @@ type MyInfo = {
   id: string
   account: string
   iconUrl: string
+}
+
+type SocialAccount = {
   twitterUserName: string | null
   githubUserName: string | null
 }
 
 export const useUserForContext = () => {
-  const [login, setLogin] = useState(false)
+  const { getAccessToken, refreshToken, logout } = useDispatchAuth()
+  const [socialAccount, setSocialAccount] = useState<SocialAccount>({
+    twitterUserName: null,
+    githubUserName: null
+  })
   const [me, setMe] = useState<MyInfo>({
     id: '',
     account: '',
-    iconUrl: '',
-    twitterUserName: '',
-    githubUserName: ''
+    iconUrl: ''
   })
-
-  const state = useMemo(() => {
-    return {
-      signup: me.account !== '',
-      login,
-      me
-    }
-  }, [login, me])
 
   const updateUser = async (account: string) => {
     const body: REQUEST['/api/user/@me']['PUT']['body'] = { account }
 
-    const res = await fetch('/api/user/@me', {
-      method: 'PUT',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const { accessToken } = await getAccessToken()
+    return await createApiClient(
+      '/api/user/@me',
+      {
+        method: 'PUT',
+        accessToken,
+        body: JSON.stringify(body)
       },
-      body: JSON.stringify(body)
-    })
+      async (res) => {
+        if (res.status === 200) {
+          res
+            .json()
+            .then((json: RESPONSE['/api/user/@me']['PUT']['body'][200]) => {
+              setMe({
+                ...me,
+                account: json.account,
+                iconUrl: `/api/icon/user/${json.account}`
+              })
+            })
+        }
 
-    if (res.status === 200) {
-      res.json().then((json: RESPONSE['/api/user/@me']['PUT']['body'][200]) => {
-        setMe({
-          ...me,
-          account: json.account,
-          iconUrl: `/api/icon/user/${json.account}`
-        })
-      })
-    }
-
-    return res
-  }
-
-  const logout = () => {
-    location.href = '/auth/logout'
-    setLogin(false)
+        return res
+      }
+    )
   }
 
   const fetchMyInfo = useCallback(async () => {
-    const res = await fetch('/api/user/@me', { credentials: 'include' })
-    if (res.status === 200) {
-      const payload =
-        (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][200]
+    const { accessToken, user } = await getAccessToken()
 
-      setLogin(true)
-      setMe({
-        ...payload,
-        iconUrl: payload.icon
-      })
-    } else if (res.status === 404) {
-      const payload =
-        (await res.json()) as RESPONSE['/api/user/@me']['GET']['body'][404]
+    return await createApiClient(
+      '/api/user/@me',
+      {
+        method: 'GET',
+        accessToken
+      },
+      async (res) => {
+        type ResponseType = RESPONSE['/api/user/@me']['GET']['body']
 
-      setLogin(true)
-      setMe({
-        id: payload.id,
-        account: '',
-        twitterUserName: payload.twitterUserName,
-        githubUserName: payload.githubUserName,
-        iconUrl: ''
-      })
-    } else if (res.status === 403) {
-      logout()
-    }
-    return res
-  }, [])
+        if (res.status === 200) {
+          const payload = (await res.json()) as ResponseType[200]
+
+          setMe({
+            ...payload,
+            iconUrl: payload.icon
+          })
+          setSocialAccount({
+            twitterUserName: user.twitterUserName,
+            githubUserName: user.githubUserName
+          })
+        } else if (res.status === 404) {
+          const payload = (await res.json()) as ResponseType[404]
+
+          setMe({
+            id: payload.id,
+            account: '',
+            iconUrl: ''
+          })
+        } else if (res.status === 403) {
+          logout()
+        }
+        return res
+      }
+    )
+  }, [getAccessToken, logout])
 
   const removeTwitter = async () => {
-    if (!me || !me.twitterUserName || !me.githubUserName) {
+    if (!socialAccount.twitterUserName || !socialAccount.githubUserName) {
       return
     }
-    const res = await fetch('/auth/twitter', {
-      method: 'DELETE',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const { accessToken } = await getAccessToken()
+    return await createApiClient(
+      '/auth/twitter',
+      {
+        method: 'DELETE',
+        accessToken
+      },
+      async (res) => {
+        if (res.status === 200) {
+          refreshToken().then((token) => {
+            setSocialAccount({
+              twitterUserName: token.user.twitterUserName,
+              githubUserName: token.user.githubUserName
+            })
+          })
+        }
+        return res
       }
-    })
-    if (res.status === 200) {
-      fetchMyInfo()
-    }
-    return res
+    )
   }
 
   const removeGithub = async () => {
-    if (!me || !me.twitterUserName || !me.githubUserName) {
+    if (!socialAccount.twitterUserName || !socialAccount.githubUserName) {
       return
     }
-    const res = await fetch('/auth/github', {
-      method: 'DELETE',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const { accessToken } = await getAccessToken()
+    return await createApiClient(
+      '/auth/github',
+      {
+        method: 'DELETE',
+        accessToken
+      },
+      async (res) => {
+        if (res.status === 200) {
+          refreshToken().then((token) => {
+            setSocialAccount({
+              twitterUserName: token.user.twitterUserName,
+              githubUserName: token.user.githubUserName
+            })
+          })
+        }
+        return res
       }
-    })
-    if (res.status === 200) {
-      fetchMyInfo()
-    }
-    return res
+    )
   }
 
   const removeUser = async () => {
-    const res = await fetch('/auth/user', {
-      method: 'DELETE',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const { accessToken } = await getAccessToken()
+    return await createApiClient(
+      '/auth/user',
+      {
+        method: 'DELETE',
+        accessToken
+      },
+      async (res) => {
+        if (res.status === 200) {
+          logout()
+        }
+        return res
       }
-    })
-    if (res.status === 200) {
-      setLogin(false)
-    }
-    return res
+    )
   }
 
   const uploadIcon = async (blob: Blob) => {
     const formData = new FormData()
     formData.append('icon', blob)
+    const { accessToken } = await getAccessToken()
     const res = await fetch('/api/icon/user', {
       method: 'POST',
       body: formData,
-      credentials: 'include'
+      credentials: 'include',
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
     })
 
     if (!res.ok) {
@@ -167,13 +198,25 @@ export const useUserForContext = () => {
   }
 
   return {
-    state,
-    updateUser: useCallback(updateUser, []),
-    logout: useCallback(logout, []),
+    state: {
+      me,
+      socialAccount
+    },
+    updateUser: useCallback(updateUser, [getAccessToken, me]),
     fetchMyInfo,
-    removeTwitter: useCallback(removeTwitter, [fetchMyInfo, me]),
-    removeGithub: useCallback(removeGithub, [fetchMyInfo, me]),
-    removeUser: useCallback(removeUser, []),
-    uploadIcon: useCallback(uploadIcon, [me])
+    removeTwitter: useCallback(removeTwitter, [
+      getAccessToken,
+      refreshToken,
+      socialAccount.githubUserName,
+      socialAccount.twitterUserName
+    ]),
+    removeGithub: useCallback(removeGithub, [
+      getAccessToken,
+      refreshToken,
+      socialAccount.githubUserName,
+      socialAccount.twitterUserName
+    ]),
+    removeUser: useCallback(removeUser, [getAccessToken, logout]),
+    uploadIcon: useCallback(uploadIcon, [getAccessToken, me])
   } as const
 }

@@ -17,6 +17,11 @@
     },
     "types": ["vite-plugin-pwa/client"]
   },
-  "exclude": ["node_modules", "**/*.test.ts", "vite.config.ts", "vitest.config.ts"],
+  "exclude": [
+    "node_modules",
+    "**/*.test.ts",
+    "vite.config.ts",
+    "vitest.config.ts"
+  ],
   "references": [{ "path": "../shared" }]
 }

@@ -1,7 +1,8 @@
 import { request } from 'undici'
-import { HEADERS } from 'mzm-shared/auth'
+import { HEADERS } from 'mzm-shared/auth/constants'
 import { INTERNAL_API_URL } from '../config.js'
 import logger from './logger.js'
+import { createInternalAccessToken } from '../lib/token.js'
 
 // todo: retry
 export const requestSocketAPI = async (
@@ -9,11 +10,13 @@ export const requestSocketAPI = async (
   user: string,
   id: string
 ) => {
+  const token = await createInternalAccessToken()
   const options: Parameters<typeof request>[1] = {
     headers: {
       'Content-type': 'application/json',
       [HEADERS.USER_ID]: user,
-      'x-socket-id': id
+      'x-socket-id': id,
+      Authorization: `Bearer ${token}`
     },
     method: 'POST',
     body: body,

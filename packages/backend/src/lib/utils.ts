@@ -1,25 +1,11 @@
 import type { IncomingMessage } from 'http'
 import type { Request } from 'express'
-import { HEADERS } from 'mzm-shared/auth'
+import { HEADERS } from 'mzm-shared/auth/constants'
 import validator from 'validator'
 
 export const getRequestUserId = (req: IncomingMessage | Request): string => {
   const user: string = req.headers[HEADERS.USER_ID] as string
   return user
-}
-
-export const getRequestTwitterUserName = (
-  req: IncomingMessage | Request
-): string | null => {
-  const twitter = (req.headers[HEADERS.TIWTTER_USER_NAME] as string) ?? null
-  return twitter
-}
-
-export const getRequestGithubUserName = (
-  req: IncomingMessage | Request
-): string | null => {
-  const github = (req.headers[HEADERS.GITHUB_USER_NAME] as string) ?? null
-  return github
 }
 
 export const popParam = (param: string): string => {

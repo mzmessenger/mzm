@@ -1,33 +1,85 @@
-import type { IncomingHttpHeaders } from 'http'
-import { request } from 'undici'
+import type { Request } from 'express'
+import type { AccessToken } from '../type/auth.js'
+import jwt from 'jsonwebtoken'
 
-export const HEADERS = {
-  USER_ID: 'x-user-id',
-  TIWTTER_USER_NAME: 'x-twitter-user-name',
-  GITHUB_USER_NAME: 'x-github-user-name'
-} as const
+type VeryfyAccessToken =
+  | {
+      err: jwt.VerifyErrors
+      decoded: null
+    }
+  | {
+      err: null
+      decoded: AccessToken
+    }
 
-type RequestOptions = {
-  url: string
-  headers: {
-    cookie: IncomingHttpHeaders['cookie']
-  }
-  bodyTimeout?: number
-  headersTimeout?: number
-}
-export const requestAuthServer = async (options: RequestOptions) => {
-  const { headers } = await request(`${options.url}/auth`, {
-    method: 'GET',
-    headers: {
-      cookie: options.headers.cookie
-    },
-    bodyTimeout: options.bodyTimeout ?? 1000 * 60 * 5,
-    headersTimeout: options.headersTimeout ?? 1000 * 60 * 5
+const verifyAccessTokenAsync = (
+  accessToken: string,
+  accessTokenSecret: string,
+  options: jwt.VerifyOptions
+) => {
+  return new Promise<VeryfyAccessToken>((resolve) => {
+    jwt.verify(
+      accessToken,
+      accessTokenSecret,
+      {
+        algorithms: ['HS256'],
+        ...options
+      },
+      (err, decoded) => {
+        if (err) {
+          return resolve({ err, decoded: null })
+        }
+        return resolve({
+          err: null,
+          decoded: decoded as AccessToken
+        })
+      }
+    )
   })
+}
 
-  const userId = headers[HEADERS.USER_ID] as string
-  const twitterUserName = headers[HEADERS.TIWTTER_USER_NAME] as string
-  const githubUserName = headers[HEADERS.GITHUB_USER_NAME] as string
+export const verifyAccessToken = async (
+  accessToken: string,
+  accessTokenSecret: string,
+  options: jwt.VerifyOptions
+): Promise<
+  | {
+      err: jwt.VerifyErrors
+      decoded: null
+    }
+  | {
+      err: null
+      decoded: AccessToken
+    }
+> => {
+  const { err, decoded } = await verifyAccessTokenAsync(
+    accessToken,
+    accessTokenSecret,
+    options
+  )
 
-  return { userId, twitterUserName, githubUserName }
+  if (err) {
+    return {
+      err,
+      decoded: null
+    }
+  }
+  return { err: null, decoded }
+}
+
+export const parseAuthorizationHeader = (req: Request) => {
+  const authorizationHeaderKey = Object.prototype.hasOwnProperty.call(
+    req.headers,
+    'Authorization'
+  )
+    ? 'Authorization'
+    : 'authorization'
+  const authorization = req.headers[authorizationHeaderKey] as string
+  if (!authorization) {
+    return null
+  }
+
+  const [, credentials] = authorization.split(' ')
+  const token = (credentials ?? '').trim()
+  return token !== '' ? token : null
 }

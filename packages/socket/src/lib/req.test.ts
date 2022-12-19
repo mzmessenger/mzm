@@ -2,6 +2,13 @@ import { vi, test, expect } from 'vitest'
 import { INTERNAL_API_URL } from '../config.js'
 
 vi.mock('./logger.js')
+vi.mock('../lib/token.js', () => {
+  return {
+    createInternalAccessToken: vi
+      .fn()
+      .mockResolvedValue('internal-access-token')
+  }
+})
 
 const request = vi.fn((_url, _options) => {
   return new Promise((resolve) => {
@@ -31,5 +38,8 @@ test('requestSocketAPI', async () => {
   expect(url).toStrictEqual(INTERNAL_API_URL)
   expect(options.headers['x-user-id']).toStrictEqual(user)
   expect(options.headers['x-socket-id']).toStrictEqual(socket)
+  expect(options.headers['Authorization']).toStrictEqual(
+    `Bearer internal-access-token`
+  )
   expect(options.body).toStrictEqual(message)
 })

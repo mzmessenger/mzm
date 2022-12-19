@@ -1,10 +1,20 @@
 import { vi, test, expect } from 'vitest'
-vi.mock('mzm-shared/auth')
+vi.mock('mzm-shared/auth/index', async () => {
+  const module = await vi.importActual<typeof import('mzm-shared/auth/index')>(
+    'mzm-shared/auth/index'
+  )
+  return {
+    ...module,
+    verifyAccessToken: vi.fn()
+  }
+})
 vi.mock('../lib/logger')
 
+import { JsonWebTokenError } from 'jsonwebtoken'
 import { NextFunction, Request, Response } from 'express'
-import { HEADERS, requestAuthServer } from 'mzm-shared/auth'
-import { errorHandler, checkLogin } from './index'
+import { HEADERS } from 'mzm-shared/auth/constants'
+import { verifyAccessToken } from 'mzm-shared/auth/index'
+import { errorHandler, checkAccessToken } from './index'
 import * as HttpErrors from '../lib/errors'
 
 test('errorHandler (Internal Server Error)', async () => {
@@ -44,57 +54,94 @@ test.each([
   await errorHandler(error, {}, res as any as Response, vi.fn())
 })
 
-test('checkLogin (success)', async () => {
+test('checkAccessToken (success)', async () => {
+  expect.assertions(3)
+
+  const req = {
+    headers: {
+      Authorization: 'Bearer accesstoken'
+    }
+  }
+
+  const verifyAccessTokenMock = vi.mocked(verifyAccessToken)
+  verifyAccessTokenMock.mockResolvedValueOnce({
+    err: null,
+    decoded: {
+      user: {
+        _id: 'aaa',
+        twitterId: 'xxx-id',
+        twitterUserName: 'xxx',
+        githubUserName: 'yyy',
+        githubId: 'yyy-id'
+      }
+    }
+  })
+
+  const next = vi.fn(() => {
+    expect(verifyAccessTokenMock).toHaveBeenCalledTimes(1)
+    expect(verifyAccessTokenMock.mock.calls[0][0]).toStrictEqual('accesstoken')
+    expect(req.headers[HEADERS.USER_ID]).toStrictEqual('aaa')
+  })
+
+  await checkAccessToken(req as unknown as Request, {} as Response, next)
+})
+
+test('checkAccessToken no header', async () => {
   expect.assertions(4)
 
   const req = { headers: {} }
 
-  const mock = vi.mocked(requestAuthServer)
+  const mock = vi.mocked(verifyAccessToken)
   mock.mockResolvedValueOnce({
-    userId: 'aaa',
-    twitterUserName: 'xxx',
-    githubUserName: 'yyy'
+    err: new JsonWebTokenError('not valid token'),
+    decoded: null
   })
 
-  const next = vi.fn(() => {
-    expect('called').toEqual('called')
-    expect(req.headers[HEADERS.USER_ID]).toEqual('aaa')
-    expect(req.headers[HEADERS.TIWTTER_USER_NAME]).toEqual('xxx')
-    expect(req.headers[HEADERS.GITHUB_USER_NAME]).toEqual('yyy')
+  const send = vi.fn(function (arg) {
+    expect(this.status.mock.calls.length).toBe(1)
+    expect(this.send.mock.calls.length).toBe(1)
+
+    expect(this.status.mock.calls[0][0]).toEqual(401)
+    expect(arg).toEqual('no authorization header')
   })
 
-  await checkLogin(req as Request, {} as Response, next)
+  const res = { status: vi.fn().mockReturnThis(), send }
+
+  await checkAccessToken(
+    req as any as Request,
+    res as any as Response,
+    vi.fn() as any as NextFunction
+  )
 })
 
-test.each([[null], [undefined], ['']])(
-  'checkLogin send 401 (%s)',
-  async (userId) => {
-    expect.assertions(4)
+test('checkAccessToken verify token error', async () => {
+  expect.assertions(4)
 
-    const req = { headers: {} }
-
-    const mock = vi.mocked(requestAuthServer)
-    mock.mockResolvedValueOnce({
-      // @ts-expect-error
-      userId: userId,
-      twitterUserName: 'xxx',
-      githubUserName: 'yyy'
-    })
-
-    const send = vi.fn(function (arg) {
-      expect(this.status.mock.calls.length).toBe(1)
-      expect(this.send.mock.calls.length).toBe(1)
-
-      expect(this.status.mock.calls[0][0]).toEqual(401)
-      expect(arg).toEqual('not login')
-    })
-
-    const res = { status: vi.fn().mockReturnThis(), send }
-
-    await checkLogin(
-      req as any as Request,
-      res as any as Response,
-      vi.fn() as any as NextFunction
-    )
+  const req = {
+    headers: {
+      Authorization: 'Bearer accesstoken'
+    }
   }
-)
+
+  const mock = vi.mocked(verifyAccessToken)
+  mock.mockResolvedValueOnce({
+    err: new JsonWebTokenError('not valid token'),
+    decoded: null
+  })
+
+  const send = vi.fn(function (arg) {
+    expect(this.status.mock.calls.length).toBe(1)
+    expect(this.send.mock.calls.length).toBe(1)
+
+    expect(this.status.mock.calls[0][0]).toEqual(401)
+    expect(arg).toEqual('not verify token')
+  })
+
+  const res = { status: vi.fn().mockReturnThis(), send }
+
+  await checkAccessToken(
+    req as any as Request,
+    res as any as Response,
+    vi.fn() as any as NextFunction
+  )
+})

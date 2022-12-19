@@ -4,6 +4,8 @@ import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useDispatchUi } from '../ui/hooks'
 import type { useUser } from '../user/hooks'
+import { useDispatchAuth } from '../auth/hooks'
+import { createApiClient } from '../../lib/client'
 import { RoomsContext, RoomsDispatchContext } from './index'
 import { INITIAL_STATE, Actions } from './constants'
 import { reducer } from './reducer'
@@ -18,6 +20,7 @@ export const useDispatchRooms = () => {
 
 export const useRoomsForContext = () => {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE)
+  const { getAccessToken } = useDispatchAuth()
 
   const getRoomMessages = (
     roomId: string,
@@ -34,27 +37,31 @@ export const useRoomsForContext = () => {
     const body: REQUEST['/api/rooms']['POST']['body'] = {
       name
     }
-    const res = await fetch('/api/rooms', {
-      method: 'POST',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+
+    const { accessToken } = await getAccessToken()
+
+    return await createApiClient(
+      '/api/rooms',
+      {
+        method: 'POST',
+        accessToken,
+        body: JSON.stringify(body)
       },
-      body: JSON.stringify(body)
-    })
+      async (res) => {
+        if (res.status !== 200) {
+          return res
+        }
 
-    if (res.status !== 200) {
-      return res
-    }
+        const room = (await res.json()) as RESPONSE['/api/rooms']['POST']
+        getRooms()
+        dispatch({
+          type: Actions.CreateRoom,
+          payload: { id: room.id, name: room.name }
+        })
 
-    const room = (await res.json()) as RESPONSE['/api/rooms']['POST']
-    getRooms()
-    dispatch({
-      type: Actions.CreateRoom,
-      payload: { id: room.id, name: room.name }
-    })
-
-    return res
+        return res
+      }
+    )
   }
 
   const changeRoom = useCallback(
@@ -103,19 +110,24 @@ export const useRoomsForContext = () => {
     getRooms: ReturnType<typeof useDispatchSocket>['getRooms']
   ) => {
     const body: REQUEST['/api/rooms/enter']['DELETE']['body'] = { room: roomId }
-    const res = await fetch('/api/rooms/enter', {
-      method: 'DELETE',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+
+    const { accessToken } = await getAccessToken()
+
+    return await createApiClient(
+      '/api/rooms/enter',
+      {
+        method: 'DELETE',
+        accessToken,
+        body: JSON.stringify(body)
       },
-      body: JSON.stringify(body)
-    })
-    if (res.status === 200) {
-      getRooms()
-      dispatch({ type: Actions.ExitRoom })
-    }
-    return res
+      async (res) => {
+        if (res.status === 200) {
+          getRooms()
+          dispatch({ type: Actions.ExitRoom })
+        }
+        return res
+      }
+    )
   }
 
   const receiveRooms = (
@@ -236,26 +248,30 @@ export const useRoomsForContext = () => {
       return
     }
     dispatch({ type: Actions.FetchStartRoomUsers })
-    const res = await fetch(`/api/rooms/${roomId}/users`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+
+    const { accessToken } = await getAccessToken()
+
+    return await createApiClient(
+      `/api/rooms/${roomId}/users`,
+      {
+        method: 'GET',
+        accessToken
+      },
+      async (res) => {
+        if (res.status !== 200) {
+          return res
+        }
+
+        res.json().then((body: RESPONSE['/api/rooms/:roomid/users']['GET']) => {
+          dispatch({
+            type: Actions.SetRoomUsers,
+            payload: { room: roomId, users: body.users, count: body.count }
+          })
+        })
+
+        return res
       }
-    })
-
-    if (res.status !== 200) {
-      return res
-    }
-
-    res.json().then((body: RESPONSE['/api/rooms/:roomid/users']['GET']) => {
-      dispatch({
-        type: Actions.SetRoomUsers,
-        payload: { room: roomId, users: body.users, count: body.count }
-      })
-    })
-
-    return res
+    )
   }
 
   const getNextUsers = async (roomId: string) => {
@@ -282,26 +298,29 @@ export const useRoomsForContext = () => {
 
     const query = new URLSearchParams(init)
 
-    const res = await fetch(`/api/rooms/${roomId}/users?${query.toString()}`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const { accessToken } = await getAccessToken()
+
+    return await createApiClient(
+      `/api/rooms/${roomId}/users?${query.toString()}`,
+      {
+        method: 'GET',
+        accessToken
+      },
+      async (res) => {
+        if (res.status !== 200) {
+          return res
+        }
+
+        res.json().then((body: RESPONSE['/api/rooms/:roomid/users']['GET']) => {
+          dispatch({
+            type: Actions.SetNextRoomUsers,
+            payload: { room: roomId, users: body.users }
+          })
+        })
+
+        return res
       }
-    })
-
-    if (res.status !== 200) {
-      return res
-    }
-
-    res.json().then((body: RESPONSE['/api/rooms/:roomid/users']['GET']) => {
-      dispatch({
-        type: Actions.SetNextRoomUsers,
-        payload: { room: roomId, users: body.users }
-      })
-    })
-
-    return res
+    )
   }
 
   const alreadyRead = (roomId: string) => {
@@ -326,10 +345,14 @@ export const useRoomsForContext = () => {
   const uploadIcon = async (name: string, blob: Blob) => {
     const formData = new FormData()
     formData.append('icon', blob)
+    const { accessToken } = await getAccessToken()
     const res = await fetch(`/api/icon/rooms/${name}`, {
       method: 'POST',
       body: formData,
-      credentials: 'include'
+      credentials: 'include',
+      headers: {
+        Authorization: `Bearer ${accessToken}`
+      }
     })
 
     if (res.ok) {
@@ -358,18 +381,19 @@ export const useRoomsForContext = () => {
   return {
     state,
     getRoomMessages: useCallback(getRoomMessages, []),
-    createRoom: useCallback(createRoom, []),
+    createRoom: useCallback(createRoom, [getAccessToken]),
     changeRoom,
     enterRoom: useCallback(enterRoom, [changeRoom, state.rooms.byId]),
-    exitRoom: useCallback(exitRoom, []),
+    exitRoom: useCallback(exitRoom, [getAccessToken]),
     receiveRooms: useCallback(receiveRooms, []),
     setRoomOrder: useCallback(setRoomOrder, [state.rooms.allIds]),
     changeRoomOrder: useCallback(changeRoomOrder, [state.rooms.allIds]),
     receiveMessage: useCallback(receiveMessage, [state.currentRoomId]),
     receiveMessages: useCallback(receiveMessages, []),
     enterSuccess: useCallback(enterSuccess, [state.rooms.byId]),
-    getUsers: useCallback(getUsers, [state.users.loading]),
+    getUsers: useCallback(getUsers, [getAccessToken, state.users.loading]),
     getNextUsers: useCallback(getNextUsers, [
+      getAccessToken,
       state.users.byId,
       state.users.loading
     ]),
@@ -377,7 +401,7 @@ export const useRoomsForContext = () => {
     reloadMessage: useCallback(reloadMessage, []),
     toggleRoomSetting: useCallback(toggleRoomSetting, []),
     closeRoomSetting: useCallback(closeRoomSetting, []),
-    uploadIcon: useCallback(uploadIcon, []),
+    uploadIcon: useCallback(uploadIcon, [getAccessToken]),
     setRoomStatus: useCallback(setRoomStatus, []),
     setRoomDescription: useCallback(setRoomDescription, [])
   } as const

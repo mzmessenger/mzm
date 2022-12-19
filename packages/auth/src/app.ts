@@ -1,5 +1,5 @@
-import express from 'express'
-import { Response } from 'express'
+import express, { type Request, type Response } from 'express'
+import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import passport from 'passport'
 import type { Redis } from 'ioredis'
@@ -7,6 +7,7 @@ import connectRedis from 'connect-redis'
 import { Strategy as TwitterStrategy } from 'passport-twitter'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import session from 'express-session'
+import { COOKIES } from 'mzm-shared/auth/constants'
 import { logger } from './lib/logger.js'
 import {
   TWITTER_CONSUMER_KEY,
@@ -74,31 +75,46 @@ export const createApp = ({ client }: Options) => {
     )
   )
 
+  app.post('/auth/token/refresh', cookieParser(), (req, res) => {
+    return handlers.refreshAccessToken(req, res)
+  })
+
+  const callbackHandler = (
+    req: Request & { user: handlers.SerializeUser },
+    res: Response
+  ) => {
+    return res
+      .cookie(COOKIES.ACCESS_TOKEN, req.user.accessToken)
+      .cookie(COOKIES.REFRESH_TOKEN, req.user.refreshToken, {
+        secure: true,
+        httpOnly: true
+      })
+      .redirect('/login/success')
+  }
+
   app.get('/auth/twitter', passport.authenticate('twitter'))
   app.get(
     '/auth/twitter/callback',
     passport.authenticate('twitter', { failureRedirect: '/' }),
-    (req, res) => {
-      res.redirect('/login/success')
-    }
+    callbackHandler
   )
-  app.delete('/auth/twitter', handlers.remoteTwitter)
+  app.delete('/auth/twitter', handlers.removeTwitter)
 
   app.get('/auth/github', passport.authenticate('github'))
   app.get(
     '/auth/github/callback',
     passport.authenticate('github', { failureRedirect: '/' }),
-    (req, res) => {
-      res.redirect('/login/success')
-    }
+    callbackHandler
   )
-  app.delete('/auth/github', handlers.remoteGithub)
+  app.delete('/auth/github', handlers.removeGithub)
 
-  app.get('/auth', handlers.auth)
-
-  app.get('/auth/logout', (req: any, res: Response) => {
-    req.logout()
-    res.redirect('/')
+  app.get('/auth/logout', (req: Request, res: Response) => {
+    req.logout(() => {
+      res
+        .clearCookie(COOKIES.ACCESS_TOKEN)
+        .clearCookie(COOKIES.REFRESH_TOKEN)
+        .redirect('/')
+    })
   })
 
   app.delete('/auth/user', handlers.remove)

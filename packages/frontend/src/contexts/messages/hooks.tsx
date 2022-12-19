@@ -168,7 +168,7 @@ export const useMessagesForContext = () => {
     addMessages: useCallback(addMessages, [convertMessage]),
     addMessage: useCallback(addMessage, [convertMessage]),
     modifyMessage: useCallback(modifyMessage, [convertMessage]),
-    removeMessage: useCallback(removeMessage, []),
+    removeMessage: useCallback(removeMessage, [convertMessage]),
     updateIine: useCallback(updateIine, []),
     setVoteAnswers: useCallback(setVoteAnswers, []),
     sendVoteAnswer: useCallback(sendVoteAnswer, []),
