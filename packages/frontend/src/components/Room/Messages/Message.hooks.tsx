@@ -1,6 +1,6 @@
 import { useRef, useEffect, useMemo, useCallback } from 'react'
 import dayjs from 'dayjs'
-import { useMessages } from '../../../contexts/messages/hooks'
+import { useMessages } from '../../../recoil/messages/hooks'
 import { useUserAccountState } from '../../../recoil/user/hooks'
 import { usePostTextArea } from '../../../recoil/postTextArea/hooks'
 import { useSocket } from '../../../recoil/socket/hooks'
@@ -10,7 +10,7 @@ export const useMessage = (id: string) => {
   const { userAccount } = useUserAccountState()
   const {
     messages: {
-      byId: { [id]: messageObj }
+      messagesById: { [id]: messageObj }
     }
   } = useMessages()
   const { startToEdit } = usePostTextArea()

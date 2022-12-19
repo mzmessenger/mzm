@@ -6,7 +6,6 @@ import { RecoilRoot } from 'recoil'
 import 'normalize.css'
 import 'highlight.js/styles/base16/onedark.css'
 import './index.css'
-import { Provider as ContextProvider } from './contexts'
 import App from './App'
 
 const root = createRoot(document.getElementById('root'))
@@ -14,9 +13,7 @@ const root = createRoot(document.getElementById('root'))
 root.render(
   <RecoilRoot>
     <BrowserRouter>
-      <ContextProvider>
-        <App />
-      </ContextProvider>
+      <App />
     </BrowserRouter>
   </RecoilRoot>
 )

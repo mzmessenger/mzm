@@ -7,7 +7,7 @@ import { useAuth } from './recoil/auth/hooks'
 import { getRoomName } from './lib/util'
 import { useUi } from './recoil/ui/hooks'
 import { useRooms, useRoomActions } from './recoil/rooms/hooks'
-import { useDispatchMessages } from './contexts/messages/hooks'
+import { useMessages } from './recoil/messages/hooks'
 import { sendSocket } from './lib/util'
 
 const useRouter = () => {
@@ -75,7 +75,7 @@ const useWebSocket = (url: string) => {
     addMessages,
     updateIine,
     setVoteAnswers
-  } = useDispatchMessages()
+  } = useMessages()
   const { currentRoomId, currentRoomName } = useRooms()
   const {
     receiveRooms,

@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import { useCallback, useEffect } from 'react'
 import { atom, useRecoilState, selector, useRecoilValue } from 'recoil'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { useAuth } from '../../recoil/auth/hooks'
@@ -70,6 +70,18 @@ export const useUser = () => {
   const { getAccessToken, refreshToken, logout } = useAuth()
   const [user, setUser] = useRecoilState(userState)
 
+  useEffect(() => {
+    getAccessToken().then(({ user }) => {
+      setUser((current) => ({
+        ...current,
+        id: user._id,
+        twitterUserName: user.twitterUserName,
+        githubUserName: user.githubUserName
+      }))
+    })
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
+
   const updateUser = useCallback(
     async (account: string) => {
       const body: REQUEST['/api/user/@me']['PUT']['body'] = { account }
@@ -119,6 +131,7 @@ export const useUser = () => {
 
           setUser((current) => ({
             ...current,
+            id: user._id,
             account: payload.account,
             iconUrl: payload.icon,
             twitterUserName: user.twitterUserName,
