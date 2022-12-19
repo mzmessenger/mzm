@@ -1,7 +1,7 @@
 import React, { Suspense, lazy, PropsWithChildren } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useApp } from './App.hooks'
-import { useAuth } from './contexts/auth/hooks'
+import { useAuth } from './recoil/auth/hooks'
 import { Loading } from './components/Loading'
 
 const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'

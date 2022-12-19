@@ -1,17 +1,9 @@
 import type { AccessToken } from 'mzm-shared/type/auth'
 import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
 import { COOKIES } from 'mzm-shared/auth/constants'
-import { useState, useContext } from 'react'
+import { atom, useRecoilState } from 'recoil'
+import { useState } from 'react'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
-import { AuthContext, AuthDispatchContext } from './index'
-
-export const useAuth = () => {
-  return useContext(AuthContext)
-}
-
-export const useDispatchAuth = () => {
-  return useContext(AuthDispatchContext)
-}
 
 const createDefaultToken = () => {
   try {
@@ -26,13 +18,20 @@ const createDefaultToken = () => {
 }
 const defaultToken = createDefaultToken()
 
-export const useAuthForContext = () => {
-  const [login, setLogin] = useState<boolean>(false)
+const authState = atom({
+  key: 'state:auth',
+  default: {
+    login: false
+  }
+})
+
+export const useAuth = () => {
+  const [auth, setAuth] = useRecoilState(authState)
   const [accessToken, setAccessToken] = useState<string>(defaultToken)
 
   const logout = () => {
     location.href = '/auth/logout'
-    setLogin(false)
+    setAuth({ login: false })
   }
 
   const refreshToken = async () => {
@@ -45,7 +44,7 @@ export const useAuthForContext = () => {
     if (res.status === 200) {
       const body = (await res.json()) as ResponseType[200]
       setAccessToken(body.accessToken)
-      setLogin(true)
+      setAuth({ login: true })
       return body
     }
     setAccessToken('')
@@ -61,7 +60,7 @@ export const useAuthForContext = () => {
         return { accessToken: res.accessToken, user: res.user }
       }
       const user = (decoded as any).user as AccessToken['user']
-      setLogin(true)
+      setAuth({ login: true })
       return { accessToken, user }
     } catch (e) {
       return { accessToken: '', user: null }
@@ -69,10 +68,8 @@ export const useAuthForContext = () => {
   }
 
   return {
-    state: {
-      login
-    },
-    login: () => setLogin(true),
+    state: auth,
+    login: () => setAuth({ login: true }),
     logout,
     getAccessToken,
     refreshToken

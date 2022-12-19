@@ -1,7 +1,7 @@
 import { useContext, useState, useCallback } from 'react'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { UserContext, UserDispatchContext } from './index'
-import { useDispatchAuth } from '../auth/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
 import { createApiClient } from '../../lib/client'
 
 export const useUser = () => {
@@ -24,7 +24,7 @@ type SocialAccount = {
 }
 
 export const useUserForContext = () => {
-  const { getAccessToken, refreshToken, logout } = useDispatchAuth()
+  const { getAccessToken, refreshToken, logout } = useAuth()
   const [socialAccount, setSocialAccount] = useState<SocialAccount>({
     twitterUserName: null,
     githubUserName: null

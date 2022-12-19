@@ -46,6 +46,7 @@
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-router-dom": "^6.4.3",
+    "recoil": "^0.7.6",
     "validator": "^13.7.0"
   }
 }

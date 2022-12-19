@@ -4,7 +4,7 @@ import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { useDispatchSocket } from '../socket/hooks'
 import type { useDispatchUi } from '../ui/hooks'
 import type { useUser } from '../user/hooks'
-import { useDispatchAuth } from '../auth/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
 import { createApiClient } from '../../lib/client'
 import { RoomsContext, RoomsDispatchContext } from './index'
 import { INITIAL_STATE, Actions } from './constants'
@@ -20,7 +20,7 @@ export const useDispatchRooms = () => {
 
 export const useRoomsForContext = () => {
   const [state, dispatch] = useReducer(reducer, INITIAL_STATE)
-  const { getAccessToken } = useDispatchAuth()
+  const { getAccessToken } = useAuth()
 
   const getRoomMessages = (
     roomId: string,

@@ -14,7 +14,7 @@ import {
   INIT_RECONNECT_INTERVAL,
   MAX_RECONNECT
 } from './constants'
-import { useAuthForContext } from '../auth/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
 
 export const useSocket = () => {
   return useContext(SocketContext)
@@ -39,7 +39,7 @@ type InitOptions = {
 const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 export const useSocketForContext = () => {
-  const { getAccessToken } = useAuthForContext()
+  const { getAccessToken } = useAuth()
   const ws = useRef<WebSocket>(null)
   const reconnectInterval = useRef<number>(INIT_RECONNECT_INTERVAL)
   const reconnectAttempts = useRef<number>(0)
