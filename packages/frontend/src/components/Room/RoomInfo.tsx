@@ -1,7 +1,7 @@
 import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import styled from '@emotion/styled'
 import { Home, Person, ExpandMore } from '@mui/icons-material'
-import { useDispatchUi } from '../../contexts/ui/hooks'
+import { useUi } from '../../recoil/ui/hooks'
 import { useRooms, useDispatchRooms } from '../../contexts/rooms/hooks'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import { ModalUsersList } from './ModalUsersList'
@@ -20,7 +20,7 @@ export const RoomInfo = () => {
     users: { byId }
   } = useRooms()
   const { getUsers, toggleRoomSetting } = useDispatchRooms()
-  const { openUserDetail } = useDispatchUi()
+  const { openUserDetail } = useUi()
   const [open, setOpen] = useState(false)
   const description = useMemo(() => {
     return currentRoomDescription ? currentRoomDescription.substring(0, 20) : ''

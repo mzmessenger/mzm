@@ -4,7 +4,7 @@ import { useNavigate } from 'react-router-dom'
 import { useRooms, useDispatchRooms } from '../../contexts/rooms/hooks'
 import { Room } from '../../contexts/rooms/constants'
 import { useSocket } from '../../recoil/socket/hooks'
-import { useDispatchUi } from '../../contexts/ui/hooks'
+import { useUi } from '../../recoil/ui/hooks'
 import { DropZone } from './DropZone'
 
 export const Rooms = () => {
@@ -15,7 +15,7 @@ export const Rooms = () => {
   } = useRooms()
   const { changeRoom, changeRoomOrder } = useDispatchRooms()
   const { sortRoom, getMessages, readMessages } = useSocket()
-  const { closeMenu } = useDispatchUi()
+  const { closeMenu } = useUi()
 
   const onClick = useCallback(
     (e: React.MouseEvent, room: Room) => {

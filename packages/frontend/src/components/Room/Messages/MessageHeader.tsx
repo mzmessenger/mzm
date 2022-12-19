@@ -6,7 +6,7 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material'
 import { IconButton } from '../../atoms/Button'
-import { useDispatchUi } from '../../../contexts/ui/hooks'
+import { useUi } from '../../../recoil/ui/hooks'
 import { useUser } from '../../../contexts/user/hooks'
 
 type Props = {
@@ -58,7 +58,7 @@ const Actions: React.FC<{
 }
 
 export const MessageHeader: React.FC<Props> = (props) => {
-  const { openUserDetail } = useDispatchUi()
+  const { openUserDetail } = useUi()
 
   const clickAccount = () => {
     openUserDetail(props.id, props.account, props.icon)

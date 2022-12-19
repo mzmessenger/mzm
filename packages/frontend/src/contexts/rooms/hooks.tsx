@@ -2,7 +2,7 @@ import { useContext, useReducer, useCallback } from 'react'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { useSocket } from '../../recoil/socket/hooks'
-import type { useDispatchUi } from '../ui/hooks'
+import type { useUi } from '../../recoil/ui/hooks'
 import type { useUser } from '../user/hooks'
 import { useAuth } from '../../recoil/auth/hooks'
 import { createApiClient } from '../../lib/client'
@@ -68,7 +68,7 @@ export const useRoomsForContext = () => {
     (
       roomId: string,
       getMessages: ReturnType<typeof useSocket>['getMessages'],
-      closeMenu: ReturnType<typeof useDispatchUi>['closeMenu']
+      closeMenu: ReturnType<typeof useUi>['closeMenu']
     ) => {
       const room = state.rooms.byId[roomId]
       if (room) {
@@ -92,7 +92,7 @@ export const useRoomsForContext = () => {
     roomName: string,
     getMessages: ReturnType<typeof useSocket>['getMessages'],
     enterRoomMessage: ReturnType<typeof useSocket>['enterRoom'],
-    closeMenu: ReturnType<typeof useDispatchUi>['closeMenu']
+    closeMenu: ReturnType<typeof useUi>['closeMenu']
   ) => {
     const room = Object.values(state.rooms.byId).find(
       (r) => r.name === roomName

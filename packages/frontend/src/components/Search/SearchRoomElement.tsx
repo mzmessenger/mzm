@@ -4,7 +4,7 @@ import styled from '@emotion/styled'
 import { Home, Forward } from '@mui/icons-material'
 import { useDispatchRooms } from '../../contexts/rooms/hooks'
 import { useSocket } from '../../recoil/socket/hooks'
-import { useDispatchUi } from '../../contexts/ui/hooks'
+import { useUi } from '../../recoil/ui/hooks'
 import { useDispatchSearch } from '../../contexts/search/hooks'
 import { IconButton } from '../atoms/Button'
 
@@ -17,7 +17,7 @@ export const SearchRoomElement: React.FC<{
   const { enterRoom } = useDispatchRooms()
   const { getMessages, enterRoom: enterRoomSocket } = useSocket()
   const { cancel } = useDispatchSearch()
-  const { closeMenu } = useDispatchUi()
+  const { closeMenu } = useUi()
 
   const description = useMemo(() => {
     return props.description ? props.description.substring(0, 40) : ''

@@ -1,13 +1,13 @@
 import React, { useMemo } from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
-import { useUi, useDispatchUi } from '../../contexts/ui/hooks'
+import { useUi, useSettingsUiState } from '../../recoil/ui/hooks'
 import { useUser } from '../../contexts/user/hooks'
 
 export const MyInfo = () => {
   const { me } = useUser()
-  const { isOpenSettings } = useUi()
-  const { closeSettings, openSettings } = useDispatchUi()
+  const { closeSettings, openSettings } = useUi()
+  const { isOpenSettings } = useSettingsUiState()
   const icon = useMemo(() => {
     return me ? me.iconUrl : null
   }, [me])

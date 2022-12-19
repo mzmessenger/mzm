@@ -5,7 +5,7 @@ import { useSocket } from './recoil/socket/hooks'
 import { useUser, useDispatchUser } from './contexts/user/hooks'
 import { useAuth } from './recoil/auth/hooks'
 import { getRoomName } from './lib/util'
-import { useDispatchUi } from './contexts/ui/hooks'
+import { useUi } from './recoil/ui/hooks'
 import { useRooms, useDispatchRooms } from './contexts/rooms/hooks'
 import { useDispatchMessages } from './contexts/messages/hooks'
 import { sendSocket } from './lib/util'
@@ -39,7 +39,7 @@ const useRouter = () => {
 }
 
 const useResize = () => {
-  const { onResize } = useDispatchUi()
+  const { onResize } = useUi()
 
   useEffect(() => {
     onResize(window.innerWidth, window.innerHeight)
@@ -63,7 +63,7 @@ const useWebSocket = (url: string) => {
   const { me } = useUser()
   const { fetchMyInfo } = useDispatchUser()
   const { init, getMessages, getRooms, readMessages } = useSocket()
-  const { closeMenu } = useDispatchUi()
+  const { closeMenu } = useUi()
   const {
     addMessage,
     modifyMessage,

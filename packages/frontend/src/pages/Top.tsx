@@ -1,12 +1,11 @@
 import React, { lazy, Suspense } from 'react'
-import { useUi } from '../contexts/ui/hooks'
+import { useSettingsUiState } from '../recoil/ui/hooks'
 import { Menu } from '../components/Menu'
 import { PageWrapper } from '../components/PageWrapper'
 import { TopContent } from '../components/TopContent'
-// import Settings from '../components/Settings'
 
 const Top = () => {
-  const { isOpenSettings } = useUi()
+  const { isOpenSettings } = useSettingsUiState()
 
   const Settings = lazy(() => import('../components/Settings'))
 

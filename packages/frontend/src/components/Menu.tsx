@@ -3,7 +3,7 @@ import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
 import { WIDTH_MOBILE } from '../lib/constants'
 import { useNumberLocalStorage } from '../lib/hooks/useLocalStorage'
-import { useUi, useDispatchUi } from '../contexts/ui/hooks'
+import { useMenuUiState, useUi } from '../recoil/ui/hooks'
 import { ResizerX } from './atoms/ResizerX'
 import { MobileMenuIcon } from './atoms/MobileMenuIcon'
 import { Rooms } from './Rooms'
@@ -14,8 +14,8 @@ const WIDTH_KEY = 'mzm:menu:width'
 const MIN_WIDTH = 240
 
 export const Menu = () => {
-  const { menuStatus, device } = useUi()
-  const { closeMenu, openSettings } = useDispatchUi()
+  const { menuStatus, device } = useMenuUiState()
+  const { openSettings, closeMenu } = useUi()
   const className = menuStatus === 'open' ? 'menu open' : 'menu'
   const [width, _setWidth] = useNumberLocalStorage(WIDTH_KEY, MIN_WIDTH)
 

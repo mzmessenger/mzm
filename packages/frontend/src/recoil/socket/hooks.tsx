@@ -34,7 +34,7 @@ type SocketState = {
   connecting: boolean
 }
 
-const socketAtom = atom<SocketState>({
+const socketState = atom<SocketState>({
   key: 'state:socket',
   default: {
     ws: null,
@@ -47,7 +47,7 @@ type SocketRecoonectState = {
   reconnectAttempts: number
 }
 
-const socketRecoonectAtom = atom<SocketRecoonectState>({
+const socketRecoonectState = atom<SocketRecoonectState>({
   key: 'state:socket:reconnect',
   default: {
     reconnectInterval: INIT_RECONNECT_INTERVAL,
@@ -57,22 +57,19 @@ const socketRecoonectAtom = atom<SocketRecoonectState>({
 
 export const useSocket = () => {
   const { getAccessToken } = useAuth()
-  const [socketState, setSocketState] = useRecoilState(socketAtom)
-  const [socketRecoonectState, setSocketRecoonectState] =
-    useRecoilState(socketRecoonectAtom)
+  const [socket, setSocket] = useRecoilState(socketState)
+  const [socketRecoonect, setSocketRecoonect] =
+    useRecoilState(socketRecoonectState)
 
-  const close = useCallback(
-    (socket: WebSocket) => {
-      if (
-        socket &&
-        socket.readyState !== WebSocket.CLOSING &&
-        socket.readyState !== WebSocket.CLOSED
-      ) {
-        socketState.ws.close()
-      }
-    },
-    [socketState.ws]
-  )
+  const close = useCallback((socket: WebSocket) => {
+    if (
+      socket &&
+      socket.readyState !== WebSocket.CLOSING &&
+      socket.readyState !== WebSocket.CLOSED
+    ) {
+      socket.close()
+    }
+  }, [])
 
   const setOnMessageHandlers = useCallback(
     (ws: WebSocket, handlers: MessageHandlers) => {
@@ -105,29 +102,29 @@ export const useSocket = () => {
 
   const connect = useCallback(
     async (connectUrl: string, handlers: MessageHandlers) => {
-      if (socketState.ws || socketState.connecting) {
+      if (socket.ws || socket.connecting) {
         return
       }
 
-      setSocketState((current) => {
+      setSocket((current) => {
         return { ...current, connecting: true }
       })
       const { accessToken } = await getAccessToken()
       const socketInstance = new WebSocket(connectUrl + `?token=${accessToken}`)
 
-      setSocketState((current) => {
+      setSocket((current) => {
         return { ...current, ws: socketInstance }
       })
 
       socketInstance.addEventListener('open', () => {
         console.log('ws open')
-        setSocketState((current) => {
+        setSocket((current) => {
           return {
             ...current,
             connecting: false
           }
         })
-        setSocketRecoonectState({
+        setSocketRecoonect({
           reconnectInterval: INIT_RECONNECT_INTERVAL,
           reconnectAttempts: 0
         })
@@ -136,8 +133,8 @@ export const useSocket = () => {
       setOnMessageHandlers(socketInstance, handlers)
 
       const reconnect = async () => {
-        const counter = socketRecoonectState.reconnectAttempts + 1
-        setSocketRecoonectState((current) => {
+        const counter = socketRecoonect.reconnectAttempts + 1
+        setSocketRecoonect((current) => {
           return {
             ...current,
             reconnectAttempts: counter
@@ -149,26 +146,23 @@ export const useSocket = () => {
         }
 
         console.warn(
-          `ws reconnect: ${socketRecoonectState.reconnectAttempts} `,
+          `ws reconnect: ${socketRecoonect.reconnectAttempts} `,
           dayjs().format('YYYY/MM/DD HH:mm:ss'),
-          socketRecoonectState.reconnectInterval
+          socketRecoonect.reconnectInterval
         )
 
-        await sleep(socketRecoonectState.reconnectInterval)
+        await sleep(socketRecoonect.reconnectInterval)
         connect(connectUrl, handlers)
 
         const newInterval =
-          socketRecoonectState.reconnectInterval <= INIT_RECONNECT_INTERVAL
+          socketRecoonect.reconnectInterval <= INIT_RECONNECT_INTERVAL
             ? DEFAULT_INTERVAL
-            : socketRecoonectState.reconnectInterval *
+            : socketRecoonect.reconnectInterval *
               Math.floor(
-                Math.pow(
-                  RECONNECT_DECAY,
-                  socketRecoonectState.reconnectAttempts
-                )
+                Math.pow(RECONNECT_DECAY, socketRecoonect.reconnectAttempts)
               )
 
-        setSocketRecoonectState((current) => {
+        setSocketRecoonect((current) => {
           return {
             ...current,
             reconnectInterval: newInterval
@@ -200,12 +194,12 @@ export const useSocket = () => {
       close,
       getAccessToken,
       setOnMessageHandlers,
-      setSocketRecoonectState,
-      setSocketState,
-      socketRecoonectState.reconnectAttempts,
-      socketRecoonectState.reconnectInterval,
-      socketState.connecting,
-      socketState.ws
+      setSocketRecoonect,
+      setSocket,
+      socketRecoonect.reconnectAttempts,
+      socketRecoonect.reconnectInterval,
+      socket.connecting,
+      socket.ws
     ]
   )
 
@@ -220,148 +214,193 @@ export const useSocket = () => {
     [connect]
   )
 
-  const getMessages = (roomId: string, socket?: WebSocket) => {
-    const sendTo = socket ?? socketState.ws
-    sendSocket(sendTo, {
-      cmd: TO_SERVER_CMD.MESSAGES_ROOM,
-      room: roomId
-    })
-  }
+  const getMessages = useCallback(
+    (roomId: string, s?: WebSocket) => {
+      const sendTo = s ?? socket.ws
+      sendSocket(sendTo, {
+        cmd: TO_SERVER_CMD.MESSAGES_ROOM,
+        room: roomId
+      })
+    },
+    [socket.ws]
+  )
 
-  const getRooms = (socket?: WebSocket) => {
-    const sendTo = socket ?? socketState.ws
-    sendSocket(sendTo, { cmd: TO_SERVER_CMD.ROOMS_GET })
-  }
+  const getRooms = useCallback(
+    (s?: WebSocket) => {
+      const sendTo = s ?? socket.ws
+      sendSocket(sendTo, { cmd: TO_SERVER_CMD.ROOMS_GET })
+    },
+    [socket.ws]
+  )
 
-  const sortRoom = (roomOrder: string[]) => {
-    sendSocket(socketState.ws, {
-      cmd: TO_SERVER_CMD.ROOMS_SORT,
-      roomOrder
-    })
-  }
+  const sortRoom = useCallback(
+    (roomOrder: string[]) => {
+      sendSocket(socket.ws, {
+        cmd: TO_SERVER_CMD.ROOMS_SORT,
+        roomOrder
+      })
+    },
+    [socket.ws]
+  )
 
-  const incrementIine = (messageId: string) => {
-    sendSocket(socketState.ws, {
-      cmd: TO_SERVER_CMD.MESSAGE_IINE,
-      id: messageId
-    })
-  }
+  const incrementIine = useCallback(
+    (messageId: string) => {
+      sendSocket(socket.ws, {
+        cmd: TO_SERVER_CMD.MESSAGE_IINE,
+        id: messageId
+      })
+    },
+    [socket.ws]
+  )
 
-  const sendMessage = (
-    message: string,
-    roomId: string,
-    vote?: { questions: { text: string }[] }
-  ) => {
-    const send: ClientToSocketType = {
-      cmd: TO_SERVER_CMD.MESSAGE_SEND,
-      message: message,
-      room: roomId
-    }
-    if (vote) {
-      send.vote = vote
-    }
-    sendSocket(socketState.ws, send)
-  }
+  const sendMessage = useCallback(
+    (
+      message: string,
+      roomId: string,
+      vote?: { questions: { text: string }[] }
+    ) => {
+      const send: ClientToSocketType = {
+        cmd: TO_SERVER_CMD.MESSAGE_SEND,
+        message: message,
+        room: roomId
+      }
+      if (vote) {
+        send.vote = vote
+      }
+      sendSocket(socket.ws, send)
+    },
+    [socket.ws]
+  )
 
-  const enterRoom = (roomName: string) => {
-    sendSocket(socketState.ws, {
-      cmd: TO_SERVER_CMD.ROOMS_ENTER,
-      name: encodeURIComponent(roomName)
-    })
-  }
+  const enterRoom = useCallback(
+    (roomName: string) => {
+      sendSocket(socket.ws, {
+        cmd: TO_SERVER_CMD.ROOMS_ENTER,
+        name: encodeURIComponent(roomName)
+      })
+    },
+    [socket.ws]
+  )
 
-  const sendModifyMessage = (message: string, messageId: string) => {
-    const send: ClientToSocketType = {
-      cmd: TO_SERVER_CMD.MESSAGE_MODIFY,
-      message: message,
-      id: messageId
-    }
-    sendSocket(socketState.ws, send)
-  }
+  const sendModifyMessage = useCallback(
+    (message: string, messageId: string) => {
+      const send: ClientToSocketType = {
+        cmd: TO_SERVER_CMD.MESSAGE_MODIFY,
+        message: message,
+        id: messageId
+      }
+      sendSocket(socket.ws, send)
+    },
+    [socket.ws]
+  )
 
-  const sendDeleteMessage = (messageId: string) => {
-    const send: ClientToSocketType = {
-      cmd: TO_SERVER_CMD.MESSAGE_REMOVE,
-      id: messageId
-    }
-    sendSocket(socketState.ws, send)
-  }
+  const sendDeleteMessage = useCallback(
+    (messageId: string) => {
+      const send: ClientToSocketType = {
+        cmd: TO_SERVER_CMD.MESSAGE_REMOVE,
+        id: messageId
+      }
+      sendSocket(socket.ws, send)
+    },
+    [socket.ws]
+  )
 
-  const readMessages = (roomId: string) => {
-    sendSocket(socketState.ws, {
-      cmd: TO_SERVER_CMD.ROOMS_READ,
-      room: roomId
-    })
-  }
+  const readMessages = useCallback(
+    (roomId: string) => {
+      sendSocket(socket.ws, {
+        cmd: TO_SERVER_CMD.ROOMS_READ,
+        room: roomId
+      })
+    },
+    [socket.ws]
+  )
 
-  const openRoom = (roomId: string) => {
-    sendSocket(socketState.ws, {
-      cmd: TO_SERVER_CMD.ROOMS_OPEN,
-      roomId
-    })
-  }
+  const openRoom = useCallback(
+    (roomId: string) => {
+      sendSocket(socket.ws, {
+        cmd: TO_SERVER_CMD.ROOMS_OPEN,
+        roomId
+      })
+    },
+    [socket.ws]
+  )
 
-  const closeRoom = (roomId: string) => {
-    sendSocket(socketState.ws, {
-      cmd: TO_SERVER_CMD.ROOMS_CLOSE,
-      roomId
-    })
-  }
+  const closeRoom = useCallback(
+    (roomId: string) => {
+      sendSocket(socket.ws, {
+        cmd: TO_SERVER_CMD.ROOMS_CLOSE,
+        roomId
+      })
+    },
+    [socket.ws]
+  )
 
-  const getHistory = (id: string, roomId: string) => {
-    const message: ClientToSocketType = {
-      cmd: TO_SERVER_CMD.MESSAGES_ROOM,
-      room: roomId,
-      id: id
-    }
-    sendSocket(socketState.ws, message)
-  }
+  const getHistory = useCallback(
+    (id: string, roomId: string) => {
+      const message: ClientToSocketType = {
+        cmd: TO_SERVER_CMD.MESSAGES_ROOM,
+        room: roomId,
+        id: id
+      }
+      sendSocket(socket.ws, message)
+    },
+    [socket.ws]
+  )
 
-  const removeVoteAnswer = (messageId: string, index: number) => {
-    sendSocket(socketState.ws, {
-      cmd: TO_SERVER_CMD.VOTE_ANSWER_REMOVE,
-      messageId: messageId,
-      index: index
-    })
-  }
+  const removeVoteAnswer = useCallback(
+    (messageId: string, index: number) => {
+      sendSocket(socket.ws, {
+        cmd: TO_SERVER_CMD.VOTE_ANSWER_REMOVE,
+        messageId: messageId,
+        index: index
+      })
+    },
+    [socket.ws]
+  )
 
-  const sendVoteAnswer = (messageId: string, index: number, answer: number) => {
-    sendSocket(socketState.ws, {
-      cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
-      messageId: messageId,
-      index: index,
-      answer: answer
-    })
-  }
+  const sendVoteAnswer = useCallback(
+    (messageId: string, index: number, answer: number) => {
+      sendSocket(socket.ws, {
+        cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
+        messageId: messageId,
+        index: index,
+        answer: answer
+      })
+    },
+    [socket.ws]
+  )
 
-  const updateRoomDescription = (roomId: string, description: string) => {
-    sendSocket(socketState.ws, {
-      cmd: TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION,
-      roomId,
-      description
-    })
-  }
+  const updateRoomDescription = useCallback(
+    (roomId: string, description: string) => {
+      sendSocket(socket.ws, {
+        cmd: TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION,
+        roomId,
+        description
+      })
+    },
+    [socket.ws]
+  )
 
   return {
     state: {
-      ws: socketState.ws
+      ws: socket.ws
     },
     init,
     connect,
-    getMessages: useCallback(getMessages, [socketState.ws]),
-    getRooms: useCallback(getRooms, [socketState.ws]),
-    sortRoom: useCallback(sortRoom, [socketState.ws]),
-    incrementIine: useCallback(incrementIine, [socketState.ws]),
-    sendMessage: useCallback(sendMessage, [socketState.ws]),
-    sendModifyMessage: useCallback(sendModifyMessage, [socketState.ws]),
-    sendDeleteMessage: useCallback(sendDeleteMessage, [socketState.ws]),
-    enterRoom: useCallback(enterRoom, [socketState.ws]),
-    readMessages: useCallback(readMessages, [socketState.ws]),
-    openRoom: useCallback(openRoom, [socketState.ws]),
-    closeRoom: useCallback(closeRoom, [socketState.ws]),
-    getHistory: useCallback(getHistory, [socketState.ws]),
-    removeVoteAnswer: useCallback(removeVoteAnswer, [socketState.ws]),
-    sendVoteAnswer: useCallback(sendVoteAnswer, [socketState.ws]),
-    updateRoomDescription: useCallback(updateRoomDescription, [socketState.ws])
+    getMessages,
+    getRooms,
+    sortRoom,
+    incrementIine,
+    sendMessage,
+    sendModifyMessage,
+    sendDeleteMessage,
+    enterRoom,
+    readMessages,
+    openRoom,
+    closeRoom,
+    getHistory,
+    removeVoteAnswer,
+    sendVoteAnswer,
+    updateRoomDescription
   } as const
 }

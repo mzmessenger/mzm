@@ -1,12 +1,12 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useUi, useDispatchUi } from '../contexts/ui/hooks'
+import { useUi, useMenuUiState } from '../recoil/ui/hooks'
 import { WIDTH_MOBILE } from '../lib/constants'
 import { Header } from './Header'
 
 export const PageWrapper = ({ children }: { children?: React.ReactNode }) => {
-  const { overlay, menuStatus } = useUi()
-  const { closeMenu } = useDispatchUi()
+  const { overlay, menuStatus } = useMenuUiState()
+  const { closeMenu } = useUi()
   const classNames = menuStatus === 'open' ? ['body open'] : ['body']
 
   return (
