@@ -46,6 +46,11 @@ export const reducer = (
       return { ...state }
     }
     case Actions.AddMessage: {
+      if (
+        (state.messages.allIds as string[]).includes(action.payload.message.id)
+      ) {
+        return state
+      }
       const allIds = [...state.messages.allIds, action.payload.message.id]
       state.messages.byId[action.payload.message.id] = {
         ...action.payload.message
