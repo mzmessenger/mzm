@@ -5,7 +5,7 @@ import { Home, Forward } from '@mui/icons-material'
 import { useRoomActions } from '../../recoil/rooms/hooks'
 import { useSocket } from '../../recoil/socket/hooks'
 import { useUi } from '../../recoil/ui/hooks'
-import { useDispatchSearch } from '../../contexts/search/hooks'
+import { useSearch } from '../../recoil/search/hooks'
 import { IconButton } from '../atoms/Button'
 
 export const SearchRoomElement: React.FC<{
@@ -16,7 +16,7 @@ export const SearchRoomElement: React.FC<{
   const navigate = useNavigate()
   const { enterRoom } = useRoomActions()
   const { getMessages, enterRoom: enterRoomSocket } = useSocket()
-  const { cancel } = useDispatchSearch()
+  const { cancel } = useSearch()
   const { closeMenu } = useUi()
 
   const description = useMemo(() => {

@@ -1,14 +1,16 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useSearch, useDispatchSearch } from '../../contexts/search/hooks'
+import { useSearch } from '../../recoil/search/hooks'
 import { TransparentButton } from '../atoms/Button'
 import { SearchRoomElement } from './SearchRoomElement'
 
 export const SearchResult = () => {
-  const { results, total } = useSearch()
-  const { searchNext } = useDispatchSearch()
+  const {
+    search: { results, total },
+    execSearchNext
+  } = useSearch()
 
-  const onClick = () => searchNext()
+  const onClick = () => execSearchNext()
 
   return (
     <Wrap>
