@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDispatchRooms } from '../../contexts/rooms/hooks'
+import { useRoomActions } from '../../recoil/rooms/hooks'
 import { useSocket } from '../../recoil/socket/hooks'
 import { useUi } from '../../recoil/ui/hooks'
 import { getRoomName } from '../util'
@@ -8,7 +8,7 @@ import { getRoomName } from '../util'
 export const useLinkClick = () => {
   const ref = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const { enterRoom } = useDispatchRooms()
+  const { enterRoom } = useRoomActions()
   const { getMessages, enterRoom: enterRoomSocket } = useSocket()
   const { closeMenu } = useUi()
 

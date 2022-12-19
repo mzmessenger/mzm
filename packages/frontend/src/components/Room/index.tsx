@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useRooms } from '../../contexts/rooms/hooks'
+import { useRooms } from '../../recoil/rooms/hooks'
 import { InputArea } from './InputArea'
 import { Messages } from './Messages'
 import { RoomInfo } from './RoomInfo'

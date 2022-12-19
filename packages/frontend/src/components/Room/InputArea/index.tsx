@@ -4,7 +4,7 @@ import Add from '@mui/icons-material/Add'
 import SendIcon from '@mui/icons-material/Send'
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined'
 import { WIDTH_MOBILE } from '../../../lib/constants'
-import { useRooms } from '../../../contexts/rooms/hooks'
+import { useRooms } from '../../../recoil/rooms/hooks'
 import { useSocket } from '../../../recoil/socket/hooks'
 import {
   usePostTextArea,

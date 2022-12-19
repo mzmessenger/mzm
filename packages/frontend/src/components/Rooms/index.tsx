@@ -1,19 +1,15 @@
 import React, { useCallback } from 'react'
 import styled from '@emotion/styled'
 import { useNavigate } from 'react-router-dom'
-import { useRooms, useDispatchRooms } from '../../contexts/rooms/hooks'
-import { Room } from '../../contexts/rooms/constants'
+import { useRooms, useRoomActions, type Room } from '../../recoil/rooms/hooks'
 import { useSocket } from '../../recoil/socket/hooks'
 import { useUi } from '../../recoil/ui/hooks'
 import { DropZone } from './DropZone'
 
 export const Rooms = () => {
   const navigate = useNavigate()
-  const {
-    rooms: { allIds, byId },
-    currentRoomId
-  } = useRooms()
-  const { changeRoom, changeRoomOrder } = useDispatchRooms()
+  const { roomsAllIds, roomsById, currentRoomId } = useRooms()
+  const { changeRoom, changeRoomOrder } = useRoomActions()
   const { sortRoom, getMessages, readMessages } = useSocket()
   const { closeMenu } = useUi()
 
@@ -33,10 +29,10 @@ export const Rooms = () => {
 
       const moveId = e.dataTransfer.getData('text')
       const roomOrder = [
-        ...allIds.filter((e, i) => i !== allIds.indexOf(moveId))
+        ...roomsAllIds.filter((e, i) => i !== roomsAllIds.indexOf(moveId))
       ]
       roomOrder.splice(
-        allIds.indexOf(e.currentTarget.getAttribute('attr-room-id')),
+        roomsAllIds.indexOf(e.currentTarget.getAttribute('attr-room-id')),
         0,
         moveId
       )
@@ -45,15 +41,15 @@ export const Rooms = () => {
 
       e.dataTransfer.clearData()
     },
-    [allIds, changeRoomOrder, sortRoom]
+    [roomsAllIds, changeRoomOrder, sortRoom]
   )
 
   return (
     <Wrap className="scroll-styled-y">
-      {allIds.map((r) => (
+      {roomsAllIds.map((r) => (
         <DropZone
           key={r}
-          room={byId[r]}
+          room={roomsById[r]}
           currentRoomId={currentRoomId}
           onDrop={onDrop}
           onClick={onClick}

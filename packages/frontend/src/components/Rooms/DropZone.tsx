@@ -1,5 +1,5 @@
 import React, { useState } from 'react'
-import { Room } from '../../contexts/rooms/constants'
+import { type Room } from '../../recoil/rooms/hooks'
 import { RoomElem } from './RoomElem'
 
 type Props = {

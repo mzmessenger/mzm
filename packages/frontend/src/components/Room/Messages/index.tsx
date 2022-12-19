@@ -1,16 +1,14 @@
 import React, { useRef, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
 import { useSocket } from '../../../recoil/socket/hooks'
-import { useRooms } from '../../../contexts/rooms/hooks'
+import { useRooms } from '../../../recoil/rooms/hooks'
 import { useIntersectionObserver } from '../../../lib/hooks/useIntersectionObserver'
 import { MessageElement } from './Message'
 
 export const Messages = ({ className }) => {
   const {
     currentRoomId,
-    rooms: {
-      byId: { [currentRoomId]: currentRoom }
-    },
+    roomsById: { [currentRoomId]: currentRoom },
     scrollTargetIndex
   } = useRooms()
   const wrapRef = useRef<HTMLDivElement>(null)

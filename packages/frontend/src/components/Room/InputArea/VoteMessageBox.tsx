@@ -1,7 +1,7 @@
 import React, { useState } from 'react'
 import styled from '@emotion/styled'
 import { Add } from '@mui/icons-material'
-import { useRooms } from '../../../contexts/rooms/hooks'
+import { useRooms } from '../../../recoil/rooms/hooks'
 import { useSocket } from '../../../recoil/socket/hooks'
 import { TextArea } from '../../atoms/TextArea'
 import { Button } from '../../atoms/Button'

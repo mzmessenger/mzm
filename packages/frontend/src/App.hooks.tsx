@@ -6,7 +6,7 @@ import { useUser, useUserAccountState } from './recoil/user/hooks'
 import { useAuth } from './recoil/auth/hooks'
 import { getRoomName } from './lib/util'
 import { useUi } from './recoil/ui/hooks'
-import { useRooms, useDispatchRooms } from './contexts/rooms/hooks'
+import { useRooms, useRoomActions } from './recoil/rooms/hooks'
 import { useDispatchMessages } from './contexts/messages/hooks'
 import { sendSocket } from './lib/util'
 
@@ -87,7 +87,7 @@ const useWebSocket = (url: string) => {
     alreadyRead,
     setRoomOrder,
     setRoomDescription
-  } = useDispatchRooms()
+  } = useRoomActions()
 
   const messageHandlers: Parameters<typeof init>[0]['messageHandlers'] =
     useMemo(() => {
@@ -145,7 +145,7 @@ const useWebSocket = (url: string) => {
           addMessages(message.messages).then(() => {
             receiveMessages({
               messageIds: message.messages.map((m) => m.id),
-              room: message.room,
+              roomId: message.room,
               existHistory: message.existHistory
             })
           })

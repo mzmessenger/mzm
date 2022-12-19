@@ -87,7 +87,6 @@ export const useUser = () => {
             res
               .json()
               .then((json: RESPONSE['/api/user/@me']['PUT']['body'][200]) => {
-                console.log(json)
                 setUser((current) => ({
                   ...current,
                   account: json.account,

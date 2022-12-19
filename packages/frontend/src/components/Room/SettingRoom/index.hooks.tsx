@@ -1,17 +1,13 @@
 import { useState, useMemo, useCallback } from 'react'
-import { useRooms, useDispatchRooms } from '../../../contexts/rooms/hooks'
+import { useRooms, useRoomActions } from '../../../recoil/rooms/hooks'
 import { useSocket } from '../../../recoil/socket/hooks'
 import { Props as RoomInfoProps } from './RoomInfo'
 
 export const useSettiongRooms = () => {
-  const {
-    currentRoomId,
-    currentRoomName,
-    rooms: { byId }
-  } = useRooms()
-  const { exitRoom, uploadIcon } = useDispatchRooms()
+  const { currentRoomId, currentRoomName, roomsById } = useRooms()
+  const { exitRoom, uploadIcon } = useRoomActions()
   const { getRooms, updateRoomDescription } = useSocket()
-  const room = byId[currentRoomId]
+  const room = roomsById[currentRoomId]
   const [image, setImage] = useState('')
   const [open, setOpen] = useState(false)
   const [edit, setEdit] = useState(false)
