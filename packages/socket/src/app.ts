@@ -27,6 +27,7 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
           audience: JWT.audience
         }
       )
+      logger.info('[ws:verifyAccessToken]', err, decoded)
       if (!err && decoded) {
         userId = decoded.user._id
         twitterUserName = decoded.user.twitterUserName
