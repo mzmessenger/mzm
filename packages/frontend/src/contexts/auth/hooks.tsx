@@ -56,7 +56,7 @@ export const useAuthForContext = () => {
   const getAccessToken = async () => {
     try {
       const decoded = jwt_decode<JwtPayload>(accessToken)
-      if (decoded.exp <= Math.floor(Date.now() / 1000) - 10 * 1000) {
+      if (decoded.exp - 10 * 1000 <= Math.floor(Date.now() / 1000)) {
         const res = await refreshToken()
         return { accessToken: res.accessToken, user: res.user }
       }
