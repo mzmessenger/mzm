@@ -2,7 +2,7 @@ import { useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { TO_CLIENT_CMD, TO_SERVER_CMD } from 'mzm-shared/type/socket'
 import { useSocket } from './recoil/socket/hooks'
-import { useUser, useDispatchUser } from './contexts/user/hooks'
+import { useUser, useUserAccountState } from './recoil/user/hooks'
 import { useAuth } from './recoil/auth/hooks'
 import { getRoomName } from './lib/util'
 import { useUi } from './recoil/ui/hooks'
@@ -11,21 +11,25 @@ import { useDispatchMessages } from './contexts/messages/hooks'
 import { sendSocket } from './lib/util'
 
 const useRouter = () => {
-  const { login } = useAuth()
+  const {
+    state: { login }
+  } = useAuth()
   const { getAccessToken } = useAuth()
-  const { fetchMyInfo } = useDispatchUser()
+  const { fetchMyInfo } = useUser()
+
+  useEffect(() => {
+    if (!login) {
+      getAccessToken().then(({ accessToken }) => {
+        if (accessToken) {
+          fetchMyInfo()
+        }
+      })
+    }
+  }, [getAccessToken, fetchMyInfo, login])
 
   useEffect(() => {
     try {
       const room = getRoomName(location.pathname)
-
-      if (!login) {
-        getAccessToken().then(({ accessToken }) => {
-          if (accessToken) {
-            fetchMyInfo()
-          }
-        })
-      }
 
       if (room) {
         document.title = `MZM (${room})`
@@ -35,7 +39,7 @@ const useRouter = () => {
     } catch (e) {
       console.error(e)
     }
-  }, [login, getAccessToken, fetchMyInfo])
+  }, [])
 }
 
 const useResize = () => {
@@ -60,8 +64,8 @@ const useWebSocket = (url: string) => {
   const navigate = useNavigate()
   const location = useLocation()
   const { login } = useAuth()
-  const { me } = useUser()
-  const { fetchMyInfo } = useDispatchUser()
+  const { fetchMyInfo } = useUser()
+  const { userAccount } = useUserAccountState()
   const { init, getMessages, getRooms, readMessages } = useSocket()
   const { closeMenu } = useUi()
   const {
@@ -84,8 +88,6 @@ const useWebSocket = (url: string) => {
     setRoomOrder,
     setRoomDescription
   } = useDispatchRooms()
-
-  const account = useMemo(() => me.account ?? '', [me])
 
   const messageHandlers: Parameters<typeof init>[0]['messageHandlers'] =
     useMemo(() => {
@@ -124,7 +126,7 @@ const useWebSocket = (url: string) => {
               message.message.id,
               message.message.message,
               message.room,
-              account,
+              userAccount,
               readMessages
             )
           })
@@ -188,7 +190,7 @@ const useWebSocket = (url: string) => {
         }
       }
     }, [
-      account,
+      userAccount,
       addMessage,
       addMessages,
       alreadyRead,

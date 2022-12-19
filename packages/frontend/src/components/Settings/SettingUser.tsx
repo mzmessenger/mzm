@@ -1,11 +1,11 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useDispatchUser } from '../../contexts/user/hooks'
+import { useUser } from '../../recoil/user/hooks'
 import { Button } from '../atoms/Button'
 import { SettingAccount } from './SettingAccount'
 
 export const SettingUser = () => {
-  const { removeUser } = useDispatchUser()
+  const { removeUser } = useUser()
 
   const onDelete = () => {
     if (window.confirm('本当にアカウントを削除しますか？')) {

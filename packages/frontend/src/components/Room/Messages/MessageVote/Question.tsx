@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
 import { useSocket } from '../../../../recoil/socket/hooks'
-import { useUser } from '../../../../contexts/user/hooks'
+import { useUserIdAndAccountState } from '../../../../recoil/user/hooks'
 import {
   useMessages,
   useDispatchMessages
@@ -18,7 +18,7 @@ type Props = {
 }
 
 export const Question: React.FC<Props> = ({ messageId, text, index }) => {
-  const { me } = useUser()
+  const { userId, userAccount, userIconUrl } = useUserIdAndAccountState()
   const {
     voteAnswers: { byId }
   } = useMessages()
@@ -40,17 +40,27 @@ export const Question: React.FC<Props> = ({ messageId, text, index }) => {
   const na = answers.filter((e) => e.answer === 2)
 
   useEffect(() => {
-    setChecked(answers.find((e) => e.userId === me.id)?.answer)
-  }, [me.id, answers])
+    setChecked(answers.find((e) => e.userId === userId)?.answer)
+  }, [userId, answers])
 
   const onClickRadio = (e: React.MouseEvent<HTMLInputElement>) => {
     const answer = parseInt((e.target as HTMLInputElement).value, 10)
     if (answer === checked) {
-      removeVoteAnswer(messageId, index, me, removeVoteAnswerSocket)
+      removeVoteAnswer(messageId, index, userId, removeVoteAnswerSocket)
       setChecked(null)
     } else {
       const answer = parseInt((e.target as HTMLInputElement).value, 10)
-      sendVoteAnswer(messageId, index, answer, me, sendVoteAnswerSocket)
+      sendVoteAnswer(
+        messageId,
+        index,
+        answer,
+        {
+          userId,
+          userAccount,
+          userIconUrl
+        },
+        sendVoteAnswerSocket
+      )
       setChecked(answer)
     }
   }

@@ -1,16 +1,14 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
 import { useUi, useSettingsUiState } from '../../recoil/ui/hooks'
-import { useUser } from '../../contexts/user/hooks'
+import { useUserIdAndAccountState } from '../../recoil/user/hooks'
 
 export const MyInfo = () => {
-  const { me } = useUser()
+  const { userAccount, userIconUrl } = useUserIdAndAccountState()
   const { closeSettings, openSettings } = useUi()
   const { isOpenSettings } = useSettingsUiState()
-  const icon = useMemo(() => {
-    return me ? me.iconUrl : null
-  }, [me])
+  const icon = userIconUrl ? userIconUrl : null
 
   const clickSettings = () => {
     if (isOpenSettings) {
@@ -20,7 +18,7 @@ export const MyInfo = () => {
     }
   }
 
-  const m = me ? me.account : ''
+  const m = userAccount ? userAccount : ''
 
   return (
     <Wrap>

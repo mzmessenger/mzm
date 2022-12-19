@@ -1,13 +1,13 @@
 import { useRef, useEffect, useMemo, useCallback } from 'react'
 import dayjs from 'dayjs'
 import { useMessages } from '../../../contexts/messages/hooks'
-import { useUser } from '../../../contexts/user/hooks'
+import { useUserAccountState } from '../../../recoil/user/hooks'
 import { useDispatchPostTextArea } from '../../../contexts/postTextArea/hooks'
 import { useSocket } from '../../../recoil/socket/hooks'
 import { isReplied } from '../../../lib/util'
 
 export const useMessage = (id: string) => {
-  const { me } = useUser()
+  const { userAccount } = useUserAccountState()
   const {
     messages: {
       byId: { [id]: messageObj }
@@ -15,10 +15,6 @@ export const useMessage = (id: string) => {
   } = useMessages()
   const { startToEdit } = useDispatchPostTextArea()
   const { incrementIine, sendDeleteMessage } = useSocket()
-
-  const myAccount = useMemo(() => {
-    return me?.account ?? ''
-  }, [me])
 
   const {
     message,
@@ -58,7 +54,7 @@ export const useMessage = (id: string) => {
     )
     const account = messageObj.userAccount ?? ''
 
-    const replied = isReplied(myAccount, messageObj.message)
+    const replied = isReplied(userAccount, messageObj.message)
 
     return {
       ...messageObj,
@@ -66,7 +62,7 @@ export const useMessage = (id: string) => {
       account,
       replied
     }
-  }, [messageObj, myAccount])
+  }, [messageObj, userAccount])
 
   const iineHandler = useCallback(() => {
     incrementIine(id)

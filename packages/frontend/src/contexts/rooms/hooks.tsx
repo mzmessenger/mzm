@@ -3,7 +3,6 @@ import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { useSocket } from '../../recoil/socket/hooks'
 import type { useUi } from '../../recoil/ui/hooks'
-import type { useUser } from '../user/hooks'
 import { useAuth } from '../../recoil/auth/hooks'
 import { createApiClient } from '../../lib/client'
 import { RoomsContext, RoomsDispatchContext } from './index'
@@ -179,7 +178,7 @@ export const useRoomsForContext = () => {
     messageId: string,
     message: string,
     room: string,
-    account: ReturnType<typeof useUser>['me']['account'],
+    account: string,
     readMessages: ReturnType<typeof useSocket>['readMessages']
   ) => {
     // 現在みている部屋だったら既読フラグを返す
