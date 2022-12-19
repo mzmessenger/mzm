@@ -6,10 +6,7 @@ import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined'
 import { WIDTH_MOBILE } from '../../../lib/constants'
 import { useRooms } from '../../../recoil/rooms/hooks'
 import { useSocket } from '../../../recoil/socket/hooks'
-import {
-  usePostTextArea,
-  useDispatchPostTextArea
-} from '../../../contexts/postTextArea/hooks'
+import { usePostTextArea } from '../../../recoil/postTextArea/hooks'
 import { Button } from '../../atoms/Button'
 import { ResizerY } from '../../atoms/ResizerY'
 import { TextArea } from '../../atoms/TextArea'
@@ -20,8 +17,12 @@ const HEIGHT_KEY = 'mzm:input:height'
 
 export const InputArea = () => {
   const { currentRoomId } = useRooms()
-  const { txt, editTxt, editId, inputMode } = usePostTextArea()
-  const { inputMessage, endToEdit, modifyMessage } = useDispatchPostTextArea()
+  const {
+    postTextArea: { txt, editTxt, editId, inputMode },
+    inputMessage,
+    endToEdit,
+    modifyMessage
+  } = usePostTextArea()
   const [rows, setRows] = useState(
     inputMode === 'normal' ? txt.split('\n').length : editTxt.split('\n').length
   )

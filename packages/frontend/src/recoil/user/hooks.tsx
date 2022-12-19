@@ -119,6 +119,7 @@ export const useUser = () => {
 
           setUser((current) => ({
             ...current,
+            account: payload.account,
             iconUrl: payload.icon,
             twitterUserName: user.twitterUserName,
             githubUserName: user.githubUserName
