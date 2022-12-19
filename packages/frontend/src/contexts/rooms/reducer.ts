@@ -107,6 +107,10 @@ export const reducer = (
       const room = state.rooms.byId[action.payload.room]
       const replied = isReplied(action.payload.account, action.payload.message)
 
+      if (room.messages.includes(action.payload.messageId)) {
+        return state
+      }
+
       state.rooms.byId[action.payload.room] = {
         ...room,
         messages: [...room.messages, action.payload.messageId],
