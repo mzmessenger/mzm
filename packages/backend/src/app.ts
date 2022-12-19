@@ -8,7 +8,11 @@ import * as rooms from './handlers/rooms.js'
 import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import * as internal from './handlers/internal.js'
-import { checkAccessToken, errorHandler } from './middleware/index.js'
+import {
+  checkAccessToken,
+  checkInternalAccessToken,
+  errorHandler
+} from './middleware/index.js'
 
 const iconUpload = multer({
   dest: MULTER_PATH,
@@ -61,7 +65,12 @@ export const createApp = () => {
     wrap(icon.uploadRoomIcon)
   )
 
-  app.post('/api/internal/socket', jsonParser, wrap(internal.socket))
+  app.post(
+    '/api/internal/socket',
+    checkInternalAccessToken,
+    jsonParser,
+    wrap(internal.socket)
+  )
 
   // 必ず最後に use する
   app.use(errorHandler)

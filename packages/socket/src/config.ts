@@ -17,6 +17,7 @@ export const REDIS = {
 }
 export const JWT = {
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
+  internalAccessTokenSecret: process.env.INTERNAL_ACCESS_TOKEN_SECRET,
   issuer: process.env.JWT_ISSURE ?? 'https://mzm.dev',
   audience: process.env.JWT_AUDIENCE
     ? process.env.JWT_AUDIENCE.split(',')

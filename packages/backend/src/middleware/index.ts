@@ -6,6 +6,7 @@ import {
 import { HEADERS } from 'mzm-shared/auth/constants'
 import { JWT } from '../config.js'
 import * as HttpErrors from '../lib/errors.js'
+import { verifyInternalAccessToken } from '../lib/token.js'
 import { logger } from '../lib/logger.js'
 
 const allHttpErrors = Object.keys(HttpErrors).map((err) => HttpErrors[err])
@@ -40,6 +41,28 @@ export const checkAccessToken = (
         return res.status(401).send('not login')
       }
       req.headers[HEADERS.USER_ID] = decoded.user._id
+      next()
+    })
+    .catch(() => {
+      return res.status(401).send('not login')
+    })
+}
+
+export const checkInternalAccessToken = (
+  req: Request,
+  res: Response,
+  next: NextFunction
+) => {
+  const accessToken = parseAuthorizationHeader(req)
+  if (!accessToken) {
+    return res.status(401).send('no authorization header')
+  }
+
+  verifyInternalAccessToken(accessToken)
+    .then(({ err }) => {
+      if (err) {
+        return res.status(401).send('not verify token')
+      }
       next()
     })
     .catch(() => {

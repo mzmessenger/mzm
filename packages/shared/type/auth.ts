@@ -7,3 +7,7 @@ export type AccessToken = {
     githubUserName: string | null
   }
 }
+
+export type InternalAccessToken = {
+  name: string
+}
