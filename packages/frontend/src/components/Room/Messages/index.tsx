@@ -1,6 +1,6 @@
 import React, { useRef, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
+import { useSocket } from '../../../recoil/socket/hooks'
 import { useRooms } from '../../../contexts/rooms/hooks'
 import { useIntersectionObserver } from '../../../lib/hooks/useIntersectionObserver'
 import { MessageElement } from './Message'
@@ -16,7 +16,7 @@ export const Messages = ({ className }) => {
   const wrapRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef(0)
-  const { getHistory } = useDispatchSocket()
+  const { getHistory } = useSocket()
 
   const [intersectionRef, isIntersecting] = useIntersectionObserver()
 

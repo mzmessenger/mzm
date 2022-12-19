@@ -2,7 +2,7 @@ import React from 'react'
 import styled from '@emotion/styled'
 import CheckIcon from '@mui/icons-material/Check'
 import { useRooms, useDispatchRooms } from '../../../contexts/rooms/hooks'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
+import { useSocket } from '../../../recoil/socket/hooks'
 
 export const SettingRoomStatus = () => {
   const {
@@ -10,7 +10,7 @@ export const SettingRoomStatus = () => {
     rooms: { byId }
   } = useRooms()
   const { setRoomStatus } = useDispatchRooms()
-  const { openRoom, closeRoom } = useDispatchSocket()
+  const { openRoom, closeRoom } = useSocket()
 
   const room = byId[currentRoomId]
   const status = room?.status

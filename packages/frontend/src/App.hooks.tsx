@@ -1,7 +1,7 @@
 import { useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { TO_CLIENT_CMD, TO_SERVER_CMD } from 'mzm-shared/type/socket'
-import { useDispatchSocket } from './contexts/socket/hooks'
+import { useSocket } from './recoil/socket/hooks'
 import { useUser, useDispatchUser } from './contexts/user/hooks'
 import { useAuth } from './recoil/auth/hooks'
 import { getRoomName } from './lib/util'
@@ -62,7 +62,7 @@ const useWebSocket = (url: string) => {
   const { login } = useAuth()
   const { me } = useUser()
   const { fetchMyInfo } = useDispatchUser()
-  const { init, getMessages, getRooms, readMessages } = useDispatchSocket()
+  const { init, getMessages, getRooms, readMessages } = useSocket()
   const { closeMenu } = useDispatchUi()
   const {
     addMessage,

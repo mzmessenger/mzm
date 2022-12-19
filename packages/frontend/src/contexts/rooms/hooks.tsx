@@ -1,7 +1,7 @@
 import { useContext, useReducer, useCallback } from 'react'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
-import type { useDispatchSocket } from '../socket/hooks'
+import type { useSocket } from '../../recoil/socket/hooks'
 import type { useDispatchUi } from '../ui/hooks'
 import type { useUser } from '../user/hooks'
 import { useAuth } from '../../recoil/auth/hooks'
@@ -24,7 +24,7 @@ export const useRoomsForContext = () => {
 
   const getRoomMessages = (
     roomId: string,
-    getMessages: ReturnType<typeof useDispatchSocket>['getMessages']
+    getMessages: ReturnType<typeof useSocket>['getMessages']
   ) => {
     getMessages(roomId)
     dispatch({ type: Actions.GetMessages, payload: { id: roomId } })
@@ -32,7 +32,7 @@ export const useRoomsForContext = () => {
 
   const createRoom = async (
     name: string,
-    getRooms: ReturnType<typeof useDispatchSocket>['getRooms']
+    getRooms: ReturnType<typeof useSocket>['getRooms']
   ) => {
     const body: REQUEST['/api/rooms']['POST']['body'] = {
       name
@@ -67,7 +67,7 @@ export const useRoomsForContext = () => {
   const changeRoom = useCallback(
     (
       roomId: string,
-      getMessages: ReturnType<typeof useDispatchSocket>['getMessages'],
+      getMessages: ReturnType<typeof useSocket>['getMessages'],
       closeMenu: ReturnType<typeof useDispatchUi>['closeMenu']
     ) => {
       const room = state.rooms.byId[roomId]
@@ -90,8 +90,8 @@ export const useRoomsForContext = () => {
 
   const enterRoom = async (
     roomName: string,
-    getMessages: ReturnType<typeof useDispatchSocket>['getMessages'],
-    enterRoomMessage: ReturnType<typeof useDispatchSocket>['enterRoom'],
+    getMessages: ReturnType<typeof useSocket>['getMessages'],
+    enterRoomMessage: ReturnType<typeof useSocket>['enterRoom'],
     closeMenu: ReturnType<typeof useDispatchUi>['closeMenu']
   ) => {
     const room = Object.values(state.rooms.byId).find(
@@ -107,7 +107,7 @@ export const useRoomsForContext = () => {
 
   const exitRoom = async (
     roomId: string,
-    getRooms: ReturnType<typeof useDispatchSocket>['getRooms']
+    getRooms: ReturnType<typeof useSocket>['getRooms']
   ) => {
     const body: REQUEST['/api/rooms/enter']['DELETE']['body'] = { room: roomId }
 
@@ -134,7 +134,7 @@ export const useRoomsForContext = () => {
     rooms: FilterToClientType<typeof TO_CLIENT_CMD.ROOMS_GET>['rooms'],
     roomOrder: string[],
     currentRoomId: string,
-    getMessages: ReturnType<typeof useDispatchSocket>['getMessages']
+    getMessages: ReturnType<typeof useSocket>['getMessages']
   ) => {
     if (currentRoomId) {
       getMessages(currentRoomId)
@@ -165,7 +165,7 @@ export const useRoomsForContext = () => {
 
   const changeRoomOrder = (
     roomOrder: string[],
-    sortRoom: ReturnType<typeof useDispatchSocket>['sortRoom']
+    sortRoom: ReturnType<typeof useSocket>['sortRoom']
   ) => {
     const newOrder = sortRoomIds(state.rooms.allIds, roomOrder)
     dispatch({
@@ -180,7 +180,7 @@ export const useRoomsForContext = () => {
     message: string,
     room: string,
     account: ReturnType<typeof useUser>['me']['account'],
-    readMessages: ReturnType<typeof useDispatchSocket>['readMessages']
+    readMessages: ReturnType<typeof useSocket>['readMessages']
   ) => {
     // 現在みている部屋だったら既読フラグを返す
     if (room === state.currentRoomId) {
@@ -221,8 +221,8 @@ export const useRoomsForContext = () => {
     name: string,
     description: string,
     iconUrl: string,
-    getRooms: ReturnType<typeof useDispatchSocket>['getRooms'],
-    getMessages: ReturnType<typeof useDispatchSocket>['getMessages']
+    getRooms: ReturnType<typeof useSocket>['getRooms'],
+    getMessages: ReturnType<typeof useSocket>['getMessages']
   ) => {
     const room = state.rooms.byId[id]
     // すでに入っている部屋だったら部屋の再取得をしない

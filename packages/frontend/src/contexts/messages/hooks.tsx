@@ -1,6 +1,6 @@
 import { useContext, useReducer, useCallback } from 'react'
 import type { MessageType } from 'mzm-shared/type/socket'
-import type { useDispatchSocket } from '../socket/hooks'
+import type { useSocket } from '../../recoil/socket/hooks'
 import type { useUser } from '../user/hooks'
 import { convertToHtml } from '../../lib/markdown'
 import { MessagesContext, MessagesDispatchContext } from './index'
@@ -125,7 +125,7 @@ export const useMessagesForContext = () => {
     index: number,
     answer: number,
     me: ReturnType<typeof useUser>['me'],
-    sendVoteAnswer: ReturnType<typeof useDispatchSocket>['sendVoteAnswer']
+    sendVoteAnswer: ReturnType<typeof useSocket>['sendVoteAnswer']
   ) => {
     dispatch({
       type: Actions.SendVoteAnswer,
@@ -148,7 +148,7 @@ export const useMessagesForContext = () => {
     messageId: string,
     index: number,
     me: ReturnType<typeof useUser>['me'],
-    removeVoteAnswer: ReturnType<typeof useDispatchSocket>['removeVoteAnswer']
+    removeVoteAnswer: ReturnType<typeof useSocket>['removeVoteAnswer']
   ) => {
     dispatch({
       type: Actions.RemoveVoteAnswer,

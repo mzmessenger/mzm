@@ -3,7 +3,7 @@ import { useNavigate } from 'react-router-dom'
 import styled from '@emotion/styled'
 import { Home, Forward } from '@mui/icons-material'
 import { useDispatchRooms } from '../../contexts/rooms/hooks'
-import { useDispatchSocket } from '../../contexts/socket/hooks'
+import { useSocket } from '../../recoil/socket/hooks'
 import { useDispatchUi } from '../../contexts/ui/hooks'
 import { useDispatchSearch } from '../../contexts/search/hooks'
 import { IconButton } from '../atoms/Button'
@@ -15,7 +15,7 @@ export const SearchRoomElement: React.FC<{
 }> = (props) => {
   const navigate = useNavigate()
   const { enterRoom } = useDispatchRooms()
-  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
+  const { getMessages, enterRoom: enterRoomSocket } = useSocket()
   const { cancel } = useDispatchSearch()
   const { closeMenu } = useDispatchUi()
 

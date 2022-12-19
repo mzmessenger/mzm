@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
-import { useDispatchSocket } from '../../../../contexts/socket/hooks'
+import { useSocket } from '../../../../recoil/socket/hooks'
 import { useUser } from '../../../../contexts/user/hooks'
 import {
   useMessages,
@@ -27,7 +27,7 @@ export const Question: React.FC<Props> = ({ messageId, text, index }) => {
   const {
     removeVoteAnswer: removeVoteAnswerSocket,
     sendVoteAnswer: sendVoteAnswerSocket
-  } = useDispatchSocket()
+  } = useSocket()
 
   const answers = useMemo(() => {
     return byId[messageId][index] ?? []

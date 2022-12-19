@@ -5,7 +5,7 @@ import SendIcon from '@mui/icons-material/Send'
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined'
 import { WIDTH_MOBILE } from '../../../lib/constants'
 import { useRooms } from '../../../contexts/rooms/hooks'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
+import { useSocket } from '../../../recoil/socket/hooks'
 import {
   usePostTextArea,
   useDispatchPostTextArea
@@ -29,7 +29,7 @@ export const InputArea = () => {
   const [height, setHeight] = useNumberLocalStorage(HEIGHT_KEY, 68)
   const [showVote, setShowVote] = useState(false)
 
-  const { sendMessage, sendModifyMessage } = useDispatchSocket()
+  const { sendMessage, sendModifyMessage } = useSocket()
 
   useEffect(() => {
     if (inputMode === 'edit') {

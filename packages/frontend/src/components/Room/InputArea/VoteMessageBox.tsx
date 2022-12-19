@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import styled from '@emotion/styled'
 import { Add } from '@mui/icons-material'
 import { useRooms } from '../../../contexts/rooms/hooks'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
+import { useSocket } from '../../../recoil/socket/hooks'
 import { TextArea } from '../../atoms/TextArea'
 import { Button } from '../../atoms/Button'
 import { TransparentButton } from '../../atoms/Button'
@@ -15,7 +15,7 @@ export const VoteMessageBox: React.FC<{
   const { currentRoomId } = useRooms()
   const [text, setText] = useState('候補日')
   const [questions, setQuestions] = useState<string[]>(['4/1', '4/2', '4/3'])
-  const { sendMessage } = useDispatchSocket()
+  const { sendMessage } = useSocket()
 
   const onChange = (e) => {
     setText(e.target.value)

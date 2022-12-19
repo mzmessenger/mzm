@@ -3,7 +3,7 @@ import dayjs from 'dayjs'
 import { useMessages } from '../../../contexts/messages/hooks'
 import { useUser } from '../../../contexts/user/hooks'
 import { useDispatchPostTextArea } from '../../../contexts/postTextArea/hooks'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
+import { useSocket } from '../../../recoil/socket/hooks'
 import { isReplied } from '../../../lib/util'
 
 export const useMessage = (id: string) => {
@@ -14,7 +14,7 @@ export const useMessage = (id: string) => {
     }
   } = useMessages()
   const { startToEdit } = useDispatchPostTextArea()
-  const { incrementIine, sendDeleteMessage } = useDispatchSocket()
+  const { incrementIine, sendDeleteMessage } = useSocket()
 
   const myAccount = useMemo(() => {
     return me?.account ?? ''
