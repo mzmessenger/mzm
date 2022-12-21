@@ -130,6 +130,7 @@ const Wrap = styled.div`
   flex-direction: column;
   padding: 0 15px;
   color: var(--color-on-background);
+  border-top: 1px solid var(--color-border);
 
   .form-wrap {
     padding: 10px 0;

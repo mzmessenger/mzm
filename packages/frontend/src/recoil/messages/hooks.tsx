@@ -90,6 +90,84 @@ const messagesState = atom<MessagesState>({
   }
 })
 
+type UseSocketActions = ReturnType<typeof useSocketActions>
+
+export const useVoteSocket = ({
+  sendVoteAnswerSocket,
+  removeVoteAnswerSocket
+}: {
+  sendVoteAnswerSocket: UseSocketActions['sendVoteAnswer']
+  removeVoteAnswerSocket: UseSocketActions['removeVoteAnswer']
+}) => {
+  const setVoteAnswersById = useSetRecoilState(voteAnswersByIdState)
+
+  const createVoteAnswers = (
+    state: VoteAnswersById,
+    messageId: string,
+    index: number,
+    answers: VoteAnswerType[]
+  ): VoteAnswersById => {
+    return {
+      [messageId]: {
+        ...state[messageId],
+        [index]: answers
+      }
+    }
+  }
+
+  const sendVoteAnswer = (
+    messageId: string,
+    index: number,
+    answer: number,
+    user: {
+      userId: string
+      userAccount: string
+      userIconUrl: string
+    }
+  ) => {
+    setVoteAnswersById((current) => {
+      const answers = (current[messageId][index] ?? []).filter((e) => {
+        return e.userId !== user.userId
+      })
+
+      answers.push({
+        userId: user.userId,
+        userAccount: user.userAccount,
+        icon: user.userIconUrl,
+        index: index,
+        answer: answer
+      })
+
+      const add = createVoteAnswers(current, messageId, index, answers)
+      return { ...current, ...add }
+    })
+
+    sendVoteAnswerSocket(messageId, index, answer)
+  }
+
+  const removeVoteAnswer = (
+    messageId: string,
+    index: number,
+    userId: string
+  ) => {
+    setVoteAnswersById((current) => {
+      const answers = current[messageId][index].filter(
+        (e) => e.userId !== userId
+      )
+
+      const add = createVoteAnswers(current, messageId, index, answers)
+      return { ...current, ...add }
+    })
+
+    removeVoteAnswerSocket(messageId, index)
+  }
+
+  return {
+    sendVoteAnswer,
+    removeVoteAnswer
+  } as const
+}
+
 export const useMessages = () => {
   const [messagesById, setMessagesById] = useRecoilState(messagesByIdState)
   const setVoteAnswersById = useSetRecoilState(voteAnswersByIdState)
@@ -258,96 +336,33 @@ export const useMessages = () => {
   const setVoteAnswers = useCallback(
     (messageId: string, answers: VoteAnswerType[]) => {
       // @todo 数秒間queueに詰めて最後の結果だけ入れる
+      const message = messagesById[messageId]
+      if (!message) {
+        return
+      }
 
       const convertedAnswers = convertVoteAnswerByIndex(answers)
 
-      const vote = {
+      const vote: StateVoteType = {
         ...messagesById[messageId].vote,
         answers: convertedAnswers
       }
 
-      const message = {
-        ...messagesById[messageId],
-        vote
-      }
-
       setMessagesById((current) => ({
         ...current,
-        [messageId]: message
+        [messageId]: {
+          ...current[messageId],
+          vote
+        }
       }))
 
       setVoteAnswersById((current) => ({
         ...current,
-        [messageId]: convertedAnswers
+        [messageId]: vote
       }))
     },
     [messagesById, setMessagesById, setVoteAnswersById]
   )
-
-  const createVoteAnswers = (
-    state: VoteAnswersById,
-    messageId: string,
-    index: number,
-    answers: VoteAnswerType[]
-  ): VoteAnswersById => {
-    return {
-      [messageId]: {
-        ...state.voteAnswersById[messageId],
-        [index]: answers
-      }
-    }
-  }
-
-  const sendVoteAnswer = (
-    messageId: string,
-    index: number,
-    answer: number,
-    user: {
-      userId: string
-      userAccount: string
-      userIconUrl: string
-    },
-    sendVoteAnswer: ReturnType<typeof useSocketActions>['sendVoteAnswer']
-  ) => {
-    setVoteAnswersById((current) => {
-      const answers = (current.voteAnswersById[messageId][index] ?? []).filter(
-        (e) => {
-          return e.userId !== user.userId
-        }
-      )
-
-      answers.push({
-        userId: user.userId,
-        userAccount: user.userAccount,
-        icon: user.userIconUrl,
-        index: index,
-        answer: answer
-      })
-
-      const add = createVoteAnswers(current, messageId, index, answers)
-      return { ...current, ...add }
-    })
-
-    sendVoteAnswer(messageId, index, answer)
-  }
-
-  const removeVoteAnswer = (
-    messageId: string,
-    index: number,
-    userId: string,
-    removeVoteAnswer: ReturnType<typeof useSocketActions>['removeVoteAnswer']
-  ) => {
-    setVoteAnswersById((current) => {
-      const answers = current.voteAnswersById[messageId][index].filter(
-        (e) => e.userId !== userId
-      )
-
-      const add = createVoteAnswers(current, messageId, index, answers)
-      return { ...current, ...add }
-    })
-
-    removeVoteAnswer(messageId, index)
-  }
 
   return {
     messages,
@@ -358,8 +373,6 @@ export const useMessages = () => {
     modifyMessage,
     removeMessage,
     updateIine,
-    setVoteAnswers,
-    sendVoteAnswer,
-    removeVoteAnswer
+    setVoteAnswers
   } as const
 }
