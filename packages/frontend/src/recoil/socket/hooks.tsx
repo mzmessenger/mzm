@@ -1,6 +1,6 @@
 import type { useAuth } from '../auth/hooks'
 import { useCallback } from 'react'
-import { atom, useRecoilState } from 'recoil'
+import { atom, useRecoilState, useRecoilValue } from 'recoil'
 import dayjs from 'dayjs'
 import {
   ClientToSocketType,
@@ -56,7 +56,7 @@ const socketRecoonectState = atom<SocketRecoonectState>({
 })
 
 export const useSocketActions = () => {
-  const [socket] = useRecoilState(socketState)
+  const socket = useRecoilValue(socketState)
 
   const getMessages = useCallback(
     (roomId: string, s?: WebSocket) => {

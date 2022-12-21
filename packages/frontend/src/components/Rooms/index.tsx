@@ -4,6 +4,7 @@ import styled from '@emotion/styled'
 import { useNavigate } from 'react-router-dom'
 import {
   useChangeRoomActions,
+  useChangeRoomOrderActions,
   useCurrentRoom,
   useRoomsAllIds
 } from '../../recoil/rooms/hooks'
@@ -15,18 +16,24 @@ export const Rooms = () => {
   const navigate = useNavigate()
   const roomsAllIds = useRoomsAllIds()
   const { currentRoomId } = useCurrentRoom()
-  const { changeRoom, changeRoomOrder } = useChangeRoomActions()
   const { sortRoom, getMessages, readMessages } = useSocketActions()
   const { closeMenu } = useUiActions()
+  const { changeRoom } = useChangeRoomActions({
+    getMessages,
+    closeMenu
+  })
+  const { changeRoomOrder } = useChangeRoomOrderActions({
+    sortRoom
+  })
 
   const onClick = useCallback(
     (e: React.MouseEvent, room: Room) => {
       e.preventDefault()
       navigate(`/rooms/${room.name}`)
-      changeRoom(room.id, getMessages, closeMenu)
+      changeRoom(room.id)
       readMessages(room.id)
     },
-    [changeRoom, closeMenu, getMessages, navigate, readMessages]
+    [changeRoom, navigate, readMessages]
   )
 
   const onDrop = useCallback(
@@ -43,11 +50,11 @@ export const Rooms = () => {
         moveId
       )
 
-      changeRoomOrder(roomOrder, sortRoom)
+      changeRoomOrder(roomOrder)
 
       e.dataTransfer.clearData()
     },
-    [roomsAllIds, changeRoomOrder, sortRoom]
+    [roomsAllIds, changeRoomOrder]
   )
 
   return (

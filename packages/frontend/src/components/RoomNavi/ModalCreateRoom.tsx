@@ -17,12 +17,12 @@ export const ModalCraeteRoom = ({ open, onClose }: Props) => {
   const [error, setErrorTxt] = useState('')
   const { getAccessToken } = useAuth()
   const { getRooms } = useSocketActions()
-  const { createRoom } = useRoomActions({ getAccessToken })
+  const { createRoom } = useRoomActions({ getAccessToken, getRooms })
 
   const handleSubmit = (evt) => {
     evt.preventDefault()
     // @todo エラー時の処理
-    createRoom(txt, getRooms)
+    createRoom(txt)
       .then((data) => {
         if (data.status === 200) {
           onClose()

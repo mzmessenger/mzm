@@ -2,7 +2,7 @@ import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from '@emotion/styled'
 import { Home, Forward } from '@mui/icons-material'
-import { useChangeRoomActions } from '../../recoil/rooms/hooks'
+import { useEnterRoomActions } from '../../recoil/rooms/hooks'
 import { useSocketActions } from '../../recoil/socket/hooks'
 import { useUiActions } from '../../recoil/ui/hooks'
 import { useSearch } from '../../recoil/search/hooks'
@@ -14,17 +14,21 @@ export const SearchRoomElement: React.FC<{
   description?: string
 }> = (props) => {
   const navigate = useNavigate()
-  const { enterRoom } = useChangeRoomActions()
   const { getMessages, enterRoom: enterRoomSocket } = useSocketActions()
   const { cancel } = useSearch()
   const { closeMenu } = useUiActions()
+  const { enterRoom } = useEnterRoomActions({
+    getMessages,
+    closeMenu,
+    enterRoomSocket
+  })
 
   const description = useMemo(() => {
     return props.description ? props.description.substring(0, 40) : ''
   }, [props.description])
 
   const onClick = () => {
-    enterRoom(props.name, getMessages, enterRoomSocket, closeMenu).then(() => {
+    enterRoom(props.name).then(() => {
       navigate(`/rooms/${props.name}`)
       cancel()
     })

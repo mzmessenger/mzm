@@ -4,7 +4,8 @@ import { Home, Person, ExpandMore } from '@mui/icons-material'
 import { useUiActions } from '../../recoil/ui/hooks'
 import { useAuth } from '../../recoil/auth/hooks'
 import {
-  useRoomActions,
+  useRoomUserActions,
+  useRoomSettingActions,
   useGetUsersById,
   useOpenRoomSettingFlag,
   useCurrentRoom
@@ -25,7 +26,8 @@ export const RoomInfo = () => {
     currentRoomIcon
   } = useCurrentRoom()
   const { getAccessToken } = useAuth()
-  const { getUsers, toggleRoomSetting } = useRoomActions({ getAccessToken })
+  const { toggleRoomSetting } = useRoomSettingActions()
+  const { getUsers } = useRoomUserActions({ getAccessToken })
   const { openUserDetail } = useUiActions()
   const [open, setOpen] = useState(false)
   const users = useGetUsersById(currentRoomId)

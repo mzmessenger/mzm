@@ -11,8 +11,8 @@ import { Props as RoomInfoProps } from './RoomInfo'
 export const useSettiongRooms = () => {
   const { currentRoomId, currentRoomName } = useCurrentRoom()
   const { getAccessToken } = useAuth()
-  const { exitRoom, uploadIcon } = useRoomActions({ getAccessToken })
   const { getRooms, updateRoomDescription } = useSocketActions()
+  const { exitRoom, uploadIcon } = useRoomActions({ getAccessToken, getRooms })
   const room = useRoomById(currentRoomId)
   const [image, setImage] = useState('')
   const [open, setOpen] = useState(false)
@@ -30,8 +30,8 @@ export const useSettiongRooms = () => {
   }, [room])
 
   const onExit = useCallback(() => {
-    exitRoom(currentRoomId, getRooms)
-  }, [exitRoom, currentRoomId, getRooms])
+    exitRoom(currentRoomId)
+  }, [exitRoom, currentRoomId])
 
   const onLoadFile = (file: string) => {
     setImage(file)

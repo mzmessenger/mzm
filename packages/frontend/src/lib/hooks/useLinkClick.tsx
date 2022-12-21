@@ -1,6 +1,6 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useChangeRoomActions } from '../../recoil/rooms/hooks'
+import { useEnterRoomActions } from '../../recoil/rooms/hooks'
 import { useSocketActions } from '../../recoil/socket/hooks'
 import { useUiActions } from '../../recoil/ui/hooks'
 import { getRoomName } from '../util'
@@ -8,9 +8,13 @@ import { getRoomName } from '../util'
 export const useLinkClick = () => {
   const ref = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const { enterRoom } = useChangeRoomActions()
   const { getMessages, enterRoom: enterRoomSocket } = useSocketActions()
   const { closeMenu } = useUiActions()
+  const { enterRoom } = useEnterRoomActions({
+    getMessages,
+    closeMenu,
+    enterRoomSocket
+  })
 
   useEffect(() => {
     if (!ref.current) {
@@ -22,7 +26,7 @@ export const useLinkClick = () => {
       if (url.host === window.location.host) {
         navigate(url.pathname)
         const roomName = getRoomName(url.pathname)
-        enterRoom(roomName, getMessages, enterRoomSocket, closeMenu)
+        enterRoom(roomName)
       } else {
         window.open(url.href, '_blank')
       }

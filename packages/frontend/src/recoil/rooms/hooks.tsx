@@ -36,6 +36,20 @@ export const useOpenRoomSettingFlag = () => {
   return openRoomSetting
 }
 
+export const useRoomSettingActions = () => {
+  const setOpenRoomSetting = useSetRecoilState(openRoomSettingState)
+
+  const toggleRoomSetting = useCallback(() => {
+    setOpenRoomSetting((current) => ({
+      openRoomSetting: !current.openRoomSetting
+    }))
+  }, [setOpenRoomSetting])
+
+  return {
+    toggleRoomSetting
+  }
+}
+
 type CurrentRoomState = {
   currentRoomId: string
   currentRoomName: string
@@ -146,24 +160,24 @@ const sortRoomIds = (roomIds: string[], roomOrder: string[]) => {
   )
 }
 
-export const useChangeRoomActions = () => {
-  const setRoomsOrder = useSetRecoilState(roomsOrderState)
+export const useChangeRoomActions = ({
+  getMessages,
+  closeMenu
+}: {
+  getMessages: ReturnType<typeof useSocketActions>['getMessages']
+  closeMenu: ReturnType<typeof useUiActions>['closeMenu']
+}) => {
   const setOpenRoomSetting = useSetRecoilState(openRoomSettingState)
   const setCurrentRoom = useSetRecoilState(currentRoomState)
   const roomsById = useRecoilValue(roomsByIdState)
-  const [roomsAllIds, setRoomsAllIds] = useRecoilState(roomsAllIdsState)
   const setRooms = useSetRecoilState(roomsState)
 
   const changeRoom = useCallback(
-    (
-      roomId: string,
-      getMessages: ReturnType<typeof useSocketActions>['getMessages'],
-      closeMenu: ReturnType<typeof useUiActions>['closeMenu']
-    ) => {
+    (roomId: string, ws?: WebSocket) => {
       const room = roomsById[roomId]
       if (room) {
         if (!room.receivedMessages && !room.loading) {
-          getMessages(roomId)
+          getMessages(roomId, ws)
         }
 
         setRooms((current) => ({
@@ -186,14 +200,31 @@ export const useChangeRoomActions = () => {
         return
       }
     },
-    [roomsById, setCurrentRoom, setOpenRoomSetting, setRooms]
+    [
+      roomsById,
+      setRooms,
+      setCurrentRoom,
+      closeMenu,
+      getMessages,
+      setOpenRoomSetting
+    ]
   )
 
+  return {
+    changeRoom
+  } as const
+}
+
+export const useChangeRoomOrderActions = ({
+  sortRoom
+}: {
+  sortRoom: ReturnType<typeof useSocketActions>['sortRoom']
+}) => {
+  const setRoomsOrder = useSetRecoilState(roomsOrderState)
+  const [roomsAllIds, setRoomsAllIds] = useRecoilState(roomsAllIdsState)
+
   const changeRoomOrder = useCallback(
-    (
-      roomsOrder: string[],
-      sortRoom: ReturnType<typeof useSocketActions>['sortRoom']
-    ) => {
+    (roomsOrder: string[]) => {
       const newRoomsAllIds = sortRoomIds(roomsAllIds, roomsOrder)
 
       setRoomsOrder({ roomsOrder })
@@ -202,49 +233,79 @@ export const useChangeRoomActions = () => {
 
       sortRoom(newRoomsAllIds)
     },
-    [roomsAllIds, setRoomsAllIds, setRoomsOrder]
-  )
-
-  const enterRoom = useCallback(
-    async (
-      roomName: string,
-      getMessages: ReturnType<typeof useSocketActions>['getMessages'],
-      enterRoomMessage: ReturnType<typeof useSocketActions>['enterRoom'],
-      closeMenu: ReturnType<typeof useUiActions>['closeMenu']
-    ) => {
-      const room = Object.values(roomsById).find((r) => r.name === roomName)
-      if (room) {
-        changeRoom(room.id, getMessages, closeMenu)
-        return
-      }
-      enterRoomMessage(roomName)
-      closeMenu()
-    },
-    [changeRoom, roomsById]
+    [roomsAllIds, setRoomsAllIds, setRoomsOrder, sortRoom]
   )
 
   return {
-    changeRoom,
-    changeRoomOrder,
-    enterRoom
+    changeRoomOrder
   } as const
 }
 
-export const useRoomActions = ({
-  getAccessToken
+export const useEnterRoomActions = ({
+  getMessages,
+  closeMenu,
+  enterRoomSocket
 }: {
-  getAccessToken: ReturnType<typeof useAuth>['getAccessToken']
+  closeMenu: ReturnType<typeof useUiActions>['closeMenu']
+  enterRoomSocket: ReturnType<typeof useSocketActions>['enterRoom']
+} & Parameters<typeof useChangeRoomActions>[0]) => {
+  const roomsById = useRecoilValue(roomsByIdState)
+  const { changeRoom } = useChangeRoomActions({
+    getMessages,
+    closeMenu
+  })
+
+  const enterRoom = useCallback(
+    async (roomName: string) => {
+      const room = Object.values(roomsById).find((r) => r.name === roomName)
+      if (room) {
+        changeRoom(room.id)
+        return
+      }
+      enterRoomSocket(roomName)
+      closeMenu()
+    },
+    [roomsById, enterRoomSocket, closeMenu, changeRoom]
+  )
+
+  return {
+    enterRoom
+  }
+}
+
+export const useRoomStatusActions = () => {
+  const setRoomsById = useSetRecoilState(roomsByIdState)
+
+  const setRoomStatus = useCallback(
+    (roomId: string, status: 'open' | 'close') => {
+      setRoomsById((current) => {
+        const room = current[roomId]
+        return {
+          ...current,
+          [roomId]: {
+            ...room,
+            status
+          }
+        }
+      })
+    },
+    [setRoomsById]
+  )
+
+  return {
+    setRoomStatus
+  } as const
+}
+
+export const useRoomMessageActions = ({
+  getMessages
+}: {
+  getMessages: ReturnType<typeof useSocketActions>['getMessages']
 }) => {
-  const setOpenRoomSetting = useSetRecoilState(openRoomSettingState)
-  const setCurrentRoom = useSetRecoilState(currentRoomState)
   const [roomsById, setRoomsById] = useRecoilState(roomsByIdState)
-  const [rooms, setRooms] = useRecoilState(roomsState)
 
   const getRoomMessages = useCallback(
-    (
-      roomId: string,
-      getMessages: ReturnType<typeof useSocketActions>['getMessages']
-    ) => {
+    (roomId: string) => {
       getMessages(roomId)
 
       const room = roomsById[roomId]
@@ -255,84 +316,20 @@ export const useRoomActions = ({
         }))
       }
     },
-    [roomsById, setRoomsById]
+    [getMessages, roomsById, setRoomsById]
   )
 
-  const createRoom = useCallback(
-    async (
-      name: string,
-      getRooms: ReturnType<typeof useSocketActions>['getRooms']
-    ) => {
-      const body: REQUEST['/api/rooms']['POST']['body'] = {
-        name
-      }
+  return {
+    getRoomMessages
+  }
+}
 
-      const { accessToken } = await getAccessToken()
-
-      return await createApiClient(
-        '/api/rooms',
-        {
-          method: 'POST',
-          accessToken,
-          body: JSON.stringify(body)
-        },
-        async (res) => {
-          if (res.status !== 200) {
-            return res
-          }
-
-          const room = (await res.json()) as RESPONSE['/api/rooms']['POST']
-          getRooms()
-
-          setCurrentRoom({
-            currentRoomId: room.id,
-            currentRoomName: room.name,
-            currentRoomIcon: '',
-            currentRoomDescription: ''
-          })
-
-          return res
-        }
-      )
-    },
-    [getAccessToken, setCurrentRoom]
-  )
-
-  const exitRoom = useCallback(
-    async (
-      roomId: string,
-      getRooms: ReturnType<typeof useSocketActions>['getRooms']
-    ) => {
-      const body: REQUEST['/api/rooms/enter']['DELETE']['body'] = {
-        room: roomId
-      }
-
-      const { accessToken } = await getAccessToken()
-
-      return await createApiClient(
-        '/api/rooms/enter',
-        {
-          method: 'DELETE',
-          accessToken,
-          body: JSON.stringify(body)
-        },
-        async (res) => {
-          if (res.status === 200) {
-            getRooms()
-
-            setCurrentRoom({
-              currentRoomId: '',
-              currentRoomName: '',
-              currentRoomIcon: '',
-              currentRoomDescription: ''
-            })
-          }
-          return res
-        }
-      )
-    },
-    [getAccessToken, setCurrentRoom]
-  )
+export const useRoomUserActions = ({
+  getAccessToken
+}: {
+  getAccessToken: ReturnType<typeof useAuth>['getAccessToken']
+}) => {
+  const [rooms, setRooms] = useRecoilState(roomsState)
 
   const fetchStartRoomUsers = useCallback(() => {
     setRooms((current) => ({ ...current, usersLoading: true }))
@@ -464,11 +461,91 @@ export const useRoomActions = ({
     ]
   )
 
-  const toggleRoomSetting = useCallback(() => {
-    setOpenRoomSetting((current) => ({
-      openRoomSetting: !current.openRoomSetting
-    }))
-  }, [setOpenRoomSetting])
+  return {
+    getUsers,
+    getNextUsers
+  }
+}
+
+export const useRoomActions = ({
+  getAccessToken,
+  getRooms
+}: {
+  getAccessToken: ReturnType<typeof useAuth>['getAccessToken']
+  getRooms: ReturnType<typeof useSocketActions>['getRooms']
+}) => {
+  const setCurrentRoom = useSetRecoilState(currentRoomState)
+  const setRoomsById = useSetRecoilState(roomsByIdState)
+
+  const createRoom = useCallback(
+    async (name: string) => {
+      const body: REQUEST['/api/rooms']['POST']['body'] = {
+        name
+      }
+
+      const { accessToken } = await getAccessToken()
+
+      return await createApiClient(
+        '/api/rooms',
+        {
+          method: 'POST',
+          accessToken,
+          body: JSON.stringify(body)
+        },
+        async (res) => {
+          if (res.status !== 200) {
+            return res
+          }
+
+          const room = (await res.json()) as RESPONSE['/api/rooms']['POST']
+          getRooms()
+
+          setCurrentRoom({
+            currentRoomId: room.id,
+            currentRoomName: room.name,
+            currentRoomIcon: '',
+            currentRoomDescription: ''
+          })
+
+          return res
+        }
+      )
+    },
+    [getAccessToken, getRooms, setCurrentRoom]
+  )
+
+  const exitRoom = useCallback(
+    async (roomId: string) => {
+      const body: REQUEST['/api/rooms/enter']['DELETE']['body'] = {
+        room: roomId
+      }
+
+      const { accessToken } = await getAccessToken()
+
+      return await createApiClient(
+        '/api/rooms/enter',
+        {
+          method: 'DELETE',
+          accessToken,
+          body: JSON.stringify(body)
+        },
+        async (res) => {
+          if (res.status === 200) {
+            getRooms()
+
+            setCurrentRoom({
+              currentRoomId: '',
+              currentRoomName: '',
+              currentRoomIcon: '',
+              currentRoomDescription: ''
+            })
+          }
+          return res
+        }
+      )
+    },
+    [getAccessToken, getRooms, setCurrentRoom]
+  )
 
   const uploadIcon = useCallback(
     async (name: string, blob: Blob) => {
@@ -508,35 +585,22 @@ export const useRoomActions = ({
     [getAccessToken, setRoomsById]
   )
 
-  const setRoomStatus = useCallback(
-    (roomId: string, status: 'open' | 'close') => {
-      setRoomsById((current) => {
-        const room = current[roomId]
-        return {
-          ...current,
-          [roomId]: {
-            ...room,
-            status
-          }
-        }
-      })
-    },
-    [setRoomsById]
-  )
-
   return {
-    getRoomMessages,
     createRoom,
     exitRoom,
-    getUsers,
-    getNextUsers,
-    toggleRoomSetting,
-    uploadIcon,
-    setRoomStatus
+    uploadIcon
   } as const
 }
 
-export const useRoomActionsForSocket = () => {
+export const useRoomActionsForSocket = ({
+  readMessages,
+  getMessages,
+  getRooms
+}: {
+  readMessages: ReturnType<typeof useSocketActions>['readMessages']
+  getMessages: ReturnType<typeof useSocketActions>['getMessages']
+  getRooms: ReturnType<typeof useSocketActions>['getRooms']
+}) => {
   const [currentRoom, setCurrentRoom] = useRecoilState(currentRoomState)
   const setRoomsOrder = useSetRecoilState(roomsOrderState)
   const [roomsById, setRoomsById] = useRecoilState(roomsByIdState)
@@ -587,13 +651,7 @@ export const useRoomActionsForSocket = () => {
   )
 
   const receiveMessage = useCallback(
-    (
-      messageId: string,
-      message: string,
-      roomId: string,
-      account: string,
-      readMessages: ReturnType<typeof useSocketActions>['readMessages']
-    ) => {
+    (messageId: string, message: string, roomId: string, account: string) => {
       // 現在みている部屋だったら既読フラグを返す
       if (roomId === currentRoom.currentRoomId) {
         readMessages(roomId)
@@ -630,15 +688,14 @@ export const useRoomActionsForSocket = () => {
         }
       })
     },
-    [currentRoom.currentRoomId, setRooms, setRoomsById]
+    [currentRoom.currentRoomId, readMessages, setRooms, setRoomsById]
   )
 
   const receiveRooms = useCallback(
     (
       rooms: FilterToClientType<typeof TO_CLIENT_CMD.ROOMS_GET>['rooms'],
       roomsOrder: string[],
-      currentRoomId: string,
-      getMessages: ReturnType<typeof useSocketActions>['getMessages']
+      currentRoomId: string
     ) => {
       if (currentRoomId) {
         getMessages(currentRoomId)
@@ -673,7 +730,7 @@ export const useRoomActionsForSocket = () => {
       setRoomsAllIds(allIds)
       setRoomsOrder({ roomsOrder })
     },
-    [roomsById, setRoomsById, setRoomsAllIds, setRoomsOrder]
+    [roomsById, setRoomsById, setRoomsAllIds, setRoomsOrder, getMessages]
   )
 
   const enterSuccess = useCallback(
@@ -682,17 +739,16 @@ export const useRoomActionsForSocket = () => {
       name: string,
       description: string,
       iconUrl: string,
-      getRooms: ReturnType<typeof useSocketActions>['getRooms'],
-      getMessages: ReturnType<typeof useSocketActions>['getMessages']
+      ws: WebSocket
     ) => {
       const room = roomsById[roomId]
       // すでに入っている部屋だったら部屋の再取得をしない
       if (!room) {
-        getRooms()
+        getRooms(ws)
       }
       let loading = false
       if (!room || (!room.receivedMessages && !room.loading)) {
-        getMessages(roomId)
+        getMessages(roomId, ws)
         loading = true
       }
 
@@ -717,7 +773,7 @@ export const useRoomActionsForSocket = () => {
         currentRoomDescription: description
       })
     },
-    [roomsById, setCurrentRoom, setRoomsById]
+    [getMessages, getRooms, roomsById, setCurrentRoom, setRoomsById]
   )
 
   const reloadMessage = useCallback(

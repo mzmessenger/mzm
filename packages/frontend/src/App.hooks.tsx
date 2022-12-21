@@ -7,7 +7,6 @@ import { useAuth, useLoginFlag } from './recoil/auth/hooks'
 import { getRoomName } from './lib/util'
 import { useUiActions } from './recoil/ui/hooks'
 import {
-  useRoomActions,
   useRoomActionsForSocket,
   useChangeRoomActions,
   useCurrentRoom
@@ -81,6 +80,10 @@ const useWebSocket = (url: string) => {
     setVoteAnswers
   } = useMessages()
   const { currentRoomId, currentRoomName } = useCurrentRoom()
+  const { changeRoom } = useChangeRoomActions({
+    getMessages,
+    closeMenu
+  })
   const {
     enterSuccess,
     alreadyRead,
@@ -90,8 +93,11 @@ const useWebSocket = (url: string) => {
     receiveMessage,
     receiveRooms,
     setRoomDescription
-  } = useRoomActionsForSocket()
-  const { changeRoom } = useChangeRoomActions()
+  } = useRoomActionsForSocket({
+    readMessages,
+    getMessages,
+    getRooms
+  })
 
   const messageHandlers: Parameters<typeof init>[0]['messageHandlers'] =
     useMemo(() => {
@@ -113,13 +119,7 @@ const useWebSocket = (url: string) => {
           if (currentRoomId) {
             getMessages(currentRoomId, ws)
           }
-          const gMessages = (roomId: string) => getMessages(roomId, ws)
-          receiveRooms(
-            message.rooms,
-            message.roomOrder,
-            currentRoomId,
-            gMessages
-          )
+          receiveRooms(message.rooms, message.roomOrder, currentRoomId)
         },
         [TO_CLIENT_CMD.ROOMS_UPDATE_DESCRIPTION]: ({ ws, message }) => {
           setRoomDescription(message.roomId, message.descrioption)
@@ -130,8 +130,7 @@ const useWebSocket = (url: string) => {
               message.message.id,
               message.message.message,
               message.room,
-              userAccount,
-              readMessages
+              userAccount
             )
           })
         },
@@ -158,23 +157,19 @@ const useWebSocket = (url: string) => {
           const currentPathRoomName = getRoomName(location.pathname)
           if (currentPathRoomName !== message.name) {
             navigate(`/rooms/${message.name}`)
-            const gMesssages = (roomId: string) => getMessages(roomId, ws)
-            changeRoom(message.id, gMesssages, closeMenu)
+            changeRoom(message.id, ws)
           }
-          const gRooms = () => getRooms(ws)
-          const gMesssages = (roomId: string) => getMessages(roomId, ws)
           enterSuccess(
             message.id,
             message.name,
             message.description,
             message.iconUrl,
-            gRooms,
-            gMesssages
+            ws
           )
         },
-        [TO_CLIENT_CMD.ROOMS_ENTER_FAIL]: () => {
+        [TO_CLIENT_CMD.ROOMS_ENTER_FAIL]: ({ ws }) => {
           navigate('/')
-          getRooms()
+          getRooms(ws)
         },
         [TO_CLIENT_CMD.ROOMS_READ]: ({ message }) => {
           alreadyRead(message.room)
@@ -199,7 +194,6 @@ const useWebSocket = (url: string) => {
       addMessages,
       alreadyRead,
       changeRoom,
-      closeMenu,
       currentRoomId,
       currentRoomName,
       enterSuccess,
@@ -209,7 +203,6 @@ const useWebSocket = (url: string) => {
       location.pathname,
       modifyMessage,
       navigate,
-      readMessages,
       receiveMessage,
       receiveMessages,
       receiveRooms,
