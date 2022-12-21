@@ -10,7 +10,7 @@ type Props = {
   style?: React.CSSProperties
 }
 
-export const Header: React.FC<Props> = ({ style }) => {
+const HeaderInner: React.FC<Props> = ({ style }) => {
   const { openMenu } = useUiActions()
 
   const onClick = () => openMenu()
@@ -28,6 +28,8 @@ export const Header: React.FC<Props> = ({ style }) => {
     </Wrap>
   )
 }
+
+export const Header = React.memo(HeaderInner)
 
 const Wrap = styled.header`
   height: var(--header-height);

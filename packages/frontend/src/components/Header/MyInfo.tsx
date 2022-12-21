@@ -1,23 +1,18 @@
-import React from 'react'
+import React, { useCallback } from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
-import { useUiActions, useSettingsUi } from '../../recoil/ui/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
 import { useUserIdAndAccount } from '../../recoil/user/hooks'
 
 export const MyInfo = () => {
   const { userAccount, userIconUrl } = useUserIdAndAccount()
-  const { closeSettings, openSettings } = useUiActions()
-  const { isOpenSettings } = useSettingsUi()
+  const { toggleSettings } = useUiActions()
+
+  const clickSettings = useCallback(() => {
+    toggleSettings()
+  }, [toggleSettings])
+
   const icon = userIconUrl ? userIconUrl : null
-
-  const clickSettings = () => {
-    if (isOpenSettings) {
-      closeSettings()
-    } else {
-      openSettings()
-    }
-  }
-
   const m = userAccount ? userAccount : ''
 
   return (

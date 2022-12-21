@@ -88,7 +88,7 @@ const roomsByIdState = atom<RoomsById>({
   default: {}
 })
 
-const getRoomFromRoomsById = selectorFamily({
+const getRoomById = selectorFamily({
   key: 'state:rooms:roomsById:id',
   get:
     (roomId: string) =>
@@ -98,7 +98,7 @@ const getRoomFromRoomsById = selectorFamily({
     }
 })
 export const useRoomById = (roomId: string) =>
-  useRecoilValue(getRoomFromRoomsById(roomId))
+  useRecoilValue(getRoomById(roomId))
 
 const roomsAllIdsState = atom<string[]>({
   key: 'state:rooms:roomsAllIds',
@@ -168,12 +168,15 @@ export const useChangeRoomActions = ({
   closeMenu: ReturnType<typeof useUiActions>['closeMenu']
 }) => {
   const setOpenRoomSetting = useSetRecoilState(openRoomSettingState)
-  const setCurrentRoom = useSetRecoilState(currentRoomState)
+  const [{ currentRoomId }, setCurrentRoom] = useRecoilState(currentRoomState)
   const roomsById = useRecoilValue(roomsByIdState)
   const setRooms = useSetRecoilState(roomsState)
 
   const changeRoom = useCallback(
     (roomId: string, ws?: WebSocket) => {
+      if (currentRoomId === roomId) {
+        return
+      }
       const room = roomsById[roomId]
       if (room) {
         if (!room.receivedMessages && !room.loading) {
@@ -201,6 +204,7 @@ export const useChangeRoomActions = ({
       }
     },
     [
+      currentRoomId,
       roomsById,
       setRooms,
       setCurrentRoom,
@@ -663,7 +667,7 @@ export const useRoomActionsForSocket = ({
         const replied = isReplied(account, message)
 
         if (room.messages.includes(messageId)) {
-          return
+          return current
         }
 
         return {
@@ -701,8 +705,8 @@ export const useRoomActionsForSocket = ({
         getMessages(currentRoomId)
       }
 
-      const allIds = []
-      const newRoomsById = { ...roomsById }
+      const allIds: string[] = []
+      const addRoomsById: RoomsById = {}
       for (const r of rooms) {
         if (!allIds.includes(r.id)) {
           allIds.push(r.id)
@@ -720,17 +724,17 @@ export const useRoomActionsForSocket = ({
             existHistory: false,
             status: r.status
           }
-          newRoomsById[r.id] = room
+          addRoomsById[r.id] = room
         }
       }
 
       allIds.sort((a, b) => roomsOrder.indexOf(a) - roomsOrder.indexOf(b))
 
-      setRoomsById(newRoomsById)
+      setRoomsById((current) => ({ ...current, ...addRoomsById }))
       setRoomsAllIds(allIds)
       setRoomsOrder({ roomsOrder })
     },
-    [roomsById, setRoomsById, setRoomsAllIds, setRoomsOrder, getMessages]
+    [setRoomsById, setRoomsAllIds, setRoomsOrder, getMessages]
   )
 
   const enterSuccess = useCallback(

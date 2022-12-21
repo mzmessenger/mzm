@@ -9,7 +9,11 @@ import {
 import { useIntersectionObserver } from '../../../lib/hooks/useIntersectionObserver'
 import { MessageElement } from './Message'
 
-export const Messages = ({ className }) => {
+type Props = {
+  className: string
+}
+
+export const Messages: React.FC<Props> = ({ className }) => {
   const { currentRoomId } = useCurrentRoom()
   const { scrollTargetIndex } = useRooms()
   const currentRoom = useRoomById(currentRoomId)
@@ -27,14 +31,6 @@ export const Messages = ({ className }) => {
   const existHistoryFlg = useMemo(() => {
     return messages.length > 0 && currentRoom?.existHistory
   }, [currentRoom?.existHistory, messages.length])
-
-  const messageElements = messages.map((m) => {
-    return (
-      <div className="message" key={m}>
-        <MessageElement id={m} />
-      </div>
-    )
-  })
 
   useEffect(() => {
     if (!scrollTargetIndex) {
@@ -65,11 +61,15 @@ export const Messages = ({ className }) => {
   }, [messages, currentRoomId, getHistory, isIntersecting, existHistoryFlg])
 
   return (
-    <Wrap ref={wrapRef} className={className}>
+    <Wrap className={className}>
       {messages.length > 0 && (
         <div ref={intersectionRef} style={{ visibility: 'hidden' }} />
       )}
-      {messageElements}
+      <div ref={wrapRef}>
+        {messages.map((m) => (
+          <MessageElement className="message" id={m} key={m} />
+        ))}
+      </div>
       <div ref={bottomRef} style={{ visibility: 'hidden' }} />
     </Wrap>
   )

@@ -1,7 +1,13 @@
 import type { MessageType } from 'mzm-shared/type/socket'
 import type { useSocketActions } from '../../recoil/socket/hooks'
 import { useCallback } from 'react'
-import { atom, useRecoilState } from 'recoil'
+import {
+  atom,
+  useRecoilState,
+  selectorFamily,
+  useRecoilValue,
+  useSetRecoilState
+} from 'recoil'
 import { convertToHtml } from '../../lib/markdown'
 
 import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/type/socket'
@@ -22,28 +28,71 @@ export type StateMessageType = Omit<SocketMessageType, 'vote'> & {
   vote?: StateVoteType
 }
 
-type MessagesState = {
-  messagesById: {
-    [key: string]: StateMessageType
-  }
-  messagesAllIds: string[] | readonly []
-  voteAnswersById: {
-    [key: string]: {
-      [key: number]: VoteAnswerType[]
+type MessageById = {
+  [key: string]: StateMessageType
+}
+
+const messagesByIdState = atom<MessageById>({
+  key: 'state:messages:messagesByid',
+  default: {}
+})
+
+const getMessageById = selectorFamily({
+  key: 'state:messages:messagesByid:id',
+  get:
+    (messageId: string) =>
+    ({ get }) => {
+      const byId = get(messagesByIdState)
+      return byId[messageId] ?? null
     }
+})
+
+export const useMessageById = (roomId: string) => {
+  return useRecoilValue(getMessageById(roomId))
+}
+
+type VoteAnswersById = {
+  [key: string]: {
+    [key: number]: VoteAnswerType[]
   }
+}
+
+const voteAnswersByIdState = atom<VoteAnswersById>({
+  key: 'state:messages:voteAnswersByid',
+  default: {}
+})
+
+const getVoteAnswerByIdAndIndex = selectorFamily({
+  key: 'state:messages:voteAnswersByid:id',
+  get:
+    (options: { messageId: string; index: number }) =>
+    ({ get }) => {
+      const byId = get(voteAnswersByIdState)
+      if (!byId[options.messageId]) {
+        return []
+      }
+      return byId[options.messageId][options.index] ?? []
+    }
+})
+
+export const useVoteAnswerByIdAndIndex = (messageId: string, index: number) => {
+  return useRecoilValue(getVoteAnswerByIdAndIndex({ messageId, index }))
+}
+
+type MessagesState = {
+  messagesAllIds: string[] | readonly []
 }
 
 const messagesState = atom<MessagesState>({
   key: 'state:messages',
   default: {
-    messagesById: {},
-    messagesAllIds: [],
-    voteAnswersById: {}
+    messagesAllIds: []
   }
 })
 
 export const useMessages = () => {
+  const [messagesById, setMessagesById] = useRecoilState(messagesByIdState)
+  const setVoteAnswersById = useSetRecoilState(voteAnswersByIdState)
   const [messages, setMessages] = useRecoilState(messagesState)
 
   const convertVoteAnswerByIndex = (
@@ -88,57 +137,75 @@ export const useMessages = () => {
     async (add: MessageType[]) => {
       const promises = add.map((m) => convertMessage(m))
       const converted = await Promise.all(promises)
+      const allIds = [...messages.messagesAllIds]
+      const addMessagesById: MessageById = {}
+      const addVoteAnswersById: VoteAnswersById = {}
 
-      setMessages((current) => {
-        const allIds = [...current.messagesAllIds]
-        const messagesById = { ...current.messagesById }
-        const voteAnswersById = { ...current.voteAnswersById }
-        for (const message of converted) {
-          const id = message.id
-          if (!allIds.includes(id)) {
-            allIds.push(id)
-            messagesById[id] = { ...message }
-          }
-          if (message.vote) {
-            voteAnswersById[id] = message.vote.answers
-          }
+      for (const message of converted) {
+        const id = message.id
+        if (!allIds.includes(id)) {
+          allIds.push(id)
+          addMessagesById[id] = { ...message }
         }
-        return {
-          ...current,
-          messagesAllIds: allIds,
-          messagesById,
-          voteAnswersById
+        if (message.vote) {
+          addVoteAnswersById[id] = message.vote.answers
         }
-      })
+      }
+
+      setMessagesById((current) => ({
+        ...current,
+        ...addMessagesById
+      }))
+
+      setMessages((current) => ({
+        ...current,
+        messagesAllIds: allIds
+      }))
+
+      setVoteAnswersById((current) => ({
+        ...current,
+        ...addVoteAnswersById
+      }))
     },
-    [convertMessage, setMessages]
+    [
+      messages.messagesAllIds,
+      setMessagesById,
+      setMessages,
+      setVoteAnswersById,
+      convertMessage
+    ]
   )
 
   const addMessage = async (message: MessageType) => {
     const converted = await convertMessage(message)
 
+    if ((messages.messagesAllIds as string[]).includes(message.id)) {
+      return
+    }
+
     setMessages((current) => {
-      if ((current.messagesAllIds as string[]).includes(message.id)) {
-        return current
-      }
       const allIds = [...current.messagesAllIds, message.id]
-      const messagesById = {
-        ...current.messagesById,
+      return {
+        ...current,
+        messagesAllIds: allIds
+      }
+    })
+
+    setMessagesById((current) => {
+      return {
+        ...current,
         [message.id]: converted
       }
+    })
 
-      const voteAnswersById = message.vote
-        ? {
-            ...current.voteAnswersById,
-            [message.id]: message.vote
-          }
-        : current.voteAnswersById
+    setVoteAnswersById((current) => {
+      if (!message.vote) {
+        return current
+      }
 
       return {
         ...current,
-        messagesAllIds: allIds,
-        messagesById,
-        voteAnswersById
+        [message.id]: message.vote
       }
     })
   }
@@ -146,19 +213,15 @@ export const useMessages = () => {
   const modifyMessage = async (message: MessageType) => {
     const converted = await convertMessage(message)
 
-    setMessages((current) => {
-      const beforeMessage = current.messagesById[message.id]
-      const messagesById = {
-        ...current.messagesById,
+    setMessagesById((current) => {
+      const beforeMessage = current[message.id]
+      return {
+        ...current,
         [message.id]: {
           ...beforeMessage,
           message: converted.message,
           html: converted.html
         }
-      }
-      return {
-        ...current,
-        messagesById
       }
     })
   }
@@ -166,31 +229,29 @@ export const useMessages = () => {
   const removeMessage = async (message: MessageType) => {
     const converted = await convertMessage(message)
 
-    setMessages((current) => {
-      const messagesById = {
-        ...current.messagesById,
+    setMessagesById((current) => {
+      return {
+        ...current,
         [message.id]: {
           ...converted,
           message: '',
           html: ''
         }
       }
-      return { ...current, messagesById }
     })
   }
 
   const updateIine = (messageId: string, iine: number) => {
-    setMessages((current) => {
-      const message = current.messagesById[messageId]
-      const messagesById = {
-        ...current.messagesById,
+    setMessagesById((current) => {
+      const message = current[messageId]
+
+      return {
+        ...current,
         [messageId]: {
           ...message,
           iine
         }
       }
-
-      return { ...current, messagesById }
     })
   }
 
@@ -198,42 +259,38 @@ export const useMessages = () => {
     (messageId: string, answers: VoteAnswerType[]) => {
       // @todo 数秒間queueに詰めて最後の結果だけ入れる
 
-      setMessages((current) => {
-        const convertedAnswers = convertVoteAnswerByIndex(answers)
+      const convertedAnswers = convertVoteAnswerByIndex(answers)
 
-        const voteAnswersById = {
-          ...current.voteAnswersById,
-          [messageId]: convertedAnswers
-        }
+      const vote = {
+        ...messagesById[messageId].vote,
+        answers: convertedAnswers
+      }
 
-        const vote = {
-          ...current.messagesById[messageId].vote,
-          answers: convertedAnswers
-        }
+      const message = {
+        ...messagesById[messageId],
+        vote
+      }
 
-        const message = {
-          ...current.messagesById[messageId],
-          vote
-        }
+      setMessagesById((current) => ({
+        ...current,
+        [messageId]: message
+      }))
 
-        const messagesById: MessagesState['messagesById'] = {
-          ...current.messagesById,
-          [messageId]: message
-        }
-        return { ...current, voteAnswersById, messagesById }
-      })
+      setVoteAnswersById((current) => ({
+        ...current,
+        [messageId]: convertedAnswers
+      }))
     },
-    [setMessages]
+    [messagesById, setMessagesById, setVoteAnswersById]
   )
 
   const createVoteAnswers = (
-    state: MessagesState,
+    state: VoteAnswersById,
     messageId: string,
     index: number,
     answers: VoteAnswerType[]
-  ): MessagesState['voteAnswersById'] => {
+  ): VoteAnswersById => {
     return {
-      ...state.voteAnswersById,
       [messageId]: {
         ...state.voteAnswersById[messageId],
         [index]: answers
@@ -252,7 +309,7 @@ export const useMessages = () => {
     },
     sendVoteAnswer: ReturnType<typeof useSocketActions>['sendVoteAnswer']
   ) => {
-    setMessages((current) => {
+    setVoteAnswersById((current) => {
       const answers = (current.voteAnswersById[messageId][index] ?? []).filter(
         (e) => {
           return e.userId !== user.userId
@@ -267,13 +324,8 @@ export const useMessages = () => {
         answer: answer
       })
 
-      const voteAnswersById = createVoteAnswers(
-        current,
-        messageId,
-        index,
-        answers
-      )
-      return { ...current, voteAnswersById }
+      const add = createVoteAnswers(current, messageId, index, answers)
+      return { ...current, ...add }
     })
 
     sendVoteAnswer(messageId, index, answer)
@@ -285,18 +337,13 @@ export const useMessages = () => {
     userId: string,
     removeVoteAnswer: ReturnType<typeof useSocketActions>['removeVoteAnswer']
   ) => {
-    setMessages((current) => {
+    setVoteAnswersById((current) => {
       const answers = current.voteAnswersById[messageId][index].filter(
         (e) => e.userId !== userId
       )
 
-      const voteAnswersById = createVoteAnswers(
-        current,
-        messageId,
-        index,
-        answers
-      )
-      return { ...current, voteAnswersById }
+      const add = createVoteAnswers(current, messageId, index, answers)
+      return { ...current, ...add }
     })
 
     removeVoteAnswer(messageId, index)

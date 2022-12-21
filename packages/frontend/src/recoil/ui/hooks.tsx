@@ -111,6 +111,16 @@ export const useUiActions = () => {
     })
   }, [setUiState])
 
+  const toggleSettings = useCallback(() => {
+    setUiState((current) => {
+      return {
+        ...current,
+        isOpenSettings: !current.isOpenSettings,
+        overlay: false
+      }
+    })
+  }, [setUiState])
+
   const openUserDetail = useCallback(
     (id: string, account: string, icon: string) => {
       setUiState((current) => {
@@ -144,6 +154,7 @@ export const useUiActions = () => {
     onResize,
     openSettings,
     closeSettings,
+    toggleSettings,
     openUserDetail,
     closeUserDetail
   } as const

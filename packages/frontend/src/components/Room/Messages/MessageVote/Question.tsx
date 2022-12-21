@@ -1,8 +1,11 @@
-import React, { useState, useEffect, useMemo } from 'react'
+import React, { useState, useEffect } from 'react'
 import styled from '@emotion/styled'
 import { useSocketActions } from '../../../../recoil/socket/hooks'
 import { useUserIdAndAccount } from '../../../../recoil/user/hooks'
-import { useMessages } from '../../../../recoil/messages/hooks'
+import {
+  useMessages,
+  useVoteAnswerByIdAndIndex
+} from '../../../../recoil/messages/hooks'
 import { VoteAnswerTypeEnum } from './constants'
 import { VoteAnswer } from './VoteAnswer'
 import { VoteAnswerBar } from './VoteAnswerBar'
@@ -16,20 +19,13 @@ type Props = {
 
 export const Question: React.FC<Props> = ({ messageId, text, index }) => {
   const { userId, userAccount, userIconUrl } = useUserIdAndAccount()
-  const {
-    messages: { voteAnswersById },
-    removeVoteAnswer,
-    sendVoteAnswer
-  } = useMessages()
+  const { removeVoteAnswer, sendVoteAnswer } = useMessages()
   const [checked, setChecked] = useState<number>(null)
   const {
     removeVoteAnswer: removeVoteAnswerSocket,
     sendVoteAnswer: sendVoteAnswerSocket
   } = useSocketActions()
-
-  const answers = useMemo(() => {
-    return voteAnswersById[messageId][index] ?? []
-  }, [voteAnswersById, index, messageId])
+  const answers = useVoteAnswerByIdAndIndex(messageId, index)
 
   const name = `${text}-${index}`
 

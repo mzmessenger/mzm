@@ -54,7 +54,7 @@ const Actions: React.FC<{
   )
 }
 
-export const MessageHeader: React.FC<Props> = (props) => {
+const MessageHeaderInner: React.FC<Props> = (props) => {
   const { openUserDetail } = useUiActions()
 
   const clickAccount = () => {
@@ -80,6 +80,8 @@ export const MessageHeader: React.FC<Props> = (props) => {
     </Wrap>
   )
 }
+
+export const MessageHeader = React.memo(MessageHeaderInner)
 
 const Wrap = styled.div`
   grid-area: message-header;

@@ -29,11 +29,14 @@ export const Rooms = () => {
   const onClick = useCallback(
     (e: React.MouseEvent, room: Room) => {
       e.preventDefault()
+      if (room.id === currentRoomId) {
+        return
+      }
       navigate(`/rooms/${room.name}`)
       changeRoom(room.id)
       readMessages(room.id)
     },
-    [changeRoom, navigate, readMessages]
+    [changeRoom, currentRoomId, navigate, readMessages]
   )
 
   const onDrop = useCallback(
