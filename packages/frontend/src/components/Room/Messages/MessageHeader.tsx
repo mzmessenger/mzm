@@ -7,7 +7,7 @@ import {
 } from '@mui/icons-material'
 import { IconButton } from '../../atoms/Button'
 import { useUi } from '../../../recoil/ui/hooks'
-import { useUserAccountState } from '../../../recoil/user/hooks'
+import { useUserAccount } from '../../../recoil/user/hooks'
 
 type Props = {
   id: string
@@ -28,7 +28,7 @@ const Actions: React.FC<{
   deleteHandler: Props['deleteHandler']
   startEditHandler: Props['startEditHandler']
 }> = (props) => {
-  const { userAccount } = useUserAccountState()
+  const { userAccount } = useUserAccount()
 
   return (
     <>

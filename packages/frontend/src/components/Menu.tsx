@@ -1,20 +1,24 @@
-import React from 'react'
+import React, { type PropsWithChildren, type FC, type ReactNode } from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
 import { WIDTH_MOBILE } from '../lib/constants'
 import { useNumberLocalStorage } from '../lib/hooks/useLocalStorage'
-import { useMenuUiState, useUi } from '../recoil/ui/hooks'
+import { useMenuUi, useUi } from '../recoil/ui/hooks'
 import { ResizerX } from './atoms/ResizerX'
 import { MobileMenuIcon } from './atoms/MobileMenuIcon'
-import { Rooms } from './Rooms'
 import { RoomNavi } from './RoomNavi'
 import { SearchInput } from './Search'
+export { Rooms } from './Rooms'
 
 const WIDTH_KEY = 'mzm:menu:width'
 const MIN_WIDTH = 240
 
-export const Menu = () => {
-  const { menuStatus, device } = useMenuUiState()
+type Props = {
+  rooms: ReactNode
+}
+
+export const Menu: FC<PropsWithChildren<Props>> = ({ rooms }) => {
+  const { menuStatus, device } = useMenuUi()
   const { openSettings, closeMenu } = useUi()
   const className = menuStatus === 'open' ? 'menu open' : 'menu'
   const [width, _setWidth] = useNumberLocalStorage(WIDTH_KEY, MIN_WIDTH)
@@ -45,7 +49,7 @@ export const Menu = () => {
         <SearchInput />
         <div className="contents">
           <RoomNavi />
-          <Rooms />
+          {rooms}
         </div>
       </div>
     </Wrap>

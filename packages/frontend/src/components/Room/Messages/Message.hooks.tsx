@@ -1,20 +1,20 @@
 import { useRef, useEffect, useMemo, useCallback } from 'react'
 import dayjs from 'dayjs'
 import { useMessages } from '../../../recoil/messages/hooks'
-import { useUserAccountState } from '../../../recoil/user/hooks'
+import { useUserAccount } from '../../../recoil/user/hooks'
 import { usePostTextArea } from '../../../recoil/postTextArea/hooks'
-import { useSocket } from '../../../recoil/socket/hooks'
+import { useSocketActions } from '../../../recoil/socket/hooks'
 import { isReplied } from '../../../lib/util'
 
 export const useMessage = (id: string) => {
-  const { userAccount } = useUserAccountState()
+  const { userAccount } = useUserAccount()
   const {
     messages: {
       messagesById: { [id]: messageObj }
     }
   } = useMessages()
   const { startToEdit } = usePostTextArea()
-  const { incrementIine, sendDeleteMessage } = useSocket()
+  const { incrementIine, sendDeleteMessage } = useSocketActions()
 
   const {
     message,

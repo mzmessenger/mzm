@@ -2,6 +2,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
 import { ModalProps, ModalBase } from '../atoms/Modal'
+import { useAuth } from '../../recoil/auth/hooks'
 import { useRoomActions, useRooms } from '../../recoil/rooms/hooks'
 import { useIntersectionObserver } from '../../lib/hooks/useIntersectionObserver'
 import { WIDTH_MOBILE } from '../../lib/constants'
@@ -12,7 +13,8 @@ export const ModalUsersList: React.FC<Props> = ({ open, onClose, roomId }) => {
   const {
     usersById: { [roomId]: users }
   } = useRooms()
-  const { getNextUsers } = useRoomActions()
+  const { getAccessToken } = useAuth()
+  const { getNextUsers } = useRoomActions({ getAccessToken })
   const [loading, setLoading] = useState(false)
   const listWrapRef = useRef<HTMLUListElement>(null)
 

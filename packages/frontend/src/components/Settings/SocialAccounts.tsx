@@ -6,11 +6,19 @@ import {
   GitHub as GitHubIcon
 } from '@mui/icons-material'
 import { WIDTH_MOBILE } from '../../lib/constants'
-import { useUser, useSocialAccountState } from '../../recoil/user/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
+import {
+  useSocialAccount,
+  useRemoveAccountActions
+} from '../../recoil/user/hooks'
 
 export const SocialAccounts = () => {
-  const { twitterUserName, githubUserName } = useSocialAccountState()
-  const { removeTwitter, removeGithub } = useUser()
+  const { twitterUserName, githubUserName } = useSocialAccount()
+  const { refreshToken, getAccessToken } = useAuth()
+  const { removeTwitter, removeGithub } = useRemoveAccountActions({
+    getAccessToken,
+    refreshToken
+  })
 
   const isTwitterLinked = !!twitterUserName
   const isGithubLinked = !!githubUserName

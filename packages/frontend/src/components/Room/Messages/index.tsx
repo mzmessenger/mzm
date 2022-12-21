@@ -1,20 +1,22 @@
 import React, { useRef, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
-import { useSocket } from '../../../recoil/socket/hooks'
-import { useRooms } from '../../../recoil/rooms/hooks'
+import { useSocketActions } from '../../../recoil/socket/hooks'
+import {
+  useRooms,
+  useCurrentRoom,
+  useRoomById
+} from '../../../recoil/rooms/hooks'
 import { useIntersectionObserver } from '../../../lib/hooks/useIntersectionObserver'
 import { MessageElement } from './Message'
 
 export const Messages = ({ className }) => {
-  const {
-    currentRoomId,
-    roomsById: { [currentRoomId]: currentRoom },
-    scrollTargetIndex
-  } = useRooms()
+  const { currentRoomId } = useCurrentRoom()
+  const { scrollTargetIndex } = useRooms()
+  const currentRoom = useRoomById(currentRoomId)
   const wrapRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef(0)
-  const { getHistory } = useSocket()
+  const { getHistory } = useSocketActions()
 
   const [intersectionRef, isIntersecting] = useIntersectionObserver()
 

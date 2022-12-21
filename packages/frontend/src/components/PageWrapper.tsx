@@ -1,17 +1,24 @@
-import React from 'react'
+import React, { type PropsWithChildren, type FC, type ReactNode } from 'react'
 import styled from '@emotion/styled'
-import { useUi, useMenuUiState } from '../recoil/ui/hooks'
+import { useUi, useMenuUi } from '../recoil/ui/hooks'
 import { WIDTH_MOBILE } from '../lib/constants'
-import { Header } from './Header'
+export { Header } from './Header'
 
-export const PageWrapper = ({ children }: { children?: React.ReactNode }) => {
-  const { overlay, menuStatus } = useMenuUiState()
+type Props = {
+  header: ReactNode
+}
+
+export const PageWrapper: FC<PropsWithChildren<Props>> = ({
+  children,
+  header
+}) => {
+  const { overlay, menuStatus } = useMenuUi()
   const { closeMenu } = useUi()
   const classNames = menuStatus === 'open' ? ['body open'] : ['body']
 
   return (
     <Wrap>
-      <Header />
+      {header}
       <div className={classNames.join(' ')}>{children}</div>
       {overlay && <div className="overlay" onClick={() => closeMenu()} />}
     </Wrap>

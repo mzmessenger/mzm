@@ -1,5 +1,5 @@
 import type { MessageType } from 'mzm-shared/type/socket'
-import type { useSocket } from '../../recoil/socket/hooks'
+import type { useSocketActions } from '../../recoil/socket/hooks'
 import { useCallback } from 'react'
 import { atom, useRecoilState } from 'recoil'
 import { convertToHtml } from '../../lib/markdown'
@@ -250,7 +250,7 @@ export const useMessages = () => {
       userAccount: string
       userIconUrl: string
     },
-    sendVoteAnswer: ReturnType<typeof useSocket>['sendVoteAnswer']
+    sendVoteAnswer: ReturnType<typeof useSocketActions>['sendVoteAnswer']
   ) => {
     setMessages((current) => {
       const answers = (current.voteAnswersById[messageId][index] ?? []).filter(
@@ -283,7 +283,7 @@ export const useMessages = () => {
     messageId: string,
     index: number,
     userId: string,
-    removeVoteAnswer: ReturnType<typeof useSocket>['removeVoteAnswer']
+    removeVoteAnswer: ReturnType<typeof useSocketActions>['removeVoteAnswer']
   ) => {
     setMessages((current) => {
       const answers = current.voteAnswersById[messageId][index].filter(

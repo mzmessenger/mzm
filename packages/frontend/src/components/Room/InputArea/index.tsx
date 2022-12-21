@@ -4,8 +4,8 @@ import Add from '@mui/icons-material/Add'
 import SendIcon from '@mui/icons-material/Send'
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined'
 import { WIDTH_MOBILE } from '../../../lib/constants'
-import { useRooms } from '../../../recoil/rooms/hooks'
-import { useSocket } from '../../../recoil/socket/hooks'
+import { useCurrentRoom } from '../../../recoil/rooms/hooks'
+import { useSocketActions } from '../../../recoil/socket/hooks'
 import { usePostTextArea } from '../../../recoil/postTextArea/hooks'
 import { Button } from '../../atoms/Button'
 import { ResizerY } from '../../atoms/ResizerY'
@@ -16,7 +16,7 @@ import { useNumberLocalStorage } from '../../../lib/hooks/useLocalStorage'
 const HEIGHT_KEY = 'mzm:input:height'
 
 export const InputArea = () => {
-  const { currentRoomId } = useRooms()
+  const { currentRoomId } = useCurrentRoom()
   const {
     postTextArea: { txt, editTxt, editId, inputMode },
     inputMessage,
@@ -30,7 +30,7 @@ export const InputArea = () => {
   const [height, setHeight] = useNumberLocalStorage(HEIGHT_KEY, 68)
   const [showVote, setShowVote] = useState(false)
 
-  const { sendMessage, sendModifyMessage } = useSocket()
+  const { sendMessage, sendModifyMessage } = useSocketActions()
 
   useEffect(() => {
     if (inputMode === 'edit') {

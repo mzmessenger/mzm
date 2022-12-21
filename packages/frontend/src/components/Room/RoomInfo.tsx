@@ -2,7 +2,13 @@ import React, { useEffect, useState, useMemo, useCallback } from 'react'
 import styled from '@emotion/styled'
 import { Home, Person, ExpandMore } from '@mui/icons-material'
 import { useUi } from '../../recoil/ui/hooks'
-import { useRoomActions, useRooms } from '../../recoil/rooms/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
+import {
+  useRoomActions,
+  useRooms,
+  useOpenRoomSettingFlag,
+  useCurrentRoom
+} from '../../recoil/rooms/hooks'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import { ModalUsersList } from './ModalUsersList'
 
@@ -11,15 +17,16 @@ const RoomIcon = ({ iconUrl }: { iconUrl: string }) => {
 }
 
 export const RoomInfo = () => {
+  const { usersById } = useRooms()
+  const openRoomSetting = useOpenRoomSettingFlag()
   const {
     currentRoomId,
     currentRoomName,
     currentRoomDescription,
-    currentRoomIcon,
-    openRoomSetting,
-    usersById
-  } = useRooms()
-  const { getUsers, toggleRoomSetting } = useRoomActions()
+    currentRoomIcon
+  } = useCurrentRoom()
+  const { getAccessToken } = useAuth()
+  const { getUsers, toggleRoomSetting } = useRoomActions({ getAccessToken })
   const { openUserDetail } = useUi()
   const [open, setOpen] = useState(false)
   const description = useMemo(() => {

@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react'
 import styled from '@emotion/styled'
 import { isValidAccount } from 'mzm-shared/validator'
 import { WIDTH_MOBILE } from '../../lib/constants'
-import { useUser, useUserIdAndAccountState } from '../../recoil/user/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
+import { useUser, useUserIdAndAccount } from '../../recoil/user/hooks'
 import { Button } from '../atoms/Button'
 import { InputText, Props as InputTextProps } from '../atoms/InputText'
 import { DropImage } from '../atoms/DropImage'
@@ -12,8 +13,9 @@ import { ModalIcon } from '../atoms/ModalIcon'
 const ERROR_TXT = '利用できない文字が含まれるか、すでに存在するアカウントです。'
 
 export const SettingAccount = () => {
-  const { userId, userAccount, userIconUrl } = useUserIdAndAccountState()
-  const { uploadIcon, updateUser } = useUser()
+  const { userId, userAccount, userIconUrl } = useUserIdAndAccount()
+  const { getAccessToken } = useAuth()
+  const { uploadIcon, updateUser } = useUser({ getAccessToken })
   const [open, setOpen] = useState(false)
   const [image, setImage] = useState('')
   const [edit, setEdit] = useState(false)

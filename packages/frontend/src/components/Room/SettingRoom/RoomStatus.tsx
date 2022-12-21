@@ -1,15 +1,20 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import CheckIcon from '@mui/icons-material/Check'
-import { useRooms, useRoomActions } from '../../../recoil/rooms/hooks'
-import { useSocket } from '../../../recoil/socket/hooks'
+import { useAuth } from '../../../recoil/auth/hooks'
+import {
+  useRoomActions,
+  useCurrentRoom,
+  useRoomById
+} from '../../../recoil/rooms/hooks'
+import { useSocketActions } from '../../../recoil/socket/hooks'
 
 export const SettingRoomStatus = () => {
-  const { currentRoomId, roomsById } = useRooms()
-  const { setRoomStatus } = useRoomActions()
-  const { openRoom, closeRoom } = useSocket()
-
-  const room = roomsById[currentRoomId]
+  const { currentRoomId } = useCurrentRoom()
+  const { getAccessToken } = useAuth()
+  const { setRoomStatus } = useRoomActions({ getAccessToken })
+  const { openRoom, closeRoom } = useSocketActions()
+  const room = useRoomById(currentRoomId)
   const status = room?.status
 
   const clickOpen = () => {

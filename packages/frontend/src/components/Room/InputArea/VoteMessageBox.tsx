@@ -1,8 +1,8 @@
 import React, { useState } from 'react'
 import styled from '@emotion/styled'
 import { Add } from '@mui/icons-material'
-import { useRooms } from '../../../recoil/rooms/hooks'
-import { useSocket } from '../../../recoil/socket/hooks'
+import { useCurrentRoom } from '../../../recoil/rooms/hooks'
+import { useSocketActions } from '../../../recoil/socket/hooks'
 import { TextArea } from '../../atoms/TextArea'
 import { Button } from '../../atoms/Button'
 import { TransparentButton } from '../../atoms/Button'
@@ -12,10 +12,10 @@ export const VoteMessageBox: React.FC<{
   onSave: (e: React.MouseEvent) => void
   onCancel: (e: React.MouseEvent) => void
 }> = ({ onSave, onCancel }) => {
-  const { currentRoomId } = useRooms()
+  const { currentRoomId } = useCurrentRoom()
   const [text, setText] = useState('候補日')
   const [questions, setQuestions] = useState<string[]>(['4/1', '4/2', '4/3'])
-  const { sendMessage } = useSocket()
+  const { sendMessage } = useSocketActions()
 
   const onChange = (e) => {
     setText(e.target.value)

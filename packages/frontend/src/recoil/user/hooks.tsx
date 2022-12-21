@@ -1,7 +1,7 @@
+import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
+import type { useAuth } from '../../recoil/auth/hooks'
 import { useCallback, useEffect } from 'react'
 import { atom, useRecoilState, selector, useRecoilValue } from 'recoil'
-import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
-import { useAuth } from '../../recoil/auth/hooks'
 import { createApiClient } from '../../lib/client'
 
 type UserState = {
@@ -31,9 +31,7 @@ const userAccountState = selector({
   }
 })
 
-export const useUserAccountState = () => {
-  return useRecoilValue(userAccountState)
-}
+export const useUserAccount = () => useRecoilValue(userAccountState)
 
 const userIdAndAccountState = selector({
   key: 'state:user:selector:id-and-account',
@@ -47,9 +45,7 @@ const userIdAndAccountState = selector({
   }
 })
 
-export const useUserIdAndAccountState = () => {
-  return useRecoilValue(userIdAndAccountState)
-}
+export const useUserIdAndAccount = () => useRecoilValue(userIdAndAccountState)
 
 const socialAccountState = selector({
   key: 'state:user:selector:social-account',
@@ -61,13 +57,15 @@ const socialAccountState = selector({
     }
   }
 })
+export const useSocialAccount = () => useRecoilValue(socialAccountState)
 
-export const useSocialAccountState = () => {
-  return useRecoilValue(socialAccountState)
-}
+type UseAuthType = ReturnType<typeof useAuth>
 
-export const useUser = () => {
-  const { getAccessToken, refreshToken, logout } = useAuth()
+export const useUser = ({
+  getAccessToken
+}: {
+  getAccessToken: UseAuthType['getAccessToken']
+}) => {
   const [user, setUser] = useRecoilState(userState)
 
   useEffect(() => {
@@ -114,6 +112,52 @@ export const useUser = () => {
     [getAccessToken, setUser]
   )
 
+  const uploadIcon = useCallback(
+    async (blob: Blob) => {
+      const formData = new FormData()
+      formData.append('icon', blob)
+      const { accessToken } = await getAccessToken()
+      const res = await fetch('/api/icon/user', {
+        method: 'POST',
+        body: formData,
+        credentials: 'include',
+        headers: {
+          Authorization: `Bearer ${accessToken}`
+        }
+      })
+
+      if (!res.ok) {
+        return res
+      }
+
+      const { version } =
+        (await res.json()) as RESPONSE['/api/icon/user']['POST']
+      const iconUrl = `/api/icon/user/${user.account}/${version}`
+      setUser((current) => ({
+        ...current,
+        iconUrl
+      }))
+
+      return res
+    },
+    [getAccessToken, setUser, user.account]
+  )
+
+  return {
+    updateUser,
+    uploadIcon
+  } as const
+}
+
+export const useMyInfoActions = ({
+  getAccessToken,
+  logout
+}: {
+  getAccessToken: UseAuthType['getAccessToken']
+  logout: UseAuthType['logout']
+}) => {
+  const [, setUser] = useRecoilState(userState)
+
   const fetchMyInfo = useCallback(async () => {
     const { accessToken, user } = await getAccessToken()
 
@@ -153,6 +197,49 @@ export const useUser = () => {
       }
     )
   }, [getAccessToken, setUser, logout])
+
+  return {
+    fetchMyInfo
+  }
+}
+
+export const useRemoveUserActions = ({
+  getAccessToken,
+  logout
+}: {
+  getAccessToken: UseAuthType['getAccessToken']
+  logout: UseAuthType['logout']
+}) => {
+  const removeUser = useCallback(async () => {
+    const { accessToken } = await getAccessToken()
+    return await createApiClient(
+      '/auth/user',
+      {
+        method: 'DELETE',
+        accessToken
+      },
+      async (res) => {
+        if (res.status === 200) {
+          logout()
+        }
+        return res
+      }
+    )
+  }, [getAccessToken, logout])
+
+  return {
+    removeUser
+  } as const
+}
+
+export const useRemoveAccountActions = ({
+  getAccessToken,
+  refreshToken
+}: {
+  getAccessToken: UseAuthType['getAccessToken']
+  refreshToken: UseAuthType['refreshToken']
+}) => {
+  const [user, setUser] = useRecoilState(userState)
 
   const removeTwitter = useCallback(async () => {
     if (!user.twitterUserName || !user.githubUserName) {
@@ -218,60 +305,8 @@ export const useUser = () => {
     user.twitterUserName
   ])
 
-  const removeUser = useCallback(async () => {
-    const { accessToken } = await getAccessToken()
-    return await createApiClient(
-      '/auth/user',
-      {
-        method: 'DELETE',
-        accessToken
-      },
-      async (res) => {
-        if (res.status === 200) {
-          logout()
-        }
-        return res
-      }
-    )
-  }, [getAccessToken, logout])
-
-  const uploadIcon = useCallback(
-    async (blob: Blob) => {
-      const formData = new FormData()
-      formData.append('icon', blob)
-      const { accessToken } = await getAccessToken()
-      const res = await fetch('/api/icon/user', {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      })
-
-      if (!res.ok) {
-        return res
-      }
-
-      const { version } =
-        (await res.json()) as RESPONSE['/api/icon/user']['POST']
-      const iconUrl = `/api/icon/user/${user.account}/${version}`
-      setUser((current) => ({
-        ...current,
-        iconUrl
-      }))
-
-      return res
-    },
-    [getAccessToken, setUser, user.account]
-  )
-
   return {
-    updateUser,
-    fetchMyInfo,
     removeTwitter,
-    removeGithub,
-    removeUser,
-    uploadIcon
+    removeGithub
   } as const
 }

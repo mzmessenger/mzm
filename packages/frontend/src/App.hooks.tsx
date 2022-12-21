@@ -1,21 +1,23 @@
 import { useEffect, useMemo } from 'react'
 import { useNavigate, useLocation } from 'react-router-dom'
 import { TO_CLIENT_CMD, TO_SERVER_CMD } from 'mzm-shared/type/socket'
-import { useSocket } from './recoil/socket/hooks'
-import { useUser, useUserAccountState } from './recoil/user/hooks'
-import { useAuth } from './recoil/auth/hooks'
+import { useSocket, useSocketActions } from './recoil/socket/hooks'
+import { useUserAccount, useMyInfoActions } from './recoil/user/hooks'
+import { useAuth, useLoginFlag } from './recoil/auth/hooks'
 import { getRoomName } from './lib/util'
 import { useUi } from './recoil/ui/hooks'
-import { useRooms, useRoomActions } from './recoil/rooms/hooks'
+import {
+  useRoomActions,
+  useChangeRoomActions,
+  useCurrentRoom
+} from './recoil/rooms/hooks'
 import { useMessages } from './recoil/messages/hooks'
 import { sendSocket } from './lib/util'
 
 const useRouter = () => {
-  const {
-    state: { login }
-  } = useAuth()
-  const { getAccessToken } = useAuth()
-  const { fetchMyInfo } = useUser()
+  const login = useLoginFlag()
+  const { getAccessToken, logout } = useAuth()
+  const { fetchMyInfo } = useMyInfoActions({ getAccessToken, logout })
 
   useEffect(() => {
     if (!login) {
@@ -63,10 +65,11 @@ const useResize = () => {
 const useWebSocket = (url: string) => {
   const navigate = useNavigate()
   const location = useLocation()
-  const { login } = useAuth()
-  const { fetchMyInfo } = useUser()
-  const { userAccount } = useUserAccountState()
-  const { init, getMessages, getRooms, readMessages } = useSocket()
+  const { login, getAccessToken, logout } = useAuth()
+  const { fetchMyInfo } = useMyInfoActions({ getAccessToken, logout })
+  const { userAccount } = useUserAccount()
+  const { init } = useSocket({ getAccessToken })
+  const { getMessages, getRooms, readMessages } = useSocketActions()
   const { closeMenu } = useUi()
   const {
     addMessage,
@@ -76,18 +79,18 @@ const useWebSocket = (url: string) => {
     updateIine,
     setVoteAnswers
   } = useMessages()
-  const { currentRoomId, currentRoomName } = useRooms()
+  const { currentRoomId, currentRoomName } = useCurrentRoom()
   const {
     receiveRooms,
     receiveMessage,
     receiveMessages,
     reloadMessage,
-    changeRoom,
     enterSuccess,
     alreadyRead,
     setRoomOrder,
     setRoomDescription
-  } = useRoomActions()
+  } = useRoomActions({ getAccessToken })
+  const { changeRoom } = useChangeRoomActions()
 
   const messageHandlers: Parameters<typeof init>[0]['messageHandlers'] =
     useMemo(() => {

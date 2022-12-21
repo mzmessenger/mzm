@@ -36,9 +36,7 @@ const menuUiState = selector({
   }
 })
 
-export const useMenuUiState = () => {
-  return useRecoilValue(menuUiState)
-}
+export const useMenuUi = () => useRecoilValue(menuUiState)
 
 const settingsUiState = selector({
   key: 'state:ui:selector:settings',
@@ -48,9 +46,7 @@ const settingsUiState = selector({
   }
 })
 
-export const useSettingsUiState = () => {
-  return useRecoilValue(settingsUiState)
-}
+export const useSettingsUi = () => useRecoilValue(settingsUiState)
 
 const userDetailUiState = selector({
   key: 'state:ui:selector:userDetail',
@@ -60,9 +56,7 @@ const userDetailUiState = selector({
   }
 })
 
-export const useUserDetailUiState = () => {
-  return useRecoilValue(userDetailUiState)
-}
+export const useUserDetailUi = () => useRecoilValue(userDetailUiState)
 
 export const useUi = () => {
   const [, setUiState] = useRecoilState(uiState)

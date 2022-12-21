@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useRooms } from '../../recoil/rooms/hooks'
+import { useOpenRoomSettingFlag } from '../../recoil/rooms/hooks'
 import { InputArea } from './InputArea'
 import { Messages } from './Messages'
 import { RoomInfo } from './RoomInfo'
@@ -18,7 +18,7 @@ const ContentMessage = () => {
 }
 
 export const RoomContent = () => {
-  const { openRoomSetting } = useRooms()
+  const openRoomSetting = useOpenRoomSettingFlag()
 
   return (
     <Wrap className="room-content">

@@ -1,11 +1,13 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useUser } from '../../recoil/user/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
+import { useRemoveUserActions } from '../../recoil/user/hooks'
 import { Button } from '../atoms/Button'
 import { SettingAccount } from './SettingAccount'
 
 export const SettingUser = () => {
-  const { removeUser } = useUser()
+  const { getAccessToken, logout } = useAuth()
+  const { removeUser } = useRemoveUserActions({ getAccessToken, logout })
 
   const onDelete = () => {
     if (window.confirm('本当にアカウントを削除しますか？')) {
