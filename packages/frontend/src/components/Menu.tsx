@@ -3,7 +3,7 @@ import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
 import { WIDTH_MOBILE } from '../lib/constants'
 import { useNumberLocalStorage } from '../lib/hooks/useLocalStorage'
-import { useMenuUi, useUi } from '../recoil/ui/hooks'
+import { useMenuUi, useUiActions } from '../recoil/ui/hooks'
 import { ResizerX } from './atoms/ResizerX'
 import { MobileMenuIcon } from './atoms/MobileMenuIcon'
 import { RoomNavi } from './RoomNavi'
@@ -19,7 +19,7 @@ type Props = {
 
 export const Menu: FC<PropsWithChildren<Props>> = ({ rooms }) => {
   const { menuStatus, device } = useMenuUi()
-  const { openSettings, closeMenu } = useUi()
+  const { openSettings, closeMenu } = useUiActions()
   const className = menuStatus === 'open' ? 'menu open' : 'menu'
   const [width, _setWidth] = useNumberLocalStorage(WIDTH_KEY, MIN_WIDTH)
 

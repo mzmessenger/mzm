@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useUi } from '../../recoil/ui/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import { Link } from '../atoms/Link'
 import { MobileMenuIcon } from '../atoms/MobileMenuIcon'
@@ -11,7 +11,7 @@ type Props = {
 }
 
 export const Header: React.FC<Props> = ({ style }) => {
-  const { openMenu } = useUi()
+  const { openMenu } = useUiActions()
 
   const onClick = () => openMenu()
 

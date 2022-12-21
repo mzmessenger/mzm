@@ -1,12 +1,12 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
-import { useUi, useSettingsUi } from '../../recoil/ui/hooks'
+import { useUiActions, useSettingsUi } from '../../recoil/ui/hooks'
 import { useUserIdAndAccount } from '../../recoil/user/hooks'
 
 export const MyInfo = () => {
   const { userAccount, userIconUrl } = useUserIdAndAccount()
-  const { closeSettings, openSettings } = useUi()
+  const { closeSettings, openSettings } = useUiActions()
   const { isOpenSettings } = useSettingsUi()
   const icon = userIconUrl ? userIconUrl : null
 

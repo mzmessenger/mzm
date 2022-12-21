@@ -4,10 +4,10 @@ import Clear from '@mui/icons-material/Clear'
 import { ModalBase } from './atoms/Modal'
 import { IconButton } from './atoms/Button'
 import { WIDTH_MOBILE } from '../lib/constants'
-import { useUi, useUserDetailUi } from '../recoil/ui/hooks'
+import { useUiActions, useUserDetailUi } from '../recoil/ui/hooks'
 
 export const ModalUserProfile: React.FC = () => {
-  const { closeUserDetail } = useUi()
+  const { closeUserDetail } = useUiActions()
   const { userDetail, isOpenUserDetail } = useUserDetailUi()
 
   const onClose = () => {

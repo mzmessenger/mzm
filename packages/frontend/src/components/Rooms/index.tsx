@@ -5,19 +5,19 @@ import { useNavigate } from 'react-router-dom'
 import {
   useChangeRoomActions,
   useCurrentRoom,
-  useRoomsAllIdsState
+  useRoomsAllIds
 } from '../../recoil/rooms/hooks'
 import { useSocketActions } from '../../recoil/socket/hooks'
-import { useUi } from '../../recoil/ui/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
 import { DropZone } from './DropZone'
 
 export const Rooms = () => {
   const navigate = useNavigate()
-  const roomsAllIds = useRoomsAllIdsState()
+  const roomsAllIds = useRoomsAllIds()
   const { currentRoomId } = useCurrentRoom()
   const { changeRoom, changeRoomOrder } = useChangeRoomActions()
   const { sortRoom, getMessages, readMessages } = useSocketActions()
-  const { closeMenu } = useUi()
+  const { closeMenu } = useUiActions()
 
   const onClick = useCallback(
     (e: React.MouseEvent, room: Room) => {

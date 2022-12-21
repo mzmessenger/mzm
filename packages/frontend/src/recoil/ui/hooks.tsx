@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { atom, useRecoilState, selector, useRecoilValue } from 'recoil'
+import { atom, useSetRecoilState, selector, useRecoilValue } from 'recoil'
 
 const WIDTH_MOBILE = 720
 
@@ -58,8 +58,8 @@ const userDetailUiState = selector({
 
 export const useUserDetailUi = () => useRecoilValue(userDetailUiState)
 
-export const useUi = () => {
-  const [, setUiState] = useRecoilState(uiState)
+export const useUiActions = () => {
+  const setUiState = useSetRecoilState(uiState)
 
   const onResize = useCallback(
     (innerWidth: number, innerHeight: number) => {

@@ -5,9 +5,10 @@ import { useSocket, useSocketActions } from './recoil/socket/hooks'
 import { useUserAccount, useMyInfoActions } from './recoil/user/hooks'
 import { useAuth, useLoginFlag } from './recoil/auth/hooks'
 import { getRoomName } from './lib/util'
-import { useUi } from './recoil/ui/hooks'
+import { useUiActions } from './recoil/ui/hooks'
 import {
   useRoomActions,
+  useRoomActionsForSocket,
   useChangeRoomActions,
   useCurrentRoom
 } from './recoil/rooms/hooks'
@@ -45,7 +46,7 @@ const useRouter = () => {
 }
 
 const useResize = () => {
-  const { onResize } = useUi()
+  const { onResize } = useUiActions()
 
   useEffect(() => {
     onResize(window.innerWidth, window.innerHeight)
@@ -70,7 +71,7 @@ const useWebSocket = (url: string) => {
   const { userAccount } = useUserAccount()
   const { init } = useSocket({ getAccessToken })
   const { getMessages, getRooms, readMessages } = useSocketActions()
-  const { closeMenu } = useUi()
+  const { closeMenu } = useUiActions()
   const {
     addMessage,
     modifyMessage,
@@ -81,15 +82,15 @@ const useWebSocket = (url: string) => {
   } = useMessages()
   const { currentRoomId, currentRoomName } = useCurrentRoom()
   const {
-    receiveRooms,
-    receiveMessage,
-    receiveMessages,
-    reloadMessage,
     enterSuccess,
     alreadyRead,
+    reloadMessage,
     setRoomOrder,
+    receiveMessages,
+    receiveMessage,
+    receiveRooms,
     setRoomDescription
-  } = useRoomActions({ getAccessToken })
+  } = useRoomActionsForSocket()
   const { changeRoom } = useChangeRoomActions()
 
   const messageHandlers: Parameters<typeof init>[0]['messageHandlers'] =

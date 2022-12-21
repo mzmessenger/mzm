@@ -2,7 +2,7 @@ import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { useChangeRoomActions } from '../../recoil/rooms/hooks'
 import { useSocketActions } from '../../recoil/socket/hooks'
-import { useUi } from '../../recoil/ui/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
 import { getRoomName } from '../util'
 
 export const useLinkClick = () => {
@@ -10,7 +10,7 @@ export const useLinkClick = () => {
   const navigate = useNavigate()
   const { enterRoom } = useChangeRoomActions()
   const { getMessages, enterRoom: enterRoomSocket } = useSocketActions()
-  const { closeMenu } = useUi()
+  const { closeMenu } = useUiActions()
 
   useEffect(() => {
     if (!ref.current) {

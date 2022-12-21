@@ -1,7 +1,13 @@
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { useAuth } from '../../recoil/auth/hooks'
 import { useCallback, useEffect } from 'react'
-import { atom, useRecoilState, selector, useRecoilValue } from 'recoil'
+import {
+  atom,
+  useRecoilState,
+  useSetRecoilState,
+  selector,
+  useRecoilValue
+} from 'recoil'
 import { createApiClient } from '../../lib/client'
 
 type UserState = {
@@ -156,7 +162,7 @@ export const useMyInfoActions = ({
   getAccessToken: UseAuthType['getAccessToken']
   logout: UseAuthType['logout']
 }) => {
-  const [, setUser] = useRecoilState(userState)
+  const setUser = useSetRecoilState(userState)
 
   const fetchMyInfo = useCallback(async () => {
     const { accessToken, user } = await getAccessToken()

@@ -3,16 +3,14 @@ import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
 import { ModalProps, ModalBase } from '../atoms/Modal'
 import { useAuth } from '../../recoil/auth/hooks'
-import { useRoomActions, useRooms } from '../../recoil/rooms/hooks'
+import { useRoomActions, useGetUsersById } from '../../recoil/rooms/hooks'
 import { useIntersectionObserver } from '../../lib/hooks/useIntersectionObserver'
 import { WIDTH_MOBILE } from '../../lib/constants'
 
 type Props = ModalProps & { roomId: string }
 
 export const ModalUsersList: React.FC<Props> = ({ open, onClose, roomId }) => {
-  const {
-    usersById: { [roomId]: users }
-  } = useRooms()
+  const users = useGetUsersById(roomId)
   const { getAccessToken } = useAuth()
   const { getNextUsers } = useRoomActions({ getAccessToken })
   const [loading, setLoading] = useState(false)

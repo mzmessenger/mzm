@@ -1,6 +1,6 @@
 import React, { type PropsWithChildren, type FC, type ReactNode } from 'react'
 import styled from '@emotion/styled'
-import { useUi, useMenuUi } from '../recoil/ui/hooks'
+import { useUiActions, useMenuUi } from '../recoil/ui/hooks'
 import { WIDTH_MOBILE } from '../lib/constants'
 export { Header } from './Header'
 
@@ -13,7 +13,7 @@ export const PageWrapper: FC<PropsWithChildren<Props>> = ({
   header
 }) => {
   const { overlay, menuStatus } = useMenuUi()
-  const { closeMenu } = useUi()
+  const { closeMenu } = useUiActions()
   const classNames = menuStatus === 'open' ? ['body open'] : ['body']
 
   return (
