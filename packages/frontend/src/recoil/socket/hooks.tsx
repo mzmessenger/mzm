@@ -9,6 +9,7 @@ import {
   FilterToClientType
 } from 'mzm-shared/type/socket'
 import { sendSocket } from '../../lib/util'
+import { logger } from '../../lib/logger'
 
 const DEFAULT_INTERVAL = 1000
 const RECONNECT_DECAY = 1.5
@@ -285,7 +286,7 @@ export const useSocket = ({
             handler(args as any)
           }
         } catch (err) {
-          console.error(err)
+          logger.error(err)
         }
       }
     },
@@ -309,7 +310,7 @@ export const useSocket = ({
       })
 
       socketInstance.addEventListener('open', () => {
-        console.log('ws open')
+        logger.log('ws open')
         setSocket((current) => {
           return {
             ...current,
@@ -337,7 +338,7 @@ export const useSocket = ({
           return
         }
 
-        console.warn(
+        logger.warn(
           `ws reconnect: ${socketRecoonect.reconnectAttempts} `,
           dayjs().format('YYYY/MM/DD HH:mm:ss'),
           socketRecoonect.reconnectInterval
@@ -363,22 +364,22 @@ export const useSocket = ({
       }
 
       socketInstance.addEventListener('close', (e) => {
-        console.warn('ws close:', e)
+        logger.warn('ws close:', e)
         try {
           close(socketInstance)
           reconnect()
         } catch (err) {
-          console.error(err)
+          logger.error(err)
         }
       })
 
       socketInstance.addEventListener('error', (e) => {
-        console.warn('ws error:', e)
+        logger.warn('ws error:', e)
         try {
           close(socketInstance)
           reconnect()
         } catch (err) {
-          console.error(err)
+          logger.error(err)
         }
       })
     },

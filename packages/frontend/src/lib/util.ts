@@ -1,9 +1,9 @@
 import { ClientToSocketType } from 'mzm-shared/type/socket'
+import { logger } from './logger'
 
 export const sendSocket = (socket: WebSocket, message: ClientToSocketType) => {
   if (!socket || socket.readyState !== WebSocket.OPEN) {
-    console.warn('socket is not ready:', socket, message)
-    console.trace()
+    logger.warn('socket is not ready:', socket, message)
     return
   }
   socket.send(JSON.stringify(message))

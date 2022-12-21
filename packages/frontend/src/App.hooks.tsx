@@ -13,6 +13,7 @@ import {
 } from './recoil/rooms/hooks'
 import { useMessages } from './recoil/messages/hooks'
 import { sendSocket } from './lib/util'
+import { logger } from './lib/logger'
 
 const useRouter = () => {
   const login = useLoginFlag()
@@ -39,7 +40,7 @@ const useRouter = () => {
         document.title = `MZM`
       }
     } catch (e) {
-      console.error(e)
+      logger.error(e)
     }
   }, [])
 }
