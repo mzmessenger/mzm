@@ -593,6 +593,7 @@ export const useSocket = ({
       socket.connecting,
       setSocket,
       getAccessToken,
+      logout,
       setSocketRecoonect,
       socketRecoonect.reconnectAttempts,
       socketRecoonect.reconnectInterval,
