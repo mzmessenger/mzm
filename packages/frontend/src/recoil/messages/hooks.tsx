@@ -168,7 +168,7 @@ export const useVoteSocket = ({
   } as const
 }
 
-export const useMessages = () => {
+export const useMessagesForSocket = () => {
   const [messagesById, setMessagesById] = useRecoilState(messagesByIdState)
   const setVoteAnswersById = useSetRecoilState(voteAnswersByIdState)
   const [messages, setMessages] = useRecoilState(messagesState)
@@ -365,7 +365,6 @@ export const useMessages = () => {
   )
 
   return {
-    messages,
     convertVoteAnswerByIndex,
     convertMessage,
     addMessages,
