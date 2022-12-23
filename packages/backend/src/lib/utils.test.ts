@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { test, expect } from 'vitest'
 import { popParam, repliedAccounts } from './utils'
 

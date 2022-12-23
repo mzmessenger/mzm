@@ -27,7 +27,7 @@ export const removeSocket = (id: string, user: string) => {
   userMap.set(user, list)
 }
 
-export const sendToUser = (user: string, payload: Object) => {
+export const sendToUser = (user: string, payload: unknown) => {
   if (!userMap.has(user)) {
     return false
   }

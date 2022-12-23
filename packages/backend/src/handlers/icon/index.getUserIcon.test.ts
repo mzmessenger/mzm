@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { IncomingHttpHeaders } from 'http'
 import type { MongoMemoryServer } from 'mongodb-memory-server'
 import { vi, test, expect, beforeAll, beforeEach, afterAll } from 'vitest'

@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/ban-ts-comment */
 import type { MongoMemoryServer } from 'mongodb-memory-server'
 import {
   vi,

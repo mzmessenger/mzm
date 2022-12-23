@@ -25,7 +25,9 @@ afterAll(async () => {
 })
 
 beforeEach(async () => {
-  dropCollection(mongoUri!, db.COLLECTION_NAMES.MESSAGES)
+  if (mongoUri) {
+    dropCollection(mongoUri, db.COLLECTION_NAMES.MESSAGES)
+  }
 })
 
 test('update', async () => {

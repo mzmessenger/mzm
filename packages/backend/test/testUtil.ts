@@ -1,3 +1,4 @@
+import type { MulterFile } from '../src/types/index'
 import { vi } from 'vitest'
 import assert from 'assert'
 import { Request } from 'express'
@@ -44,7 +45,13 @@ export const dropCollection = async (uri: string, name: string) => {
   return await db.collection(name).drop()
 }
 
-type TestRequest = Request & { file?: { [key: string]: string | number } }
+type TestRequest = Request & { file?: MulterFile }
+
+export const createFileRequest = (
+  ...args: Parameters<typeof createRequest>
+) => {
+  return createRequest(...args) as Request & { file: MulterFile }
+}
 
 export const createRequest = <T>(
   userId: ObjectId | null,
@@ -67,6 +74,7 @@ export const createRequest = <T>(
     query: {},
     params: {},
     body: {}
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
   } as any
 
   if (params) {

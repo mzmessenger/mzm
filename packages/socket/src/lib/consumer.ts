@@ -34,7 +34,7 @@ export const parser = async (read) => {
   return nextId
 }
 
-export const consume = async (startId: string = '$') => {
+export const consume = async (startId = '$') => {
   let nextId = startId ? startId : '$'
 
   try {

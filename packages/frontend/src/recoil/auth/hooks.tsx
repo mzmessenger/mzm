@@ -62,7 +62,7 @@ export const useAuth = () => {
 
   const getAccessToken = async () => {
     try {
-      const decoded = jwt_decode<JwtPayload>(auth.accessToken)
+      const decoded = jwt_decode<JwtPayload & AccessToken>(auth.accessToken)
       if (decoded.exp - 10 * 1000 <= Math.floor(Date.now() / 1000)) {
         const res = await refreshToken()
         setAuth((current) => {
@@ -70,11 +70,10 @@ export const useAuth = () => {
         })
         return { accessToken: res.accessToken, user: res.user }
       }
-      const user = (decoded as any).user as AccessToken['user']
       setAuth((current) => {
         return { ...current, login: true }
       })
-      return { accessToken: auth.accessToken, user }
+      return { accessToken: auth.accessToken, user: decoded.user }
     } catch (e) {
       return { accessToken: '', user: null }
     }

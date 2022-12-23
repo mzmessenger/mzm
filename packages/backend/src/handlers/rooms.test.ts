@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import type { MongoMemoryServer } from 'mongodb-memory-server'
 import { vi, test, expect, beforeAll, afterAll } from 'vitest'
 vi.mock('../lib/logger')

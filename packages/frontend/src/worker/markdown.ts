@@ -11,8 +11,6 @@ highlight.registerLanguage('shell', shell)
 highlight.registerLanguage('javascript', javascript)
 highlight.registerLanguage('css', css)
 
-const ctx: Worker = self as any
-
 const r = new marked.Renderer()
 
 const escapeTxt = (text: string) => escape(text)
@@ -82,4 +80,4 @@ export class Markdown {
   }
 }
 
-expose(Markdown, ctx)
+expose(Markdown)

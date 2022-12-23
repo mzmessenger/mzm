@@ -22,7 +22,7 @@ export const DropImage: React.FC<Props> = ({ onloadFile }) => {
     }
   }, [])
 
-  const onDragOver = (e) => {
+  const onDragOver: React.DragEventHandler<HTMLDivElement> = (e) => {
     if (
       e.dataTransfer.types &&
       Array.from(e.dataTransfer.types).includes('Files')
@@ -36,8 +36,8 @@ export const DropImage: React.FC<Props> = ({ onloadFile }) => {
     fileInputRef.current.click()
   }
 
-  const openFile = (e) => {
-    const [file] = e.target.files
+  const openFile: React.ChangeEventHandler<HTMLInputElement> = (e) => {
+    const [file] = Array.from(e.target.files)
     if (!file) {
       return
     }
@@ -50,13 +50,13 @@ export const DropImage: React.FC<Props> = ({ onloadFile }) => {
     reader.readAsDataURL(file)
   }
 
-  const onDrop = (e) => {
+  const onDrop: React.DragEventHandler<HTMLDivElement> = (e) => {
     e.preventDefault()
 
     const data = e.dataTransfer
 
     const [file] = Array.from(data.files).filter(
-      (f: any) => f.type.includes('image/jpeg') || f.type.includes('image/png')
+      (f) => f.type.includes('image/jpeg') || f.type.includes('image/png')
     ) as Blob[]
 
     const reader = new FileReader()

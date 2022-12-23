@@ -500,6 +500,7 @@ export const useSocket = ({
               message: parsed
             }
             // @todo remove any
+            // eslint-disable-next-line @typescript-eslint/no-explicit-any
             handler(args as any)
           }
         } catch (err) {
@@ -570,6 +571,7 @@ export const useSocket = ({
       socket.connecting,
       setSocket,
       getAccessToken,
+      logout,
       setSocketRecoonect,
       socketRecoonect.reconnectAttempts,
       socketRecoonect.reconnectInterval,

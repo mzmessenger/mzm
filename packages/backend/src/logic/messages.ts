@@ -1,4 +1,4 @@
-import { ObjectId, WithId } from 'mongodb'
+import { ObjectId, type WithId, type Document } from 'mongodb'
 import unescape from 'validator/lib/unescape.js'
 import { MessageType } from 'mzm-shared/type/socket'
 import * as config from '../config.js'
@@ -39,7 +39,7 @@ export const getMessages = async (
   roomId: string,
   thresholdId?: string
 ): Promise<{ existHistory: boolean; messages: MessageType[] }> => {
-  const query: Object[] = [
+  const query: Document[] = [
     {
       $match: { roomId: new ObjectId(roomId) }
     },
