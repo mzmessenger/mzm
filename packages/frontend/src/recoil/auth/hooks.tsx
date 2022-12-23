@@ -38,8 +38,10 @@ export const useAuth = () => {
   const [auth, setAuth] = useRecoilState(authState)
 
   const logout = () => {
-    location.href = '/auth/logout'
-    setAuth({ login: false, accessToken: '' })
+    if (auth.login) {
+      location.href = '/auth/logout'
+      setAuth({ login: false, accessToken: '' })
+    }
   }
 
   const refreshToken = async () => {
