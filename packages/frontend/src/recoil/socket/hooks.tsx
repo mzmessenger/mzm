@@ -402,29 +402,6 @@ export const useSocket = ({
   }, [changeRoom, closeMenu, enterSuccess, navigate, pathname])
 
   useEffect(() => {
-    handlers.current[TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS] = ({ ws, message }) => {
-      const currentPathRoomName = getRoomName(pathname)
-      if (currentPathRoomName !== message.name) {
-        navigate(`/rooms/${message.name}`)
-        changeRoom(message.id, {
-          getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
-          closeMenu
-        })
-      }
-      enterSuccess(
-        message.id,
-        message.name,
-        message.description,
-        message.iconUrl,
-        {
-          getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
-          getRooms: () => sharedActions.getRooms(ws)
-        }
-      )
-    }
-  }, [changeRoom, closeMenu, enterSuccess, navigate, pathname])
-
-  useEffect(() => {
     handlers.current[TO_CLIENT_CMD.ROOMS_ENTER_FAIL] = ({ ws }) => {
       navigate('/')
       sharedActions.getRooms(ws)
