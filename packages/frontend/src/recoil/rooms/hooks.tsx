@@ -9,7 +9,8 @@ import {
   useRecoilState,
   useSetRecoilState,
   useRecoilValue,
-  selectorFamily
+  selectorFamily,
+  type SetterOrUpdater
 } from 'recoil'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
 import { createApiClient } from '../../lib/client'
@@ -25,7 +26,11 @@ type RoomUser = {
 const splited = window.location.pathname.split('/')
 const initCurrentRoomName = splited[1] === 'rooms' ? splited[2] : ''
 
-const openRoomSettingState = atom<{ openRoomSetting: boolean }>({
+type OpenRoomSettingState = {
+  openRoomSetting: boolean
+}
+
+const openRoomSettingState = atom<OpenRoomSettingState>({
   key: 'state:rooms:openRoomSettingState',
   default: {
     openRoomSetting: false
@@ -160,6 +165,50 @@ const sortRoomIds = (roomIds: string[], roomOrder: string[]) => {
   )
 }
 
+const sharedActions = {
+  changeRoom: (args: {
+    roomId: string
+    currentRoomId: string
+    roomsById: RoomsById
+    setRooms: SetterOrUpdater<RoomsState>
+    setCurrentRoom: SetterOrUpdater<CurrentRoomState>
+    setOpenRoomSetting: SetterOrUpdater<OpenRoomSettingState>
+    handlers: {
+      getMessages: (roomId: string) => void
+      closeMenu: ReturnType<typeof useUiActions>['closeMenu']
+    }
+  }) => {
+    if (args.currentRoomId === args.roomId) {
+      return
+    }
+    const room = args.roomsById[args.roomId]
+    if (room) {
+      if (!room.receivedMessages && !room.loading) {
+        args.handlers.getMessages(args.roomId)
+      }
+
+      args.setRooms((current) => ({
+        ...current,
+        scrollTargetIndex: 'bottom'
+      }))
+
+      args.setCurrentRoom({
+        currentRoomId: room.id,
+        currentRoomName: room.name,
+        currentRoomIcon: room.iconUrl,
+        currentRoomDescription: room.description
+      })
+
+      if (openRoomSettingState) {
+        args.setOpenRoomSetting({ openRoomSetting: false })
+      }
+
+      args.handlers.closeMenu()
+      return
+    }
+  }
+} as const
+
 export const useChangeRoomActions = ({
   getMessages,
   closeMenu
@@ -173,35 +222,19 @@ export const useChangeRoomActions = ({
   const setRooms = useSetRecoilState(roomsState)
 
   const changeRoom = useCallback(
-    (roomId: string, ws?: WebSocket) => {
-      if (currentRoomId === roomId) {
-        return
-      }
-      const room = roomsById[roomId]
-      if (room) {
-        if (!room.receivedMessages && !room.loading) {
-          getMessages(roomId, ws)
+    (roomId: string) => {
+      sharedActions.changeRoom({
+        roomId,
+        currentRoomId,
+        roomsById,
+        setRooms,
+        setCurrentRoom,
+        setOpenRoomSetting,
+        handlers: {
+          getMessages,
+          closeMenu
         }
-
-        setRooms((current) => ({
-          ...current,
-          scrollTargetIndex: 'bottom'
-        }))
-
-        setCurrentRoom({
-          currentRoomId: room.id,
-          currentRoomName: room.name,
-          currentRoomIcon: room.iconUrl,
-          currentRoomDescription: room.description
-        })
-
-        if (openRoomSettingState) {
-          setOpenRoomSetting({ openRoomSetting: false })
-        }
-
-        closeMenu()
-        return
-      }
+      })
     },
     [
       currentRoomId,
@@ -596,20 +629,14 @@ export const useRoomActions = ({
   } as const
 }
 
-export const useRoomActionsForSocket = ({
-  readMessages,
-  getMessages,
-  getRooms
-}: {
-  readMessages: ReturnType<typeof useSocketActions>['readMessages']
-  getMessages: ReturnType<typeof useSocketActions>['getMessages']
-  getRooms: ReturnType<typeof useSocketActions>['getRooms']
-}) => {
-  const [currentRoom, setCurrentRoom] = useRecoilState(currentRoomState)
+export const useRoomActionsForSocket = () => {
+  const [{ currentRoomId, currentRoomName }, setCurrentRoom] =
+    useRecoilState(currentRoomState)
   const setRoomsOrder = useSetRecoilState(roomsOrderState)
   const [roomsById, setRoomsById] = useRecoilState(roomsByIdState)
   const setRoomsAllIds = useSetRecoilState(roomsAllIdsState)
   const setRooms = useSetRecoilState(roomsState)
+  const setOpenRoomSetting = useSetRecoilState(openRoomSettingState)
 
   const receiveMessages = useCallback(
     ({
@@ -640,8 +667,7 @@ export const useRoomActionsForSocket = ({
 
       setRooms((current) => {
         const scrollTargetIndex =
-          roomId === currentRoom.currentRoomId &&
-          !roomsById[roomId].receivedMessages
+          roomId === currentRoomId && !roomsById[roomId].receivedMessages
             ? messageIds.length
             : current.scrollTargetIndex
 
@@ -651,18 +677,26 @@ export const useRoomActionsForSocket = ({
         }
       })
     },
-    [setRoomsById, setRooms, currentRoom.currentRoomId, roomsById]
+    [setRoomsById, setRooms, currentRoomId, roomsById]
   )
 
   const receiveMessage = useCallback(
-    (messageId: string, message: string, roomId: string, account: string) => {
+    (
+      messageId: string,
+      message: string,
+      roomId: string,
+      account: string,
+      handlers: {
+        readMessages: (roomId: string) => void
+      }
+    ) => {
       // 現在みている部屋だったら既読フラグを返す
-      if (roomId === currentRoom.currentRoomId) {
-        readMessages(roomId)
+      if (roomId === currentRoomId) {
+        handlers.readMessages(roomId)
       }
 
       setRoomsById((current) => {
-        const isCurrent = roomId === currentRoom.currentRoomId
+        const isCurrent = roomId === currentRoomId
         const room = current[roomId]
         const replied = isReplied(account, message)
 
@@ -686,23 +720,24 @@ export const useRoomActionsForSocket = ({
         return {
           ...current,
           scrollTargetIndex:
-            roomId === currentRoom.currentRoomId
-              ? 'bottom'
-              : current.scrollTargetIndex
+            roomId === currentRoomId ? 'bottom' : current.scrollTargetIndex
         }
       })
     },
-    [currentRoom.currentRoomId, readMessages, setRooms, setRoomsById]
+    [currentRoomId, setRooms, setRoomsById]
   )
 
   const receiveRooms = useCallback(
     (
       rooms: FilterToClientType<typeof TO_CLIENT_CMD.ROOMS_GET>['rooms'],
       roomsOrder: string[],
-      currentRoomId: string
+      currentRoomId: string,
+      handlers: {
+        getMessages: (currentRoomId: string) => void
+      }
     ) => {
       if (currentRoomId) {
-        getMessages(currentRoomId)
+        handlers.getMessages(currentRoomId)
       }
 
       const allIds: string[] = []
@@ -734,7 +769,7 @@ export const useRoomActionsForSocket = ({
       setRoomsAllIds(allIds)
       setRoomsOrder({ roomsOrder })
     },
-    [setRoomsById, setRoomsAllIds, setRoomsOrder, getMessages]
+    [setRoomsById, setRoomsAllIds, setRoomsOrder]
   )
 
   const enterSuccess = useCallback(
@@ -743,16 +778,19 @@ export const useRoomActionsForSocket = ({
       name: string,
       description: string,
       iconUrl: string,
-      ws: WebSocket
+      handlers: {
+        getRooms: () => void
+        getMessages: (roomId: string) => void
+      }
     ) => {
       const room = roomsById[roomId]
       // すでに入っている部屋だったら部屋の再取得をしない
       if (!room) {
-        getRooms(ws)
+        handlers.getRooms()
       }
       let loading = false
       if (!room || (!room.receivedMessages && !room.loading)) {
-        getMessages(roomId, ws)
+        handlers.getMessages(roomId)
         loading = true
       }
 
@@ -777,7 +815,7 @@ export const useRoomActionsForSocket = ({
         currentRoomDescription: description
       })
     },
-    [getMessages, getRooms, roomsById, setCurrentRoom, setRoomsById]
+    [roomsById, setCurrentRoom, setRoomsById]
   )
 
   const reloadMessage = useCallback(
@@ -841,7 +879,33 @@ export const useRoomActionsForSocket = ({
     [setRoomsById]
   )
 
+  const changeRoom = useCallback(
+    (
+      roomId: string,
+      handlers: {
+        getMessages: (roomId: string) => void
+        closeMenu: ReturnType<typeof useUiActions>['closeMenu']
+      }
+    ) => {
+      sharedActions.changeRoom({
+        roomId,
+        currentRoomId,
+        roomsById,
+        setRooms,
+        setCurrentRoom,
+        setOpenRoomSetting,
+        handlers: {
+          getMessages: handlers.getMessages,
+          closeMenu: handlers.closeMenu
+        }
+      })
+    },
+    [currentRoomId, roomsById, setRooms, setCurrentRoom, setOpenRoomSetting]
+  )
+
   return {
+    currentRoomId,
+    currentRoomName,
     receiveMessages,
     receiveMessage,
     receiveRooms,
@@ -849,6 +913,7 @@ export const useRoomActionsForSocket = ({
     reloadMessage,
     alreadyRead,
     setRoomOrder,
-    setRoomDescription
+    setRoomDescription,
+    changeRoom
   } as const
 }

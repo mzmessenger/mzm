@@ -49,6 +49,7 @@ export type FilterToClientType<P extends ToClientType['cmd']> = Extract<
 >
 
 export type ToClientType =
+  | { cmd: typeof TO_CLIENT_CMD.CLIENT_RELOAD; user?: string }
   | {
       cmd: typeof TO_CLIENT_CMD.SOCKET_CONNECTION
       user: string

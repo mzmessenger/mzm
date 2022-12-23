@@ -1,14 +1,21 @@
 import type { useAuth } from '../auth/hooks'
-import { useCallback } from 'react'
-import { atom, useRecoilState, useRecoilValue } from 'recoil'
-import dayjs from 'dayjs'
+import type { useUserAccount } from '../user/hooks'
+import { useNavigate } from 'react-router-dom'
+import { useCallback, useEffect, useRef } from 'react'
 import {
   ClientToSocketType,
+  TO_CLIENT_CMD,
   TO_SERVER_CMD,
   ToClientType,
   FilterToClientType
 } from 'mzm-shared/type/socket'
-import { sendSocket } from '../../lib/util'
+import { useRoomActionsForSocket } from '../rooms/hooks'
+import { useMessagesForSocket } from '../messages/hooks'
+import { useMyInfoActions } from '../user/hooks'
+import { useUiActions } from '../ui/hooks'
+import { atom, useRecoilState, useRecoilValue } from 'recoil'
+import dayjs from 'dayjs'
+import { sendSocket, getRoomName } from '../../lib/util'
 import { logger } from '../../lib/logger'
 
 const DEFAULT_INTERVAL = 1000
@@ -26,9 +33,7 @@ type MessageHandlers = {
 
 type InitOptions = {
   url: string
-  messageHandlers: MessageHandlers
 }
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 type SocketState = {
   ws: WebSocket | null
@@ -56,27 +61,30 @@ const socketRecoonectState = atom<SocketRecoonectState>({
   }
 })
 
+const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+const sharedActions = {
+  readMessages: (roomId: string, socket: WebSocket) => {
+    sendSocket(socket, {
+      cmd: TO_SERVER_CMD.ROOMS_READ,
+      room: roomId
+    })
+  },
+  getMessages: (roomId: string, socket: WebSocket) => {
+    const sendTo = socket
+    sendSocket(sendTo, {
+      cmd: TO_SERVER_CMD.MESSAGES_ROOM,
+      room: roomId
+    })
+  },
+  getRooms: (socket: WebSocket) => {
+    const sendTo = socket
+    sendSocket(sendTo, { cmd: TO_SERVER_CMD.ROOMS_GET })
+  }
+} as const
+
 export const useSocketActions = () => {
   const socket = useRecoilValue(socketState)
-
-  const getMessages = useCallback(
-    (roomId: string, s?: WebSocket) => {
-      const sendTo = s ?? socket.ws
-      sendSocket(sendTo, {
-        cmd: TO_SERVER_CMD.MESSAGES_ROOM,
-        room: roomId
-      })
-    },
-    [socket.ws]
-  )
-
-  const getRooms = useCallback(
-    (s?: WebSocket) => {
-      const sendTo = s ?? socket.ws
-      sendSocket(sendTo, { cmd: TO_SERVER_CMD.ROOMS_GET })
-    },
-    [socket.ws]
-  )
 
   const sortRoom = useCallback(
     (roomOrder: string[]) => {
@@ -150,16 +158,6 @@ export const useSocketActions = () => {
     [socket.ws]
   )
 
-  const readMessages = useCallback(
-    (roomId: string) => {
-      sendSocket(socket.ws, {
-        cmd: TO_SERVER_CMD.ROOMS_READ,
-        room: roomId
-      })
-    },
-    [socket.ws]
-  )
-
   const openRoom = useCallback(
     (roomId: string) => {
       sendSocket(socket.ws, {
@@ -226,33 +224,243 @@ export const useSocketActions = () => {
     [socket.ws]
   )
 
+  const getMessages = useCallback(
+    (roomId: string) => {
+      sharedActions.getMessages(roomId, socket.ws)
+    },
+    [socket.ws]
+  )
+
+  const getRooms = useCallback(() => {
+    sharedActions.getRooms(socket.ws), [socket.ws]
+  }, [socket.ws])
+
+  const readMessages = useCallback(
+    (roomId: string) => {
+      sharedActions.readMessages(roomId, socket.ws)
+    },
+    [socket.ws]
+  )
+
   return {
-    getMessages,
-    getRooms,
     sortRoom,
     incrementIine,
     sendMessage,
     sendModifyMessage,
     sendDeleteMessage,
     enterRoom,
-    readMessages,
     openRoom,
     closeRoom,
     getHistory,
     removeVoteAnswer,
     sendVoteAnswer,
-    updateRoomDescription
+    updateRoomDescription,
+    getMessages,
+    getRooms,
+    readMessages
   } as const
 }
 
 export const useSocket = ({
-  getAccessToken
+  pathname,
+  userAccount,
+  getAccessToken,
+  logout
 }: {
+  pathname: string
+  userAccount: ReturnType<typeof useUserAccount>['userAccount']
   getAccessToken: ReturnType<typeof useAuth>['getAccessToken']
+  logout: ReturnType<typeof useAuth>['logout']
 }) => {
+  const navigate = useNavigate()
+  const handlers = useRef<MessageHandlers>({})
   const [socket, setSocket] = useRecoilState(socketState)
   const [socketRecoonect, setSocketRecoonect] =
     useRecoilState(socketRecoonectState)
+  const {
+    addMessage,
+    modifyMessage,
+    removeMessage,
+    addMessages,
+    updateIine,
+    setVoteAnswers
+  } = useMessagesForSocket()
+  const {
+    currentRoomId,
+    currentRoomName,
+    enterSuccess,
+    alreadyRead,
+    reloadMessage,
+    setRoomOrder,
+    receiveMessages,
+    receiveMessage,
+    receiveRooms,
+    setRoomDescription,
+    changeRoom
+  } = useRoomActionsForSocket()
+  const { closeMenu } = useUiActions()
+  const { fetchMyInfo } = useMyInfoActions({ getAccessToken, logout })
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.SOCKET_CONNECTION] = ({ ws, message }) => {
+      if (message.signup) {
+        fetchMyInfo()
+      }
+      if (currentRoomName) {
+        sendSocket(ws, {
+          cmd: TO_SERVER_CMD.ROOMS_ENTER,
+          name: currentRoomName
+        })
+      } else {
+        sendSocket(ws, { cmd: TO_SERVER_CMD.ROOMS_GET })
+      }
+    }
+  }, [currentRoomName, fetchMyInfo])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_GET] = ({ ws, message }) => {
+      receiveRooms(message.rooms, message.roomOrder, currentRoomId, {
+        getMessages: (currentRoomId) =>
+          sharedActions.getMessages(currentRoomId, ws)
+      })
+    }
+  }, [currentRoomId, receiveRooms])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_UPDATE_DESCRIPTION] = ({
+      message
+    }) => {
+      setRoomDescription(message.roomId, message.descrioption)
+    }
+  }, [setRoomDescription])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.MESSAGE_RECEIVE] = ({ ws, message }) => {
+      addMessage(message.message).then(() => {
+        receiveMessage(
+          message.message.id,
+          message.message.message,
+          message.room,
+          userAccount,
+          {
+            readMessages: (roomId) => sharedActions.readMessages(roomId, ws)
+          }
+        )
+      })
+    }
+  }, [addMessage, receiveMessage, userAccount])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.MESSAGE_MODIFY] = ({ message }) => {
+      modifyMessage(message.message).then(() => {
+        reloadMessage(message.room)
+      })
+    }
+  }, [modifyMessage, reloadMessage])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.MESSAGE_REMOVE] = ({ message }) => {
+      removeMessage(message.message).then(() => {
+        reloadMessage(message.room)
+      })
+    }
+  }, [reloadMessage, removeMessage])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.MESSAGES_ROOM] = ({ message }) => {
+      addMessages(message.messages).then(() => {
+        receiveMessages({
+          messageIds: message.messages.map((m) => m.id),
+          roomId: message.room,
+          existHistory: message.existHistory
+        })
+      })
+    }
+  }, [addMessages, receiveMessages])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS] = ({ ws, message }) => {
+      const currentPathRoomName = getRoomName(pathname)
+      if (currentPathRoomName !== message.name) {
+        navigate(`/rooms/${message.name}`)
+        changeRoom(message.id, {
+          getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
+          closeMenu
+        })
+      }
+      enterSuccess(
+        message.id,
+        message.name,
+        message.description,
+        message.iconUrl,
+        {
+          getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
+          getRooms: () => sharedActions.getRooms(ws)
+        }
+      )
+    }
+  }, [changeRoom, closeMenu, enterSuccess, navigate, pathname])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS] = ({ ws, message }) => {
+      const currentPathRoomName = getRoomName(pathname)
+      if (currentPathRoomName !== message.name) {
+        navigate(`/rooms/${message.name}`)
+        changeRoom(message.id, {
+          getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
+          closeMenu
+        })
+      }
+      enterSuccess(
+        message.id,
+        message.name,
+        message.description,
+        message.iconUrl,
+        {
+          getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
+          getRooms: () => sharedActions.getRooms(ws)
+        }
+      )
+    }
+  }, [changeRoom, closeMenu, enterSuccess, navigate, pathname])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_ENTER_FAIL] = ({ ws }) => {
+      navigate('/')
+      sharedActions.getRooms(ws)
+    }
+  }, [navigate])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_READ] = ({ message }) => {
+      alreadyRead(message.room)
+    }
+  }, [alreadyRead])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.MESSAGE_IINE] = ({ message }) => {
+      updateIine(message.id, message.iine)
+      reloadMessage(message.room)
+    }
+  }, [reloadMessage, updateIine])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_SORT_SUCCESS] = ({ message }) => {
+      setRoomOrder(message.roomOrder)
+    }
+  }, [setRoomOrder])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.VOTE_ANSWERS] = ({ message }) => {
+      setVoteAnswers(message.messageId, message.answers)
+    }
+  }, [setVoteAnswers])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.CLIENT_RELOAD] = () => {
+      window.location.reload()
+    }
+  }, [])
 
   const close = useCallback((socket: WebSocket) => {
     if (
@@ -264,37 +472,8 @@ export const useSocket = ({
     }
   }, [])
 
-  const setOnMessageHandlers = useCallback(
-    (ws: WebSocket, handlers: MessageHandlers) => {
-      ws.onmessage = (e) => {
-        if (!e) {
-          return
-        }
-        if (e.data === 'ping') {
-          ws.send('pong')
-          return
-        }
-        try {
-          const parsed: ToClientType = JSON.parse(e.data)
-          if (handlers[parsed.cmd]) {
-            const handler = handlers[parsed.cmd]
-            const args: HandlerArgs<typeof parsed.cmd> = {
-              ws: ws,
-              message: parsed
-            }
-            // @todo
-            handler(args as any)
-          }
-        } catch (err) {
-          logger.error(err)
-        }
-      }
-    },
-    []
-  )
-
   const connect = useCallback(
-    async (connectUrl: string, handlers: MessageHandlers) => {
+    async (connectUrl: string) => {
       if (socket.ws || socket.connecting) {
         return
       }
@@ -323,7 +502,29 @@ export const useSocket = ({
         })
       })
 
-      setOnMessageHandlers(socketInstance, handlers)
+      socketInstance.onmessage = (e) => {
+        if (!e) {
+          return
+        }
+        if (e.data === 'ping') {
+          socketInstance.send('pong')
+          return
+        }
+        try {
+          const parsed: ToClientType = JSON.parse(e.data)
+          if (handlers.current[parsed.cmd]) {
+            const handler = handlers.current[parsed.cmd]
+            const args: HandlerArgs<typeof parsed.cmd> = {
+              ws: socketInstance,
+              message: parsed
+            }
+            // @todo remove any
+            handler(args as any)
+          }
+        } catch (err) {
+          logger.error(err)
+        }
+      }
 
       const reconnect = async () => {
         const counter = socketRecoonect.reconnectAttempts + 1
@@ -345,7 +546,7 @@ export const useSocket = ({
         )
 
         await sleep(socketRecoonect.reconnectInterval)
-        connect(connectUrl, handlers)
+        connect(connectUrl)
 
         const newInterval =
           socketRecoonect.reconnectInterval <= INIT_RECONNECT_INTERVAL
@@ -384,15 +585,14 @@ export const useSocket = ({
       })
     },
     [
-      close,
-      getAccessToken,
-      setOnMessageHandlers,
-      setSocketRecoonect,
+      socket.ws,
+      socket.connecting,
       setSocket,
+      getAccessToken,
+      setSocketRecoonect,
       socketRecoonect.reconnectAttempts,
       socketRecoonect.reconnectInterval,
-      socket.connecting,
-      socket.ws
+      close
     ]
   )
 
@@ -402,7 +602,7 @@ export const useSocket = ({
         throw new Error('no url')
       }
 
-      connect(options.url, options.messageHandlers)
+      connect(options.url)
     },
     [connect]
   )

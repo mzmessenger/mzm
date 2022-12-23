@@ -1,6 +1,6 @@
 import { client } from '../redis.js'
 import { logger } from '../logger.js'
-import { ToClientType } from 'mzm-shared/type/socket'
+import { type ToClientType } from 'mzm-shared/type/socket'
 import { UnreadQueue, ReplyQueue, VoteQueue } from '../../types.js'
 import * as config from '../../config.js'
 export {
