@@ -1,18 +1,10 @@
-import { useEffect, useMemo } from 'react'
-import { useNavigate, useLocation } from 'react-router-dom'
-import { TO_CLIENT_CMD, TO_SERVER_CMD } from 'mzm-shared/type/socket'
-import { useSocket, useSocketActions } from './recoil/socket/hooks'
+import { useEffect } from 'react'
+import { useLocation } from 'react-router-dom'
+import { useSocket } from './recoil/socket/hooks'
 import { useUserAccount, useMyInfoActions } from './recoil/user/hooks'
 import { useAuth, useLoginFlag } from './recoil/auth/hooks'
 import { getRoomName } from './lib/util'
 import { useUiActions } from './recoil/ui/hooks'
-import {
-  useRoomActionsForSocket,
-  useChangeRoomActions,
-  useCurrentRoom
-} from './recoil/rooms/hooks'
-import { useMessagesForSocket } from './recoil/messages/hooks'
-import { sendSocket } from './lib/util'
 import { logger } from './lib/logger'
 
 const useRouter = () => {
@@ -69,13 +61,11 @@ export const useApp = (url: string) => {
 
   const { login, getAccessToken, logout } = useAuth()
   const { userAccount } = useUserAccount()
-  const navigate = useNavigate()
   const location = useLocation()
   const { init } = useSocket({
     getAccessToken,
     userAccount,
     logout,
-    navigate,
     pathname: location.pathname
   })
 

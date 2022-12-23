@@ -1,6 +1,6 @@
 import type { useAuth } from '../auth/hooks'
 import type { useUserAccount } from '../user/hooks'
-import type { NavigateFunction } from 'react-router-dom'
+import { useNavigate } from 'react-router-dom'
 import { useCallback, useEffect, useRef } from 'react'
 import {
   ClientToSocketType,
@@ -263,22 +263,20 @@ export const useSocketActions = () => {
 
 export const useSocket = ({
   pathname,
-  navigate,
   userAccount,
   getAccessToken,
   logout
 }: {
   pathname: string
-  navigate: NavigateFunction
   userAccount: ReturnType<typeof useUserAccount>['userAccount']
   getAccessToken: ReturnType<typeof useAuth>['getAccessToken']
   logout: ReturnType<typeof useAuth>['logout']
 }) => {
-  const messageHandlersRef = useRef<MessageHandlers>({})
+  const navigate = useNavigate()
+  const handlers = useRef<MessageHandlers>({})
   const [socket, setSocket] = useRecoilState(socketState)
   const [socketRecoonect, setSocketRecoonect] =
     useRecoilState(socketRecoonectState)
-
   const {
     addMessage,
     modifyMessage,
@@ -287,7 +285,6 @@ export const useSocket = ({
     updateIine,
     setVoteAnswers
   } = useMessagesForSocket()
-
   const {
     currentRoomId,
     currentRoomName,
@@ -302,130 +299,168 @@ export const useSocket = ({
     changeRoom
   } = useRoomActionsForSocket()
   const { closeMenu } = useUiActions()
-
   const { fetchMyInfo } = useMyInfoActions({ getAccessToken, logout })
 
   useEffect(() => {
-    messageHandlersRef.current = {
-      [TO_CLIENT_CMD.SOCKET_CONNECTION]: ({ ws, message }) => {
-        if (message.signup) {
-          fetchMyInfo()
-        }
-        if (currentRoomName) {
-          sendSocket(ws, {
-            cmd: TO_SERVER_CMD.ROOMS_ENTER,
-            name: currentRoomName
-          })
-        } else {
-          sendSocket(ws, { cmd: TO_SERVER_CMD.ROOMS_GET })
-        }
-      },
-      [TO_CLIENT_CMD.ROOMS_GET]: ({ ws, message }) => {
-        receiveRooms(message.rooms, message.roomOrder, currentRoomId, {
-          getMessages: (currentRoomId) =>
-            sharedActions.getMessages(currentRoomId, ws)
+    handlers.current[TO_CLIENT_CMD.SOCKET_CONNECTION] = ({ ws, message }) => {
+      if (message.signup) {
+        fetchMyInfo()
+      }
+      if (currentRoomName) {
+        sendSocket(ws, {
+          cmd: TO_SERVER_CMD.ROOMS_ENTER,
+          name: currentRoomName
         })
-      },
-      [TO_CLIENT_CMD.ROOMS_UPDATE_DESCRIPTION]: ({ ws, message }) => {
-        setRoomDescription(message.roomId, message.descrioption)
-      },
-      [TO_CLIENT_CMD.MESSAGE_RECEIVE]: ({ ws, message }) => {
-        addMessage(message.message).then(() => {
-          receiveMessage(
-            message.message.id,
-            message.message.message,
-            message.room,
-            userAccount,
-            {
-              readMessages: (roomId) => sharedActions.readMessages(roomId, ws)
-            }
-          )
-        })
-      },
-      [TO_CLIENT_CMD.MESSAGE_MODIFY]: ({ message }) => {
-        modifyMessage(message.message).then(() => {
-          reloadMessage(message.room)
-        })
-      },
-      [TO_CLIENT_CMD.MESSAGE_REMOVE]: ({ message }) => {
-        removeMessage(message.message).then(() => {
-          reloadMessage(message.room)
-        })
-      },
-      [TO_CLIENT_CMD.MESSAGES_ROOM]: ({ message }) => {
-        addMessages(message.messages).then(() => {
-          receiveMessages({
-            messageIds: message.messages.map((m) => m.id),
-            roomId: message.room,
-            existHistory: message.existHistory
-          })
-        })
-      },
-      [TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS]: ({ ws, message }) => {
-        const currentPathRoomName = getRoomName(pathname)
-        if (currentPathRoomName !== message.name) {
-          navigate(`/rooms/${message.name}`)
-          changeRoom(message.id, {
-            getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
-            closeMenu
-          })
-        }
-        enterSuccess(
-          message.id,
-          message.name,
-          message.description,
-          message.iconUrl,
-          {
-            getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
-            getRooms: () => sharedActions.getRooms(ws)
-          }
-        )
-      },
-      [TO_CLIENT_CMD.ROOMS_ENTER_FAIL]: ({ ws }) => {
-        navigate('/')
-        sharedActions.getRooms(ws)
-      },
-      [TO_CLIENT_CMD.ROOMS_READ]: ({ message }) => {
-        alreadyRead(message.room)
-      },
-      [TO_CLIENT_CMD.MESSAGE_IINE]: ({ message }) => {
-        updateIine(message.id, message.iine)
-        reloadMessage(message.room)
-      },
-      [TO_CLIENT_CMD.ROOMS_SORT_SUCCESS]: ({ message }) => {
-        setRoomOrder(message.roomOrder)
-      },
-      [TO_CLIENT_CMD.VOTE_ANSWERS]: ({ message }) => {
-        setVoteAnswers(message.messageId, message.answers)
-      },
-      [TO_CLIENT_CMD.CLIENT_RELOAD]: () => {
-        window.location.reload()
+      } else {
+        sendSocket(ws, { cmd: TO_SERVER_CMD.ROOMS_GET })
       }
     }
-  }, [
-    currentRoomName,
-    fetchMyInfo,
-    currentRoomId,
-    receiveRooms,
-    setRoomDescription,
-    addMessage,
-    receiveMessage,
-    userAccount,
-    modifyMessage,
-    reloadMessage,
-    removeMessage,
-    addMessages,
-    receiveMessages,
-    pathname,
-    enterSuccess,
-    navigate,
-    changeRoom,
-    alreadyRead,
-    updateIine,
-    setRoomOrder,
-    setVoteAnswers,
-    closeMenu
-  ])
+  }, [currentRoomName, fetchMyInfo])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_GET] = ({ ws, message }) => {
+      receiveRooms(message.rooms, message.roomOrder, currentRoomId, {
+        getMessages: (currentRoomId) =>
+          sharedActions.getMessages(currentRoomId, ws)
+      })
+    }
+  }, [currentRoomId, receiveRooms])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_UPDATE_DESCRIPTION] = ({
+      message
+    }) => {
+      setRoomDescription(message.roomId, message.descrioption)
+    }
+  }, [setRoomDescription])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.MESSAGE_RECEIVE] = ({ ws, message }) => {
+      addMessage(message.message).then(() => {
+        receiveMessage(
+          message.message.id,
+          message.message.message,
+          message.room,
+          userAccount,
+          {
+            readMessages: (roomId) => sharedActions.readMessages(roomId, ws)
+          }
+        )
+      })
+    }
+  }, [addMessage, receiveMessage, userAccount])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.MESSAGE_MODIFY] = ({ message }) => {
+      modifyMessage(message.message).then(() => {
+        reloadMessage(message.room)
+      })
+    }
+  }, [modifyMessage, reloadMessage])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.MESSAGE_REMOVE] = ({ message }) => {
+      removeMessage(message.message).then(() => {
+        reloadMessage(message.room)
+      })
+    }
+  }, [reloadMessage, removeMessage])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.MESSAGES_ROOM] = ({ message }) => {
+      addMessages(message.messages).then(() => {
+        receiveMessages({
+          messageIds: message.messages.map((m) => m.id),
+          roomId: message.room,
+          existHistory: message.existHistory
+        })
+      })
+    }
+  }, [addMessages, receiveMessages])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS] = ({ ws, message }) => {
+      const currentPathRoomName = getRoomName(pathname)
+      if (currentPathRoomName !== message.name) {
+        navigate(`/rooms/${message.name}`)
+        changeRoom(message.id, {
+          getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
+          closeMenu
+        })
+      }
+      enterSuccess(
+        message.id,
+        message.name,
+        message.description,
+        message.iconUrl,
+        {
+          getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
+          getRooms: () => sharedActions.getRooms(ws)
+        }
+      )
+    }
+  }, [changeRoom, closeMenu, enterSuccess, navigate, pathname])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS] = ({ ws, message }) => {
+      const currentPathRoomName = getRoomName(pathname)
+      if (currentPathRoomName !== message.name) {
+        navigate(`/rooms/${message.name}`)
+        changeRoom(message.id, {
+          getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
+          closeMenu
+        })
+      }
+      enterSuccess(
+        message.id,
+        message.name,
+        message.description,
+        message.iconUrl,
+        {
+          getMessages: (roomId) => sharedActions.getMessages(roomId, ws),
+          getRooms: () => sharedActions.getRooms(ws)
+        }
+      )
+    }
+  }, [changeRoom, closeMenu, enterSuccess, navigate, pathname])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_ENTER_FAIL] = ({ ws }) => {
+      navigate('/')
+      sharedActions.getRooms(ws)
+    }
+  }, [navigate])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_READ] = ({ message }) => {
+      alreadyRead(message.room)
+    }
+  }, [alreadyRead])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.MESSAGE_IINE] = ({ message }) => {
+      updateIine(message.id, message.iine)
+      reloadMessage(message.room)
+    }
+  }, [reloadMessage, updateIine])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.ROOMS_SORT_SUCCESS] = ({ message }) => {
+      setRoomOrder(message.roomOrder)
+    }
+  }, [setRoomOrder])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.VOTE_ANSWERS] = ({ message }) => {
+      setVoteAnswers(message.messageId, message.answers)
+    }
+  }, [setVoteAnswers])
+
+  useEffect(() => {
+    handlers.current[TO_CLIENT_CMD.CLIENT_RELOAD] = () => {
+      window.location.reload()
+    }
+  }, [])
 
   const close = useCallback((socket: WebSocket) => {
     if (
@@ -477,8 +512,8 @@ export const useSocket = ({
         }
         try {
           const parsed: ToClientType = JSON.parse(e.data)
-          if (messageHandlersRef.current[parsed.cmd]) {
-            const handler = messageHandlersRef.current[parsed.cmd]
+          if (handlers.current[parsed.cmd]) {
+            const handler = handlers.current[parsed.cmd]
             const args: HandlerArgs<typeof parsed.cmd> = {
               ws: socketInstance,
               message: parsed

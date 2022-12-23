@@ -12,6 +12,22 @@ export const useMessage = (id: string) => {
   const { startToEdit } = usePostTextArea()
   const { incrementIine, sendDeleteMessage } = useSocketActions()
 
+  type Message = Pick<
+    typeof messageObj,
+    | 'message'
+    | 'iine'
+    | 'html'
+    | 'icon'
+    | 'vote'
+    | 'updated'
+    | 'removed'
+    | 'userId'
+  > & {
+    date: string
+    account: string
+    replied: boolean
+  }
+
   const {
     message,
     iine,
@@ -24,8 +40,8 @@ export const useMessage = (id: string) => {
     account,
     userId,
     replied
-  } = useMemo(() => {
-    const init = {
+  } = useMemo<Message>(() => {
+    const init: Message = {
       message: '',
       iine: 0,
       html: '',

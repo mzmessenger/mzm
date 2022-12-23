@@ -18,15 +18,7 @@ type SocketMessageType = FilterToClientType<
 
 export type VoteAnswerType = SocketMessageType['vote']['answers'][number]
 
-type StateVoteType = Omit<SocketMessageType['vote'], 'answers'> & {
-  answers: {
-    [key: number]: VoteAnswerType[]
-  }
-}
-
-export type StateMessageType = Omit<SocketMessageType, 'vote'> & {
-  vote?: StateVoteType
-}
+export type StateMessageType = SocketMessageType
 
 type MessageById = {
   [key: string]: StateMessageType
@@ -71,7 +63,8 @@ const getVoteAnswerByIdAndIndex = selectorFamily({
       if (!byId[options.messageId]) {
         return []
       }
-      return byId[options.messageId][options.index] ?? []
+      const answers = byId[options.messageId]
+      return answers[options.index] ?? []
     }
 })
 
@@ -168,48 +161,48 @@ export const useVoteSocket = ({
   } as const
 }
 
+const convertMessage = async (
+  m: MessageType
+): Promise<{
+  message: StateMessageType
+  vote: VoteAnswersById[string]
+}> => {
+  const message: StateMessageType = {
+    id: m.id,
+    userId: m.userId,
+    icon: m.icon,
+    userAccount: m.userAccount,
+    message: m.message,
+    iine: m.iine,
+    vote: m.vote,
+    updated: m.updated,
+    removed: m.removed,
+    createdAt: m.createdAt,
+    updatedAt: m.updatedAt
+  }
+  message.html = await convertToHtml(m.message)
+
+  const createVote = () => {
+    if (!m.vote) {
+      return {}
+    }
+
+    const vote = m.vote.answers.reduce((byIndex, answer) => {
+      byIndex[answer.index] = byIndex[answer.index] ?? []
+      byIndex[answer.index].push(answer)
+      return byIndex
+    }, {} as VoteAnswersById[string])
+
+    return vote
+  }
+
+  return { message, vote: createVote() }
+}
+
 export const useMessagesForSocket = () => {
   const [messagesById, setMessagesById] = useRecoilState(messagesByIdState)
   const setVoteAnswersById = useSetRecoilState(voteAnswersByIdState)
   const [messages, setMessages] = useRecoilState(messagesState)
-
-  const convertVoteAnswerByIndex = (
-    answers: MessageType['vote']['answers']
-  ): StateVoteType['answers'] => {
-    return answers.reduce((byIndex, answer) => {
-      byIndex[answer.index] = byIndex[answer.index] ?? []
-      byIndex[answer.index].push(answer)
-      return byIndex
-    }, {} as StateVoteType['answers'])
-  }
-
-  const convertMessage = useCallback(
-    async (m: MessageType): Promise<StateMessageType> => {
-      const message: StateMessageType = {
-        id: m.id,
-        userId: m.userId,
-        icon: m.icon,
-        userAccount: m.userAccount,
-        message: m.message,
-        iine: m.iine,
-        updated: m.updated,
-        removed: m.removed,
-        createdAt: m.createdAt,
-        updatedAt: m.updatedAt
-      }
-      message.html = await convertToHtml(m.message)
-      if (m.vote) {
-        const answers = convertVoteAnswerByIndex(m.vote.answers)
-        message.vote = {
-          questions: m.vote.questions,
-          answers,
-          status: m.vote.status
-        }
-      }
-      return message
-    },
-    []
-  )
 
   const addMessages = useCallback(
     async (add: MessageType[]) => {
@@ -219,14 +212,14 @@ export const useMessagesForSocket = () => {
       const addMessagesById: MessageById = {}
       const addVoteAnswersById: VoteAnswersById = {}
 
-      for (const message of converted) {
+      for (const { message, vote } of converted) {
         const id = message.id
         if (!allIds.includes(id)) {
           allIds.push(id)
           addMessagesById[id] = { ...message }
         }
         if (message.vote) {
-          addVoteAnswersById[id] = message.vote.answers
+          addVoteAnswersById[id] = vote
         }
       }
 
@@ -245,13 +238,7 @@ export const useMessagesForSocket = () => {
         ...addVoteAnswersById
       }))
     },
-    [
-      messages.messagesAllIds,
-      setMessagesById,
-      setMessages,
-      setVoteAnswersById,
-      convertMessage
-    ]
+    [messages.messagesAllIds, setMessagesById, setMessages, setVoteAnswersById]
   )
 
   const addMessage = async (message: MessageType) => {
@@ -272,7 +259,7 @@ export const useMessagesForSocket = () => {
     setMessagesById((current) => {
       return {
         ...current,
-        [message.id]: converted
+        [message.id]: converted.message
       }
     })
 
@@ -283,7 +270,7 @@ export const useMessagesForSocket = () => {
 
       return {
         ...current,
-        [message.id]: message.vote
+        [message.id]: converted.vote
       }
     })
   }
@@ -297,8 +284,8 @@ export const useMessagesForSocket = () => {
         ...current,
         [message.id]: {
           ...beforeMessage,
-          message: converted.message,
-          html: converted.html
+          message: converted.message.message,
+          html: converted.message.html
         }
       }
     })
@@ -311,7 +298,7 @@ export const useMessagesForSocket = () => {
       return {
         ...current,
         [message.id]: {
-          ...converted,
+          ...converted.message,
           message: '',
           html: ''
         }
@@ -341,31 +328,20 @@ export const useMessagesForSocket = () => {
         return
       }
 
-      const convertedAnswers = convertVoteAnswerByIndex(answers)
-
-      const vote: StateVoteType = {
-        ...messagesById[messageId].vote,
-        answers: convertedAnswers
-      }
-
-      setMessagesById((current) => ({
-        ...current,
-        [messageId]: {
-          ...current[messageId],
-          vote
+      setVoteAnswersById((current) => {
+        return {
+          ...current,
+          [messageId]: {
+            ...current[messageId],
+            answers
+          }
         }
-      }))
-
-      setVoteAnswersById((current) => ({
-        ...current,
-        [messageId]: vote
-      }))
+      })
     },
-    [messagesById, setMessagesById, setVoteAnswersById]
+    [messagesById, setVoteAnswersById]
   )
 
   return {
-    convertVoteAnswerByIndex,
     convertMessage,
     addMessages,
     addMessage,
