@@ -1,17 +1,8 @@
 import type { AccessToken } from 'mzm-shared/type/auth'
 import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
 import { COOKIES } from 'mzm-shared/auth/constants'
-import { useState, useContext } from 'react'
+import { atom, useRecoilState, selector, useRecoilValue } from 'recoil'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
-import { AuthContext, AuthDispatchContext } from './index'
-
-export const useAuth = () => {
-  return useContext(AuthContext)
-}
-
-export const useDispatchAuth = () => {
-  return useContext(AuthDispatchContext)
-}
 
 const createDefaultToken = () => {
   try {
@@ -26,13 +17,29 @@ const createDefaultToken = () => {
 }
 const defaultToken = createDefaultToken()
 
-export const useAuthForContext = () => {
-  const [login, setLogin] = useState<boolean>(false)
-  const [accessToken, setAccessToken] = useState<string>(defaultToken)
+const authState = atom({
+  key: 'state:auth',
+  default: {
+    login: false,
+    accessToken: defaultToken
+  }
+})
+
+const loginState = selector({
+  key: 'state:auth:selector:login',
+  get: ({ get }) => {
+    const { login } = get(authState)
+    return login
+  }
+})
+export const useLoginFlag = () => useRecoilValue(loginState)
+
+export const useAuth = () => {
+  const [auth, setAuth] = useRecoilState(authState)
 
   const logout = () => {
     location.href = '/auth/logout'
-    setLogin(false)
+    setAuth({ login: false, accessToken: '' })
   }
 
   const refreshToken = async () => {
@@ -44,35 +51,35 @@ export const useAuthForContext = () => {
     })
     if (res.status === 200) {
       const body = (await res.json()) as ResponseType[200]
-      setAccessToken(body.accessToken)
-      setLogin(true)
+      setAuth({ login: true, accessToken: body.accessToken })
       return body
     }
-    setAccessToken('')
     logout()
     return { accessToken: '', user: null }
   }
 
   const getAccessToken = async () => {
     try {
-      const decoded = jwt_decode<JwtPayload>(accessToken)
+      const decoded = jwt_decode<JwtPayload>(auth.accessToken)
       if (decoded.exp - 10 * 1000 <= Math.floor(Date.now() / 1000)) {
         const res = await refreshToken()
+        setAuth((current) => {
+          return { ...current, accessToken: res.accessToken }
+        })
         return { accessToken: res.accessToken, user: res.user }
       }
       const user = (decoded as any).user as AccessToken['user']
-      setLogin(true)
-      return { accessToken, user }
+      setAuth((current) => {
+        return { ...current, login: true }
+      })
+      return { accessToken: auth.accessToken, user }
     } catch (e) {
       return { accessToken: '', user: null }
     }
   }
 
   return {
-    state: {
-      login
-    },
-    login: () => setLogin(true),
+    login: () => setAuth((current) => ({ ...current, login: true })),
     logout,
     getAccessToken,
     refreshToken

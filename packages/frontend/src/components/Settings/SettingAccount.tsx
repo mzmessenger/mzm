@@ -2,7 +2,8 @@ import React, { useState, useCallback } from 'react'
 import styled from '@emotion/styled'
 import { isValidAccount } from 'mzm-shared/validator'
 import { WIDTH_MOBILE } from '../../lib/constants'
-import { useUser, useDispatchUser } from '../../contexts/user/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
+import { useUser, useUserIdAndAccount } from '../../recoil/user/hooks'
 import { Button } from '../atoms/Button'
 import { InputText, Props as InputTextProps } from '../atoms/InputText'
 import { DropImage } from '../atoms/DropImage'
@@ -12,29 +13,30 @@ import { ModalIcon } from '../atoms/ModalIcon'
 const ERROR_TXT = '利用できない文字が含まれるか、すでに存在するアカウントです。'
 
 export const SettingAccount = () => {
-  const { me } = useUser()
-  const { uploadIcon, updateUser } = useDispatchUser()
+  const { userId, userAccount, userIconUrl } = useUserIdAndAccount()
+  const { getAccessToken } = useAuth()
+  const { uploadIcon, updateUser } = useUser({ getAccessToken })
   const [open, setOpen] = useState(false)
   const [image, setImage] = useState('')
   const [edit, setEdit] = useState(false)
-  const [accountText, setAccountText] = useState(me.account ?? '')
+  const [accountText, setAccountText] = useState(userAccount ?? '')
   const [accountErrorText, setAccountErrorText] = useState('')
 
   const onSave = useCallback(() => {
     setEdit(false)
-    if (me.account !== accountText) {
+    if (userAccount !== accountText) {
       updateUser(accountText).then((res) => {
         if (res.status === 400) {
           setAccountErrorText(ERROR_TXT)
         }
       })
     }
-  }, [accountText, me.account, updateUser])
+  }, [accountText, userAccount, updateUser])
 
   const onCancel = useCallback(() => {
     setEdit(false)
-    setAccountText(me.account ?? '')
-  }, [me.account])
+    setAccountText(userAccount ?? '')
+  }, [userAccount])
 
   const onModalSave = useCallback(
     (image: Blob) => {
@@ -79,12 +81,12 @@ export const SettingAccount = () => {
     <Wrap>
       <div className="icon">
         {edit && <DropImage onloadFile={onloadFile} />}
-        {!edit && <img src={me.iconUrl} />}
+        {!edit && <img src={userIconUrl} />}
       </div>
       <ul className="info">
         <li>
           <h4>ユーザーID</h4>
-          <span>{me.id}</span>
+          <span>{userId}</span>
         </li>
         <li>
           <h4>ユーザー名</h4>

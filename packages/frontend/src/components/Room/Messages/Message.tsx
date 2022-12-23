@@ -8,9 +8,10 @@ import { MessageHeader } from './MessageHeader'
 
 type Props = {
   id: string
+  className: string
 }
 
-export const MessageElement: React.FC<Props> = (props) => {
+const MessageElementInner: React.FC<Props> = (props) => {
   const {
     message,
     iine,
@@ -52,7 +53,7 @@ export const MessageElement: React.FC<Props> = (props) => {
   }, [iine])
 
   const className = useMemo(() => {
-    const classNames = []
+    const classNames = [props.className]
     if (replied) {
       classNames.push('replied')
     }
@@ -64,7 +65,7 @@ export const MessageElement: React.FC<Props> = (props) => {
     }
 
     return classNames.join(' ')
-  }, [replied, iine, iineAction])
+  }, [props.className, replied, iine, iineAction])
 
   return (
     <MessageWrap className={className}>
@@ -95,6 +96,8 @@ export const MessageElement: React.FC<Props> = (props) => {
     </MessageWrap>
   )
 }
+
+export const MessageElement = React.memo(MessageElementInner)
 
 const MessageWrap = styled.div`
   --icon-size: 32px;

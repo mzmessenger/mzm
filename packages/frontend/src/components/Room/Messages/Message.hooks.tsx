@@ -1,24 +1,16 @@
 import { useRef, useEffect, useMemo, useCallback } from 'react'
 import dayjs from 'dayjs'
-import { useMessages } from '../../../contexts/messages/hooks'
-import { useUser } from '../../../contexts/user/hooks'
-import { useDispatchPostTextArea } from '../../../contexts/postTextArea/hooks'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
+import { useMessageById } from '../../../recoil/messages/hooks'
+import { useUserAccount } from '../../../recoil/user/hooks'
+import { usePostTextArea } from '../../../recoil/postTextArea/hooks'
+import { useSocketActions } from '../../../recoil/socket/hooks'
 import { isReplied } from '../../../lib/util'
 
 export const useMessage = (id: string) => {
-  const { me } = useUser()
-  const {
-    messages: {
-      byId: { [id]: messageObj }
-    }
-  } = useMessages()
-  const { startToEdit } = useDispatchPostTextArea()
-  const { incrementIine, sendDeleteMessage } = useDispatchSocket()
-
-  const myAccount = useMemo(() => {
-    return me?.account ?? ''
-  }, [me])
+  const { userAccount } = useUserAccount()
+  const messageObj = useMessageById(id)
+  const { startToEdit } = usePostTextArea()
+  const { incrementIine, sendDeleteMessage } = useSocketActions()
 
   const {
     message,
@@ -58,7 +50,7 @@ export const useMessage = (id: string) => {
     )
     const account = messageObj.userAccount ?? ''
 
-    const replied = isReplied(myAccount, messageObj.message)
+    const replied = isReplied(userAccount, messageObj.message)
 
     return {
       ...messageObj,
@@ -66,7 +58,7 @@ export const useMessage = (id: string) => {
       account,
       replied
     }
-  }, [messageObj, myAccount])
+  }, [messageObj, userAccount])
 
   const iineHandler = useCallback(() => {
     incrementIine(id)
@@ -82,7 +74,7 @@ export const useMessage = (id: string) => {
 
   const prevIineRef = useRef<number>()
   useEffect(() => {
-    prevIineRef.current = messageObj.iine ?? undefined
+    prevIineRef.current = messageObj?.iine ?? undefined
   })
 
   return {

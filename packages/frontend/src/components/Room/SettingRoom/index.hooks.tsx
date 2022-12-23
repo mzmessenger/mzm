@@ -1,17 +1,19 @@
 import { useState, useMemo, useCallback } from 'react'
-import { useRooms, useDispatchRooms } from '../../../contexts/rooms/hooks'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
+import {
+  useRoomActions,
+  useCurrentRoom,
+  useRoomById
+} from '../../../recoil/rooms/hooks'
+import { useSocketActions } from '../../../recoil/socket/hooks'
+import { useAuth } from '../../../recoil/auth/hooks'
 import { Props as RoomInfoProps } from './RoomInfo'
 
 export const useSettiongRooms = () => {
-  const {
-    currentRoomId,
-    currentRoomName,
-    rooms: { byId }
-  } = useRooms()
-  const { exitRoom, uploadIcon } = useDispatchRooms()
-  const { getRooms, updateRoomDescription } = useDispatchSocket()
-  const room = byId[currentRoomId]
+  const { currentRoomId, currentRoomName } = useCurrentRoom()
+  const { getAccessToken } = useAuth()
+  const { getRooms, updateRoomDescription } = useSocketActions()
+  const { exitRoom, uploadIcon } = useRoomActions({ getAccessToken, getRooms })
+  const room = useRoomById(currentRoomId)
   const [image, setImage] = useState('')
   const [open, setOpen] = useState(false)
   const [edit, setEdit] = useState(false)
@@ -28,8 +30,8 @@ export const useSettiongRooms = () => {
   }, [room])
 
   const onExit = useCallback(() => {
-    exitRoom(currentRoomId, getRooms)
-  }, [exitRoom, currentRoomId, getRooms])
+    exitRoom(currentRoomId)
+  }, [exitRoom, currentRoomId])
 
   const onLoadFile = (file: string) => {
     setImage(file)

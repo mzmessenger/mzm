@@ -1,26 +1,19 @@
-import React, { useMemo } from 'react'
+import React, { useCallback } from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
-import { useUi, useDispatchUi } from '../../contexts/ui/hooks'
-import { useUser } from '../../contexts/user/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
+import { useUserIdAndAccount } from '../../recoil/user/hooks'
 
 export const MyInfo = () => {
-  const { me } = useUser()
-  const { isOpenSettings } = useUi()
-  const { closeSettings, openSettings } = useDispatchUi()
-  const icon = useMemo(() => {
-    return me ? me.iconUrl : null
-  }, [me])
+  const { userAccount, userIconUrl } = useUserIdAndAccount()
+  const { toggleSettings } = useUiActions()
 
-  const clickSettings = () => {
-    if (isOpenSettings) {
-      closeSettings()
-    } else {
-      openSettings()
-    }
-  }
+  const clickSettings = useCallback(() => {
+    toggleSettings()
+  }, [toggleSettings])
 
-  const m = me ? me.account : ''
+  const icon = userIconUrl ? userIconUrl : null
+  const m = userAccount ? userAccount : ''
 
   return (
     <Wrap>

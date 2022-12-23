@@ -1,16 +1,24 @@
 import React, { lazy, Suspense } from 'react'
-import { useUi } from '../contexts/ui/hooks'
-import { Menu } from '../components/Menu'
+import { useSettingsUi } from '../recoil/ui/hooks'
+import { useLoginFlag } from '../recoil/auth/hooks'
+import { Menu, Rooms } from '../components/Menu'
 import { RoomContent } from '../components/Room'
-import { PageWrapper } from '../components/PageWrapper'
+import { PageWrapper, Header } from '../components/PageWrapper'
 import { ModalUserProfile } from '../components/ModalUserProfile'
+import Login from './Login'
 
 const PageRoom = () => {
-  const { isOpenSettings } = useUi()
+  const login = useLoginFlag()
+  const { isOpenSettings } = useSettingsUi()
+
+  if (!login) {
+    return <Login />
+  }
+
   const Settings = lazy(() => import('../components/Settings'))
 
   return (
-    <PageWrapper>
+    <PageWrapper header={<Header />}>
       {isOpenSettings ? (
         <Suspense>
           <Settings />
@@ -18,7 +26,7 @@ const PageRoom = () => {
       ) : (
         <>
           <RoomContent />
-          <Menu />
+          <Menu rooms={<Rooms />} />
         </>
       )}
       <ModalUserProfile />

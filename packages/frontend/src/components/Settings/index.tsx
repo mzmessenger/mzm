@@ -2,11 +2,11 @@ import React from 'react'
 import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
 import { WIDTH_MOBILE } from '../../lib/constants'
-import { useDispatchUi } from '../../contexts/ui/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
 import { SettingUser } from './SettingUser'
 
 const Settings = () => {
-  const { closeSettings } = useDispatchUi()
+  const { closeSettings } = useUiActions()
   const onClose = () => {
     closeSettings()
   }

@@ -1,32 +1,40 @@
-import React, { useEffect, useState, useMemo, useCallback } from 'react'
+import React, { useEffect, useState } from 'react'
 import styled from '@emotion/styled'
 import { Home, Person, ExpandMore } from '@mui/icons-material'
-import { useDispatchUi } from '../../contexts/ui/hooks'
-import { useRooms, useDispatchRooms } from '../../contexts/rooms/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
+import {
+  useRoomUserActions,
+  useRoomSettingActions,
+  useGetUsersById,
+  useOpenRoomSettingFlag,
+  useCurrentRoom
+} from '../../recoil/rooms/hooks'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import { ModalUsersList } from './ModalUsersList'
 
-const RoomIcon = ({ iconUrl }: { iconUrl: string }) => {
+const RoomIcon = React.memo(({ iconUrl }: { iconUrl: string }) => {
   return iconUrl ? <img src={iconUrl} /> : <Home fontSize="small" />
-}
+})
 
 export const RoomInfo = () => {
+  const openRoomSetting = useOpenRoomSettingFlag()
   const {
     currentRoomId,
     currentRoomName,
     currentRoomDescription,
-    currentRoomIcon,
-    openRoomSetting,
-    users: { byId }
-  } = useRooms()
-  const { getUsers, toggleRoomSetting } = useDispatchRooms()
-  const { openUserDetail } = useDispatchUi()
+    currentRoomIcon
+  } = useCurrentRoom()
+  const { getAccessToken } = useAuth()
+  const { toggleRoomSetting } = useRoomSettingActions()
+  const { getUsers } = useRoomUserActions({ getAccessToken })
+  const { openUserDetail } = useUiActions()
   const [open, setOpen] = useState(false)
-  const description = useMemo(() => {
-    return currentRoomDescription ? currentRoomDescription.substring(0, 20) : ''
-  }, [currentRoomDescription])
+  const users = useGetUsersById(currentRoomId)
 
-  const users = byId[currentRoomId]
+  const description = currentRoomDescription
+    ? currentRoomDescription.substring(0, 20)
+    : ''
   const name = currentRoomName || ''
 
   useEffect(() => {
@@ -49,14 +57,6 @@ export const RoomInfo = () => {
     expandClassName.push('expand')
   }
 
-  const onExpandClick = () => {
-    toggleRoomSetting()
-  }
-
-  const onClose = useCallback(() => {
-    setOpen(false)
-  }, [setOpen])
-
   return (
     <Wrap>
       <div className="room-icon">
@@ -73,10 +73,19 @@ export const RoomInfo = () => {
         </div>
         <div className="users">{userIcons}</div>
       </div>
-      <div className={expandClassName.join(' ')} onClick={onExpandClick}>
+      <div
+        className={expandClassName.join(' ')}
+        onClick={() => toggleRoomSetting()}
+      >
         <ExpandMore className="icon" />
       </div>
-      <ModalUsersList open={open} onClose={onClose} roomId={currentRoomId} />
+      {open && (
+        <ModalUsersList
+          open={open}
+          onClose={() => setOpen(false)}
+          roomId={currentRoomId}
+        />
+      )}
     </Wrap>
   )
 }

@@ -2,20 +2,20 @@ import React from 'react'
 import { registerSW } from 'virtual:pwa-register'
 import { createRoot } from 'react-dom/client'
 import { BrowserRouter } from 'react-router-dom'
+import { RecoilRoot } from 'recoil'
 import 'normalize.css'
 import 'highlight.js/styles/base16/onedark.css'
 import './index.css'
-import { Provider as ContextProvider } from './contexts'
 import App from './App'
 
 const root = createRoot(document.getElementById('root'))
 
 root.render(
-  <BrowserRouter>
-    <ContextProvider>
+  <RecoilRoot>
+    <BrowserRouter>
       <App />
-    </ContextProvider>
-  </BrowserRouter>
+    </BrowserRouter>
+  </RecoilRoot>
 )
 
 const updateSW = registerSW({

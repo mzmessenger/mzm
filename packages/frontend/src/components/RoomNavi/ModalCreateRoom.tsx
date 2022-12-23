@@ -1,8 +1,9 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from '@emotion/styled'
-import { useDispatchRooms } from '../../contexts/rooms/hooks'
-import { useDispatchSocket } from '../../contexts/socket/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
+import { useRoomActions } from '../../recoil/rooms/hooks'
+import { useSocketActions } from '../../recoil/socket/hooks'
 import { Button } from '../atoms/Button'
 import { TransparentButton } from '../atoms/Button'
 import { ModalProps, ModalBase } from '../atoms/Modal'
@@ -14,13 +15,14 @@ export const ModalCraeteRoom = ({ open, onClose }: Props) => {
   const navigate = useNavigate()
   const [txt, setTxt] = useState('')
   const [error, setErrorTxt] = useState('')
-  const { getRooms } = useDispatchSocket()
-  const { createRoom } = useDispatchRooms()
+  const { getAccessToken } = useAuth()
+  const { getRooms } = useSocketActions()
+  const { createRoom } = useRoomActions({ getAccessToken, getRooms })
 
   const handleSubmit = (evt) => {
     evt.preventDefault()
     // @todo エラー時の処理
-    createRoom(txt, getRooms)
+    createRoom(txt)
       .then((data) => {
         if (data.status === 200) {
           onClose()

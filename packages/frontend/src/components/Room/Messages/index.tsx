@@ -1,22 +1,26 @@
 import React, { useRef, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
-import { useRooms } from '../../../contexts/rooms/hooks'
+import { useSocketActions } from '../../../recoil/socket/hooks'
+import {
+  useRooms,
+  useCurrentRoom,
+  useRoomById
+} from '../../../recoil/rooms/hooks'
 import { useIntersectionObserver } from '../../../lib/hooks/useIntersectionObserver'
 import { MessageElement } from './Message'
 
-export const Messages = ({ className }) => {
-  const {
-    currentRoomId,
-    rooms: {
-      byId: { [currentRoomId]: currentRoom }
-    },
-    scrollTargetIndex
-  } = useRooms()
+type Props = {
+  className: string
+}
+
+export const Messages: React.FC<Props> = ({ className }) => {
+  const { currentRoomId } = useCurrentRoom()
+  const { scrollTargetIndex } = useRooms()
+  const currentRoom = useRoomById(currentRoomId)
   const wrapRef = useRef<HTMLDivElement>(null)
   const bottomRef = useRef<HTMLDivElement>(null)
   const timerRef = useRef(0)
-  const { getHistory } = useDispatchSocket()
+  const { getHistory } = useSocketActions()
 
   const [intersectionRef, isIntersecting] = useIntersectionObserver()
 
@@ -27,14 +31,6 @@ export const Messages = ({ className }) => {
   const existHistoryFlg = useMemo(() => {
     return messages.length > 0 && currentRoom?.existHistory
   }, [currentRoom?.existHistory, messages.length])
-
-  const messageElements = messages.map((m) => {
-    return (
-      <div className="message" key={m}>
-        <MessageElement id={m} />
-      </div>
-    )
-  })
 
   useEffect(() => {
     if (!scrollTargetIndex) {
@@ -65,11 +61,15 @@ export const Messages = ({ className }) => {
   }, [messages, currentRoomId, getHistory, isIntersecting, existHistoryFlg])
 
   return (
-    <Wrap ref={wrapRef} className={className}>
+    <Wrap className={className}>
       {messages.length > 0 && (
         <div ref={intersectionRef} style={{ visibility: 'hidden' }} />
       )}
-      {messageElements}
+      <div ref={wrapRef}>
+        {messages.map((m) => (
+          <MessageElement className="message" id={m} key={m} />
+        ))}
+      </div>
       <div ref={bottomRef} style={{ visibility: 'hidden' }} />
     </Wrap>
   )

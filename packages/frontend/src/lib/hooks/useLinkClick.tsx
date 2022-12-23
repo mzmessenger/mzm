@@ -1,16 +1,20 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { useDispatchRooms } from '../../contexts/rooms/hooks'
-import { useDispatchSocket } from '../../contexts/socket/hooks'
-import { useDispatchUi } from '../../contexts/ui/hooks'
+import { useEnterRoomActions } from '../../recoil/rooms/hooks'
+import { useSocketActions } from '../../recoil/socket/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
 import { getRoomName } from '../util'
 
 export const useLinkClick = () => {
   const ref = useRef<HTMLDivElement>(null)
   const navigate = useNavigate()
-  const { enterRoom } = useDispatchRooms()
-  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
-  const { closeMenu } = useDispatchUi()
+  const { getMessages, enterRoom: enterRoomSocket } = useSocketActions()
+  const { closeMenu } = useUiActions()
+  const { enterRoom } = useEnterRoomActions({
+    getMessages,
+    closeMenu,
+    enterRoomSocket
+  })
 
   useEffect(() => {
     if (!ref.current) {
@@ -22,7 +26,7 @@ export const useLinkClick = () => {
       if (url.host === window.location.host) {
         navigate(url.pathname)
         const roomName = getRoomName(url.pathname)
-        enterRoom(roomName, getMessages, enterRoomSocket, closeMenu)
+        enterRoom(roomName)
       } else {
         window.open(url.href, '_blank')
       }

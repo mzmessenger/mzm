@@ -1,4 +1,4 @@
-import React, { useMemo } from 'react'
+import React from 'react'
 import styled from '@emotion/styled'
 import {
   Create as CreateIcon,
@@ -6,8 +6,8 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material'
 import { IconButton } from '../../atoms/Button'
-import { useDispatchUi } from '../../../contexts/ui/hooks'
-import { useUser } from '../../../contexts/user/hooks'
+import { useUiActions } from '../../../recoil/ui/hooks'
+import { useUserAccount } from '../../../recoil/user/hooks'
 
 type Props = {
   id: string
@@ -28,10 +28,7 @@ const Actions: React.FC<{
   deleteHandler: Props['deleteHandler']
   startEditHandler: Props['startEditHandler']
 }> = (props) => {
-  const { me } = useUser()
-  const myAccount = useMemo(() => {
-    return me?.account ?? ''
-  }, [me])
+  const { userAccount } = useUserAccount()
 
   return (
     <>
@@ -41,7 +38,7 @@ const Actions: React.FC<{
       </IconButton>
       <div className="actions">
         <div className="icon">
-          {myAccount === props.account && (
+          {userAccount === props.account && (
             <>
               <IconButton className="icon" onClick={props.deleteHandler}>
                 <DeleteIcon className="thumbup" />
@@ -57,8 +54,8 @@ const Actions: React.FC<{
   )
 }
 
-export const MessageHeader: React.FC<Props> = (props) => {
-  const { openUserDetail } = useDispatchUi()
+const MessageHeaderInner: React.FC<Props> = (props) => {
+  const { openUserDetail } = useUiActions()
 
   const clickAccount = () => {
     openUserDetail(props.id, props.account, props.icon)
@@ -83,6 +80,8 @@ export const MessageHeader: React.FC<Props> = (props) => {
     </Wrap>
   )
 }
+
+export const MessageHeader = React.memo(MessageHeaderInner)
 
 const Wrap = styled.div`
   grid-area: message-header;

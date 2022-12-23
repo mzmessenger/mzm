@@ -4,12 +4,9 @@ import Add from '@mui/icons-material/Add'
 import SendIcon from '@mui/icons-material/Send'
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined'
 import { WIDTH_MOBILE } from '../../../lib/constants'
-import { useRooms } from '../../../contexts/rooms/hooks'
-import { useDispatchSocket } from '../../../contexts/socket/hooks'
-import {
-  usePostTextArea,
-  useDispatchPostTextArea
-} from '../../../contexts/postTextArea/hooks'
+import { useCurrentRoom } from '../../../recoil/rooms/hooks'
+import { useSocketActions } from '../../../recoil/socket/hooks'
+import { usePostTextArea } from '../../../recoil/postTextArea/hooks'
 import { Button } from '../../atoms/Button'
 import { ResizerY } from '../../atoms/ResizerY'
 import { TextArea } from '../../atoms/TextArea'
@@ -19,9 +16,13 @@ import { useNumberLocalStorage } from '../../../lib/hooks/useLocalStorage'
 const HEIGHT_KEY = 'mzm:input:height'
 
 export const InputArea = () => {
-  const { currentRoomId } = useRooms()
-  const { txt, editTxt, editId, inputMode } = usePostTextArea()
-  const { inputMessage, endToEdit, modifyMessage } = useDispatchPostTextArea()
+  const { currentRoomId } = useCurrentRoom()
+  const {
+    postTextArea: { txt, editTxt, editId, inputMode },
+    inputMessage,
+    endToEdit,
+    modifyMessage
+  } = usePostTextArea()
   const [rows, setRows] = useState(
     inputMode === 'normal' ? txt.split('\n').length : editTxt.split('\n').length
   )
@@ -29,7 +30,7 @@ export const InputArea = () => {
   const [height, setHeight] = useNumberLocalStorage(HEIGHT_KEY, 68)
   const [showVote, setShowVote] = useState(false)
 
-  const { sendMessage, sendModifyMessage } = useDispatchSocket()
+  const { sendMessage, sendModifyMessage } = useSocketActions()
 
   useEffect(() => {
     if (inputMode === 'edit') {
@@ -129,6 +130,7 @@ const Wrap = styled.div`
   flex-direction: column;
   padding: 0 15px;
   color: var(--color-on-background);
+  border-top: 1px solid var(--color-border);
 
   .form-wrap {
     padding: 10px 0;

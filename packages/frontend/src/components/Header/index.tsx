@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useDispatchUi } from '../../contexts/ui/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
 import { WIDTH_MOBILE } from '../../lib/constants'
 import { Link } from '../atoms/Link'
 import { MobileMenuIcon } from '../atoms/MobileMenuIcon'
@@ -10,8 +10,8 @@ type Props = {
   style?: React.CSSProperties
 }
 
-export const Header: React.FC<Props> = ({ style }) => {
-  const { openMenu } = useDispatchUi()
+const HeaderInner: React.FC<Props> = ({ style }) => {
+  const { openMenu } = useUiActions()
 
   const onClick = () => openMenu()
 
@@ -28,6 +28,8 @@ export const Header: React.FC<Props> = ({ style }) => {
     </Wrap>
   )
 }
+
+export const Header = React.memo(HeaderInner)
 
 const Wrap = styled.header`
   height: var(--header-height);

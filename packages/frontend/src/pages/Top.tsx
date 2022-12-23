@@ -1,17 +1,23 @@
 import React, { lazy, Suspense } from 'react'
-import { useUi } from '../contexts/ui/hooks'
-import { Menu } from '../components/Menu'
-import { PageWrapper } from '../components/PageWrapper'
+import { useSettingsUi } from '../recoil/ui/hooks'
+import { useLoginFlag } from '../recoil/auth/hooks'
+import { Menu, Rooms } from '../components/Menu'
+import { PageWrapper, Header } from '../components/PageWrapper'
 import { TopContent } from '../components/TopContent'
-// import Settings from '../components/Settings'
+import Login from './Login'
 
 const Top = () => {
-  const { isOpenSettings } = useUi()
+  const login = useLoginFlag()
+  const { isOpenSettings } = useSettingsUi()
+
+  if (!login) {
+    return <Login />
+  }
 
   const Settings = lazy(() => import('../components/Settings'))
 
   return (
-    <PageWrapper>
+    <PageWrapper header={<Header />}>
       {isOpenSettings ? (
         <Suspense>
           <Settings />
@@ -19,7 +25,7 @@ const Top = () => {
       ) : (
         <>
           <TopContent />
-          <Menu />
+          <Menu rooms={<Rooms />} />
         </>
       )}
     </PageWrapper>

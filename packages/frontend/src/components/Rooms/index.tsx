@@ -1,30 +1,42 @@
+import type { Room } from '../../recoil/rooms/types'
 import React, { useCallback } from 'react'
 import styled from '@emotion/styled'
 import { useNavigate } from 'react-router-dom'
-import { useRooms, useDispatchRooms } from '../../contexts/rooms/hooks'
-import { Room } from '../../contexts/rooms/constants'
-import { useDispatchSocket } from '../../contexts/socket/hooks'
-import { useDispatchUi } from '../../contexts/ui/hooks'
+import {
+  useChangeRoomActions,
+  useChangeRoomOrderActions,
+  useCurrentRoom,
+  useRoomsAllIds
+} from '../../recoil/rooms/hooks'
+import { useSocketActions } from '../../recoil/socket/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
 import { DropZone } from './DropZone'
 
 export const Rooms = () => {
   const navigate = useNavigate()
-  const {
-    rooms: { allIds, byId },
-    currentRoomId
-  } = useRooms()
-  const { changeRoom, changeRoomOrder } = useDispatchRooms()
-  const { sortRoom, getMessages, readMessages } = useDispatchSocket()
-  const { closeMenu } = useDispatchUi()
+  const roomsAllIds = useRoomsAllIds()
+  const { currentRoomId } = useCurrentRoom()
+  const { sortRoom, getMessages, readMessages } = useSocketActions()
+  const { closeMenu } = useUiActions()
+  const { changeRoom } = useChangeRoomActions({
+    getMessages,
+    closeMenu
+  })
+  const { changeRoomOrder } = useChangeRoomOrderActions({
+    sortRoom
+  })
 
   const onClick = useCallback(
     (e: React.MouseEvent, room: Room) => {
       e.preventDefault()
+      if (room.id === currentRoomId) {
+        return
+      }
       navigate(`/rooms/${room.name}`)
-      changeRoom(room.id, getMessages, closeMenu)
+      changeRoom(room.id)
       readMessages(room.id)
     },
-    [changeRoom, closeMenu, getMessages, navigate, readMessages]
+    [changeRoom, currentRoomId, navigate, readMessages]
   )
 
   const onDrop = useCallback(
@@ -33,32 +45,34 @@ export const Rooms = () => {
 
       const moveId = e.dataTransfer.getData('text')
       const roomOrder = [
-        ...allIds.filter((e, i) => i !== allIds.indexOf(moveId))
+        ...roomsAllIds.filter((e, i) => i !== roomsAllIds.indexOf(moveId))
       ]
       roomOrder.splice(
-        allIds.indexOf(e.currentTarget.getAttribute('attr-room-id')),
+        roomsAllIds.indexOf(e.currentTarget.getAttribute('attr-room-id')),
         0,
         moveId
       )
 
-      changeRoomOrder(roomOrder, sortRoom)
+      changeRoomOrder(roomOrder)
 
       e.dataTransfer.clearData()
     },
-    [allIds, changeRoomOrder, sortRoom]
+    [roomsAllIds, changeRoomOrder]
   )
 
   return (
     <Wrap className="scroll-styled-y">
-      {allIds.map((r) => (
-        <DropZone
-          key={r}
-          room={byId[r]}
-          currentRoomId={currentRoomId}
-          onDrop={onDrop}
-          onClick={onClick}
-        />
-      ))}
+      {roomsAllIds.map((r) => {
+        return (
+          <DropZone
+            key={r}
+            roomId={r}
+            currentRoomId={currentRoomId}
+            onDrop={onDrop}
+            onClick={onClick}
+          />
+        )
+      })}
     </Wrap>
   )
 }

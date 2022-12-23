@@ -1,11 +1,11 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import SearchIcon from '@mui/icons-material/Search'
-import { useDispatchSearch } from '../../contexts/search/hooks'
+import { useSearch } from '../../recoil/search/hooks'
 import { SearchModal } from './SearchModal'
 
 export const SearchInput = () => {
-  const { open } = useDispatchSearch()
+  const { open } = useSearch()
 
   return (
     <Wrap>

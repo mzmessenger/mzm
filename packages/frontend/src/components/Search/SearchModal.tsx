@@ -1,17 +1,20 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import { Search, Close } from '@mui/icons-material'
-import { useSearch, useDispatchSearch } from '../../contexts/search/hooks'
+import { useSearch } from '../../recoil/search/hooks'
 import { ModalBase } from '../atoms/Modal'
 import { IconButton } from '../atoms/Button'
 import { SearchResult } from './SearchResults'
 
 export const SearchModal: React.FC = () => {
-  const { showModal, query } = useSearch()
-  const { search, cancel } = useDispatchSearch()
+  const {
+    search: { showModal, query },
+    execSearch,
+    cancel
+  } = useSearch()
 
   const onChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    search(e.target.value)
+    execSearch(e.target.value)
   }
 
   return (

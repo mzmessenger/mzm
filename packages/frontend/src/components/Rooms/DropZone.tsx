@@ -1,20 +1,22 @@
+import type { Room } from '../../recoil/rooms/types'
 import React, { useState } from 'react'
-import { Room } from '../../contexts/rooms/constants'
+import { useRoomById } from '../../recoil/rooms/hooks'
 import { RoomElem } from './RoomElem'
 
 type Props = {
-  room: Room
+  roomId: string
   currentRoomId: string
   onDrop: (e: React.DragEvent) => void
   onClick: (e: React.MouseEvent, room: Room) => void
 }
 
-export const DropZone: React.FC<Props> = ({
-  room,
+const DropZoneInner: React.FC<Props> = ({
+  roomId,
   currentRoomId,
   onDrop,
   onClick
 }) => {
+  const room = useRoomById(roomId)
   const [isOver, setIsOver] = useState(false)
 
   const onDropWrap = (e: React.DragEvent) => {
@@ -57,3 +59,4 @@ export const DropZone: React.FC<Props> = ({
     </div>
   )
 }
+export const DropZone = React.memo(DropZoneInner)

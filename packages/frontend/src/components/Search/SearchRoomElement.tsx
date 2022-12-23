@@ -2,10 +2,10 @@ import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from '@emotion/styled'
 import { Home, Forward } from '@mui/icons-material'
-import { useDispatchRooms } from '../../contexts/rooms/hooks'
-import { useDispatchSocket } from '../../contexts/socket/hooks'
-import { useDispatchUi } from '../../contexts/ui/hooks'
-import { useDispatchSearch } from '../../contexts/search/hooks'
+import { useEnterRoomActions } from '../../recoil/rooms/hooks'
+import { useSocketActions } from '../../recoil/socket/hooks'
+import { useUiActions } from '../../recoil/ui/hooks'
+import { useSearch } from '../../recoil/search/hooks'
 import { IconButton } from '../atoms/Button'
 
 export const SearchRoomElement: React.FC<{
@@ -14,17 +14,21 @@ export const SearchRoomElement: React.FC<{
   description?: string
 }> = (props) => {
   const navigate = useNavigate()
-  const { enterRoom } = useDispatchRooms()
-  const { getMessages, enterRoom: enterRoomSocket } = useDispatchSocket()
-  const { cancel } = useDispatchSearch()
-  const { closeMenu } = useDispatchUi()
+  const { getMessages, enterRoom: enterRoomSocket } = useSocketActions()
+  const { cancel } = useSearch()
+  const { closeMenu } = useUiActions()
+  const { enterRoom } = useEnterRoomActions({
+    getMessages,
+    closeMenu,
+    enterRoomSocket
+  })
 
   const description = useMemo(() => {
     return props.description ? props.description.substring(0, 40) : ''
   }, [props.description])
 
   const onClick = () => {
-    enterRoom(props.name, getMessages, enterRoomSocket, closeMenu).then(() => {
+    enterRoom(props.name).then(() => {
       navigate(`/rooms/${props.name}`)
       cancel()
     })

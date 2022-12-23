@@ -2,19 +2,17 @@ import React, { useRef, useState, useEffect } from 'react'
 import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
 import { ModalProps, ModalBase } from '../atoms/Modal'
-import { useRooms, useDispatchRooms } from '../../contexts/rooms/hooks'
+import { useAuth } from '../../recoil/auth/hooks'
+import { useRoomUserActions, useGetUsersById } from '../../recoil/rooms/hooks'
 import { useIntersectionObserver } from '../../lib/hooks/useIntersectionObserver'
 import { WIDTH_MOBILE } from '../../lib/constants'
 
 type Props = ModalProps & { roomId: string }
 
 export const ModalUsersList: React.FC<Props> = ({ open, onClose, roomId }) => {
-  const {
-    users: {
-      byId: { [roomId]: users }
-    }
-  } = useRooms()
-  const { getNextUsers } = useDispatchRooms()
+  const users = useGetUsersById(roomId)
+  const { getAccessToken } = useAuth()
+  const { getNextUsers } = useRoomUserActions({ getAccessToken })
   const [loading, setLoading] = useState(false)
   const listWrapRef = useRef<HTMLUListElement>(null)
 

@@ -1,18 +1,18 @@
-import React, { useCallback } from 'react'
+import React from 'react'
 import styled from '@emotion/styled'
 import Clear from '@mui/icons-material/Clear'
 import { ModalBase } from './atoms/Modal'
 import { IconButton } from './atoms/Button'
 import { WIDTH_MOBILE } from '../lib/constants'
-import { useUi, useDispatchUi } from '../contexts/ui/hooks'
+import { useUiActions, useUserDetailUi } from '../recoil/ui/hooks'
 
 export const ModalUserProfile: React.FC = () => {
-  const { userDetail, isOpenUserDetail } = useUi()
-  const { closeUserDetail } = useDispatchUi()
+  const { closeUserDetail } = useUiActions()
+  const { userDetail, isOpenUserDetail } = useUserDetailUi()
 
-  const onClose = useCallback(() => {
+  const onClose = () => {
     closeUserDetail()
-  }, [closeUserDetail])
+  }
 
   if (!isOpenUserDetail) {
     return <></>
