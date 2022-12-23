@@ -1,8 +1,9 @@
 import type { AccessToken } from 'mzm-shared/type/auth'
 import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
 import { COOKIES } from 'mzm-shared/auth/constants'
-import { atom, useRecoilState, selector, useRecoilValue } from 'recoil'
+import { atom, useRecoilState, useRecoilValue } from 'recoil'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
+import { logger } from '../../lib/logger'
 
 const createDefaultToken = () => {
   try {
@@ -17,30 +18,29 @@ const createDefaultToken = () => {
 }
 const defaultToken = createDefaultToken()
 
+const loginState = atom({
+  key: 'state:auth:loginFlag',
+  default: false
+})
+
 const authState = atom({
   key: 'state:auth',
   default: {
-    login: false,
     accessToken: defaultToken
   }
 })
 
-const loginState = selector({
-  key: 'state:auth:selector:login',
-  get: ({ get }) => {
-    const { login } = get(authState)
-    return login
-  }
-})
 export const useLoginFlag = () => useRecoilValue(loginState)
 
 export const useAuth = () => {
+  const [loginFlag, setLoginFlag] = useRecoilState(loginState)
   const [auth, setAuth] = useRecoilState(authState)
 
   const logout = () => {
-    if (auth.login) {
+    if (loginFlag) {
       location.href = '/auth/logout'
-      setAuth({ login: false, accessToken: '' })
+      setAuth({ accessToken: '' })
+      setLoginFlag(false)
     }
   }
 
@@ -53,7 +53,8 @@ export const useAuth = () => {
     })
     if (res.status === 200) {
       const body = (await res.json()) as ResponseType[200]
-      setAuth({ login: true, accessToken: body.accessToken })
+      setAuth({ accessToken: body.accessToken })
+      setLoginFlag(true)
       return body
     }
     logout()
@@ -61,26 +62,32 @@ export const useAuth = () => {
   }
 
   const getAccessToken = async () => {
+    if (!auth.accessToken) {
+      return { accessToken: '', user: null }
+    }
     try {
       const decoded = jwt_decode<JwtPayload & AccessToken>(auth.accessToken)
       if (decoded.exp - 10 * 1000 <= Math.floor(Date.now() / 1000)) {
         const res = await refreshToken()
-        setAuth((current) => {
-          return { ...current, accessToken: res.accessToken }
-        })
+        setAuth({ accessToken: res.accessToken })
+        if (res.accessToken) {
+          setLoginFlag(true)
+        }
         return { accessToken: res.accessToken, user: res.user }
       }
-      setAuth((current) => {
-        return { ...current, login: true }
-      })
+      setLoginFlag(true)
       return { accessToken: auth.accessToken, user: decoded.user }
     } catch (e) {
+      logger.error(e)
       return { accessToken: '', user: null }
     }
   }
 
   return {
-    login: () => setAuth((current) => ({ ...current, login: true })),
+    loginFlag: loginFlag,
+    login: () => {
+      getAccessToken()
+    },
     logout,
     getAccessToken,
     refreshToken
