@@ -482,6 +482,10 @@ export const useSocket = ({
         return { ...current, connecting: true }
       })
       const { accessToken } = await getAccessToken()
+      if (!accessToken) {
+        logout()
+        return
+      }
       const socketInstance = new WebSocket(connectUrl + `?token=${accessToken}`)
 
       setSocket((current) => {
