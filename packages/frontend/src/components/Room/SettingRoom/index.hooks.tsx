@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import {
   useRoomActions,
   useCurrentRoom,
@@ -9,6 +10,7 @@ import { useAuth } from '../../../recoil/auth/hooks'
 import { Props as RoomInfoProps } from './RoomInfo'
 
 export const useSettiongRooms = () => {
+  const navigate = useNavigate()
   const { currentRoomId, currentRoomName } = useCurrentRoom()
   const { getAccessToken } = useAuth()
   const { getRooms, updateRoomDescription } = useSocketActions()
@@ -31,7 +33,8 @@ export const useSettiongRooms = () => {
 
   const onExit = useCallback(() => {
     exitRoom(currentRoomId)
-  }, [exitRoom, currentRoomId])
+    navigate('/')
+  }, [exitRoom, currentRoomId, navigate])
 
   const onLoadFile = (file: string) => {
     setImage(file)

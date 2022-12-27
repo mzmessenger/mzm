@@ -513,6 +513,7 @@ export const useRoomActions = ({
 }) => {
   const setCurrentRoom = useSetRecoilState(currentRoomState)
   const setRoomsById = useSetRecoilState(roomsByIdState)
+  const setOpenRoomSettingState = useSetRecoilState(openRoomSettingState)
 
   const createRoom = useCallback(
     async (name: string) => {
@@ -568,6 +569,8 @@ export const useRoomActions = ({
         },
         async (res) => {
           if (res.status === 200) {
+            setOpenRoomSettingState({ openRoomSetting: false })
+
             getRooms()
 
             setCurrentRoom({
@@ -581,7 +584,7 @@ export const useRoomActions = ({
         }
       )
     },
-    [getAccessToken, getRooms, setCurrentRoom]
+    [getAccessToken, getRooms, setCurrentRoom, setOpenRoomSettingState]
   )
 
   const uploadIcon = useCallback(
@@ -741,7 +744,7 @@ export const useRoomActionsForSocket = () => {
       }
 
       const allIds: string[] = []
-      const addRoomsById: RoomsById = {}
+      const updateRoomsById: RoomsById = {}
       for (const r of rooms) {
         if (!allIds.includes(r.id)) {
           allIds.push(r.id)
@@ -759,13 +762,13 @@ export const useRoomActionsForSocket = () => {
             existHistory: false,
             status: r.status
           }
-          addRoomsById[r.id] = room
+          updateRoomsById[r.id] = room
         }
       }
 
       allIds.sort((a, b) => roomsOrder.indexOf(a) - roomsOrder.indexOf(b))
 
-      setRoomsById((current) => ({ ...current, ...addRoomsById }))
+      setRoomsById(updateRoomsById)
       setRoomsAllIds(allIds)
       setRoomsOrder({ roomsOrder })
     },

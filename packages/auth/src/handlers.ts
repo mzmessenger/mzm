@@ -86,7 +86,7 @@ export const loginTwitter = async (
   twitterId: string,
   twitterUserName: string,
   // eslint-disable-next-line no-unused-vars
-  cb: (error: any, user?: SerializeUser) => void
+  cb: (error: unknown, user?: SerializeUser) => void
 ) => {
   try {
     const filter: { _id: ObjectId } | Pick<db.User, 'twitterId'> = req.user
@@ -135,7 +135,7 @@ export const loginGithub = async (
   githubId: string,
   githubUserName: string,
   // eslint-disable-next-line no-unused-vars
-  cb: (error: any, user?: SerializeUser) => void
+  cb: (error: unknown, user?: SerializeUser) => void
 ) => {
   try {
     const filter: { _id: ObjectId } | Pick<db.User, 'githubId'> = req.user

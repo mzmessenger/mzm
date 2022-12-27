@@ -25,7 +25,9 @@ afterAll(async () => {
 })
 
 beforeEach(async () => {
-  await dropCollection(mongoUri!, db.COLLECTION_NAMES.MESSAGES)
+  if (mongoUri) {
+    await dropCollection(mongoUri, db.COLLECTION_NAMES.MESSAGES)
+  }
 })
 
 test('saveMessage', async () => {

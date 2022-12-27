@@ -5,7 +5,7 @@ import Modal from '@mui/material/Modal'
 export type ModalProps = {
   open: boolean
   style?: React.CSSProperties
-  onClose: () => void
+  onClose?: () => void
 }
 
 export const ModalBase: React.FC<PropsWithChildren<ModalProps>> = ({

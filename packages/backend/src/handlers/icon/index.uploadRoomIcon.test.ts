@@ -11,7 +11,7 @@ vi.mock('../../lib/storage')
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
 import sizeOf from 'image-size'
-import { mongoSetup, createRequest } from '../../../test/testUtil'
+import { mongoSetup, createFileRequest } from '../../../test/testUtil'
 import * as db from '../../lib/db'
 import * as storage from '../../lib/storage'
 import * as config from '../../config'
@@ -47,7 +47,7 @@ test('uploadRoomIcon', async () => {
   })
 
   const putObjectMock = vi.mocked(storage.putObject)
-  putObjectMock.mockResolvedValueOnce({} as any)
+  putObjectMock.mockResolvedValueOnce({} as never)
 
   const sizeOfMock = vi.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
@@ -71,12 +71,12 @@ test('uploadRoomIcon', async () => {
     path: '/path/to/file'
   }
 
-  const req = createRequest(new ObjectId(), {
+  const req = createFileRequest(new ObjectId(), {
     file,
     params: { roomname: name }
   })
 
-  const res = await uploadRoomIcon(req as any)
+  const res = await uploadRoomIcon(req)
 
   const room = await db.collections.rooms.findOne({ _id: roomId })
 
@@ -100,13 +100,13 @@ test.each([['image/gif'], ['image/svg+xml']])(
       path: '/path/to/file'
     }
 
-    const req = createRequest(new ObjectId(), {
+    const req = createFileRequest(new ObjectId(), {
       file,
       params: { roomname: name }
     })
 
     try {
-      await uploadRoomIcon(req as any)
+      await uploadRoomIcon(req)
     } catch (e) {
       expect(e instanceof BadRequest).toStrictEqual(true)
     }
@@ -133,10 +133,10 @@ test('uploadRoomIcon: validation: size over ', async () => {
     })
   })
 
-  const req = createRequest(new ObjectId(), { file })
+  const req = createFileRequest(new ObjectId(), { file })
 
   try {
-    await uploadRoomIcon(req as any)
+    await uploadRoomIcon(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

@@ -38,7 +38,7 @@ test.each([
   [TO_SERVER_CMD.VOTE_ANSWER_SEND, sendVoteAnswer],
   [TO_SERVER_CMD.VOTE_ANSWER_REMOVE, removeVoteAnswer],
   [TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION, updateRoomDescription]
-])('socket %s', async (cmd, called: any) => {
+])('socket %s', async (cmd, called) => {
   const userId = new ObjectId()
   const body = { cmd }
   const req = createRequest(userId, { body })

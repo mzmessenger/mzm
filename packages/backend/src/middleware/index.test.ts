@@ -32,7 +32,7 @@ test('errorHandler (Internal Server Error)', async () => {
 
   const res = { status: vi.fn().mockReturnThis(), send }
 
-  await errorHandler(error, {}, res as any as Response, vi.fn())
+  await errorHandler(error, {}, res as unknown as Response, vi.fn())
 })
 
 test.each([
@@ -51,7 +51,7 @@ test.each([
 
   const res = { status: vi.fn().mockReturnThis(), send }
 
-  await errorHandler(error, {}, res as any as Response, vi.fn())
+  await errorHandler(error, {}, res as unknown as Response, vi.fn())
 })
 
 test('checkAccessToken (success)', async () => {
@@ -108,9 +108,9 @@ test('checkAccessToken no header', async () => {
   const res = { status: vi.fn().mockReturnThis(), send }
 
   await checkAccessToken(
-    req as any as Request,
-    res as any as Response,
-    vi.fn() as any as NextFunction
+    req as unknown as Request,
+    res as unknown as Response,
+    vi.fn() as unknown as NextFunction
   )
 })
 
@@ -140,8 +140,8 @@ test('checkAccessToken verify token error', async () => {
   const res = { status: vi.fn().mockReturnThis(), send }
 
   await checkAccessToken(
-    req as any as Request,
-    res as any as Response,
-    vi.fn() as any as NextFunction
+    req as unknown as Request,
+    res as unknown as Response,
+    vi.fn() as unknown as NextFunction
   )
 })

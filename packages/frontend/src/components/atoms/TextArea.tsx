@@ -12,14 +12,7 @@ export type Props = {
 
 export const TextArea = forwardRef<HTMLTextAreaElement, Props>(
   (
-    {
-      value,
-      rows = 1,
-      onChange = () => {},
-      onKeyDown = () => {},
-      style = {},
-      className = ''
-    },
+    { value, rows = 1, onChange, onKeyDown, style = {}, className = '' },
     ref
   ) => {
     return (

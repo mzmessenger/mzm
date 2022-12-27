@@ -1,3 +1,4 @@
+import type { MulterFile } from '../../types/index'
 import { promisify } from 'util'
 import { Request } from 'express'
 import { request } from 'undici'
@@ -84,15 +85,6 @@ export const getRoomIcon = async (req: Request): StreamWrapResponse => {
     }
     throw e
   }
-}
-
-type MulterFile = {
-  key: string
-  mimetype: string
-  originalname: string
-  size: number
-  filename: string
-  path: string
 }
 
 export const uploadUserIcon = async (

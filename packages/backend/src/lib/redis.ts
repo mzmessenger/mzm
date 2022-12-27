@@ -7,8 +7,12 @@ else
     return 0
 end`
 
+type ExRedisClient = Redis & {
+  release: (key: string, val: string) => Promise<void>
+}
+
 export const connect = async () => {
-  client = new Redis(config.redis.options)
+  client = new Redis(config.redis.options) as ExRedisClient
 
   client.defineCommand('release', {
     lua: releaseScript,
@@ -16,7 +20,7 @@ export const connect = async () => {
   })
 }
 
-export let client: Redis = null
+export let client: ExRedisClient = null
 
 export const lock = async (key: string, val: string, millisec: number) => {
   try {
@@ -28,5 +32,5 @@ export const lock = async (key: string, val: string, millisec: number) => {
 }
 
 export const release = async (key: string, val: string) => {
-  return await (client as any).release(key, val)
+  return await client.release(key, val)
 }

@@ -10,7 +10,7 @@ interface HttpResponse {
   status: number
 }
 
-export class BadRequest<T extends Object | string>
+export class BadRequest<T extends object | string>
   extends HttpError
   implements HttpResponse
 {
@@ -22,7 +22,7 @@ export class BadRequest<T extends Object | string>
   }
 }
 
-export class Forbidden<T extends Object | string>
+export class Forbidden<T extends object | string>
   extends HttpError
   implements HttpResponse
 {
@@ -34,7 +34,7 @@ export class Forbidden<T extends Object | string>
   }
 }
 
-export class NotFound<T extends Object | string>
+export class NotFound<T extends object | string>
   extends HttpError
   implements HttpResponse
 {

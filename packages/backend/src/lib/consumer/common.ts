@@ -35,7 +35,7 @@ export const initConsumerGroup = async (stream: string, groupName: string) => {
 }
 
 export const createParser = (
-  handler: (id: string, messages: string[]) => Promise<any>
+  handler: (id: string, messages: string[]) => Promise<void | null>
 ) => {
   return async (read) => {
     if (!read) {

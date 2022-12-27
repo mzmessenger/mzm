@@ -1,5 +1,5 @@
 import { Request } from 'express'
-import { ObjectId, WithId } from 'mongodb'
+import { ObjectId, type WithId, type Document } from 'mongodb'
 import isEmpty from 'validator/lib/isEmpty.js'
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import * as config from '../config.js'
@@ -85,7 +85,7 @@ export const getUsers = async (
 
   const roomId = new ObjectId(room)
 
-  const query: Object[] = [
+  const query: Document[] = [
     {
       $match: { roomId }
     },

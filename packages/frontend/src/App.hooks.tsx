@@ -59,7 +59,7 @@ export const useApp = (url: string) => {
   useRouter()
   useResize()
 
-  const { login, getAccessToken, logout } = useAuth()
+  const { loginFlag, login, getAccessToken, logout } = useAuth()
   const { userAccount } = useUserAccount()
   const location = useLocation()
   const { init } = useSocket({
@@ -70,8 +70,13 @@ export const useApp = (url: string) => {
   })
 
   useEffect(() => {
-    if (login) {
+    if (loginFlag) {
       init({ url })
     }
-  }, [login, init, url])
+  }, [loginFlag, init, url])
+
+  useEffect(() => {
+    login()
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 }

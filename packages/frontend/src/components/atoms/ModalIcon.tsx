@@ -305,7 +305,7 @@ export const ModalIcon: React.FC<Props> = ({
     size > 1000 * 1000 ? `${size / 1000 / 1000}MB` : `${size / 1000}KB`
 
   return (
-    <ModalBase open={open} onClose={() => {}}>
+    <ModalBase open={open}>
       <Wrap className={drag ? 'drag' : ''}>
         <img
           src={image}

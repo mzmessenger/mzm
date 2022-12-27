@@ -7,7 +7,7 @@ vi.mock('../../lib/storage')
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
 import sizeOf from 'image-size'
-import { mongoSetup, createRequest } from '../../../test/testUtil'
+import { mongoSetup, createFileRequest } from '../../../test/testUtil'
 import * as db from '../../lib/db'
 import * as storage from '../../lib/storage'
 import * as config from '../../config'
@@ -41,7 +41,7 @@ test('uploadUserIcon', async () => {
   })
 
   const putObjectMock = vi.mocked(storage.putObject)
-  putObjectMock.mockResolvedValueOnce({} as any)
+  putObjectMock.mockResolvedValueOnce({} as never)
 
   const sizeOfMock = vi.mocked(sizeOf)
   sizeOfMock.mockImplementation((path, cb) => {
@@ -62,9 +62,9 @@ test('uploadUserIcon', async () => {
     path: '/path/to/file'
   }
 
-  const req = createRequest(userId, { file })
+  const req = createFileRequest(userId, { file })
 
-  const res = await uploadUserIcon(req as any)
+  const res = await uploadUserIcon(req)
 
   const user = await db.collections.users.findOne({ _id: userId })
 
@@ -88,10 +88,10 @@ test.each([['image/gif'], ['image/svg+xml']])(
       path: '/path/to/file'
     }
 
-    const req = createRequest(userId, { file })
+    const req = createFileRequest(userId, { file })
 
     try {
-      await uploadUserIcon(req as any)
+      await uploadUserIcon(req)
     } catch (e) {
       expect(e instanceof BadRequest).toStrictEqual(true)
     }
@@ -120,10 +120,10 @@ test('uploadUserIcon validation: size over', async () => {
     })
   })
 
-  const req = createRequest(userId, { file })
+  const req = createFileRequest(userId, { file })
 
   try {
-    await uploadUserIcon(req as any)
+    await uploadUserIcon(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -151,10 +151,10 @@ test('uploadUserIcon validation: not square', async () => {
     })
   })
 
-  const req = createRequest(userId, { file })
+  const req = createFileRequest(userId, { file })
 
   try {
-    await uploadUserIcon(req as any)
+    await uploadUserIcon(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

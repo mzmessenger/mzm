@@ -20,8 +20,8 @@ test('wrap success', async () => {
 
   await wrap(fn)(
     {} as Request,
-    res as any as Response,
-    vi.fn() as any as NextFunction
+    res as unknown as Response,
+    vi.fn() as unknown as NextFunction
   )
 })
 
@@ -41,5 +41,5 @@ test('wrap error', async () => {
     expect(arg).toEqual(error)
   })
 
-  await wrap(fn)({} as Request, res as any as Response, next)
+  await wrap(fn)({} as Request, res as unknown as Response, next)
 })

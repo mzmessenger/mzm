@@ -5,7 +5,8 @@ let markdown: Awaited<InstanceType<Remote<typeof Markdown>>> = null
 
 export async function convertToHtml(message: string): Promise<string> {
   if (!markdown) {
-    // @ts-ignore
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+    // @ts-expect-error
     const MWorker = await import('../worker/markdown?worker')
     const MarkdownWorker = wrap<typeof Markdown>(new MWorker.default())
 
