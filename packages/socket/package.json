@@ -21,13 +21,12 @@
     "bunyan": "^1.8.15",
     "dotenv": "^16.0.3",
     "ioredis": "^5.2.4",
-    "undici": "^5.12.0",
+    "undici": "^5.14.0",
     "ws": "^8.11.0"
   },
   "devDependencies": {
     "@types/bunyan": "^1.8.8",
-    "@types/node": "^18.11.9",
-    "@types/ws": "^8.5.3",
+    "@types/ws": "^8.5.4",
     "typescript": "^4.9.4"
   }
 }
