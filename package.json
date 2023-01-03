@@ -18,6 +18,7 @@
     "build-docker-image-frontend": "docker build -f packages/frontend/Dockerfile -t mzm-frontend ."
   },
   "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.0",
     "@typescript-eslint/eslint-plugin": "^5.46.1",
     "@typescript-eslint/parser": "^5.46.1",
     "esbuild": "^0.15.13",

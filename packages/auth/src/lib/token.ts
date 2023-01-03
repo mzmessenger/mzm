@@ -83,11 +83,16 @@ export const createTokens = async (user: CreateAccessTokenArgs) => {
 
 export const verifyRefreshToken = (token: string) => {
   return new Promise<jwt.JwtPayload | string>((resolve, reject) => {
-    jwt.verify(token, JWT.refreshTokenSecret, (err, decode) => {
-      if (err) {
-        return reject()
+    jwt.verify(
+      token,
+      JWT.refreshTokenSecret,
+      { algorithms: ['HS256'] },
+      (err, decode) => {
+        if (err) {
+          return reject()
+        }
+        resolve(decode)
       }
-      resolve(decode)
-    })
+    )
   })
 }
