@@ -10,7 +10,7 @@ vi.mock('mzm-shared/auth/index', async () => {
 })
 vi.mock('../lib/logger')
 
-import { JsonWebTokenError } from 'jsonwebtoken'
+import { default as jsonwebtoken } from 'jsonwebtoken'
 import { NextFunction, Request, Response } from 'express'
 import { HEADERS } from 'mzm-shared/auth/constants'
 import { verifyAccessToken } from 'mzm-shared/auth/index'
@@ -93,7 +93,7 @@ test('checkAccessToken no header', async () => {
 
   const mock = vi.mocked(verifyAccessToken)
   mock.mockResolvedValueOnce({
-    err: new JsonWebTokenError('not valid token'),
+    err: new jsonwebtoken.JsonWebTokenError('not valid token'),
     decoded: null
   })
 
@@ -125,7 +125,7 @@ test('checkAccessToken verify token error', async () => {
 
   const mock = vi.mocked(verifyAccessToken)
   mock.mockResolvedValueOnce({
-    err: new JsonWebTokenError('not valid token'),
+    err: new jsonwebtoken.JsonWebTokenError('not valid token'),
     decoded: null
   })
 
