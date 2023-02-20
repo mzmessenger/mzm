@@ -20,7 +20,7 @@
   "dependencies": {
     "@elastic/elasticsearch": "^7.17.0",
     "@types/ioredis": "^5.0.0",
-    "aws-sdk": "^2.1287.0",
+    "aws-sdk": "^2.1318.0",
     "body-parser": "^1.20.0",
     "bunyan": "^1.8.14",
     "dotenv": "^16.0.3",
