@@ -1,6 +1,9 @@
-import { config } from 'dotenv'
 import type { SessionOptions } from 'express-session'
-config()
+import type { RedisOptions } from 'ioredis'
+import { config } from 'dotenv'
+if (process.env.NODE_ENV !== 'test') {
+  config()
+}
 
 export const {
   MONGODB_URI,
@@ -21,16 +24,18 @@ export const REMOVE_STREAM = 'stream:auth:remove:user'
 export const REDIS = {
   options: {
     host: process.env.REDIS_HOST,
-    enableOfflineQueue: false
-  }
+    enableOfflineQueue: false,
+    connectTimeout: Number(process.env.REDIS_TIMEOUT) ?? 30000
+  } satisfies RedisOptions
 } as const
 
 export const SESSION_REDIS = {
   options: {
     host: process.env.SESSION_REDIS_HOST,
     enableOfflineQueue: false,
+    connectTimeout: Number(process.env.SESSION_REDIS_TIMEOUT) ?? 30000,
     db: 1
-  }
+  } satisfies RedisOptions
 } as const
 
 export const SESSION_PARSER: SessionOptions = {

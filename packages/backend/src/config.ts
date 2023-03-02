@@ -1,3 +1,4 @@
+import type { RedisOptions } from 'ioredis'
 import { config } from 'dotenv'
 if (process.env.NODE_ENV !== 'test') {
   config()
@@ -104,8 +105,9 @@ export const aws = {
 export const redis = {
   options: {
     host: process.env.REDIS_HOST,
-    enableOfflineQueue: false
-  }
+    enableOfflineQueue: false,
+    connectTimeout: Number(process.env.REDIS_TIMEOUT) ?? 30000
+  } satisfies RedisOptions
 } as const
 
 export const elasticsearch = {
