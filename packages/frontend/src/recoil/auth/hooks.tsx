@@ -3,6 +3,7 @@ import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
 import { COOKIES } from 'mzm-shared/auth/constants'
 import { atom, useRecoilState, useRecoilValue } from 'recoil'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
+import dayjs from 'dayjs'
 import { logger } from '../../lib/logger'
 
 const createDefaultToken = () => {
@@ -67,7 +68,10 @@ export const useAuth = () => {
     }
     try {
       const decoded = jwt_decode<JwtPayload & AccessToken>(auth.accessToken)
-      if (decoded.exp - 10 * 1000 <= Math.floor(Date.now() / 1000)) {
+      const exp = dayjs(new Date(decoded.exp * 1000))
+        .subtract(5, 'minute')
+        .valueOf()
+      if (exp <= Date.now()) {
         const res = await refreshToken()
         setAuth({ accessToken: res.accessToken })
         if (res.accessToken) {

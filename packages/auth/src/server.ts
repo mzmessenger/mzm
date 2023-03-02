@@ -21,12 +21,12 @@ if (cluster.isPrimary) {
 } else {
   const main = async () => {
     redis.on('error', (e) => {
-      logger.error(e)
+      logger.error('[redis]', 'error', e)
       process.exit(1)
     })
 
     sessionRedis.on('error', (e) => {
-      logger.error(e)
+      logger.error('[sessionRedis]', 'error', e)
       process.exit(1)
     })
 
