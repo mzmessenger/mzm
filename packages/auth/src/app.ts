@@ -3,7 +3,7 @@ import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import passport from 'passport'
 import type { Redis } from 'ioredis'
-import connectRedis from 'connect-redis'
+import RedisStore from 'connect-redis'
 import { Strategy as TwitterStrategy } from 'passport-twitter'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import session from 'express-session'
@@ -29,8 +29,6 @@ export const createApp = ({ client }: Options) => {
   const app = express()
   app.use(helmet())
   app.set('trust proxy', TRUST_PROXY)
-
-  const RedisStore = connectRedis(session)
 
   const sessionParser = session({
     store: new RedisStore({ client: client }),

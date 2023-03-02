@@ -50,10 +50,14 @@ export const deserializeUser = (
 export const refreshAccessToken = async (req: Request, res: Response) => {
   type ResponseType = AUTH_API_RESPONSE['/auth/token/refresh']['POST']['body']
   try {
+    logger.info('[refreshAccessToken]', 'start')
     const decode = await verifyRefreshToken(req.cookies[COOKIES.REFRESH_TOKEN])
 
     const user = await db.collections.users.findOne({
       _id: new ObjectId((decode as RefeshToken).user._id)
+    })
+    logger.info('[refreshAccessToken]', 'find user', {
+      user: user._id.toHexString()
     })
 
     const accessToken = await createAccessToken({
@@ -62,6 +66,9 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
       twitterUserName: user.twitterUserName,
       githubId: user.githubId,
       githubUserName: user.githubUserName
+    })
+    logger.info('[refreshAccessToken]', 'created accessToken', {
+      user: user._id.toHexString()
     })
 
     const response: ResponseType[200] = {
@@ -76,6 +83,7 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     }
     res.status(200).json(response)
   } catch (e) {
+    logger.info('[refreshAccessToken]', 'error', e)
     const response: ResponseType[400] = 'not login'
     return res.status(401).send(response)
   }

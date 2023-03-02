@@ -62,5 +62,5 @@ export const JWT = {
   issuer: process.env.JWT_ISSURE ?? 'https://mzm.dev',
   audience: process.env.JWT_AUDIENCE
     ? process.env.JWT_AUDIENCE.split(',')
-    : (['https://mzm.dev'] as string[])
+    : (['https://mzm.dev'] satisfies string[])
 } as const

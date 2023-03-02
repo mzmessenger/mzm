@@ -5,7 +5,7 @@ import { VoteAnswerTypeEnum } from './constants'
 
 type Props = {
   className?: string
-  type: typeof VoteAnswerTypeEnum[keyof typeof VoteAnswerTypeEnum]
+  type: (typeof VoteAnswerTypeEnum)[keyof typeof VoteAnswerTypeEnum]
   answers: VoteAnswerType[]
 }
 

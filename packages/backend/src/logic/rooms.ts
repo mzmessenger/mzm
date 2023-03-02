@@ -48,11 +48,7 @@ export const isValidateRoomName = (
       valid: false,
       reason: `less ${config.room.MAX_ROOM_NAME_LENGTH}`
     }
-  } else if (
-    config.room.BANNED_ROOM_NAME.includes(
-      name as typeof config.room.BANNED_ROOM_NAME[number]
-    )
-  ) {
+  } else if (config.room.BANNED_ROOM_NAME.has(name)) {
     return {
       valid: false,
       reason: `${name} is not valid`
