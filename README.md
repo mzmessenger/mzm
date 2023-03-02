@@ -35,13 +35,10 @@ $ npm install
 $ docker-compose up
 
 # start
-$ npm run start-auth
-$ npm run start-socket
-$ npm run start-backend
-$ npm run start-frontend
+$ npm run start
 
-# add package
-$ npm install -w packages/backend typescript -D
+# reload backend, auth, socket...
+$ npm run build -w mzm-backend
 ```
 
 ### test
@@ -52,9 +49,6 @@ $ npm test --workspaces --if-present
 
 # test "pachages/auth"
 $ npm test --workspace=packages/auth
-
-# test file
-$ npx jest --config=./packages/frontend/jest.config.js ./packages/frontend/src/worker/markdown.test.ts
 ```
 
 ## Docker build
