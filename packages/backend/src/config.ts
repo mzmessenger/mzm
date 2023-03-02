@@ -59,6 +59,12 @@ const unicode = [
   '\uFFA0'
 ] as const
 
+const BANNED_ROOM_NAME: ReadonlySet<string> = new Set([
+  'undefined',
+  'null',
+  'NaN'
+])
+
 export const room = {
   GENERAL_ROOM_NAME: 'general',
   USER_LIMIT: 20,
@@ -66,7 +72,7 @@ export const room = {
   MAX_ROOM_NAME_LENGTH: 30,
   MIN_ROOM_NAME_LENGTH: 1,
   MAX_ROOM_DESCRIPTION_LENGTH: 5000,
-  BANNED_ROOM_NAME: ['undefined', 'null', 'NaN'],
+  BANNED_ROOM_NAME: BANNED_ROOM_NAME,
   BANNED_CHARS_REGEXP_IN_ROOM_NAME: /^@|\/|\\|\s|&|\?|=/,
   BANNED_UNICODE_REGEXP_IN_ROOM_NAME: new RegExp(unicode.join('|'))
 } as const
@@ -145,5 +151,5 @@ export const JWT = {
   issuer: process.env.JWT_ISSURE ?? 'https://mzm.dev',
   audience: process.env.JWT_AUDIENCE
     ? process.env.JWT_AUDIENCE.split(',')
-    : (['https://mzm.dev'] as string[])
+    : (['https://mzm.dev'] satisfies string[])
 } as const

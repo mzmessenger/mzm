@@ -17,7 +17,7 @@ const Drag = {
   LOWER_LEFT: 'lower-left',
   LOWER_RIGHT: 'lower-right'
 } as const
-type DragType = typeof Drag[keyof typeof Drag]
+type DragType = (typeof Drag)[keyof typeof Drag]
 
 const MIN_LENGTH = 30
 const LIMIT_LENGTH = 400

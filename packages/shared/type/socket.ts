@@ -26,7 +26,7 @@ type VoteType = {
     userAccount: string
     icon: string
   }[]
-  status: typeof VoteStatusEnum[keyof typeof VoteStatusEnum]
+  status: (typeof VoteStatusEnum)[keyof typeof VoteStatusEnum]
 }
 
 export type MessageType = {

@@ -75,7 +75,7 @@ export type Room = {
     key: string
     version: string
   }
-  status: typeof RoomStatusEnum[keyof typeof RoomStatusEnum]
+  status: (typeof RoomStatusEnum)[keyof typeof RoomStatusEnum]
 }
 
 export type Enter = {
@@ -116,8 +116,8 @@ type Vote = {
   questions: {
     text: string
   }[]
-  status: typeof VoteStatusEnum[keyof typeof VoteStatusEnum]
-  type: typeof VoteTypeEnum[keyof typeof VoteTypeEnum]
+  status: (typeof VoteStatusEnum)[keyof typeof VoteStatusEnum]
+  type: (typeof VoteTypeEnum)[keyof typeof VoteTypeEnum]
 }
 
 export const VoteAnswerEnum = {
@@ -130,5 +130,5 @@ export type VoteAnswer = {
   messageId: ObjectId
   userId: ObjectId
   index: number
-  answer: typeof VoteAnswerEnum[keyof typeof VoteAnswerEnum]
+  answer: (typeof VoteAnswerEnum)[keyof typeof VoteAnswerEnum]
 }
