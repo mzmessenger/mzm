@@ -45,6 +45,7 @@ export const useAuth = () => {
     }
   }
 
+  // @todo retry
   const refreshToken = async () => {
     type ResponseType = AUTH_API_RESPONSE['/auth/token/refresh']['POST']['body']
 

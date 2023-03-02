@@ -19,7 +19,7 @@ schedule.scheduleJob('0 * * * *', () => {
   }
 })
 
-if (cluster.isPrimary) {
+if (WORKER_NUM > 1 && cluster.isPrimary) {
   for (let i = 0; i < WORKER_NUM; i++) {
     cluster.fork()
   }
@@ -30,27 +30,40 @@ if (cluster.isPrimary) {
     cluster.fork()
   })
 } else {
-  const main = async () => {
-    redis.connect()
+  let server: http.Server | null = null
 
-    redis.client.on('error', function error(e) {
-      logger.error(e)
-      process.exit(1)
+  process.on('SIGTERM', (signal) => {
+    logger.info(signal)
+    if (!server) {
+      process.exit(0)
+    }
+    server.close((err) => {
+      if (err) {
+        logger.error('[gracefulShutdown]', err)
+        return process.exit(1)
+      }
+      logger.error('[gracefulShutdown]', 'exit')
+      process.exit(0)
     })
 
-    await once(redis.client, 'ready')
+    setTimeout(() => {
+      logger.error('[gracefulShutdown]', 'timeout')
+      process.exit(1)
+    }, 20000)
+  })
 
-    logger.info('[redis] connected')
+  const main = async () => {
+    await redis.connect()
 
     await db.connect()
 
     await init()
 
     const app = createApp()
-    const server = http.createServer(app)
+    server = http.createServer(app)
 
     server.listen(PORT, () => {
-      logger.info('Listening on', server.address())
+      logger.info(`(#${process.pid}) Listening on`, server.address())
     })
   }
 

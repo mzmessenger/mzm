@@ -5,7 +5,7 @@ import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
 import { requestSocketAPI } from './lib/req.js'
 import { saveSocket, removeSocket } from './lib/sender.js'
 import { consume } from './lib/consumer.js'
-import logger from './lib/logger.js'
+import { logger } from './lib/logger.js'
 import { JWT } from './config.js'
 import { ExtWebSocket } from './types.js'
 

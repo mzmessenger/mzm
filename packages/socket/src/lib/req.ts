@@ -1,7 +1,7 @@
 import { request } from 'undici'
 import { HEADERS } from 'mzm-shared/auth/constants'
 import { INTERNAL_API_URL } from '../config.js'
-import logger from './logger.js'
+import { logger } from './logger.js'
 import { createInternalAccessToken } from '../lib/token.js'
 
 // todo: retry

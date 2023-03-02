@@ -1,4 +1,7 @@
+import { pid, kill } from 'node:process'
+import { once } from 'node:events'
 import Redis from 'ioredis'
+import { logger } from './logger.js'
 import * as config from '../config.js'
 
 const releaseScript = `if redis.call("get",KEYS[1]) == ARGV[1] then
@@ -14,10 +17,19 @@ type ExRedisClient = Redis & {
 export const connect = async () => {
   client = new Redis(config.redis.options) as ExRedisClient
 
+  client.on('error', function error(e) {
+    logger.error(e)
+    kill(pid, 'SIGTERM')
+  })
+
   client.defineCommand('release', {
     lua: releaseScript,
     numberOfKeys: 1
   })
+
+  await once(client, 'ready')
+
+  logger.info('[redis] connected')
 }
 
 export let client: ExRedisClient = null
