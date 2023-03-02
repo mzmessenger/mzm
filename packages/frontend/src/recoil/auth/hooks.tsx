@@ -45,19 +45,20 @@ export const useAuth = () => {
     }
   }
 
-  // @todo retry
   const refreshToken = async () => {
     type ResponseType = AUTH_API_RESPONSE['/auth/token/refresh']['POST']['body']
 
-    const res = await fetch('/auth/token/refresh', {
-      credentials: 'include',
-      method: 'POST'
-    })
-    if (res.status === 200) {
-      const body = (await res.json()) as ResponseType[200]
-      setAuth({ accessToken: body.accessToken })
-      setLoginFlag(true)
-      return body
+    for (let i = 0; i < 3; i++) {
+      const res = await fetch('/auth/token/refresh', {
+        credentials: 'include',
+        method: 'POST'
+      })
+      if (res.status === 200) {
+        const body = (await res.json()) as ResponseType[200]
+        setAuth({ accessToken: body.accessToken })
+        setLoginFlag(true)
+        return body
+      }
     }
     logout()
     return { accessToken: '', user: null }
