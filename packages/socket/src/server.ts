@@ -23,9 +23,7 @@ if (WORKER_NUM > 1 && cluster.isPrimary) {
     if (!server) {
       process.exit(0)
     }
-    server.clients.forEach((ws) => {
-      ws.terminate()
-    })
+
     server.close((err) => {
       if (err) {
         logger.error('[gracefulShutdown]', err)
@@ -39,6 +37,10 @@ if (WORKER_NUM > 1 && cluster.isPrimary) {
       logger.error('[gracefulShutdown]', 'timeout')
       process.exit(1)
     }, 20000)
+
+    for (const ws of server.clients) {
+      ws.terminate()
+    }
   })
 
   const main = async () => {
