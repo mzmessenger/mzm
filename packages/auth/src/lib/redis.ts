@@ -1,5 +1,4 @@
 import { once } from 'node:events'
-import { pid, kill } from 'node:process'
 import Redis from 'ioredis'
 import { REDIS, SESSION_REDIS } from '../config.js'
 import { logger } from './logger.js'
@@ -11,14 +10,14 @@ export let sessionRedis: Redis = null
 export const connect = async () => {
   redis = new Redis(REDIS.options)
   redis.on('error', (e) => {
-    logger.error('[redis]', 'error', e, pid)
-    kill(pid, 'SIGTERM')
+    logger.error('[redis]', 'error', e)
+    process.exit(1)
   })
 
   sessionRedis = new Redis(SESSION_REDIS.options)
   sessionRedis.on('error', (e) => {
     logger.error('[sessionRedis]', 'error', e)
-    kill(process.pid, 'SIGTERM')
+    process.exit(1)
   })
 
   await Promise.all([once(redis, 'ready'), once(sessionRedis, 'ready')])
