@@ -17,3 +17,5 @@ export const getRoomName = (pathname: string) => {
   const res = pathname.match(/\/rooms\/(.+)/) || ''
   return res[1] ? decodeURIComponent(res[1]) : ''
 }
+
+export const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))

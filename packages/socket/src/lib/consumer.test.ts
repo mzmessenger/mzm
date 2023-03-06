@@ -2,8 +2,10 @@ import { vi, test, expect } from 'vitest'
 vi.mock('./logger')
 vi.mock('./redis', () => {
   return {
-    xread: vi.fn(),
-    xdel: vi.fn()
+    redis: {
+      xread: vi.fn(),
+      xdel: vi.fn()
+    }
   }
 })
 

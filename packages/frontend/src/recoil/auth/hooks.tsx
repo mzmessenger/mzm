@@ -4,6 +4,7 @@ import { COOKIES } from 'mzm-shared/auth/constants'
 import { atom, useRecoilState, useRecoilValue } from 'recoil'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
 import dayjs from 'dayjs'
+import { sleep } from '../../lib/util'
 import { logger } from '../../lib/logger'
 
 const createDefaultToken = () => {
@@ -48,17 +49,24 @@ export const useAuth = () => {
   const refreshToken = async () => {
     type ResponseType = AUTH_API_RESPONSE['/auth/token/refresh']['POST']['body']
 
-    const res = await fetch('/auth/token/refresh', {
-      credentials: 'include',
-      method: 'POST'
-    })
-    if (res.status === 200) {
-      const body = (await res.json()) as ResponseType[200]
-      setAuth({ accessToken: body.accessToken })
-      setLoginFlag(true)
-      return body
+    const MAX_RETRY_COUNT = 5
+    for (let i = 0; i < MAX_RETRY_COUNT; i++) {
+      const res = await fetch('/auth/token/refresh', {
+        credentials: 'include',
+        method: 'POST'
+      })
+      if (res.status === 200) {
+        const body = (await res.json()) as ResponseType[200]
+        setAuth({ accessToken: body.accessToken })
+        setLoginFlag(true)
+        return body
+      }
+      if (i < MAX_RETRY_COUNT) {
+        await sleep(100)
+      }
     }
-    logout()
+    // @todo
+    console.warn('refresh token failed')
     return { accessToken: '', user: null }
   }
 

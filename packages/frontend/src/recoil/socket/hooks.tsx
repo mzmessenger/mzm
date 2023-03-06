@@ -15,7 +15,7 @@ import { useMyInfoActions } from '../user/hooks'
 import { useUiActions } from '../ui/hooks'
 import { atom, useRecoilState, useRecoilValue } from 'recoil'
 import dayjs from 'dayjs'
-import { sendSocket, getRoomName } from '../../lib/util'
+import { sendSocket, getRoomName, sleep } from '../../lib/util'
 import { logger } from '../../lib/logger'
 
 const DEFAULT_INTERVAL = 1000
@@ -60,8 +60,6 @@ const socketRecoonectState = atom<SocketRecoonectState>({
     reconnectAttempts: 0
   }
 })
-
-const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
 const sharedActions = {
   readMessages: (roomId: string, socket: WebSocket) => {

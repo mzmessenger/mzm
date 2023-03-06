@@ -1,6 +1,19 @@
+import { once } from 'node:events'
 import Redis from 'ioredis'
+import { logger } from './logger.js'
 import * as config from '../config.js'
 
-const redis = new Redis(config.REDIS.options)
+export let redis: Redis = null
 
-export default redis
+export const connect = async () => {
+  redis = new Redis(config.REDIS.options)
+
+  redis.on('error', function error(e) {
+    logger.error('[redis]', 'error', e)
+    process.exit(1)
+  })
+
+  await once(redis, 'ready')
+
+  logger.info('[redis] connected')
+}

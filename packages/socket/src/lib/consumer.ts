@@ -1,5 +1,5 @@
-import redis from './redis.js'
-import logger from './logger.js'
+import { redis } from './redis.js'
+import { logger } from './logger.js'
 import { sendToUser } from './sender.js'
 
 type ReceiveQueue = {

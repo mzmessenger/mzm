@@ -1,5 +1,5 @@
 import { ExtWebSocket } from '../types.js'
-import logger from './logger.js'
+import { logger } from './logger.js'
 
 const socketMap = new Map<string, ExtWebSocket>()
 const userMap = new Map<string, ExtWebSocket[]>()
