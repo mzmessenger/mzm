@@ -29,6 +29,8 @@ const Wrap = styled.div`
   width: 100%;
   display: flex;
   flex-direction: column;
+  container-name: page-container;
+  container-type: inline-size;
 
   .overlay {
     position: fixed;
@@ -48,7 +50,7 @@ const Wrap = styled.div`
     overflow: hidden;
   }
 
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container page-container (max-width: ${WIDTH_MOBILE}px) {
     .body {
       overflow: auto;
     }

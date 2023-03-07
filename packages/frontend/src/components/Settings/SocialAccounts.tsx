@@ -1,11 +1,10 @@
-import React from 'react'
+import React, { ReactNode } from 'react'
 import styled from '@emotion/styled'
 import {
   LinkOff as LinkOffIcon,
   Twitter as TwitterIcon,
   GitHub as GitHubIcon
 } from '@mui/icons-material'
-import { WIDTH_MOBILE } from '../../lib/constants'
 import { useAuth } from '../../recoil/auth/hooks'
 import {
   useSocialAccount,
@@ -31,47 +30,31 @@ export const SocialAccounts = () => {
     removeGithub()
   }
 
-  const twitterClassName = isGithubLinked
-    ? 'login-account'
-    : 'login-account lock'
-
-  const githubClassName = isTwitterLinked
-    ? 'login-account'
-    : 'login-account lock'
-
   return (
     <Wrap>
       <header>ソーシャルログイン</header>
       <div className="accounts">
-        <div className={twitterClassName}>
+        <div className="login-account">
           <h4>Twitter</h4>
-          {isTwitterLinked && (
-            <a className="account-link" onClick={onRemoveTwitter}>
-              <LinkOffIcon className="account-link-icon" />
-              twitterログインを解除する
-            </a>
-          )}
-          {!isTwitterLinked && (
-            <a href="/auth/twitter" className="account-link">
-              <TwitterIcon className="account-link-icon" />
-              Twitterログイン
-            </a>
-          )}
+          <AccountLink
+            type="Twitter"
+            href="/auth/twitter"
+            renderIcon={({ className }) => (
+              <TwitterIcon className={className} />
+            )}
+            isLinked={isTwitterLinked}
+            onRemoveHandler={onRemoveTwitter}
+          />
         </div>
-        <div className={githubClassName}>
+        <div className="login-account">
           <h4>GitHub</h4>
-          {isGithubLinked && (
-            <a className="account-link" onClick={onRemoveGithub}>
-              <LinkOffIcon className="account-link-icon" />
-              GitHubログインを解除する
-            </a>
-          )}
-          {!isGithubLinked && (
-            <a href="/auth/github" className="account-link">
-              <GitHubIcon className="account-link-icon" />
-              GitHubログイン
-            </a>
-          )}
+          <AccountLink
+            type="GitHub"
+            href="/auth/github"
+            renderIcon={({ className }) => <GitHubIcon className={className} />}
+            isLinked={isGithubLinked}
+            onRemoveHandler={onRemoveGithub}
+          />
         </div>
       </div>
     </Wrap>
@@ -84,13 +67,6 @@ const Wrap = styled.div`
     display: flex;
   }
 
-  a {
-    cursor: pointer;
-  }
-  .login-account.lock a {
-    cursor: not-allowed;
-  }
-
   .login-account {
     display: flex;
     flex-direction: column;
@@ -100,28 +76,68 @@ const Wrap = styled.div`
     margin-left: 0;
   }
 
-  .account-link {
-    display: flex;
-    align-items: center;
-    padding: 0 10px 0 10px;
-    font-size: 1rem;
-    background-color: var(--color-guide);
-    color: var(--color-on-guide);
-    border-radius: 4px;
-    height: 40px;
-    margin: 0.5em 0 0 0;
-
-    .account-link-icon {
-      margin: 0 8px 0 0;
-    }
-  }
-
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container user-info-container (max-width: 540px) {
     .accounts {
       flex-direction: column;
       .login-account {
         margin: 0.5em 0 0 0;
       }
     }
+  }
+`
+
+function AccountLink(props: {
+  type: 'Twitter' | 'GitHub'
+  href: string
+  isLinked: boolean
+  renderIcon: (props: { className: string }) => ReactNode
+  onRemoveHandler: () => void
+}) {
+  if (props.isLinked) {
+    return (
+      <WrapAccountLink className="lock" onClick={props.onRemoveHandler}>
+        <span>
+          <LinkOffIcon className="account-link-icon" />
+          {props.type}ログインを解除する
+        </span>
+      </WrapAccountLink>
+    )
+  }
+
+  return (
+    <WrapAccountLink href={props.href}>
+      <span>
+        {props.renderIcon({ className: 'account-link-icon' })}
+        {props.type}ログイン
+      </span>
+    </WrapAccountLink>
+  )
+}
+
+const WrapAccountLink = styled.a`
+  padding: 0 10px 0 10px;
+  font-size: 1rem;
+  background-color: var(--color-guide);
+  color: var(--color-on-guide);
+  border-radius: 4px;
+  height: 40px;
+  margin: 0.5em 0 0 0;
+
+  &.lock {
+    cursor: not-allowed;
+  }
+
+  &:visited {
+    color: var(--color-on-guide);
+  }
+
+  .account-link-icon {
+    margin: 0 8px 0 0;
+  }
+
+  span {
+    height: 100%;
+    display: flex;
+    align-items: center;
   }
 `

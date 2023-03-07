@@ -90,7 +90,7 @@ const Wrap = styled.div`
     transform: translate3d(0, 0, 0);
   }
 
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container page-container (max-width: ${WIDTH_MOBILE}px) {
     background: var(--color-background);
     width: var(--mobile-menu-width);
     position: absolute;
