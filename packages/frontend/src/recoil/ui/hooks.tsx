@@ -65,6 +65,9 @@ export const useUiActions = () => {
     (innerWidth: number, innerHeight: number) => {
       const device = innerWidth <= WIDTH_MOBILE ? 'mobile' : 'pc'
       setUiState((current) => {
+        if (current.device === device) {
+          return current
+        }
         return { ...current, device }
       })
     },

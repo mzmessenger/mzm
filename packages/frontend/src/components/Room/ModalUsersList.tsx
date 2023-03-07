@@ -105,7 +105,7 @@ const ModalInner = styled.form`
     }
   }
 
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container page-container (max-width: ${WIDTH_MOBILE}px) {
     min-width: 80vw;
     max-width: 80vw;
   }

@@ -136,6 +136,7 @@ const Wrap = styled.div`
   .button {
     display: flex;
     flex-direction: column;
+    padding: 1em 1em;
 
     button {
       width: 100px;
@@ -143,6 +144,7 @@ const Wrap = styled.div`
     }
     .cancel {
       background: none;
+      border: 1px solid var(--color-border);
     }
     .save {
       margin: 1em 0 0 0;
@@ -153,6 +155,8 @@ const Wrap = styled.div`
     list-style-type: none;
     margin: 0;
     padding: 1em 0;
+    container-name: user-info-container;
+    container-type: inline-size;
     > li {
       padding: 1em 1em 0;
     }
@@ -189,7 +193,7 @@ const Wrap = styled.div`
     }
   }
 
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container page-container (max-width: ${WIDTH_MOBILE}px) {
     flex-direction: column;
   }
 `

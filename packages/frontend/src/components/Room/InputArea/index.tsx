@@ -201,7 +201,7 @@ const SendButton = styled(Button)`
     height: 100%;
   }
 
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container page-container (max-width: ${WIDTH_MOBILE}px) {
     border-radius: 50%;
     width: 40px;
     .text {
@@ -235,7 +235,7 @@ const CancelButton = styled(Button)`
     height: 100%;
   }
 
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container page-container (max-width: ${WIDTH_MOBILE}px) {
     border-radius: 50%;
     width: 40px;
     .text {

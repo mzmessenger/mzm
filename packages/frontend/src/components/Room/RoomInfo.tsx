@@ -175,7 +175,7 @@ const Wrap = styled.div`
     }
   }
 
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container page-container (max-width: ${WIDTH_MOBILE}px) {
     padding: 0 8px;
     .room-users {
       .users {

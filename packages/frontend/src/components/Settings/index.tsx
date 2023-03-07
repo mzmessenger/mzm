@@ -44,6 +44,8 @@ const Wrap = styled.div`
   padding: 8px 32px;
   color: var(--color-on-background);
   font-size: 1em;
+  container-name: user-setting-container;
+  container-type: inline-size;
 
   .inner > header {
     padding: 0 8px;
@@ -65,10 +67,11 @@ const Wrap = styled.div`
     display: flex;
     .menu {
       list-style-type: none;
-      padding: 0 8px;
+      padding: 0 0.5em;
+      min-width: 5em;
       margin: 0;
       > li {
-        padding: 8px 0;
+        padding: 0.5em 0;
       }
     }
 
@@ -98,7 +101,7 @@ const Wrap = styled.div`
     }
   }
 
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container user-setting-container (max-width: ${WIDTH_MOBILE}px) {
     padding-left: 0;
     padding-right: 0;
 
@@ -106,6 +109,8 @@ const Wrap = styled.div`
       flex-direction: column;
 
       .menu {
+        border-right: none;
+        border-bottom: 1px solid var(--color-border);
         display: flex;
         > li {
           padding-left: 1em;

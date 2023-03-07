@@ -219,7 +219,15 @@ export const removeTwitter = async (req: PassportRequest, res: Response) => {
     { $unset: { twitterId: '', twitterUserName: '' } }
   )
 
-  res.status(200).send('ok')
+  const newAccessToken = await createAccessToken({
+    _id: user._id.toHexString(),
+    twitterId: '',
+    twitterUserName: '',
+    githubId: user.githubId,
+    githubUserName: user.githubUserName
+  })
+
+  res.cookie(COOKIES.ACCESS_TOKEN, newAccessToken).status(200).send('ok')
 }
 
 export const removeGithub = async (req: PassportRequest, res: Response) => {
@@ -253,7 +261,15 @@ export const removeGithub = async (req: PassportRequest, res: Response) => {
     { $unset: { githubId: '', githubUserName: '' } }
   )
 
-  res.status(200).send('ok')
+  const newAccessToken = await createAccessToken({
+    _id: user._id.toHexString(),
+    twitterId: user.twitterId,
+    twitterUserName: user.twitterUserName,
+    githubId: '',
+    githubUserName: ''
+  })
+
+  res.cookie(COOKIES.ACCESS_TOKEN, newAccessToken).status(200).send('ok')
 }
 
 export const remove = async (req: PassportRequest, res: Response) => {

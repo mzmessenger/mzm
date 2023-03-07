@@ -55,7 +55,7 @@ const Wrap = styled.header`
     color: var(--color-on-surface);
   }
 
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container page-container (max-width: ${WIDTH_MOBILE}px) {
     padding: 0 8px 0 16px;
     > .profile {
       display: none;

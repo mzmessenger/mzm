@@ -28,6 +28,7 @@ export const SettingUser = () => {
 const Wrap = styled.div`
   .delete {
     margin-top: 32px;
+    padding: 1em 1em 0 1em;
     button {
       height: 32px;
       padding: 0 16px;

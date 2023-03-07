@@ -263,8 +263,8 @@ export const useRemoveAccountActions = ({
           refreshToken().then((token) => {
             setUser((current) => ({
               ...current,
-              twitterUserName: token.user.twitterUserName,
-              githubUserName: token.user.githubUserName
+              twitterUserName: token.user.twitterUserName ?? null,
+              githubUserName: token.user.githubUserName ?? null
             }))
           })
         }
@@ -295,8 +295,8 @@ export const useRemoveAccountActions = ({
           refreshToken().then((token) => {
             setUser((current) => ({
               ...current,
-              twitterUserName: token.user.twitterUserName,
-              githubUserName: token.user.githubUserName
+              twitterUserName: token.user.twitterUserName ?? null,
+              githubUserName: token.user.githubUserName ?? null
             }))
           })
         }

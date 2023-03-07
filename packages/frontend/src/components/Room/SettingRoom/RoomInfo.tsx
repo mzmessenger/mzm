@@ -117,7 +117,7 @@ const Wrap = styled.div`
     word-break: break-word;
   }
 
-  @media (max-width: ${WIDTH_MOBILE}px) {
+  @container page-container (max-width: ${WIDTH_MOBILE}px) {
     margin-top: 1em;
     padding: 0;
 
