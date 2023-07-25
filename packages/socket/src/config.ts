@@ -4,7 +4,7 @@ if (process.env.NODE_ENV !== 'test') {
   config()
 }
 
-export const WORKER_NUM = process.env.WORKER_NUM ?? 1
+export const WORKER_NUM = Number(process.env.WORKER_NUM) ?? 1
 
 export const PORT: number = process.env.PORT
   ? parseInt(process.env.PORT, 10)

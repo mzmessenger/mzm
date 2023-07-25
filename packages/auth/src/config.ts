@@ -15,7 +15,7 @@ export const {
   GITHUB_CALLBACK_URL
 } = process.env
 
-export const WORKER_NUM = process.env.WORKER_NUM ?? 1
+export const WORKER_NUM = Number(process.env.WORKER_NUM) ?? 1
 
 export const PORT = process.env.PORT ?? 8000
 
