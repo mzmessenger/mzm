@@ -96,7 +96,7 @@ button {
 }
 
 .codespan {
-  margin: 0 .3em;
-  padding: .3em .8em;
+  margin: 0 0.3em;
+  padding: 0.3em 0.8em;
   background: var(--color-background-secondary);
 }
