@@ -36,9 +36,29 @@ test.each([
     'marquee',
     '<marquee>aaa</marquee>',
     '<p>&lt;marquee&gt;aaa&lt;&#x2F;marquee&gt;</p>'
+  ],
+  [
+    'code(bash)',
+    `\`\`\`
+$ echo foo
+\`\`\``,
+    '<pre><code class="hljs language_bash">$ <span class="hljs-built_in">echo</span> foo</code></pre>'
+  ],
+  [
+    'code(javascript)',
+    `\`\`\`javascript
+console.log(1)
+\`\`\``,
+    `<pre>
+  <code class="hljs language_javascript">
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-number">1</span>)
+  </code>
+</pre>`
+      .replace(/[\n]/g, '')
+      .replace(/([\s])+</g, () => '<')
   ]
 ])('convertToHtml (%s)', async (_label, src, converted) => {
   const worker = new Markdown()
   const html = await worker.convertToHtml(src)
-  expect(html.trim()).toEqual(converted)
+  expect(html.trim()).toEqual(converted.trim())
 })
