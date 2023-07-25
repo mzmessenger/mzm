@@ -2,7 +2,7 @@ import React, { useMemo, useEffect, useState } from 'react'
 import styled from '@emotion/styled'
 import { TextArea, Props as TextAreaProps } from '../../atoms/TextArea'
 import { MessageBody } from '../../atoms/MessageBody'
-import { convertToHtml } from '../../../lib/markdown'
+import { convertToHtml } from '../../../lib/message'
 import { WIDTH_MOBILE } from '../../../lib/constants'
 
 export type Props = {

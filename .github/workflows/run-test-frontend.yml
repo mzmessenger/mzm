@@ -32,6 +32,7 @@ jobs:
       - run: npm run build -w packages/shared
       - run: npm run build-tsc -w packages/frontend
       - run: npm run build -w packages/frontend
+      - run: npm run lint -w packages/frontend
       - run: npm test -w packages/frontend
         env:
           CI: true

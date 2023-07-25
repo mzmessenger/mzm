@@ -94,3 +94,9 @@ h4 {
 button {
   cursor: pointer;
 }
+
+.codespan {
+  margin: 0 .3em;
+  padding: .3em .8em;
+  background: var(--color-background-secondary);
+}

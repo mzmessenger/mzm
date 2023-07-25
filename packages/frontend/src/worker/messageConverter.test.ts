@@ -1,5 +1,7 @@
 import { test, expect } from 'vitest'
-import { Markdown } from './markdown'
+import { MessageConverter } from './messageConverter'
+
+const worker = new MessageConverter()
 
 test.each([
   [
@@ -36,9 +38,44 @@ test.each([
     'marquee',
     '<marquee>aaa</marquee>',
     '<p>&lt;marquee&gt;aaa&lt;&#x2F;marquee&gt;</p>'
-  ]
+  ],
+  [
+    'code(bash:default)',
+    `\`\`\`
+$ echo foo
+\`\`\``,
+    '<pre><code class="hljs language_bash">$ <span class="hljs-built_in">echo</span> foo</code></pre>'
+  ],
+  [
+    'code(javascript)',
+    `\`\`\`javascript
+console.log(1)
+\`\`\``,
+    `<pre>
+  <code class="hljs language_javascript">
+    <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-number">1</span>)
+  </code>
+</pre>`
+  ],
+  [
+    'codespan',
+    `precodespan \`codespan\` postcodespan`,
+    `<p>precodespan <span class="codespan">codespan</span> postcodespan</p>`
+  ],
+  [
+    'emoji',
+    `:smile: aa :smile: bb :foobar: cc :+1: dd`,
+    `<p>😊 aa 😊 bb :foobar: cc 👍 dd</p>`
+  ],
+  ['ipv6', '2001:db8::1', `<p>2001:db8::1</p>`]
 ])('convertToHtml (%s)', async (_label, src, converted) => {
-  const worker = new Markdown()
   const html = await worker.convertToHtml(src)
-  expect(html.trim()).toEqual(converted)
+  const expected = converted
+    .split('\n')
+    .map((text) => {
+      text = text.trim()
+      return text
+    })
+    .join('')
+  expect(html.trim()).toEqual(expected)
 })

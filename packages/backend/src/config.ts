@@ -9,7 +9,7 @@ export const MONGODB_URI =
 
 export const PORT = process.env.PORT ?? 3001
 
-export const WORKER_NUM = process.env.WORKER_NUM ?? 1
+export const WORKER_NUM = Number(process.env.WORKER_NUM) ?? 1
 
 export const account = {
   MIN_LENGTH: 2,

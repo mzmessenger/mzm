@@ -1,6 +1,5 @@
 import cluster from 'cluster'
 import http from 'http'
-import { once } from 'events'
 import schedule from 'node-schedule'
 
 import { WORKER_NUM, PORT } from './config.js'
