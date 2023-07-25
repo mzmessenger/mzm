@@ -8,7 +8,7 @@ import {
   useRecoilValue,
   useSetRecoilState
 } from 'recoil'
-import { convertToHtml } from '../../lib/markdown'
+import { convertToHtml } from '../../lib/message'
 
 import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/type/socket'
 

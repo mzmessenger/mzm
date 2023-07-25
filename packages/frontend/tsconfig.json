@@ -1,13 +1,13 @@
 {
   "compilerOptions": {
     "incremental": true,
-    "lib": ["es2017", "dom", "webworker"],
+    "lib": ["es2022", "dom", "webworker"],
     "outDir": "dist",
     "sourceMap": true,
     "noImplicitAny": false,
     "esModuleInterop": true,
     "module": "esnext",
-    "target": "es2019",
+    "target": "es2022",
     "moduleResolution": "node",
     "skipLibCheck": true,
     "jsx": "react",
