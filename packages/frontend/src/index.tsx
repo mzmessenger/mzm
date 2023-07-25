@@ -29,8 +29,11 @@ const updateSW = registerSW({
   },
   onRegistered(r) {
     r &&
-      setInterval(() => {
-        r.update()
-      }, 60 * 60 * 1000)
+      setInterval(
+        () => {
+          r.update()
+        },
+        60 * 60 * 1000
+      )
   }
 })

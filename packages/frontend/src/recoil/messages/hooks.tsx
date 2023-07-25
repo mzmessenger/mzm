@@ -187,11 +187,14 @@ const convertMessage = async (
       return {}
     }
 
-    const vote = m.vote.answers.reduce((byIndex, answer) => {
-      byIndex[answer.index] = byIndex[answer.index] ?? []
-      byIndex[answer.index].push(answer)
-      return byIndex
-    }, {} as VoteAnswersById[string])
+    const vote = m.vote.answers.reduce(
+      (byIndex, answer) => {
+        byIndex[answer.index] = byIndex[answer.index] ?? []
+        byIndex[answer.index].push(answer)
+        return byIndex
+      },
+      {} as VoteAnswersById[string]
+    )
 
     return vote
   }
