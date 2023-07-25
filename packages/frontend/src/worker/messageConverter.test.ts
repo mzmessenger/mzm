@@ -40,7 +40,11 @@ test.each([
     '<p>&lt;marquee&gt;aaa&lt;&#x2F;marquee&gt;</p>'
   ],
   [
+<<<<<<< HEAD:packages/frontend/src/worker/messageConverter.test.ts
     'code(bash:default)',
+=======
+    'code(bash)',
+>>>>>>> a269e46 (bump marked):packages/frontend/src/worker/markdown.test.ts
     `\`\`\`
 $ echo foo
 \`\`\``,
@@ -56,6 +60,7 @@ console.log(1)
     <span class="hljs-variable language_">console</span>.<span class="hljs-title function_">log</span>(<span class="hljs-number">1</span>)
   </code>
 </pre>`
+<<<<<<< HEAD:packages/frontend/src/worker/messageConverter.test.ts
   ],
   [
     'codespan',
@@ -68,8 +73,14 @@ console.log(1)
     `<p>😊 aa 😊 bb :foobar: cc 👍 dd</p>`
   ],
   ['ipv6', '2001:db8::1', `<p>2001:db8::1</p>`]
+=======
+      .replace(/[\n]/g, '')
+      .replace(/([\s])+</g, () => '<')
+  ]
+>>>>>>> a269e46 (bump marked):packages/frontend/src/worker/markdown.test.ts
 ])('convertToHtml (%s)', async (_label, src, converted) => {
   const html = await worker.convertToHtml(src)
+<<<<<<< HEAD:packages/frontend/src/worker/messageConverter.test.ts
   const expected = converted
     .split('\n')
     .map((text) => {
@@ -78,4 +89,7 @@ console.log(1)
     })
     .join('')
   expect(html.trim()).toEqual(expected)
+=======
+  expect(html.trim()).toEqual(converted.trim())
+>>>>>>> a269e46 (bump marked):packages/frontend/src/worker/markdown.test.ts
 })
