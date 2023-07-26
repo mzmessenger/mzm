@@ -84,7 +84,7 @@ function emojiConvert(text: string): string {
     const [, p1, emojiStr] = found
     const offset = found.index + p1.length
     convertedStr += found.input.substring(0, offset)
-    convertedStr += emojis.has(emojiStr) ? emojis.get(emojiStr) : emojiStr
+    convertedStr += emojis.has(emojiStr) ? emojis.get(emojiStr).value : emojiStr
     index += offset + emojiStr.length
     found = text.substring(index).match(regexp)
   }

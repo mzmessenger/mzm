@@ -67,6 +67,18 @@ console.log(1)
     `:smile: aa :smile: bb :foobar: cc :+1: dd`,
     `<p>😊 aa 😊 bb :foobar: cc 👍 dd</p>`
   ],
+  [
+    'emoji in code',
+    `\`\`\`
+:smile: aa :smile: bb :foobar: cc :+1:
+\`\`\``,
+    '<pre><code class="hljs language_bash">:smile: aa :smile: bb :foobar: cc :+1:</code></pre>'
+  ],
+  [
+    'emoji in codespan',
+    '`:smile: aa :smile: bb :foobar: cc :+1: dd`',
+    `<p><span class="codespan">:smile: aa :smile: bb :foobar: cc :+1: dd</span></p>`
+  ],
   ['ipv6', '2001:db8::1', `<p>2001:db8::1</p>`]
 ])('convertToHtml (%s)', async (_label, src, converted) => {
   const html = await worker.convertToHtml(src)

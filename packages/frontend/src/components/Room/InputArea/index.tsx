@@ -10,8 +10,8 @@ import { usePostTextArea } from '../../../recoil/postTextArea/hooks'
 import { Button } from '../../atoms/Button'
 import { ResizerY } from '../../atoms/ResizerY'
 import { TextArea } from '../../atoms/TextArea'
-import { VoteMessageBox } from './VoteMessageBox'
 import { useNumberLocalStorage } from '../../../lib/hooks/useLocalStorage'
+import PlusMenu from './PlusMenu'
 
 const HEIGHT_KEY = 'mzm:input:height'
 
@@ -26,11 +26,14 @@ export const InputArea = () => {
   const [rows, setRows] = useState(
     inputMode === 'normal' ? txt.split('\n').length : editTxt.split('\n').length
   )
-  const textareaRef = useRef(null)
+  const textareaRef = useRef<HTMLTextAreaElement>(null)
   const [height, setHeight] = useNumberLocalStorage(HEIGHT_KEY, 68)
-  const [showVote, setShowVote] = useState(false)
-
+  const [openPlusMenu, setOpenPlusMenu] = useState(false)
   const { sendMessage, sendModifyMessage } = useSocketActions()
+  const [lastSelection, setLastSelection] = useState<{
+    start: number
+    end: number
+  }>({ start: 0, end: 0 })
 
   useEffect(() => {
     if (inputMode === 'edit') {
@@ -62,14 +65,32 @@ export const InputArea = () => {
     }
   }
 
-  const onChange = (e) => {
-    const value = e.target.value
+  const setInputText = (value: string) => {
     if (inputMode === 'normal') {
       inputMessage(value)
     } else if (inputMode === 'edit') {
       modifyMessage(value)
     }
     setRows(value.split('\n').length)
+  }
+
+  const onChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
+    const value = e.target.value
+    setInputText(value)
+  }
+
+  const onEmojiSelect = (key: string) => {
+    const value =
+      lastSelection.start === 0
+        ? key
+        : txt.substring(0, lastSelection.start) +
+          ` ${key} ` +
+          txt.substring(lastSelection.start, textareaRef.current.value.length)
+    textareaRef.current.value = value
+    const position = lastSelection.end + key.length + 2
+    textareaRef.current.selectionStart = position
+    textareaRef.current.selectionEnd = position
+    setInputText(value)
   }
 
   const classNames = ['form-wrap']
@@ -80,31 +101,53 @@ export const InputArea = () => {
   return (
     <Wrap style={{ minHeight: height }}>
       <ResizerY height={height} setHeight={setHeight} />
-      {showVote && (
-        <VoteMessageBox
-          onSave={() => setShowVote(false)}
-          onCancel={() => setShowVote(false)}
-        />
-      )}
+      <PlusMenu
+        open={openPlusMenu}
+        onClose={() => setOpenPlusMenu(false)}
+        onEmojiSelect={onEmojiSelect}
+        onEmojiClose={() => {
+          textareaRef.current.focus()
+        }}
+        onVoteCancel={() => {
+          textareaRef.current.focus()
+        }}
+      />
       <div className={classNames.join(' ')}>
         <div className="attach-wrap">
-          <button className="attach-button" onClick={() => setShowVote(true)}>
+          <button
+            className={'attach-button' + (openPlusMenu ? ' rotate' : '')}
+            onClick={() => {
+              setOpenPlusMenu(!openPlusMenu)
+            }}
+          >
             <Add />
           </button>
         </div>
         <form onSubmit={handleSubmit}>
           <TextArea
             className="text-area-wrap"
+            autoFocus={true}
             value={inputMode === 'edit' ? editTxt : txt}
             rows={rows}
             onKeyDown={onKeyDown}
             onChange={onChange}
+            onSelect={() =>
+              setLastSelection({
+                start: textareaRef.current.selectionStart,
+                end: textareaRef.current.selectionEnd
+              })
+            }
             ref={textareaRef}
           />
           <div className="button-area">
             <div style={{ flex: '1' }}></div>
             {inputMode === 'edit' && (
-              <CancelButton onClick={() => endToEdit()}>
+              <CancelButton
+                onClick={() => {
+                  textareaRef.current.focus()
+                  endToEdit()
+                }}
+              >
                 <span className="text">キャンセル</span>
                 <span className="icon">
                   <CancelOutlinedIcon />
@@ -159,11 +202,19 @@ const Wrap = styled.div`
     margin-right: 10px;
 
     .attach-button {
+      background-color: var(--color-input-background);
+      color: var(--color-input);
       border-radius: 50%;
-      padding: 0px;
+      border: none;
+      padding: 2px;
       display: flex;
       justify-content: center;
       align-items: center;
+      transition: 0.3s ease-out;
+
+      &.rotate {
+        transform: rotate(45deg);
+      }
     }
   }
 
