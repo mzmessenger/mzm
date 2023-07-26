@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import { Clear } from '@mui/icons-material'
-import { InputText } from '../../atoms/InputText'
+import { InputText } from '../../../atoms/InputText'
 
 export const Question: React.FC<{
   value: string
@@ -12,7 +12,7 @@ export const Question: React.FC<{
   return (
     <QuestionWrap>
       <InputText
-        style={{ margin: '0 8px 0 0' }}
+        style={{ margin: '0 8px 0 0', flex: 1 }}
         value={value}
         onChange={onChange}
       />

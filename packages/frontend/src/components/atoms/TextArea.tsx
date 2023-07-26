@@ -1,18 +1,34 @@
-import React, { ChangeEvent, KeyboardEvent, forwardRef } from 'react'
+import React, {
+  forwardRef,
+  type ReactEventHandler,
+  type ChangeEventHandler,
+  type KeyboardEventHandler
+} from 'react'
 import styled from '@emotion/styled'
 
 export type Props = {
   value: string
   rows?: number
-  onChange?: (e: ChangeEvent<HTMLTextAreaElement>) => void
-  onKeyDown?: (e: KeyboardEvent<HTMLTextAreaElement>) => void
+  autoFocus?: boolean
+  onChange?: ChangeEventHandler<HTMLTextAreaElement>
+  onKeyDown?: KeyboardEventHandler<HTMLTextAreaElement>
+  onSelect?: ReactEventHandler<HTMLTextAreaElement>
   style?: React.CSSProperties
   className?: string
 }
 
 export const TextArea = forwardRef<HTMLTextAreaElement, Props>(
   (
-    { value, rows = 1, onChange, onKeyDown, style = {}, className = '' },
+    {
+      value,
+      rows = 1,
+      autoFocus = false,
+      onChange,
+      onKeyDown,
+      onSelect,
+      style = {},
+      className = ''
+    },
     ref
   ) => {
     return (
@@ -22,6 +38,8 @@ export const TextArea = forwardRef<HTMLTextAreaElement, Props>(
           value={value}
           onChange={onChange}
           onKeyDown={onKeyDown}
+          onSelect={onSelect}
+          autoFocus={autoFocus}
           ref={ref}
         />
       </Wrap>

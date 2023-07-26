@@ -27,6 +27,7 @@ export const SearchModal: React.FC = () => {
             value={query}
             onChange={onChange}
             placeholder="search"
+            autoFocus={true}
           />
           <IconButton onClick={() => cancel()}>
             <Close />
