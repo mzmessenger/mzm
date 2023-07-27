@@ -17,7 +17,7 @@ export const {
 
 export const WORKER_NUM = Number(process.env.WORKER_NUM) ?? 1
 
-export const PORT = process.env.PORT ?? 8000
+export const PORT = process.env.PORT ?? 3002
 
 export const REMOVE_STREAM = 'stream:auth:remove:user'
 

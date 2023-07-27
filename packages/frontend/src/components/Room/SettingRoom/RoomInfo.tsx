@@ -3,7 +3,7 @@ import styled from '@emotion/styled'
 import { TextArea, Props as TextAreaProps } from '../../atoms/TextArea'
 import { MessageBody } from '../../atoms/MessageBody'
 import { convertToHtml } from '../../../lib/message'
-import { WIDTH_MOBILE } from '../../../lib/constants'
+import { WIDTH_MOBILE } from '../../../constants'
 
 export type Props = {
   edit: boolean

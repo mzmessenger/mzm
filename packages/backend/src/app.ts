@@ -1,8 +1,9 @@
 import express from 'express'
+import cors from 'cors'
 import bodyParser from 'body-parser'
 import multer from 'multer'
 import helmet from 'helmet'
-import { MULTER_PATH } from './config.js'
+import { MULTER_PATH, CORS_ORIGIN } from './config.js'
 import { wrap, streamWrap } from './lib/wrap.js'
 import * as rooms from './handlers/rooms.js'
 import * as user from './handlers/users.js'
@@ -24,6 +25,11 @@ const jsonParser = bodyParser.json({ limit: '1mb' })
 export const createApp = () => {
   const app = express()
   app.use(helmet())
+  app.use(
+    cors({
+      origin: CORS_ORIGIN
+    })
+  )
 
   app.post('/api/rooms', checkAccessToken, jsonParser, wrap(rooms.createRoom))
   app.post(

@@ -18,7 +18,15 @@ export const MyInfo = () => {
   return (
     <Wrap>
       <div className="profile-wrap">
-        {icon && <img className="icon-img" src={icon} width="20" height="20" />}
+        {icon && (
+          <img
+            className="icon-img"
+            src={icon}
+            width="20"
+            height="20"
+            crossOrigin="anonymous"
+          />
+        )}
         <div className="profile">{m}</div>
         <Settings className="settings-icon" onClick={clickSettings} />
       </div>

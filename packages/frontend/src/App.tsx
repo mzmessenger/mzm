@@ -4,9 +4,7 @@ import { useApp } from './App.hooks'
 import { Loading } from './components/Loading'
 import Top from './pages/Top'
 import Room from './pages/Room'
-
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-const url = `${protocol}//${window.location.host}/socket`
+import { SOCKET_URL } from './constants'
 
 const WithSuspense: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   return <Suspense fallback={<Loading />}>{children}</Suspense>
@@ -14,7 +12,7 @@ const WithSuspense: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
 
 // reduce rerender app
 const NoRenderApp = () => {
-  useApp(url)
+  useApp(SOCKET_URL)
   return <></>
 }
 

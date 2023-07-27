@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
-import { WIDTH_MOBILE } from '../../lib/constants'
+import { WIDTH_MOBILE } from '../../constants'
 import { useUiActions } from '../../recoil/ui/hooks'
 import { SettingUser } from './SettingUser'
 

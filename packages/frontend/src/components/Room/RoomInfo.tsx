@@ -10,7 +10,7 @@ import {
   useOpenRoomSettingFlag,
   useCurrentRoom
 } from '../../recoil/rooms/hooks'
-import { WIDTH_MOBILE } from '../../lib/constants'
+import { WIDTH_MOBILE } from '../../constants'
 import { ModalUsersList } from './ModalUsersList'
 
 const RoomIcon = React.memo(({ iconUrl }: { iconUrl: string }) => {

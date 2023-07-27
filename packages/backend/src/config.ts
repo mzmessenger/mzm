@@ -8,6 +8,9 @@ export const MONGODB_URI =
   process.env.NODE_ENV === 'test' ? null : process.env.MONGODB_URI
 
 export const PORT = process.env.PORT ?? 3001
+export const CORS_ORIGIN = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((e) => e.trim())
+  : ['http://localhost', 'http://localhost:8080']
 
 export const WORKER_NUM = Number(process.env.WORKER_NUM) ?? 1
 

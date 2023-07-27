@@ -1,7 +1,7 @@
 import React, { useState, useCallback } from 'react'
 import styled from '@emotion/styled'
 import { isValidAccount } from 'mzm-shared/validator'
-import { WIDTH_MOBILE } from '../../lib/constants'
+import { WIDTH_MOBILE } from '../../constants'
 import { useAuth } from '../../recoil/auth/hooks'
 import { useUser, useUserIdAndAccount } from '../../recoil/user/hooks'
 import { Button } from '../atoms/Button'
@@ -81,7 +81,7 @@ export const SettingAccount = () => {
     <Wrap>
       <div className="icon">
         {edit && <DropImage onloadFile={onloadFile} />}
-        {!edit && <img src={userIconUrl} />}
+        {!edit && <img src={userIconUrl} crossOrigin="anonymous" />}
       </div>
       <ul className="info">
         <li>

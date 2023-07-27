@@ -5,7 +5,7 @@ import {
   emojis,
   type EmojisKey,
   type EmojisValue
-} from '../../../../lib/constants'
+} from '../../../../constants'
 import Dialog from '../../../Dialog'
 
 const emojiList = Array.from(emojis.entries())

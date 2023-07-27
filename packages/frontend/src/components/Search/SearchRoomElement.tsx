@@ -38,7 +38,11 @@ export const SearchRoomElement: React.FC<{
     <RoomWrap className="search-room-elem">
       <div className="room-info">
         <div className="room-icon">
-          {props.iconUrl ? <img src={props.iconUrl} /> : <Home />}
+          {props.iconUrl ? (
+            <img src={props.iconUrl} crossOrigin="anonymous" />
+          ) : (
+            <Home />
+          )}
         </div>
         <div className="room-name">{props.name}</div>
         <div className="divider"></div>

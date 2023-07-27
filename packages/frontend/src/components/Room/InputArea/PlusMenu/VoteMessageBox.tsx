@@ -1,7 +1,7 @@
 import React, { useState, forwardRef } from 'react'
 import styled from '@emotion/styled'
 import { Add } from '@mui/icons-material'
-import { WIDTH_MOBILE } from '../../../../lib/constants'
+import { WIDTH_MOBILE } from '../../../../constants'
 import { useCurrentRoom } from '../../../../recoil/rooms/hooks'
 import { useSocketActions } from '../../../../recoil/socket/hooks'
 import { TextArea } from '../../../atoms/TextArea'

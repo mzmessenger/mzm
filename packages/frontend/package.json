@@ -12,6 +12,7 @@
     "pretest": "",
     "test": "vitest run --config=./vitest.config.ts",
     "test:warth": "vitest --config=./vite.config.ts",
+    "clean": "rm -rf dist",
     "build": "vite build",
     "build-tsc": "tsc --build tsconfig.json"
   },

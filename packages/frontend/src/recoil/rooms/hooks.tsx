@@ -15,6 +15,7 @@ import {
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
 import { createApiClient } from '../../lib/client'
 import { isReplied } from '../../lib/util'
+import { API_URL_BASE } from '../../constants'
 
 type RoomUser = {
   account: string
@@ -592,7 +593,7 @@ export const useRoomActions = ({
       const formData = new FormData()
       formData.append('icon', blob)
       const { accessToken } = await getAccessToken()
-      const res = await fetch(`/api/icon/rooms/${name}`, {
+      const res = await fetch(API_URL_BASE + `/api/icon/rooms/${name}`, {
         method: 'POST',
         body: formData,
         credentials: 'include',

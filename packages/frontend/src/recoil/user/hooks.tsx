@@ -9,6 +9,7 @@ import {
   useRecoilValue
 } from 'recoil'
 import { createApiClient } from '../../lib/client'
+import { API_URL_BASE } from '../../constants'
 
 type UserState = {
   id: string
@@ -106,7 +107,7 @@ export const useUser = ({
                 setUser((current) => ({
                   ...current,
                   account: json.account,
-                  iconUrl: `/api/icon/user/${json.account}`
+                  iconUrl: API_URL_BASE + `/api/icon/user/${json.account}`
                 }))
               })
           }
@@ -123,7 +124,7 @@ export const useUser = ({
       const formData = new FormData()
       formData.append('icon', blob)
       const { accessToken } = await getAccessToken()
-      const res = await fetch('/api/icon/user', {
+      const res = await fetch(API_URL_BASE + '/api/icon/user', {
         method: 'POST',
         body: formData,
         credentials: 'include',
@@ -138,7 +139,7 @@ export const useUser = ({
 
       const { version } =
         (await res.json()) as RESPONSE['/api/icon/user']['POST']
-      const iconUrl = `/api/icon/user/${user.account}/${version}`
+      const iconUrl = API_URL_BASE + `/api/icon/user/${user.account}/${version}`
       setUser((current) => ({
         ...current,
         iconUrl
@@ -183,7 +184,7 @@ export const useMyInfoActions = ({
             ...current,
             id: user._id,
             account: payload.account,
-            iconUrl: payload.icon,
+            iconUrl: API_URL_BASE + payload.icon,
             twitterUserName: user.twitterUserName,
             githubUserName: user.githubUserName
           }))

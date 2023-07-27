@@ -5,7 +5,7 @@ import { ModalProps, ModalBase } from '../atoms/Modal'
 import { useAuth } from '../../recoil/auth/hooks'
 import { useRoomUserActions, useGetUsersById } from '../../recoil/rooms/hooks'
 import { useIntersectionObserver } from '../../lib/hooks/useIntersectionObserver'
-import { WIDTH_MOBILE } from '../../lib/constants'
+import { WIDTH_MOBILE } from '../../constants'
 
 type Props = ModalProps & { roomId: string }
 

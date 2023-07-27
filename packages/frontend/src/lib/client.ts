@@ -1,3 +1,5 @@
+import { API_URL_BASE } from '../constants'
+
 type FetchInit = Parameters<typeof fetch>[1]
 
 type Options = { accessToken: string; headers?: FetchInit['headers'] } & (
@@ -12,7 +14,7 @@ type Options = { accessToken: string; headers?: FetchInit['headers'] } & (
 )
 
 export const createApiClient = async <T>(
-  url: string,
+  path: string,
   options: Options,
   parser: (res: Awaited<ReturnType<typeof fetch>>) => Promise<T>
 ) => {
@@ -26,7 +28,7 @@ export const createApiClient = async <T>(
 
   const init: FetchInit = {
     method,
-    credentials: 'include',
+    mode: 'cors',
     headers,
     ...options
   }
@@ -40,7 +42,7 @@ export const createApiClient = async <T>(
     init.body = options.body
   }
 
-  const res = await fetch(url, init)
+  const res = await fetch(API_URL_BASE + path, init)
 
   return await parser(res)
 }

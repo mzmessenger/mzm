@@ -2,7 +2,7 @@ import { marked } from 'marked'
 import { mangle } from 'marked-mangle'
 import escape from 'validator/lib/escape'
 import { expose } from 'comlink'
-import { emojis } from '../lib/constants'
+import { emojis } from '../constants'
 
 // bundle size
 import hljs from 'highlight.js/lib/common'

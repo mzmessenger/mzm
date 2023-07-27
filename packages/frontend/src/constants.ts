@@ -1,3 +1,9 @@
+/// <reference types="node" />
+
+export const API_URL_BASE = process.env.API_DOMAIN_BASE ?? ''
+
+export const SOCKET_URL = process.env.SOCKET_URL ?? ''
+
 export const WIDTH_MOBILE = 720
 
 export type EmojisKey = `:${string}:`
