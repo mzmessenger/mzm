@@ -44,6 +44,11 @@ export default defineConfig({
       }
     })
   ],
+  resolve: {
+    alias: [
+      { find: 'mzm-shared', replacement: path.resolve(dirname, '../shared') }
+    ]
+  },
   build: {
     emptyOutDir: true,
     sourcemap: true,
