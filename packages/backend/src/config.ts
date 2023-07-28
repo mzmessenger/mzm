@@ -4,6 +4,8 @@ if (process.env.NODE_ENV !== 'test') {
   config()
 }
 
+export const API_URL_BASE = process.env.API_URL_BASE ?? 'http://localhost:3001'
+
 export const MONGODB_URI =
   process.env.NODE_ENV === 'test' ? null : process.env.MONGODB_URI
 

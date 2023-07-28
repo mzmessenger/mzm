@@ -2,6 +2,7 @@ import type { IncomingMessage } from 'http'
 import type { Request } from 'express'
 import { HEADERS } from 'mzm-shared/auth/constants'
 import validator from 'validator'
+import { API_URL_BASE } from '../config.js'
 
 export const getRequestUserId = (req: IncomingMessage | Request): string => {
   const user: string = req.headers[HEADERS.USER_ID] as string
@@ -22,7 +23,7 @@ export const createUserIconPath = (
   if (!account) {
     return null
   }
-  let icon = `/api/icon/user/${account}`
+  let icon = `${API_URL_BASE}/api/icon/user/${account}`
   if (version) {
     icon += `/${version}`
   }
@@ -35,7 +36,7 @@ export const createRoomIconPath = (room: import('./db').Room): string => {
   }
 
   const icon = room.icon
-    ? `/api/icon/rooms/${room.name}/${room.icon.version}`
+    ? `${API_URL_BASE}/api/icon/rooms/${room.name}/${room.icon.version}`
     : null
 
   return icon

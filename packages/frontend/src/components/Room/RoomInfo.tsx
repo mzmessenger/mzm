@@ -14,7 +14,11 @@ import { WIDTH_MOBILE } from '../../constants'
 import { ModalUsersList } from './ModalUsersList'
 
 const RoomIcon = React.memo(({ iconUrl }: { iconUrl: string }) => {
-  return iconUrl ? <img src={iconUrl} /> : <Home fontSize="small" />
+  return iconUrl ? (
+    <img src={iconUrl} crossOrigin="anonymous" />
+  ) : (
+    <Home fontSize="small" />
+  )
 })
 
 export const RoomInfo = () => {
@@ -50,7 +54,14 @@ export const RoomInfo = () => {
 
   const userIcons = (users?.users || [])
     .slice(0, 10)
-    .map((u, i) => <img key={i} src={u.icon} onClick={() => clickUser(u)} />)
+    .map((u, i) => (
+      <img
+        key={i}
+        src={u.icon}
+        onClick={() => clickUser(u)}
+        crossOrigin="anonymous"
+      />
+    ))
 
   const expandClassName = ['expand-icon']
   if (openRoomSetting) {

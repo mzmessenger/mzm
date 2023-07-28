@@ -7,12 +7,13 @@ if (process.env.NODE_ENV !== 'test') {
 
 export const {
   MONGODB_URI,
-  TWITTER_CONSUMER_KEY,
-  TWITTER_CONSUMER_SECRET,
+  TWITTER_CLIENT_ID,
+  TWITTER_CLIENT_SECRET,
   TWITTER_CALLBACK_URL,
   GITHUB_CLIENT_ID,
   GITHUB_CLIENT_SECRET,
-  GITHUB_CALLBACK_URL
+  GITHUB_CALLBACK_URL,
+  CLIENT_URL_BASE = 'http://localhost:8080'
 } = process.env
 
 export const WORKER_NUM = Number(process.env.WORKER_NUM) ?? 1

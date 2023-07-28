@@ -28,7 +28,8 @@
     "mongodb": "^4.13.0",
     "passport": "^0.6.0",
     "passport-github": "^1.1.0",
-    "passport-twitter": "^1.0.4"
+    "passport-oauth2": "^1.7.0",
+    "zod": "^3.21.4"
   },
   "devDependencies": {
     "@types/bunyan": "^1.8.8",

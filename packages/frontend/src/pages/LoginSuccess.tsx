@@ -5,6 +5,9 @@ const LoginSuccess = () => {
   const navigate = useNavigate()
 
   useEffect(() => {
+    const { searchParams } = new URL(document.location.toString())
+    // @todo
+    console.log(searchParams.get('code'))
     navigate('/')
   }, [navigate])
 

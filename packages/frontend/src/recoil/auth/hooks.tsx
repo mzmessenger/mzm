@@ -6,6 +6,7 @@ import jwt_decode, { type JwtPayload } from 'jwt-decode'
 import dayjs from 'dayjs'
 import { sleep } from '../../lib/util'
 import { logger } from '../../lib/logger'
+import { AUTH_URL_BASE } from '../../constants'
 
 const createDefaultToken = () => {
   try {
@@ -40,7 +41,7 @@ export const useAuth = () => {
 
   const logout = () => {
     if (loginFlag) {
-      location.href = '/auth/logout'
+      location.href = AUTH_URL_BASE + '/auth/logout'
       setAuth({ accessToken: '' })
       setLoginFlag(false)
     }

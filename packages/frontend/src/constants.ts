@@ -1,8 +1,9 @@
 /// <reference types="node" />
 
-export const API_URL_BASE = process.env.API_DOMAIN_BASE ?? ''
+export const API_URL_BASE = process.env.API_URL_BASE ?? ''
 
 export const SOCKET_URL = process.env.SOCKET_URL ?? ''
+export const AUTH_URL_BASE = process.env.AUTH_URL_BASE ?? ''
 
 export const WIDTH_MOBILE = 720
 

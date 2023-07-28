@@ -1,25 +1,26 @@
 import express, { type Request, type Response } from 'express'
+import type { Redis } from 'ioredis'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import passport from 'passport'
-import type { Redis } from 'ioredis'
 import RedisStore from 'connect-redis'
-import { Strategy as TwitterStrategy } from 'passport-twitter'
 import { Strategy as GitHubStrategy } from 'passport-github'
+import { Strategy as Oauth2Strategy } from 'passport-oauth2'
 import session from 'express-session'
 import { COOKIES } from 'mzm-shared/auth/constants'
 import { logger } from './lib/logger.js'
 import {
-  TWITTER_CONSUMER_KEY,
-  TWITTER_CONSUMER_SECRET,
+  TWITTER_CLIENT_ID,
+  TWITTER_CLIENT_SECRET,
   TWITTER_CALLBACK_URL,
   GITHUB_CLIENT_ID,
   GITHUB_CLIENT_SECRET,
   GITHUB_CALLBACK_URL,
   TRUST_PROXY,
-  SESSION_PARSER
+  SESSION_PARSER,
+  CLIENT_URL_BASE
 } from './config.js'
-import * as handlers from './handlers.js'
+import * as handlers from './lib/handlers/index.js'
 
 type Options = {
   client: Redis
@@ -39,20 +40,25 @@ export const createApp = ({ client }: Options) => {
 
   app.use(passport.initialize())
   app.use(passport.session())
+  app.get('/', (_, res) => res.status(200).send('ok'))
 
   passport.serializeUser(handlers.serializeUser)
   passport.deserializeUser(handlers.deserializeUser)
 
   passport.use(
-    new TwitterStrategy(
+    'twitter-oauth2',
+    new Oauth2Strategy(
       {
-        consumerKey: TWITTER_CONSUMER_KEY,
-        consumerSecret: TWITTER_CONSUMER_SECRET,
+        authorizationURL: 'https://twitter.com/i/oauth2/authorize',
+        tokenURL: 'https://api.twitter.com/2/oauth2/token',
+        clientID: TWITTER_CLIENT_ID,
+        clientSecret: TWITTER_CLIENT_SECRET,
         callbackURL: TWITTER_CALLBACK_URL,
-        includeEmail: true,
-        passReqToCallback: true
+        pkce: true,
+        state: true,
+        scope: ['users.read']
       },
-      (req, token, tokenSecret, profile, done) => {
+      (req, accessToken, refreshToken, profile, done) => {
         handlers.loginTwitter(req, profile.id, profile.username, done)
       }
     )
@@ -77,32 +83,19 @@ export const createApp = ({ client }: Options) => {
     return handlers.refreshAccessToken(req, res)
   })
 
-  const callbackHandler = (
-    req: Request & { user: handlers.SerializeUser },
-    res: Response
-  ) => {
-    return res
-      .cookie(COOKIES.ACCESS_TOKEN, req.user.accessToken)
-      .cookie(COOKIES.REFRESH_TOKEN, req.user.refreshToken, {
-        secure: true,
-        httpOnly: true
-      })
-      .redirect('/login/success')
-  }
-
-  app.get('/auth/twitter', passport.authenticate('twitter'))
+  app.get('/auth/twitter', handlers.auth(client, passport, 'twitter-oauth2'))
   app.get(
     '/auth/twitter/callback',
-    passport.authenticate('twitter', { failureRedirect: '/' }),
-    callbackHandler
+    passport.authenticate('twitter-oauth2', { failureRedirect: '/' }),
+    handlers.oauthCallback
   )
   app.delete('/auth/twitter', handlers.removeTwitter)
 
-  app.get('/auth/github', passport.authenticate('github'))
+  app.get('/auth/github', handlers.auth(client, passport, 'github'))
   app.get(
     '/auth/github/callback',
     passport.authenticate('github', { failureRedirect: '/' }),
-    callbackHandler
+    handlers.oauthCallback
   )
   app.delete('/auth/github', handlers.removeGithub)
 
@@ -111,7 +104,7 @@ export const createApp = ({ client }: Options) => {
       res
         .clearCookie(COOKIES.ACCESS_TOKEN)
         .clearCookie(COOKIES.REFRESH_TOKEN)
-        .redirect('/')
+        .redirect(CLIENT_URL_BASE)
     })
   })
 

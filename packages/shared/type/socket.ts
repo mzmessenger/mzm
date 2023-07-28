@@ -62,7 +62,7 @@ export type ToClientType =
         id: string
         name: string
         description: string
-        iconUrl: string
+        iconUrl: string | null
         unread: number
         replied: number
         status: 'open' | 'close'

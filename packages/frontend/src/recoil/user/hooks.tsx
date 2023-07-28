@@ -107,7 +107,7 @@ export const useUser = ({
                 setUser((current) => ({
                   ...current,
                   account: json.account,
-                  iconUrl: API_URL_BASE + `/api/icon/user/${json.account}`
+                  iconUrl: `/api/icon/user/${json.account}`
                 }))
               })
           }
@@ -184,7 +184,7 @@ export const useMyInfoActions = ({
             ...current,
             id: user._id,
             account: payload.account,
-            iconUrl: API_URL_BASE + payload.icon,
+            iconUrl: payload.icon,
             twitterUserName: user.twitterUserName,
             githubUserName: user.githubUserName
           }))

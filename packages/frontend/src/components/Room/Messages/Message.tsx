@@ -69,7 +69,7 @@ const MessageElementInner: React.FC<Props> = (props) => {
 
   return (
     <MessageWrap className={className}>
-      <img className="user-icon" src={icon} />
+      <img className="user-icon" src={icon} crossOrigin="anonymous" />
       <MessageHeader
         id={userId}
         account={account}

@@ -6,19 +6,22 @@ import path from 'path'
 const dirname = path.dirname(new URL(import.meta.url).pathname)
 
 export default defineConfig(({ mode }) => {
-  const API_URL_BASE =
-    mode === 'production' ? 'https://api.mzm.dev' : 'http://localhost:3001'
   const SOCKET_URL =
     mode === 'production'
       ? 'wss://socket.mzm.dev/socket'
       : 'ws://localhost:3000/socket'
+  const API_URL_BASE =
+    mode === 'production' ? 'https://api.mzm.dev' : 'http://localhost:3001'
+  const AUTH_URL_BASE =
+    mode === 'production' ? 'https://auth.mzm.dev' : 'http://localhost:3002'
 
   return {
     define: {
       process: {
         env: {
-          API_URL_BASE: process.env.API_URL_BASE ?? API_URL_BASE,
-          SOCKET_URL: process.env.SOCKET_URL ?? SOCKET_URL
+          SOCKET_URL: process.env.SOCKET_URL ?? SOCKET_URL,
+          API_URL_BASE: process.env.API_DOMAIN_BASE ?? API_URL_BASE,
+          AUTH_URL_BASE: process.env.AUTH_URL_BASE ?? AUTH_URL_BASE
         }
       }
     },

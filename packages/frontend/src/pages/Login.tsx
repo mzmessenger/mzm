@@ -1,4 +1,4 @@
-import React from 'react'
+import React, { useState, useEffect } from 'react'
 import styled from '@emotion/styled'
 import {
   Twitter as TwitterIcon,
@@ -6,8 +6,45 @@ import {
 } from '@mui/icons-material'
 import { LoginHeader as Header } from '../components/atoms/LoginHeader'
 import { Link } from '../components/atoms/Link'
+import { pkceChallenge } from '../lib/auth'
+import { AUTH_URL_BASE } from '../constants'
+import { Loading } from '../components/Loading'
+
+const LoginButtons = (props: { codeChallenge: string }) => {
+  const queryParams = new URLSearchParams([
+    ['code_challenge', props.codeChallenge],
+    ['code_challenge_method', 'S256']
+  ])
+
+  return (
+    <div className="button">
+      <a
+        href={`${AUTH_URL_BASE}/auth/twitter?${queryParams.toString()}`}
+        className="login-link"
+      >
+        <TwitterIcon className="icon" />
+        Twitter
+      </a>
+      <a
+        href={`${AUTH_URL_BASE}/auth/github?${queryParams.toString()}`}
+        className="login-link"
+      >
+        <GitHubIcon className="icon" />
+        GitHub
+      </a>
+    </div>
+  )
+}
 
 const Login = () => {
+  const [codeChallenge, setCodeChallenge] = useState('')
+  // @todo worker
+  useEffect(() => {
+    pkceChallenge().then(({ code_challenge }) => {
+      setCodeChallenge(code_challenge)
+    })
+  }, [])
+
   return (
     <Wrap>
       <Header />
@@ -15,16 +52,11 @@ const Login = () => {
         <h4>
           <Link to="/tos">利用規約</Link>に同意してログイン
         </h4>
-        <div className="button">
-          <a href="/auth/twitter" className="login-link">
-            <TwitterIcon className="icon" />
-            Twitter
-          </a>
-          <a href="/auth/github" className="login-link">
-            <GitHubIcon className="icon" />
-            GitHub
-          </a>
-        </div>
+        {codeChallenge === '' ? (
+          <Loading />
+        ) : (
+          <LoginButtons codeChallenge={codeChallenge} />
+        )}
       </div>
       <div className="attention">
         <h2>注意事項</h2>

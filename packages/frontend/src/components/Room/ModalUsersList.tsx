@@ -30,7 +30,7 @@ export const ModalUsersList: React.FC<Props> = ({ open, onClose, roomId }) => {
 
   const list = (users?.users || []).map((e) => (
     <li key={e.userId} attr-id={e.userId}>
-      <img src={e.icon} className="icon" />
+      <img src={e.icon} className="icon" crossOrigin="anonymous" />
       {e.account}
     </li>
   ))

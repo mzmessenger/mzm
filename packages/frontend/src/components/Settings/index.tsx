@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
-import { WIDTH_MOBILE } from '../../constants'
+import { WIDTH_MOBILE, AUTH_URL_BASE } from '../../constants'
 import { useUiActions } from '../../recoil/ui/hooks'
 import { SettingUser } from './SettingUser'
 
@@ -25,7 +25,7 @@ const Settings = () => {
             <li>アカウント</li>
             <li>
               <div className="logout">
-                <a href="/auth/logout">Logout</a>
+                <a href={AUTH_URL_BASE + '/auth/logout'}>Logout</a>
               </div>
             </li>
           </ul>
