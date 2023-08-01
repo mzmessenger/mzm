@@ -36,11 +36,18 @@ const generateCodeChallenge = async (codeVerifier: string) => {
 export const pkceChallenge = async () => {
   const code_verifier = createCodeVerifier()
   const code_challenge = await generateCodeChallenge(code_verifier)
+  // @todo worker
+  localStorage.setItem('code_verifier', code_verifier)
 
   return {
     code_verifier,
     code_challenge
   }
+}
+
+// @todo worker
+export const getCodeVerifier = () => {
+  return localStorage.getItem('code_verifier')
 }
 
 export const verifyCodeChallenge = async (

@@ -16,6 +16,10 @@ export const {
   CLIENT_URL_BASE = 'http://localhost:8080'
 } = process.env
 
+export const CORS_ORIGIN = process.env.CORS_ORIGIN
+  ? process.env.CORS_ORIGIN.split(',').map((e) => e.trim())
+  : ['http://localhost', 'http://localhost:8080']
+
 export const WORKER_NUM = Number(process.env.WORKER_NUM) ?? 1
 
 export const PORT = process.env.PORT ?? 3002

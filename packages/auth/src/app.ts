@@ -1,5 +1,6 @@
-import express, { type Request, type Response } from 'express'
 import type { Redis } from 'ioredis'
+import express, { type Request, type Response } from 'express'
+import cors from 'cors'
 import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import passport from 'passport'
@@ -18,9 +19,12 @@ import {
   GITHUB_CALLBACK_URL,
   TRUST_PROXY,
   SESSION_PARSER,
-  CLIENT_URL_BASE
+  CLIENT_URL_BASE,
+  CORS_ORIGIN
 } from './config.js'
 import * as handlers from './lib/handlers/index.js'
+
+const jsonParser = express.json({ limit: '1mb' })
 
 type Options = {
   client: Redis
@@ -29,6 +33,12 @@ type Options = {
 export const createApp = ({ client }: Options) => {
   const app = express()
   app.use(helmet())
+  app.use(
+    cors({
+      origin: CORS_ORIGIN
+    })
+  )
+
   app.set('trust proxy', TRUST_PROXY)
 
   const sessionParser = session({
@@ -82,6 +92,8 @@ export const createApp = ({ client }: Options) => {
   app.post('/auth/token/refresh', cookieParser(), (req, res) => {
     return handlers.refreshAccessToken(req, res)
   })
+
+  app.post('/auth/token', jsonParser, handlers.accessToken)
 
   app.get('/auth/twitter', handlers.auth(client, passport, 'twitter-oauth2'))
   app.get(

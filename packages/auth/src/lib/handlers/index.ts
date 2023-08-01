@@ -14,12 +14,13 @@ import {
 import { COOKIES } from 'mzm-shared/auth/constants'
 import * as db from '../db.js'
 import { logger } from '../logger.js'
-import { redis } from '../redis.js'
+import { redis, sessionRedis } from '../redis.js'
 import {
   verifyRefreshToken,
   createAccessToken,
   type RefeshToken
 } from '../token.js'
+import { verifyAuthorizationCode } from '../pkce/index.js'
 import { JWT, REMOVE_STREAM } from '../../config.js'
 
 export { oauthCallback, auth } from './oauth.js'
@@ -47,6 +48,7 @@ export const deserializeUser = (
     .catch((err) => done(err))
 }
 
+// @todo remove
 export const refreshAccessToken = async (req: Request, res: Response) => {
   type ResponseType = AUTH_API_RESPONSE['/auth/token/refresh']['POST']['body']
   try {
@@ -86,6 +88,54 @@ export const refreshAccessToken = async (req: Request, res: Response) => {
     logger.info('[refreshAccessToken]', 'error', e)
     const response: ResponseType[400] = 'not login'
     return res.status(401).send(response)
+  }
+}
+
+export const accessToken = async (req: Request, res: Response) => {
+  type ResponseType = AUTH_API_RESPONSE['/auth/token']['POST']['body']
+
+  try {
+    logger.info('[accessToken]', 'start')
+
+    const verify = await verifyAuthorizationCode(sessionRedis, {
+      code: req.body.code,
+      grant_type: req.body.grant_type,
+      code_verifier: req.body.code_verifier
+    })
+
+    if (verify.success === false) {
+      return res.status(401).send(verify.error.message)
+    }
+
+    const user = await db.collections.users.findOne({
+      _id: new ObjectId(verify.data.userId)
+    })
+
+    const accessToken = await createAccessToken({
+      _id: user._id.toHexString(),
+      twitterId: user.twitterId,
+      twitterUserName: user.twitterUserName,
+      githubId: user.githubId,
+      githubUserName: user.githubUserName
+    })
+    logger.info('[accessToken]', 'created accessToken', {
+      user: user._id.toHexString()
+    })
+
+    const response: ResponseType[200] = {
+      accessToken,
+      user: {
+        _id: user._id.toHexString(),
+        twitterId: user.twitterId,
+        twitterUserName: user.twitterUserName,
+        githubId: user.githubId,
+        githubUserName: user.githubUserName
+      }
+    }
+    res.status(200).json(response)
+  } catch (e) {
+    logger.info('[accessToken]', 'error', e)
+    return res.status(401).send('invalid code')
   }
 }
 

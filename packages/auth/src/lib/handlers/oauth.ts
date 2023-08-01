@@ -30,7 +30,8 @@ const _oauthCallback = async (req: Request & { user: SerializeUser }) => {
 
   await saveAuthorizationCode(sessionRedis, {
     code,
-    code_challenge: params.data.code_challenge
+    code_challenge: params.data.code_challenge,
+    userId: req.user._id.toHexString()
   })
   const queryParams = new URLSearchParams([['code', code]])
   return {
@@ -48,13 +49,7 @@ export const oauthCallback = (
       logger.error({ label: 'oauth2Callback', error: params.error.message })
       return res.status(params.error.status).send(params.error.message)
     }
-    return res
-      .cookie(COOKIES.ACCESS_TOKEN, req.user.accessToken)
-      .cookie(COOKIES.REFRESH_TOKEN, req.user.refreshToken, {
-        secure: true,
-        httpOnly: true
-      })
-      .redirect(params.redirectUrl)
+    return res.redirect(params.redirectUrl)
   })
 }
 export const auth = (

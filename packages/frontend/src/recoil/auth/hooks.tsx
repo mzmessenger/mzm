@@ -5,6 +5,7 @@ import { atom, useRecoilState, useRecoilValue } from 'recoil'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
 import dayjs from 'dayjs'
 import { sleep } from '../../lib/util'
+import { getCodeVerifier } from '../../lib/auth'
 import { logger } from '../../lib/logger'
 import { AUTH_URL_BASE } from '../../constants'
 
@@ -47,6 +48,30 @@ export const useAuth = () => {
     }
   }
 
+  // @todo
+  const authToken = async (code: string) => {
+    type ResponseType = AUTH_API_RESPONSE['/auth/token']['POST']['body']
+
+    const codeVerifier = getCodeVerifier()
+    const res = await fetch(AUTH_URL_BASE + '/auth/token', {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json; charset=utf-8'
+      },
+      body: JSON.stringify({
+        code,
+        grant_type: 'authorization_code',
+        code_verifier: codeVerifier
+      })
+    })
+
+    if (res.status === 200) {
+      const body = (await res.json()) as ResponseType[200]
+      setAuth({ accessToken: body.accessToken })
+    }
+  }
+
+  // @todo remove
   const refreshToken = async () => {
     type ResponseType = AUTH_API_RESPONSE['/auth/token/refresh']['POST']['body']
 
@@ -59,7 +84,7 @@ export const useAuth = () => {
       if (res.status === 200) {
         const body = (await res.json()) as ResponseType[200]
         setAuth({ accessToken: body.accessToken })
-        setLoginFlag(true)
+        setLoginFlag(false)
         return body
       }
       if (i < MAX_RETRY_COUNT) {
@@ -103,6 +128,7 @@ export const useAuth = () => {
     },
     logout,
     getAccessToken,
-    refreshToken
+    refreshToken,
+    authToken
   } as const
 }

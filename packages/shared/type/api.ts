@@ -110,6 +110,22 @@ export type REQUEST = {
 }
 
 export type AUTH_API_RESPONSE = {
+  '/auth/token': {
+    POST: {
+      body: {
+        200: {
+          accessToken: string
+          user: {
+            _id: string
+            twitterId: string
+            twitterUserName: string
+            githubId: string
+            githubUserName: string
+          }
+        }
+      }
+    }
+  }
   '/auth/token/refresh': {
     POST: {
       body: {

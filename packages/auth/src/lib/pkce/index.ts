@@ -7,7 +7,7 @@ import { logger } from '../logger.js'
 export { generageAuthorizationCode, generateState } from './util.js'
 
 const createAuthorizationCodeRedisKey = (code: string) => {
-  return code
+  return `code:${code}`
 }
 
 export const saveAuthorizationCode = async (
@@ -15,6 +15,7 @@ export const saveAuthorizationCode = async (
   options: {
     code: string
     code_challenge: string
+    userId: string
   }
 ) => {
   // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
@@ -23,7 +24,8 @@ export const saveAuthorizationCode = async (
     createAuthorizationCodeRedisKey(options.code),
     JSON.stringify({
       code_challenge: options.code_challenge,
-      code_challenge_method: 'S256'
+      code_challenge_method: 'S256',
+      userId: options.userId
     }),
     'EX',
     60 * 10
@@ -35,7 +37,8 @@ export const saveAuthorizationCode = async (
 const AuthorizationCode = z.string().transform((str, ctx) => {
   const parser = z.object({
     code_challenge: z.string(),
-    code_challenge_method: z.string()
+    code_challenge_method: z.string(),
+    userId: z.string()
   })
 
   try {
@@ -54,7 +57,7 @@ export const verifyAuthorizationCode = async (
     code_verifier: string
   }
 ): Promise<
-  | { success: true }
+  | { success: true; data: { userId: string } }
   | {
       success: false
       error: {
@@ -84,7 +87,10 @@ export const verifyAuthorizationCode = async (
     }
 
     await client.del(key)
-    return { success: true }
+    return {
+      success: true,
+      data: { userId: parsedAuthorizationCode.data.userId }
+    }
   } catch (e) {
     return { success: false, error: { message: 'invalid code' } }
   }
@@ -138,7 +144,6 @@ export const getParametaerFromState = async (
       error: { message: string }
     }
 > => {
-  const keys = await client.keys('*')
   const key = createStateRedisKey(state)
   const val = await client.get(key)
   if (!val) {
