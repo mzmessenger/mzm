@@ -82,7 +82,7 @@ export const createTokens = async (user: CreateAccessTokenArgs) => {
 }
 
 export const verifyRefreshToken = (token: string) => {
-  return new Promise<jwt.JwtPayload | string>((resolve, reject) => {
+  return new Promise<jwt.JwtPayload & RefeshToken>((resolve, reject) => {
     jwt.verify(
       token,
       JWT.refreshTokenSecret,
@@ -91,7 +91,7 @@ export const verifyRefreshToken = (token: string) => {
         if (err) {
           return reject()
         }
-        resolve(decode)
+        resolve(decode as jwt.JwtPayload & RefeshToken)
       }
     )
   })

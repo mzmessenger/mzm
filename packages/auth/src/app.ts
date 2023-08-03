@@ -20,8 +20,11 @@ import {
   CLIENT_URL_BASE,
   CORS_ORIGIN
 } from './config.js'
-// @todo split
 import * as handlers from './handlers/index.js'
+import * as oauthHandlers from './handlers/oauth.js'
+import * as githubHandlers from './handlers/github.js'
+import * as twitterHandlers from './handlers/twitter.js'
+import * as authorizeHandlers from './handlers/authorize.js'
 
 const jsonParser = express.json({ limit: '1mb' })
 
@@ -65,7 +68,7 @@ export const createApp = ({ client }: Options) => {
         scope: ['users.read']
       },
       (req, accessToken, refreshToken, profile, done) => {
-        handlers.loginTwitter(req, profile.id, profile.username, done)
+        twitterHandlers.loginTwitter(req, profile.id, profile.username, done)
       }
     )
   )
@@ -80,20 +83,20 @@ export const createApp = ({ client }: Options) => {
         passReqToCallback: true
       },
       (req, accessToken, refreshToken, profile, done) => {
-        handlers.loginGithub(req, profile.id, profile.username, done)
+        githubHandlers.loginGithub(req, profile.id, profile.username, done)
       }
     )
   )
 
   app.get(
     '/authorize',
-    handlers.createNonceMiddleware,
+    authorizeHandlers.createNonceMiddleware,
     helmet({
       contentSecurityPolicy: {
         directives: {
           scriptSrc: [
             "'self'",
-            (req, res: handlers.AuthorizationResponse) => {
+            (req, res: authorizeHandlers.AuthorizationResponse) => {
               return `'nonce-${res.locals.nonce}'`
             }
           ],
@@ -101,39 +104,39 @@ export const createApp = ({ client }: Options) => {
         }
       }
     }),
-    handlers.authorize
+    authorizeHandlers.authorize
   )
 
   passport.serializeUser(handlers.serializeUser)
   passport.deserializeUser(handlers.deserializeUser)
 
-  app.post('/auth/token', defaultHelmet, jsonParser, handlers.accessToken)
+  app.post('/auth/token', defaultHelmet, jsonParser, authorizeHandlers.token)
 
   app.get(
     '/auth/twitter',
     defaultHelmet,
-    handlers.oauth(client, passport, 'twitter-oauth2')
+    oauthHandlers.oauth(client, passport, 'twitter-oauth2')
   )
   app.get(
     '/auth/twitter/callback',
     defaultHelmet,
     passport.authenticate('twitter-oauth2', { failureRedirect: '/' }),
-    handlers.oauthCallback
+    oauthHandlers.oauthCallback
   )
-  app.delete('/auth/twitter', defaultHelmet, handlers.removeTwitter)
+  app.delete('/auth/twitter', defaultHelmet, twitterHandlers.removeTwitter)
 
   app.get(
     '/auth/github',
     defaultHelmet,
-    handlers.oauth(client, passport, 'github')
+    oauthHandlers.oauth(client, passport, 'github')
   )
   app.get(
     '/auth/github/callback',
     defaultHelmet,
     passport.authenticate('github', { failureRedirect: '/' }),
-    handlers.oauthCallback
+    oauthHandlers.oauthCallback
   )
-  app.delete('/auth/github', defaultHelmet, handlers.removeGithub)
+  app.delete('/auth/github', defaultHelmet, githubHandlers.removeGithub)
 
   app.get('/auth/logout', defaultHelmet, (req: Request, res: Response) => {
     req.logout(() => {

@@ -10,16 +10,6 @@ import { logger } from '../lib/logger.js'
 import { redis } from '../lib/redis.js'
 import { JWT, REMOVE_STREAM } from '../config.js'
 
-export { oauthCallback, oauth } from './oauth.js'
-export { loginGithub, removeGithub } from './github.js'
-export { loginTwitter, removeTwitter } from './twitter.js'
-export {
-  authorize,
-  accessToken,
-  createNonceMiddleware,
-  type AuthorizationResponse
-} from './authorize.js'
-
 export const serializeUser = (
   user: SerializeUser,
   // eslint-disable-next-line no-unused-vars

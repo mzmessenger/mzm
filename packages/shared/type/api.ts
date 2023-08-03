@@ -115,6 +115,7 @@ export type AUTH_API_RESPONSE = {
       body: {
         200: {
           accessToken: string
+          refreshToken: string
           user: {
             _id: string
             twitterId: string

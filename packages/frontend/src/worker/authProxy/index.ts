@@ -14,12 +14,11 @@ export type Cache = {
   code_verifier?: string
 }
 
-/*
-const decodeAccessToken = async (accessToken: string) => {
+const decodeAccessToken = (accessToken: string) => {
   try {
     const decoded = jwt_decode<JwtPayload & AccessToken>(accessToken)
     const exp = dayjs(new Date(decoded.exp * 1000))
-      .subtract(5, 'minute')
+      .subtract(20, 'minute')
       .valueOf()
     return { expired: exp <= Date.now(), user: decoded.user }
   } catch (e) {
@@ -27,17 +26,26 @@ const decodeAccessToken = async (accessToken: string) => {
     return { expired: true, accessToken: '', user: null }
   }
 }
-*/
 
 export class AuthProxy {
   code_verifier: string | null = null
   #code_challenge: string | null = null
   #accessToken: string | null = null
+  #refreshToken: string | null = null
   #user: TokenResponse['user'] | null = null
 
   constructor(cache?: Cache) {
     this.#code_challenge = cache?.code_challenge ?? null
     this.code_verifier = cache?.code_verifier ?? null
+    setInterval(
+      () => {
+        const decode = decodeAccessToken(this.#accessToken)
+        if (decode.expired) {
+          this.#authTokenWithRefresh()
+        }
+      },
+      10 * 60 * 1000
+    )
   }
 
   generateSocketUrl() {
@@ -113,13 +121,17 @@ export class AuthProxy {
     return res
   }
 
-  getUser() {
-    return this.#user
-  }
-
-  async authToken(
-    code: string,
-    code_verifier?: string
+  async #authTokenBase(
+    body:
+      | {
+          grant_type: 'refresh_token'
+          refresh_token: string
+        }
+      | {
+          code: string
+          grant_type: 'authorization_code'
+          code_verifier: string
+        }
   ): Promise<
     | {
         success: true
@@ -132,20 +144,31 @@ export class AuthProxy {
       headers: {
         'Content-Type': 'application/json; charset=utf-8'
       },
-      body: JSON.stringify({
-        code,
-        grant_type: 'authorization_code',
-        code_verifier: code_verifier ? code_verifier : this.code_verifier
-      })
+      body: JSON.stringify(body)
     })
 
     if (res.status === 200) {
       const body = (await res.json()) as TokenResponse
       this.#accessToken = body.accessToken
+      this.#refreshToken = body.refreshToken
       this.#user = body.user
       return { success: true, data: body }
     }
     return { success: false, status: res.status }
+  }
+  async #authTokenWithRefresh() {
+    return this.#authTokenBase({
+      grant_type: 'refresh_token',
+      refresh_token: this.#refreshToken
+    })
+  }
+
+  async authToken(code: string, code_verifier?: string) {
+    return this.#authTokenBase({
+      code,
+      grant_type: 'authorization_code',
+      code_verifier: code_verifier ? code_verifier : this.code_verifier
+    })
   }
 
   async pkceChallenge() {
