@@ -1,5 +1,5 @@
 import type { NextFunction, Request, Response } from 'express'
-import type { PassportRequest } from './types.js'
+import type { PassportRequest } from '../types.js'
 import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
 import { randomBytes } from 'node:crypto'
 import { ObjectId } from 'mongodb'
@@ -40,7 +40,7 @@ export const token = async (req: Request, res: Response) => {
 
     let userId: string | null = null
     if (body.data.grant_type === 'authorization_code') {
-      const verify = await verifyAuthorizationCodeFromRedis(sessionRedis, {
+      const verify = await verifyAuthorizationCodeFromRedis(sessionRedis!, {
         code: body.data.code,
         grant_type: body.data.grant_type,
         code_verifier: body.data.code_verifier
@@ -57,9 +57,13 @@ export const token = async (req: Request, res: Response) => {
     if (!userId) {
       return res.status(400).json({ message: 'invalid grant_type' })
     }
-    const user = await db.collections.users.findOne({
+    const user = await db.collections().users.findOne({
       _id: new ObjectId(userId)
     })
+
+    if (!user) {
+      return res.status(400).json({ message: 'invalid user' })
+    }
 
     const { accessToken, refreshToken } = await createTokens({
       _id: user._id.toHexString(),
@@ -78,10 +82,10 @@ export const token = async (req: Request, res: Response) => {
       refreshToken,
       user: {
         _id: user._id.toHexString(),
-        twitterId: user.twitterId,
-        twitterUserName: user.twitterUserName,
-        githubId: user.githubId,
-        githubUserName: user.githubUserName
+        twitterId: user.twitterId ?? null,
+        twitterUserName: user.twitterUserName ?? null,
+        githubId: user.githubId ?? null,
+        githubUserName: user.githubUserName ?? null
       }
     }
     res.status(200).json(response)
@@ -113,7 +117,8 @@ export const authorize = async (
   res: AuthorizationResponse
 ) => {
   try {
-    if (!req.user) {
+    const user = req.user
+    if (!user) {
       return res.status(401).send('unauthorized')
     }
     const query = AuthorizationQuery.safeParse(req.query)
@@ -125,13 +130,13 @@ export const authorize = async (
     const code = generageAuthorizationCode()
     const code_challenge = encodeURIComponent(query.data.code_challenge)
 
-    await saveAuthorizationCode(sessionRedis, {
+    await saveAuthorizationCode(sessionRedis!, {
       code,
       code_challenge,
-      userId: req.user._id.toHexString()
+      userId: user._id.toHexString()
     })
 
-    const state = encodeURIComponent(query.data.state)
+    const state = encodeURIComponent(query.data.state ?? '')
     const html = authorizeTemplate({
       targetOrigin: CLIENT_URL_BASE,
       code,

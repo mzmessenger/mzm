@@ -3,9 +3,9 @@ import { Redis } from 'ioredis'
 import { REDIS, SESSION_REDIS } from '../config.js'
 import { logger } from './logger.js'
 
-export let redis: Redis = null
+export let redis: Redis | null = null
 
-export let sessionRedis: Redis = null
+export let sessionRedis: Redis | null = null
 
 export const connect = async () => {
   redis = new Redis(REDIS.options)
@@ -23,4 +23,8 @@ export const connect = async () => {
   await Promise.all([once(redis, 'ready'), once(sessionRedis, 'ready')])
 
   logger.info('[redis] connected')
+  return {
+    redis,
+    sessionRedis
+  }
 }

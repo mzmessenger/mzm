@@ -1,4 +1,4 @@
-import type { PassportRequest, SerializeUser } from './types.js'
+import type { PassportRequest, SerializeUser } from '../types.js'
 import type { Response } from 'express'
 import { ObjectId } from 'mongodb'
 import {
@@ -26,7 +26,7 @@ export const loginTwitter = async (
       twitterUserName
     }
 
-    const updated = await db.collections.users.findOneAndUpdate(
+    const updated = await db.collections().users.findOneAndUpdate(
       filter,
       { $set: update },
       {
@@ -41,9 +41,9 @@ export const loginTwitter = async (
 
     const user = updated.value
       ? updated.value
-      : await db.collections.users.findOne(filter)
+      : await db.collections().users.findOne(filter)
 
-    cb(null, user)
+    cb(null, user ?? undefined)
   } catch (e) {
     logger.error('[auth:update:twitter] error:', twitterId, twitterUserName)
     cb(e)
@@ -52,6 +52,9 @@ export const loginTwitter = async (
 
 export const removeTwitter = async (req: PassportRequest, res: Response) => {
   const accessToken = parseAuthorizationHeader(req)
+  if (!accessToken) {
+    return res.status(401).send('not auth token')
+  }
   const { err, decoded } = await verifyAccessToken(
     accessToken,
     JWT.accessTokenSecret,
@@ -66,7 +69,12 @@ export const removeTwitter = async (req: PassportRequest, res: Response) => {
   }
 
   const _id = new ObjectId(decoded.user._id)
-  const user = await db.collections.users.findOne({ _id })
+  const user = await db.collections().users.findOne({ _id })
+
+  if (!user) {
+    res.status(401).send('not exists')
+    return
+  }
 
   if (!user.twitterId) {
     res.status(400).send('not linked')
@@ -78,10 +86,12 @@ export const removeTwitter = async (req: PassportRequest, res: Response) => {
     return
   }
 
-  await db.collections.users.updateOne(
-    { _id },
-    { $unset: { twitterId: '', twitterUserName: '' } }
-  )
+  await db
+    .collections()
+    .users.updateOne(
+      { _id },
+      { $unset: { twitterId: '', twitterUserName: '' } }
+    )
 
   res.status(200).send('ok')
 }

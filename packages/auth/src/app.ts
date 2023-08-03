@@ -1,4 +1,5 @@
 import type { Redis } from 'ioredis'
+import type { PassportRequest, SerializeUser } from './types.js'
 import express, { type Request, type Response } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -96,15 +97,18 @@ export const createApp = ({ client }: Options) => {
         directives: {
           scriptSrc: [
             "'self'",
-            (req, res: authorizeHandlers.AuthorizationResponse) => {
-              return `'nonce-${res.locals.nonce}'`
+            (req, res) => {
+              const { locals } = res as authorizeHandlers.AuthorizationResponse
+              return `'nonce-${locals.nonce}'`
             }
           ],
           frameAncestors: ["'self'", CLIENT_URL_BASE]
         }
       }
     }),
-    authorizeHandlers.authorize
+    (req, res) => {
+      authorizeHandlers.authorize(req as PassportRequest, res)
+    }
   )
 
   passport.serializeUser(handlers.serializeUser)
@@ -121,9 +125,13 @@ export const createApp = ({ client }: Options) => {
     '/auth/twitter/callback',
     defaultHelmet,
     passport.authenticate('twitter-oauth2', { failureRedirect: '/' }),
-    oauthHandlers.oauthCallback
+    (req, res) => {
+      oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
+    }
   )
-  app.delete('/auth/twitter', defaultHelmet, twitterHandlers.removeTwitter)
+  app.delete('/auth/twitter', defaultHelmet, (req, res) => {
+    twitterHandlers.removeTwitter(req as PassportRequest, res)
+  })
 
   app.get(
     '/auth/github',
@@ -134,9 +142,13 @@ export const createApp = ({ client }: Options) => {
     '/auth/github/callback',
     defaultHelmet,
     passport.authenticate('github', { failureRedirect: '/' }),
-    oauthHandlers.oauthCallback
+    (req, res) => {
+      oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
+    }
   )
-  app.delete('/auth/github', defaultHelmet, githubHandlers.removeGithub)
+  app.delete('/auth/github', defaultHelmet, (req, res) => {
+    githubHandlers.removeGithub(req as PassportRequest, res)
+  })
 
   app.get('/auth/logout', defaultHelmet, (req: Request, res: Response) => {
     req.logout(() => {
@@ -144,7 +156,9 @@ export const createApp = ({ client }: Options) => {
     })
   })
 
-  app.delete('/auth/user', defaultHelmet, handlers.remove)
+  app.delete('/auth/user', defaultHelmet, (req, res) => {
+    handlers.remove(req as PassportRequest, res)
+  })
 
   // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
   app.use((err, req, res, next) => {

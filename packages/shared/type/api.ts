@@ -118,29 +118,12 @@ export type AUTH_API_RESPONSE = {
           refreshToken: string
           user: {
             _id: string
-            twitterId: string
-            twitterUserName: string
-            githubId: string
-            githubUserName: string
+            twitterId: string | null
+            twitterUserName: string | null
+            githubId: string | null
+            githubUserName: string | null
           }
         }
-      }
-    }
-  }
-  '/auth/token/refresh': {
-    POST: {
-      body: {
-        200: {
-          accessToken: string
-          user: {
-            _id: string
-            twitterId?: string
-            twitterUserName?: string
-            githubId?: string
-            githubUserName?: string
-          }
-        }
-        400: 'not login'
       }
     }
   }

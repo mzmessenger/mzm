@@ -138,6 +138,11 @@ const createStateRedisKey = (state: string) => {
   return `state:${state}`
 }
 
+const queryParser = z.object({
+  code_challenge: z.string().min(1),
+  code_challenge_method: z.literal('S256')
+})
+
 export const saveParameterWithReuqest = async (
   client: Redis,
   req: Request
@@ -151,18 +156,17 @@ export const saveParameterWithReuqest = async (
       error: { message: string }
     }
 > => {
-  // @todo parse
-  const { code_challenge, code_challenge_method } = req.query
-  if (!code_challenge || !code_challenge_method) {
-    return { success: false, error: { message: 'invalid code_challenge' } }
+  const query = queryParser.safeParse(req.query)
+  if (query.success === false) {
+    return { success: false, error: { message: query.error.message } }
   }
   const state = generateState()
 
   await client.set(
     createStateRedisKey(state),
     JSON.stringify({
-      code_challenge,
-      code_challenge_method
+      code_challenge: query.data.code_challenge,
+      code_challenge_method: query.data.code_challenge_method
     }),
     'EX',
     60 * 5

@@ -1,5 +1,5 @@
 import type { Response } from 'express'
-import type { SerializeUser, RequestUser, PassportRequest } from './types.js'
+import type { SerializeUser, RequestUser, PassportRequest } from '../types.js'
 import { ObjectId } from 'mongodb'
 import {
   parseAuthorizationHeader,
@@ -11,20 +11,19 @@ import { redis } from '../lib/redis.js'
 import { JWT, REMOVE_STREAM } from '../config.js'
 
 export const serializeUser = (
-  user: SerializeUser,
-  // eslint-disable-next-line no-unused-vars
+  user: Express.User,
   done: (err, id: string) => void
 ) => {
-  done(null, user._id.toHexString())
+  const { _id } = user as SerializeUser
+  done(null, _id.toHexString())
 }
 
 export const deserializeUser = (
   id: string,
-  // eslint-disable-next-line no-unused-vars
   done: (err, user?: RequestUser) => void
 ) => {
-  db.collections.users
-    .findOne({ _id: new ObjectId(id) })
+  db.collections()
+    .users.findOne({ _id: new ObjectId(id) })
     .then((user) => {
       done(null, user)
     })
@@ -33,6 +32,9 @@ export const deserializeUser = (
 
 export const remove = async (req: PassportRequest, res: Response) => {
   const accessToken = parseAuthorizationHeader(req)
+  if (!accessToken) {
+    return res.status(401).send('not auth token')
+  }
   const { err, decoded } = await verifyAccessToken(
     accessToken,
     JWT.accessTokenSecret,
@@ -46,7 +48,7 @@ export const remove = async (req: PassportRequest, res: Response) => {
   }
   logger.info('[remove]', req.user)
   if (decoded.user._id) {
-    await redis.xadd(REMOVE_STREAM, '*', 'user', req.user._id.toHexString())
+    await redis!.xadd(REMOVE_STREAM, '*', 'user', decoded.user._id)
     return res.status(200).send('ok')
   }
   return res.status(401).send('not auth')

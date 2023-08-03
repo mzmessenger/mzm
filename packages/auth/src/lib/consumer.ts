@@ -1,5 +1,5 @@
+import type { Redis } from 'ioredis'
 import { ObjectId } from 'mongodb'
-import { redis } from './redis.js'
 import { logger } from './logger.js'
 import * as db from './db.js'
 import { REMOVE_STREAM } from '../config.js'
@@ -7,15 +7,19 @@ import { REMOVE_STREAM } from '../config.js'
 const REMOVE_STREAM_TO_CHAT = 'stream:backend:remove:user'
 const REMOVE_GROUP = 'group:auth:remove:user'
 
-const initConsumerGroup = async (stream: string, groupName: string) => {
+const initConsumerGroup = async (
+  client: Redis,
+  stream: string,
+  groupName: string
+) => {
   // create consumer group
   try {
-    await redis.xgroup('SETID', stream, groupName, '$')
+    await client.xgroup('SETID', stream, groupName, '$')
   } catch (e) {
     try {
-      await redis.xgroup('CREATE', stream, groupName, '$', 'MKSTREAM')
+      await client.xgroup('CREATE', stream, groupName, '$', 'MKSTREAM')
     } catch (e) {
-      if (e.toSring().includes('already exists')) {
+      if (e?.toString().includes('already exists')) {
         return
       }
       logger.error(`failed creating xgroup (${stream}, ${groupName}):`, e)
@@ -24,31 +28,34 @@ const initConsumerGroup = async (stream: string, groupName: string) => {
   }
 }
 
-export const initRemoveConsumerGroup = async () => {
-  await initConsumerGroup(REMOVE_STREAM, REMOVE_GROUP)
+export const initRemoveConsumerGroup = async (client: Redis) => {
+  await initConsumerGroup(client, REMOVE_STREAM, REMOVE_GROUP)
 }
 
-const remove = async (id: string, user: string) => {
+const remove = async (client: Redis, id: string, user: string) => {
   const userId = new ObjectId(user)
-  const target = await db.collections.users.findOne({ _id: userId })
+  const target = await db.collections().users.findOne({ _id: userId })
   logger.info('[consumer:remove]', user, target)
   if (!target) {
     return
   }
-  const remove = { ...target, originId: target._id }
-  delete remove['_id']
-  await db.collections.removed.findOneAndUpdate(
-    { originId: userId },
-    { $set: remove },
-    { upsert: true }
-  )
-  await db.collections.users.deleteOne({ _id: target._id })
-  await redis.xadd(REMOVE_STREAM_TO_CHAT, '*', 'user', user)
-  await redis.xack(REMOVE_STREAM, REMOVE_GROUP, id)
+  // eslint-disable-next-line no-unused-vars,@typescript-eslint/no-unused-vars
+  const { _id, ..._target } = target
+  const remove = { ..._target, originId: target._id }
+  await db
+    .collections()
+    .removed.findOneAndUpdate(
+      { originId: userId },
+      { $set: remove },
+      { upsert: true }
+    )
+  await db.collections().users.deleteOne({ _id: target._id })
+  await client.xadd(REMOVE_STREAM_TO_CHAT, '*', 'user', user)
+  await client.xack(REMOVE_STREAM, REMOVE_GROUP, id)
   logger.info('[remove:user]', user)
 }
 
-export const parser = async (read) => {
+export const parser = async (client: Redis, read) => {
   if (!read) {
     return
   }
@@ -57,7 +64,7 @@ export const parser = async (read) => {
     for (const [id, messages] of val) {
       try {
         const user = messages[1]
-        await remove(id, user)
+        await remove(client, id, user)
       } catch (e) {
         logger.error('parse error', e, id, messages)
       }
@@ -65,9 +72,9 @@ export const parser = async (read) => {
   }
 }
 
-export const consume = async () => {
+export const consume = async (client: Redis) => {
   try {
-    const res = await redis.xreadgroup(
+    const res = await client.xreadgroup(
       'GROUP',
       REMOVE_GROUP,
       'consume-auth',
@@ -79,10 +86,10 @@ export const consume = async () => {
       REMOVE_STREAM,
       '>'
     )
-    await parser(res)
+    await parser(client, res)
   } catch (e) {
     logger.error('[read]', REMOVE_STREAM, e)
   }
 
-  await consume()
+  await consume(client)
 }

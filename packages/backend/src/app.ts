@@ -78,7 +78,6 @@ export const createApp = () => {
     wrap(internal.socket)
   )
 
-  // 必ず最後に use する
   app.use(errorHandler)
 
   return app

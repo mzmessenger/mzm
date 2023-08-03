@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
-import type { SerializeUser } from './types.js'
 import type { PassportStatic } from 'passport'
 import type { Redis } from 'ioredis'
+import type { SerializeUser, Result } from '../types.js'
 import { sessionRedis } from '../lib/redis.js'
 import {
   getParametaerFromState,
@@ -12,13 +12,15 @@ import {
 import { logger } from '../lib/logger.js'
 import { CLIENT_URL_BASE } from '../config.js'
 
-const _oauthCallback = async (req: Request & { user: SerializeUser }) => {
+const _oauthCallback = async (
+  req: Request & { user: SerializeUser }
+): Promise<Result<{ redirectUrl: string }>> => {
   const { state } = req.query
   if (!state) {
     return { success: false, error: { status: 400, message: 'invalid state' } }
   }
 
-  const params = await getParametaerFromState(sessionRedis, state as string)
+  const params = await getParametaerFromState(sessionRedis!, state as string)
   if (params.success === false) {
     return {
       success: false,
@@ -27,7 +29,7 @@ const _oauthCallback = async (req: Request & { user: SerializeUser }) => {
   }
   const code = generageAuthorizationCode()
 
-  await saveAuthorizationCode(sessionRedis, {
+  await saveAuthorizationCode(sessionRedis!, {
     code,
     code_challenge: params.data.code_challenge,
     userId: req.user._id.toHexString()
@@ -35,7 +37,9 @@ const _oauthCallback = async (req: Request & { user: SerializeUser }) => {
   const queryParams = new URLSearchParams([['code', code]])
   return {
     success: true,
-    redirectUrl: `${CLIENT_URL_BASE}/login/success?${queryParams.toString()}`
+    data: {
+      redirectUrl: `${CLIENT_URL_BASE}/login/success?${queryParams.toString()}`
+    }
   }
 }
 
@@ -48,7 +52,7 @@ export const oauthCallback = (
       logger.error({ label: 'oauth2Callback', error: params.error.message })
       return res.status(params.error.status).send(params.error.message)
     }
-    return res.redirect(params.redirectUrl)
+    return res.redirect(params.data.redirectUrl)
   })
 }
 

@@ -16,7 +16,7 @@ export const createAccessToken = (user: CreateAccessTokenArgs) => {
       user: {
         _id: user._id,
         twitterId: user.twitterId ?? null,
-        twitterUserName: user.twitterUserName,
+        twitterUserName: user.twitterUserName ?? null,
         githubId: user.githubId ?? null,
         githubUserName: user.githubUserName ?? null
       }
@@ -34,6 +34,9 @@ export const createAccessToken = (user: CreateAccessTokenArgs) => {
       (err, token) => {
         if (err) {
           return reject(err)
+        }
+        if (!token) {
+          return reject('no token')
         }
         resolve(token)
       }
@@ -64,6 +67,9 @@ const createRefreshToken = (_id: string) => {
       (err, token) => {
         if (err) {
           return reject(err)
+        }
+        if (!token) {
+          return reject('no token')
         }
         resolve(token)
       }

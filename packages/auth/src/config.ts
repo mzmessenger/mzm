@@ -5,6 +5,22 @@ if (process.env.NODE_ENV !== 'test') {
   config()
 }
 
+if (
+  !process.env.MONGODB_URI ||
+  !process.env.TWITTER_CLIENT_ID ||
+  !process.env.TWITTER_CLIENT_SECRET ||
+  !process.env.TWITTER_CALLBACK_URL ||
+  !process.env.GITHUB_CLIENT_ID ||
+  !process.env.GITHUB_CLIENT_SECRET ||
+  !process.env.GITHUB_CALLBACK_URL ||
+  !process.env.REDIS_HOST ||
+  !process.env.SESSION_SECRET ||
+  !process.env.ACCESS_TOKEN_SECRET ||
+  !process.env.REFRESH_TOKEN_SECRET
+) {
+  throw new Error('empty env')
+}
+
 export const {
   MONGODB_URI,
   TWITTER_CLIENT_ID,
