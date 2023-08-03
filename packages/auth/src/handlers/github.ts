@@ -1,4 +1,4 @@
-import type { PassportRequest, SerializeUser } from './types'
+import type { PassportRequest, SerializeUser } from './types.js'
 import type { Response } from 'express'
 import { ObjectId } from 'mongodb'
 import {
@@ -6,10 +6,10 @@ import {
   verifyAccessToken
 } from 'mzm-shared/auth/index'
 import { COOKIES } from 'mzm-shared/auth/constants'
-import { logger } from '../logger.js'
-import * as db from '../db.js'
-import { createTokens, createAccessToken } from '../token.js'
-import { JWT } from '../../config.js'
+import { logger } from '../lib/logger.js'
+import * as db from '../lib/db.js'
+import { createTokens, createAccessToken } from '../lib/token.js'
+import { JWT } from '../config.js'
 
 export const loginGithub = async (
   req: PassportRequest,

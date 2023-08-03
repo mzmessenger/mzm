@@ -397,28 +397,25 @@ export const useRoomUserActions = ({
             return res
           }
 
-          res
-            .json()
-            .then((body: RESPONSE['/api/rooms/:roomid/users']['GET']) => {
-              setRooms((current) => {
-                const usersById = {
-                  ...current.usersById,
-                  [roomId]: {
-                    users: body.users,
-                    count: body.count
-                  }
-                }
-                const usersAllIds = current.usersAllIds.includes(roomId)
-                  ? current.usersAllIds
-                  : [...current.usersAllIds, roomId]
-                return {
-                  ...current,
-                  usersById,
-                  usersAllIds,
-                  usersLoading: false
-                }
-              })
-            })
+          const body = res.body as RESPONSE['/api/rooms/:roomid/users']['GET']
+          setRooms((current) => {
+            const usersById = {
+              ...current.usersById,
+              [roomId]: {
+                users: body.users,
+                count: body.count
+              }
+            }
+            const usersAllIds = current.usersAllIds.includes(roomId)
+              ? current.usersAllIds
+              : [...current.usersAllIds, roomId]
+            return {
+              ...current,
+              usersById,
+              usersAllIds,
+              usersLoading: false
+            }
+          })
 
           return res
         }
@@ -466,25 +463,22 @@ export const useRoomUserActions = ({
             return res
           }
 
-          res
-            .json()
-            .then((body: RESPONSE['/api/rooms/:roomid/users']['GET']) => {
-              setRooms((current) => {
-                const users = current.usersById[roomId]
-                const usersById = {
-                  ...current.usersById,
-                  [roomId]: {
-                    ...users,
-                    users: [...users.users, ...body.users]
-                  }
-                }
-                return {
-                  ...current,
-                  usersById,
-                  usersLoading: false
-                }
-              })
-            })
+          const body = res.body as RESPONSE['/api/rooms/:roomid/users']['GET']
+          setRooms((current) => {
+            const users = current.usersById[roomId]
+            const usersById = {
+              ...current.usersById,
+              [roomId]: {
+                ...users,
+                users: [...users.users, ...body.users]
+              }
+            }
+            return {
+              ...current,
+              usersById,
+              usersLoading: false
+            }
+          })
 
           return res
         }
@@ -536,7 +530,7 @@ export const useRoomActions = ({
             return res
           }
 
-          const room = (await res.json()) as RESPONSE['/api/rooms']['POST']
+          const room = res.body as RESPONSE['/api/rooms']['POST']
           getRooms()
 
           setCurrentRoom({

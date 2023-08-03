@@ -6,7 +6,8 @@
     "noImplicitAny": false,
     "esModuleInterop": true,
     "target": "esnext",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "skipLibCheck": true,
     "paths": {
       "mzm-shared": ["../shared"]

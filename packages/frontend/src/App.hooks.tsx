@@ -9,18 +9,13 @@ import { logger } from './lib/logger'
 
 const useRouter = () => {
   const login = useLoginFlag()
-  const { getAccessToken, logout } = useAuth()
-  const { fetchMyInfo } = useMyInfoActions({ getAccessToken, logout })
+  const { fetchMyInfo } = useMyInfoActions()
 
   useEffect(() => {
-    if (!login) {
-      getAccessToken().then(({ accessToken }) => {
-        if (accessToken) {
-          fetchMyInfo()
-        }
-      })
+    if (login === true) {
+      fetchMyInfo()
     }
-  }, [getAccessToken, fetchMyInfo, login])
+  }, [fetchMyInfo, login])
 
   useEffect(() => {
     try {
@@ -55,28 +50,27 @@ const useResize = () => {
   }, [onResize])
 }
 
-export const useApp = (url: string) => {
+export const useApp = () => {
   useRouter()
   useResize()
 
-  const { loginFlag, login, getAccessToken, logout } = useAuth()
+  const { loginFlag, init: initAuth, getAccessToken } = useAuth()
   const { userAccount } = useUserAccount()
   const location = useLocation()
-  const { init } = useSocket({
+  const { init: initSocket } = useSocket({
     getAccessToken,
     userAccount,
-    logout,
     pathname: location.pathname
   })
 
   useEffect(() => {
     if (loginFlag) {
-      init({ url })
+      initSocket()
     }
-  }, [loginFlag, init, url])
+  }, [loginFlag, initSocket])
 
   useEffect(() => {
-    login()
+    initAuth()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 }

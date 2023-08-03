@@ -1,12 +1,17 @@
 import type { AccessToken } from 'mzm-shared/type/auth'
 import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
 import { COOKIES } from 'mzm-shared/auth/constants'
-import { atom, useRecoilState, useRecoilValue } from 'recoil'
+import { useCallback } from 'react'
+import { atom, useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
 import dayjs from 'dayjs'
 import { sleep } from '../../lib/util'
-import { getCodeVerifier } from '../../lib/auth'
 import { logger } from '../../lib/logger'
+import {
+  getAccessTokenFromIframe,
+  authTokenAfterRedirect as authTokenAfterRedirectBase
+} from '../../lib/auth'
+import { userState } from '../user/hooks'
 import { AUTH_URL_BASE } from '../../constants'
 
 const createDefaultToken = () => {
@@ -39,41 +44,17 @@ export const useLoginFlag = () => useRecoilValue(loginState)
 export const useAuth = () => {
   const [loginFlag, setLoginFlag] = useRecoilState(loginState)
   const [auth, setAuth] = useRecoilState(authState)
+  const setUser = useSetRecoilState(userState)
 
-  const logout = () => {
-    if (loginFlag) {
-      location.href = AUTH_URL_BASE + '/auth/logout'
-      setAuth({ accessToken: '' })
-      setLoginFlag(false)
-    }
-  }
-
-  // @todo
-  const authToken = async (code: string) => {
-    type ResponseType = AUTH_API_RESPONSE['/auth/token']['POST']['body']
-
-    const codeVerifier = getCodeVerifier()
-    const res = await fetch(AUTH_URL_BASE + '/auth/token', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
-      },
-      body: JSON.stringify({
-        code,
-        grant_type: 'authorization_code',
-        code_verifier: codeVerifier
-      })
-    })
-
-    if (res.status === 200) {
-      const body = (await res.json()) as ResponseType[200]
-      setAuth({ accessToken: body.accessToken })
-    }
-  }
+  const logout = useCallback(() => {
+    console.log('logout')
+    location.href = AUTH_URL_BASE + '/auth/logout'
+    setLoginFlag(false)
+  }, [setLoginFlag])
 
   // @todo remove
   const refreshToken = async () => {
-    type ResponseType = AUTH_API_RESPONSE['/auth/token/refresh']['POST']['body']
+    type ResponseType = AUTH_API_RESPONSE['/auth/token']['POST']['body']
 
     const MAX_RETRY_COUNT = 5
     for (let i = 0; i < MAX_RETRY_COUNT; i++) {
@@ -91,11 +72,11 @@ export const useAuth = () => {
         await sleep(100)
       }
     }
-    // @todo
-    console.warn('refresh token failed')
+    logger.warn('refresh token failed')
     return { accessToken: '', user: null }
   }
 
+  // @todo remove
   const getAccessToken = async () => {
     if (!auth.accessToken) {
       return { accessToken: '', user: null }
@@ -121,14 +102,46 @@ export const useAuth = () => {
     }
   }
 
+  const authTokenAfterRedirect = async (code: string) => {
+    try {
+      const res = await authTokenAfterRedirectBase(code)
+      if (res.success) {
+        setUser((current) => ({
+          ...current,
+          twitterUserName: res.data.user.twitterUserName,
+          githubUserName: res.data.user.githubUserName
+        }))
+      }
+      setLoginFlag(res.success)
+      return
+    } catch (e) {
+      setLoginFlag(false)
+    }
+  }
+
+  const init = async () => {
+    try {
+      const res = await getAccessTokenFromIframe()
+      if (res.success) {
+        setUser((current) => ({
+          ...current,
+          twitterUserName: res.data.user.twitterUserName,
+          githubUserName: res.data.user.githubUserName
+        }))
+      }
+      setLoginFlag(res.success)
+    } catch (e) {
+      logger.warn(e)
+      setLoginFlag(false)
+    }
+  }
+
   return {
-    loginFlag: loginFlag,
-    login: () => {
-      getAccessToken()
-    },
+    loginFlag,
+    init,
+    authTokenAfterRedirect,
     logout,
     getAccessToken,
-    refreshToken,
-    authToken
+    refreshToken
   } as const
 }

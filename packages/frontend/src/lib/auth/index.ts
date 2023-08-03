@@ -1,7 +1,122 @@
-const createCodeVerifier = () => {
+import type { AuthProxy, Cache } from '../../worker/authProxy/index'
+import { wrap } from 'comlink'
+import { set, get, remove } from '../cookie'
+import { AUTH_URL_BASE } from '../../constants'
+import { logger } from '../logger'
+
+const cacheKey = 'mzm:transaction'
+const worker = await init()
+
+async function init() {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+  // @ts-expect-error
+  const ProxyedWorker = await import('../../worker/authProxy/index?worker')
+  const Worker = wrap<typeof AuthProxy>(new ProxyedWorker.default())
+
+  const cacheStr = get(cacheKey)
+  let cache: Cache = undefined
+  try {
+    if (cacheStr) {
+      // @todo safeParse
+      cache = JSON.parse(cacheStr) as {
+        code_verifier: string
+        code_challenge: string
+      }
+    }
+  } catch (e) {
+    logger.warn(e)
+  }
+  return await new Worker(cache)
+}
+
+export async function proxyRequest(
+  ...args: Parameters<AuthProxy['proxyRequest']>
+) {
+  return worker.proxyRequest(...args)
+}
+
+export async function generateSocketUrl() {
+  return worker.generateSocketUrl()
+}
+
+export async function pkceChallenge() {
+  const { code_verifier, code_challenge } = await worker.pkceChallenge()
+  return { code_verifier, code_challenge }
+}
+
+export function savePkceChallenge(options: {
+  code_verifier: string
+  code_challenge: string
+}) {
+  set(cacheKey, JSON.stringify(options), {
+    expires: 1000 * 60 * 12
+  })
+}
+
+export async function authTokenAfterRedirect(code: string) {
+  const res = await worker.authToken(code)
+  if (res.success) {
+    remove(cacheKey)
+  }
+  return res
+}
+
+const runIframe = async (code_challenge: string, state: string) => {
+  return new Promise<{ code: string }>((resolve, reject) => {
+    const iframe = window.document.createElement('iframe')
+    iframe.setAttribute('width', '0')
+    iframe.setAttribute('height', '0')
+    iframe.style.display = 'none'
+
+    const removeIframe = () => {
+      if (window.document.body.contains(iframe)) {
+        window.document.body.removeChild(iframe)
+        window.removeEventListener('message', iframeEventHandler, false)
+      }
+    }
+
+    const timeoutSetTimeoutId = setTimeout(() => {
+      reject(new Error('timeout'))
+      removeIframe()
+    }, 60 * 1000)
+
+    const iframeEventHandler = (e: MessageEvent) => {
+      if (e.origin !== AUTH_URL_BASE) return
+      if (!e.data || e.data.type !== 'authorization_response') return
+
+      if (state !== e.data.response.state) return
+
+      e.data.response.error
+        ? reject(new Error('response error'))
+        : resolve(e.data.response as { code: string }) // @todo parse
+
+      clearTimeout(timeoutSetTimeoutId)
+      window.removeEventListener('message', iframeEventHandler, false)
+
+      setTimeout(removeIframe, 10 * 1000)
+    }
+
+    window.addEventListener('message', iframeEventHandler, false)
+    window.document.body.appendChild(iframe)
+    const query = new URLSearchParams([
+      ['code_challenge', code_challenge],
+      ['state', state]
+    ])
+    iframe.setAttribute('src', `${AUTH_URL_BASE}/authorize?${query.toString()}`)
+  })
+}
+
+export async function getAccessTokenFromIframe() {
+  const state = generateState()
+  const { code_challenge, code_verifier } = await worker.pkceChallenge()
+  const { code } = await runIframe(code_challenge, state)
+  const res = await worker.authToken(code, code_verifier)
+  return res
+}
+
+function generateState() {
   const mask =
     '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_~.'
-
   const randomValues = crypto.getRandomValues(new Uint8Array(43))
 
   let random = ''
@@ -10,51 +125,4 @@ const createCodeVerifier = () => {
   }
 
   return random
-}
-
-const convertSha256 = async (str: string) => {
-  const encoder = new TextEncoder()
-  const data = encoder.encode(str)
-  const hash = await crypto.subtle.digest({ name: 'SHA-256' }, data)
-
-  return urlsafeBase64Encode(hash)
-}
-
-const urlsafeBase64Encode = (buffer: ArrayBuffer) => {
-  return btoa(String.fromCharCode(...new Uint8Array(buffer)))
-    .replace(/\//g, '_')
-    .replace(/\+/g, '-')
-    .replace(/=/g, '')
-}
-
-const generateCodeChallenge = async (codeVerifier: string) => {
-  const challenge = await convertSha256(codeVerifier)
-
-  return challenge
-}
-
-export const pkceChallenge = async () => {
-  const code_verifier = createCodeVerifier()
-  const code_challenge = await generateCodeChallenge(code_verifier)
-  // @todo worker
-  localStorage.setItem('code_verifier', code_verifier)
-
-  return {
-    code_verifier,
-    code_challenge
-  }
-}
-
-// @todo worker
-export const getCodeVerifier = () => {
-  return localStorage.getItem('code_verifier')
-}
-
-export const verifyCodeChallenge = async (
-  code_verifier: string,
-  code_challenge: string
-) => {
-  const generated = await generateCodeChallenge(code_verifier)
-
-  return generated === code_challenge
 }

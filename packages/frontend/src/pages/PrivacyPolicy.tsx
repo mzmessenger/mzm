@@ -33,6 +33,7 @@ const PrivacyPolicy = () => {
           <a
             href="https://marketingplatform.google.com/about/analytics/terms/jp/"
             target="_blank"
+            rel="noopener noreferrer"
           >
             ここ
           </a>

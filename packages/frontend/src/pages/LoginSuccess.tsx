@@ -4,12 +4,12 @@ import { useAuth } from '../recoil/auth/hooks'
 
 const LoginSuccess = () => {
   const navigate = useNavigate()
-  const { authToken } = useAuth()
+  const { authTokenAfterRedirect } = useAuth()
 
   useEffect(() => {
     const { searchParams } = new URL(document.location.toString())
     const code = searchParams.get('code')
-    authToken(code).finally(() => navigate('/'))
+    authTokenAfterRedirect(code).finally(() => navigate('/'))
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 

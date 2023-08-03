@@ -1,10 +1,14 @@
 import type { Redis } from 'ioredis'
 import type { Request } from 'express'
 import { z } from 'zod'
-import { generateCodeChallenge, generateState } from './util.js'
+import { generateState, verifyCodeChallenge } from './util.js'
 import { logger } from '../logger.js'
 
-export { generageAuthorizationCode, generateState } from './util.js'
+export {
+  generageAuthorizationCode,
+  generateState,
+  verifyCodeChallenge
+} from './util.js'
 
 const createAuthorizationCodeRedisKey = (code: string) => {
   return `code:${code}`
@@ -49,9 +53,9 @@ const AuthorizationCode = z.string().transform((str, ctx) => {
   }
 })
 
-export const verifyAuthorizationCode = async (
+export const verifyAuthorizationCodeFromRedis = async (
   client: Redis,
-  options: {
+  args: {
     code: string
     grant_type: string
     code_verifier: string
@@ -66,24 +70,25 @@ export const verifyAuthorizationCode = async (
     }
 > => {
   try {
-    const key = createAuthorizationCodeRedisKey(options.code)
+    const key = createAuthorizationCodeRedisKey(args.code)
     const val = await client.get(key)
     if (!val) {
       return { success: false, error: { message: 'invalid code' } }
     }
 
-    if (options.grant_type !== 'authorization_code') {
-      return { success: false, error: { message: 'invalid grant type' } }
-    }
-
     const parsedAuthorizationCode = AuthorizationCode.safeParse(val)
-    if (!parsedAuthorizationCode.success) {
+    if (parsedAuthorizationCode.success === false) {
       return { success: false, error: { message: 'invalid code' } }
     }
 
-    const code_challenge = await generateCodeChallenge(options.code_verifier)
-    if (code_challenge !== parsedAuthorizationCode.data.code_challenge) {
-      return { success: false, error: { message: 'invalid code_challenge' } }
+    const res = await verifyAuthorizationCode({
+      code: args.code,
+      grant_type: args.grant_type,
+      code_verifier: args.code_verifier,
+      code_challenge: parsedAuthorizationCode.data.code_challenge
+    })
+    if (res.success === false) {
+      return res
     }
 
     await client.del(key)
@@ -91,6 +96,39 @@ export const verifyAuthorizationCode = async (
       success: true,
       data: { userId: parsedAuthorizationCode.data.userId }
     }
+  } catch (e) {
+    return { success: false, error: { message: 'invalid code' } }
+  }
+}
+
+const verifyAuthorizationCode = async (options: {
+  code: string
+  grant_type: string
+  code_verifier: string
+  code_challenge: string
+}): Promise<
+  | { success: true }
+  | {
+      success: false
+      error: {
+        message: string
+      }
+    }
+> => {
+  try {
+    if (options.grant_type !== 'authorization_code') {
+      return { success: false, error: { message: 'invalid grant type' } }
+    }
+
+    const success = verifyCodeChallenge({
+      code_verifier: options.code_verifier,
+      code_challenge: options.code_challenge
+    })
+    if (!success) {
+      return { success: false, error: { message: 'invalid code_challenge' } }
+    }
+
+    return { success: true }
   } catch (e) {
     return { success: false, error: { message: 'invalid code' } }
   }
@@ -113,6 +151,7 @@ export const saveParameterWithReuqest = async (
       error: { message: string }
     }
 > => {
+  // @todo parse
   const { code_challenge, code_challenge_method } = req.query
   if (!code_challenge || !code_challenge_method) {
     return { success: false, error: { message: 'invalid code_challenge' } }

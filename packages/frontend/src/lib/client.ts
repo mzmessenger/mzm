@@ -1,34 +1,35 @@
 import { API_URL_BASE } from '../constants'
+import { proxyRequest } from '../lib/auth'
 
-type FetchInit = Parameters<typeof fetch>[1]
+type Init = Parameters<typeof proxyRequest>[1]
 
-type Options = { accessToken: string; headers?: FetchInit['headers'] } & (
+type Options = {
+  accessToken?: string // @todo remove
+  headers?: Record<string, string>
+} & (
   | {
       method?: 'GET'
     }
   | {
       method: 'POST' | 'PUT' | 'DELETE'
-      accessToken: string
-      body?: FetchInit['body']
+      accessToken?: string // @todo remove
+      body?: Init['body']
     }
 )
 
 export const createApiClient = async <T>(
   path: string,
   options: Options,
-  parser: (res: Awaited<ReturnType<typeof fetch>>) => Promise<T>
+  parser: (res: Awaited<ReturnType<typeof proxyRequest>>) => Promise<T>
 ) => {
-  const headers = new Headers({
-    Authorization: `Bearer ${options.accessToken}`,
-    'Content-Type': 'application/json; charset=utf-8',
+  const headers = {
     ...options.headers
-  })
+  }
 
   const method = options.method ?? 'GET'
 
-  const init: FetchInit = {
+  const init: Init = {
     method,
-    mode: 'cors',
     headers,
     ...options
   }
@@ -41,8 +42,7 @@ export const createApiClient = async <T>(
   ) {
     init.body = options.body
   }
-
-  const res = await fetch(API_URL_BASE + path, init)
+  const res = await proxyRequest(API_URL_BASE + path, init)
 
   return await parser(res)
 }

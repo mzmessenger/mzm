@@ -2,16 +2,15 @@ import type { Request, Response, NextFunction } from 'express'
 import type { SerializeUser } from './types.js'
 import type { PassportStatic } from 'passport'
 import type { Redis } from 'ioredis'
-import { COOKIES } from 'mzm-shared/auth/constants'
-import { sessionRedis } from '../redis.js'
+import { sessionRedis } from '../lib/redis.js'
 import {
   getParametaerFromState,
   generageAuthorizationCode,
   saveAuthorizationCode,
   saveParameterWithReuqest
-} from '../pkce/index.js'
-import { logger } from '../logger.js'
-import { CLIENT_URL_BASE } from '../../config.js'
+} from '../lib/pkce/index.js'
+import { logger } from '../lib/logger.js'
+import { CLIENT_URL_BASE } from '../config.js'
 
 const _oauthCallback = async (req: Request & { user: SerializeUser }) => {
   const { state } = req.query
@@ -52,7 +51,8 @@ export const oauthCallback = (
     return res.redirect(params.redirectUrl)
   })
 }
-export const auth = (
+
+export const oauth = (
   client: Redis,
   passport: PassportStatic,
   strategy: string

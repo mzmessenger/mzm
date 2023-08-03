@@ -10,6 +10,7 @@
     "./type/db": "./dist/type/db.js",
     "./type/socket": "./dist/type/socket.js",
     "./type/api": "./dist/type/api.js",
+    "./type/auth": "./dist/type/auth.js",
     "./validator": "./dist/validator/index.js"
   },
   "scripts": {

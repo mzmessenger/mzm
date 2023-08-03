@@ -22,7 +22,8 @@ import {
   CLIENT_URL_BASE,
   CORS_ORIGIN
 } from './config.js'
-import * as handlers from './lib/handlers/index.js'
+// @todo split
+import * as handlers from './handlers/index.js'
 
 const jsonParser = express.json({ limit: '1mb' })
 
@@ -32,28 +33,25 @@ type Options = {
 
 export const createApp = ({ client }: Options) => {
   const app = express()
-  app.use(helmet())
+  const defaultHelmet = helmet()
   app.use(
     cors({
       origin: CORS_ORIGIN
     })
   )
-
   app.set('trust proxy', TRUST_PROXY)
-
-  const sessionParser = session({
-    store: new RedisStore({ client: client }),
-    ...SESSION_PARSER
-  })
-
-  app.use(sessionParser)
-
+  app.use(
+    session({
+      store: new RedisStore({ client: client }),
+      ...SESSION_PARSER
+    })
+  )
   app.use(passport.initialize())
   app.use(passport.session())
-  app.get('/', (_, res) => res.status(200).send('ok'))
 
-  passport.serializeUser(handlers.serializeUser)
-  passport.deserializeUser(handlers.deserializeUser)
+  app.get('/', defaultHelmet, (_, res) => {
+    res.status(200).send('ok')
+  })
 
   passport.use(
     'twitter-oauth2',
@@ -89,29 +87,62 @@ export const createApp = ({ client }: Options) => {
     )
   )
 
-  app.post('/auth/token/refresh', cookieParser(), (req, res) => {
+  app.get(
+    '/authorize',
+    handlers.createNonceMiddleware,
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          scriptSrc: [
+            "'self'",
+            (req, res: handlers.AuthorizationResponse) => {
+              return `'nonce-${res.locals.nonce}'`
+            }
+          ],
+          frameAncestors: ["'self'", CLIENT_URL_BASE]
+        }
+      }
+    }),
+    handlers.authorize
+  )
+
+  passport.serializeUser(handlers.serializeUser)
+  passport.deserializeUser(handlers.deserializeUser)
+
+  // @todo remove
+  app.post('/auth/token/refresh', defaultHelmet, cookieParser(), (req, res) => {
     return handlers.refreshAccessToken(req, res)
   })
 
-  app.post('/auth/token', jsonParser, handlers.accessToken)
+  app.post('/auth/token', defaultHelmet, jsonParser, handlers.accessToken)
 
-  app.get('/auth/twitter', handlers.auth(client, passport, 'twitter-oauth2'))
+  app.get(
+    '/auth/twitter',
+    defaultHelmet,
+    handlers.oauth(client, passport, 'twitter-oauth2')
+  )
   app.get(
     '/auth/twitter/callback',
+    defaultHelmet,
     passport.authenticate('twitter-oauth2', { failureRedirect: '/' }),
     handlers.oauthCallback
   )
-  app.delete('/auth/twitter', handlers.removeTwitter)
+  app.delete('/auth/twitter', defaultHelmet, handlers.removeTwitter)
 
-  app.get('/auth/github', handlers.auth(client, passport, 'github'))
+  app.get(
+    '/auth/github',
+    defaultHelmet,
+    handlers.oauth(client, passport, 'github')
+  )
   app.get(
     '/auth/github/callback',
+    defaultHelmet,
     passport.authenticate('github', { failureRedirect: '/' }),
     handlers.oauthCallback
   )
-  app.delete('/auth/github', handlers.removeGithub)
+  app.delete('/auth/github', defaultHelmet, handlers.removeGithub)
 
-  app.get('/auth/logout', (req: Request, res: Response) => {
+  app.get('/auth/logout', defaultHelmet, (req: Request, res: Response) => {
     req.logout(() => {
       res
         .clearCookie(COOKIES.ACCESS_TOKEN)
@@ -120,7 +151,7 @@ export const createApp = ({ client }: Options) => {
     })
   })
 
-  app.delete('/auth/user', handlers.remove)
+  app.delete('/auth/user', defaultHelmet, handlers.remove)
 
   // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
   app.use((err, req, res, next) => {

@@ -27,8 +27,16 @@ export const generageAuthorizationCode = () => {
   return urlsafeBase64Encode(randomUUID())
 }
 
-export const generateCodeChallenge = async (str: string) => {
+export const generateCodeChallenge = (str: string) => {
   const hash = urlsafeBase64Encode(str)
 
   return hash
+}
+
+export const verifyCodeChallenge = (options: {
+  code_verifier: string
+  code_challenge: string
+}) => {
+  const generated = generateCodeChallenge(options.code_verifier)
+  return options.code_challenge === generated
 }
