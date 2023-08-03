@@ -1,3 +1,4 @@
+import { logger } from './logger'
 function parse() {
   const store = new Map<string, string>()
 
@@ -9,7 +10,7 @@ function parse() {
       store.set(key, decodeURIComponent(value))
     }
   } catch (e) {
-    console.warn(e)
+    logger.warn(e)
   }
   return store
 }

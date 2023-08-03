@@ -2,7 +2,6 @@ import React, { useState, useCallback } from 'react'
 import styled from '@emotion/styled'
 import { isValidAccount } from 'mzm-shared/validator'
 import { WIDTH_MOBILE } from '../../constants'
-import { useAuth } from '../../recoil/auth/hooks'
 import { useUser, useUserIdAndAccount } from '../../recoil/user/hooks'
 import { Button } from '../atoms/Button'
 import { InputText, Props as InputTextProps } from '../atoms/InputText'
@@ -14,8 +13,7 @@ const ERROR_TXT = '利用できない文字が含まれるか、すでに存在�
 
 export const SettingAccount = () => {
   const { userId, userAccount, userIconUrl } = useUserIdAndAccount()
-  const { getAccessToken } = useAuth()
-  const { uploadIcon, updateUser } = useUser({ getAccessToken })
+  const { uploadIcon, updateUser } = useUser()
   const [open, setOpen] = useState(false)
   const [image, setImage] = useState('')
   const [edit, setEdit] = useState(false)
@@ -45,9 +43,7 @@ export const SettingAccount = () => {
           onSave()
           setOpen(false)
         } else {
-          res.text().then((text) => {
-            alert(`アップロードにエラーが発生しました(${text})`)
-          })
+          alert(`アップロードでエラーが発生しました`)
         }
       })
     },

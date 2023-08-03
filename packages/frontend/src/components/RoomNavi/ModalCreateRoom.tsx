@@ -1,7 +1,6 @@
 import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from '@emotion/styled'
-import { useAuth } from '../../recoil/auth/hooks'
 import { useRoomActions } from '../../recoil/rooms/hooks'
 import { useSocketActions } from '../../recoil/socket/hooks'
 import { Button } from '../atoms/Button'
@@ -15,9 +14,8 @@ export const ModalCraeteRoom = ({ open, onClose }: Props) => {
   const navigate = useNavigate()
   const [txt, setTxt] = useState('')
   const [error, setErrorTxt] = useState('')
-  const { getAccessToken } = useAuth()
   const { getRooms } = useSocketActions()
-  const { createRoom } = useRoomActions({ getAccessToken, getRooms })
+  const { createRoom } = useRoomActions({ getRooms })
 
   const handleSubmit = (evt) => {
     evt.preventDefault()

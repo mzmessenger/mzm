@@ -9,7 +9,7 @@
     "serve": "vite preview --port 8080",
     "format": "prettier --write src ./*.{js,json}",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
-    "pretest": "",
+    "pretest": "npm run build-tsc",
     "test": "vitest run --config=./vitest.config.ts",
     "test:warth": "vitest --config=./vite.config.ts",
     "clean": "rm -rf dist",

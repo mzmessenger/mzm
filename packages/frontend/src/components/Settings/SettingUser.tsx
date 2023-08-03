@@ -6,8 +6,8 @@ import { Button } from '../atoms/Button'
 import { SettingAccount } from './SettingAccount'
 
 export const SettingUser = () => {
-  const { getAccessToken, logout } = useAuth()
-  const { removeUser } = useRemoveUserActions({ getAccessToken, logout })
+  const { logout } = useAuth()
+  const { removeUser } = useRemoveUserActions({ logout })
 
   const onDelete = () => {
     if (window.confirm('本当にアカウントを削除しますか？')) {

@@ -14,6 +14,7 @@ import {
 } from '../lib/pkce/index.js'
 import { verifyAuthorizationCodeFromRedis } from '../lib/pkce/index.js'
 import { authorizeTemplate } from '../views/authorize.js'
+import { CLIENT_URL_BASE } from '../config.js'
 
 export const accessToken = async (req: Request, res: Response) => {
   type ResponseType = AUTH_API_RESPONSE['/auth/token']['POST']['body']
@@ -105,8 +106,7 @@ export const authorize = async (
 
     const state = encodeURIComponent(query.data.state)
     const html = authorizeTemplate({
-      // @todo
-      targetOrigin: 'http://localhost:8080',
+      targetOrigin: CLIENT_URL_BASE,
       code,
       state,
       nonce: res.locals.nonce

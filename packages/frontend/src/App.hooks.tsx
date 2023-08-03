@@ -54,11 +54,10 @@ export const useApp = () => {
   useRouter()
   useResize()
 
-  const { loginFlag, init: initAuth, getAccessToken } = useAuth()
+  const { loginFlag, init: initAuth } = useAuth()
   const { userAccount } = useUserAccount()
   const location = useLocation()
   const { init: initSocket } = useSocket({
-    getAccessToken,
     userAccount,
     pathname: location.pathname
   })

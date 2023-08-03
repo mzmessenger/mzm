@@ -50,7 +50,7 @@ type TestRequest = Request & { file?: MulterFile }
 export const createFileRequest = (
   ...args: Parameters<typeof createRequest>
 ) => {
-  return createRequest(...args) as Request & { file: MulterFile }
+  return createRequest(...args) as Request & { file?: MulterFile }
 }
 
 export const createRequest = <T>(

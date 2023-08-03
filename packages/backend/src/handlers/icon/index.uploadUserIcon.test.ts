@@ -98,6 +98,23 @@ test.each([['image/gif'], ['image/svg+xml']])(
   }
 )
 
+test('uploadUserIcon: empty file', async () => {
+  expect.assertions(1)
+
+  const name = new ObjectId().toHexString()
+
+  const req = createFileRequest(new ObjectId(), {
+    file: undefined,
+    params: { roomname: name }
+  })
+
+  try {
+    await uploadUserIcon(req)
+  } catch (e) {
+    expect(e instanceof BadRequest).toStrictEqual(true)
+  }
+})
+
 test('uploadUserIcon validation: size over', async () => {
   expect.assertions(1)
 

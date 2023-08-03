@@ -5,10 +5,8 @@ import {
   parseAuthorizationHeader,
   verifyAccessToken
 } from 'mzm-shared/auth/index'
-import { COOKIES } from 'mzm-shared/auth/constants'
 import { logger } from '../lib/logger.js'
 import * as db from '../lib/db.js'
-import { createTokens, createAccessToken } from '../lib/token.js'
 import { JWT } from '../config.js'
 
 export const loginGithub = async (
@@ -44,15 +42,7 @@ export const loginGithub = async (
       ? updated.value
       : await db.collections.users.findOne(filter)
 
-    const { accessToken, refreshToken } = await createTokens({
-      _id: user._id.toHexString(),
-      twitterId: user.twitterId,
-      twitterUserName: user.twitterUserName,
-      githubId: githubId,
-      githubUserName: githubUserName
-    })
-
-    cb(null, { ...user, accessToken, refreshToken })
+    cb(null, user)
   } catch (e) {
     logger.error('[auth:update:github] error:', githubId, githubUserName)
     cb(e)
@@ -90,13 +80,5 @@ export const removeGithub = async (req: PassportRequest, res: Response) => {
     { $unset: { githubId: '', githubUserName: '' } }
   )
 
-  const newAccessToken = await createAccessToken({
-    _id: user._id.toHexString(),
-    twitterId: user.twitterId,
-    twitterUserName: user.twitterUserName,
-    githubId: '',
-    githubUserName: ''
-  })
-
-  res.cookie(COOKIES.ACCESS_TOKEN, newAccessToken).status(200).send('ok')
+  res.status(200).send('ok')
 }

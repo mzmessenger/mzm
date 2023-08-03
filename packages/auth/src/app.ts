@@ -1,14 +1,12 @@
 import type { Redis } from 'ioredis'
 import express, { type Request, type Response } from 'express'
 import cors from 'cors'
-import cookieParser from 'cookie-parser'
 import helmet from 'helmet'
 import passport from 'passport'
 import RedisStore from 'connect-redis'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import { Strategy as Oauth2Strategy } from 'passport-oauth2'
 import session from 'express-session'
-import { COOKIES } from 'mzm-shared/auth/constants'
 import { logger } from './lib/logger.js'
 import {
   TWITTER_CLIENT_ID,
@@ -109,11 +107,6 @@ export const createApp = ({ client }: Options) => {
   passport.serializeUser(handlers.serializeUser)
   passport.deserializeUser(handlers.deserializeUser)
 
-  // @todo remove
-  app.post('/auth/token/refresh', defaultHelmet, cookieParser(), (req, res) => {
-    return handlers.refreshAccessToken(req, res)
-  })
-
   app.post('/auth/token', defaultHelmet, jsonParser, handlers.accessToken)
 
   app.get(
@@ -144,10 +137,7 @@ export const createApp = ({ client }: Options) => {
 
   app.get('/auth/logout', defaultHelmet, (req: Request, res: Response) => {
     req.logout(() => {
-      res
-        .clearCookie(COOKIES.ACCESS_TOKEN)
-        .clearCookie(COOKIES.REFRESH_TOKEN)
-        .redirect(CLIENT_URL_BASE)
+      res.redirect(CLIENT_URL_BASE)
     })
   })
 

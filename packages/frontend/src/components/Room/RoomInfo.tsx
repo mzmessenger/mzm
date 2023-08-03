@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import styled from '@emotion/styled'
 import { Home, Person, ExpandMore } from '@mui/icons-material'
 import { useUiActions } from '../../recoil/ui/hooks'
-import { useAuth } from '../../recoil/auth/hooks'
 import {
   useRoomUserActions,
   useRoomSettingActions,
@@ -29,9 +28,8 @@ export const RoomInfo = () => {
     currentRoomDescription,
     currentRoomIcon
   } = useCurrentRoom()
-  const { getAccessToken } = useAuth()
   const { toggleRoomSetting } = useRoomSettingActions()
-  const { getUsers } = useRoomUserActions({ getAccessToken })
+  const { getUsers } = useRoomUserActions()
   const { openUserDetail } = useUiActions()
   const [open, setOpen] = useState(false)
   const users = useGetUsersById(currentRoomId)

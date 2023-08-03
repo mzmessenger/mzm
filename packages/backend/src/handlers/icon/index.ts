@@ -88,11 +88,15 @@ export const getRoomIcon = async (req: Request): StreamWrapResponse => {
 }
 
 export const uploadUserIcon = async (
-  req: Request & { file: MulterFile }
+  req: Request & { file?: MulterFile }
 ): Promise<RESPONSE['/api/icon/user']['POST']> => {
   const userId = getRequestUserId(req)
   if (!userId) {
     throw new NotFound('not found')
+  }
+
+  if (!req.file) {
+    throw new BadRequest(`file is empty`)
   }
 
   const file = req.file
@@ -142,11 +146,15 @@ export const uploadUserIcon = async (
 }
 
 export const uploadRoomIcon = async (
-  req: Request & { file: MulterFile }
+  req: Request & { file?: MulterFile }
 ): Promise<RESPONSE['/api/icon/rooms/:roomname']['POST']> => {
   const roomName = popParam(req.params.roomname)
   if (!roomName) {
     throw new BadRequest(`no room id`)
+  }
+
+  if (!req.file) {
+    throw new BadRequest('file is empty')
   }
 
   const file = req.file

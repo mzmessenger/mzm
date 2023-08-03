@@ -1,4 +1,3 @@
-import type { useAuth } from '../auth/hooks'
 import type { useUserAccount } from '../user/hooks'
 import { useNavigate } from 'react-router-dom'
 import { useCallback, useEffect, useRef } from 'react'
