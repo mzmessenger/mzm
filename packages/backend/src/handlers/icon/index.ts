@@ -1,19 +1,21 @@
-import type { MulterFile } from '../../types/index'
-import { promisify } from 'util'
+import type { MulterFile } from '../../types/index.js'
+import { promisify } from 'node:util'
 import { Request } from 'express'
 import { request } from 'undici'
 import { ObjectId } from 'mongodb'
 import { RESPONSE } from 'mzm-shared/type/api'
 import imageSize from 'image-size'
-import { NotFound, BadRequest } from '../../lib/errors.js'
+import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
 import { popParam, getRequestUserId } from '../../lib/utils.js'
 import * as storage from '../../lib/storage.js'
-import * as db from '../../lib/db.js'
+import { collections, mongoClient, type User, type Room } from '../../lib/db.js'
 import { logger } from '../../lib/logger.js'
 import * as config from '../../config.js'
 import { StreamWrapResponse } from '../../types.js'
 import { isValidMimetype, createVersion } from './internal.js'
 
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
 const sizeOf = promisify(imageSize)
 
 const returnIconStream = async (key: string): StreamWrapResponse => {
@@ -26,7 +28,7 @@ const returnIconStream = async (key: string): StreamWrapResponse => {
       ETag: head.ETag,
       'content-type': head.ContentType,
       'content-length': `${head.ContentLength}`,
-      'last-modified': head.LastModified.toUTCString(),
+      'last-modified': head.LastModified?.toUTCString(),
       'cache-control': head.CacheControl || 'max-age=604800'
     },
     stream: storage.getObject({ Key: key }).createReadStream()
@@ -49,13 +51,14 @@ export const getUserIcon = async (req: Request): StreamWrapResponse => {
     throw new BadRequest(`no account`)
   }
   const version = popParam(req.params.version)
-  const user = await db.collections.users.findOne({ account: account })
+  const db = await mongoClient()
+  const user = await collections(db).users.findOne({ account: account })
 
   if (user?.icon?.version === version) {
     try {
       return await returnIconStream(user.icon.key)
     } catch (e) {
-      if (e.statusCode === 404) {
+      if ((e as { statusCode: number })?.statusCode === 404) {
         return await fromIdenticon(account)
       }
       throw e
@@ -71,7 +74,8 @@ export const getRoomIcon = async (req: Request): StreamWrapResponse => {
     throw new BadRequest(`no room id`)
   }
   const version = popParam(req.params.version)
-  const room = await db.collections.rooms.findOne({ name: roomName })
+  const db = await mongoClient()
+  const room = await collections(db).rooms.findOne({ name: roomName })
 
   if (room?.icon?.version !== version) {
     throw new NotFound('no image')
@@ -80,7 +84,7 @@ export const getRoomIcon = async (req: Request): StreamWrapResponse => {
   try {
     return await returnIconStream(room.icon.key)
   } catch (e) {
-    if (e.statusCode === 404) {
+    if ((e as { statusCode: number })?.statusCode === 404) {
       throw new NotFound('icon not found')
     }
     throw e
@@ -126,11 +130,12 @@ export const uploadUserIcon = async (
     CacheControl: 'max-age=604800'
   })
 
-  const update: Pick<db.User, 'icon'> = {
+  const update: Pick<User, 'icon'> = {
     icon: { key: iconKey, version }
   }
 
-  await db.collections.users.findOneAndUpdate(
+  const db = await mongoClient()
+  await collections(db).users.findOneAndUpdate(
     { _id: new ObjectId(userId) },
     { $set: update },
     {
@@ -173,7 +178,8 @@ export const uploadRoomIcon = async (
     throw new BadRequest(`not square: ${JSON.stringify(dimensions)}`)
   }
 
-  const room = await db.collections.rooms.findOne({ name: roomName })
+  const db = await mongoClient()
+  const room = await collections(db).rooms.findOne({ name: roomName })
   if (!room) {
     throw new NotFound('not exist')
   }
@@ -189,11 +195,11 @@ export const uploadRoomIcon = async (
     CacheControl: 'max-age=604800'
   })
 
-  const update: Pick<db.Room, 'icon'> = {
+  const update: Pick<Room, 'icon'> = {
     icon: { key: iconKey, version }
   }
 
-  await db.collections.rooms.findOneAndUpdate(
+  await collections(db).rooms.findOneAndUpdate(
     { _id: room._id },
     { $set: update },
     {

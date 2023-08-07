@@ -14,7 +14,7 @@ export const addInitializeSearchRoomQueue = async () => {
     return
   }
 
-  await client.xadd(
+  await client().xadd(
     config.stream.ELASTICSEARCH_ROOMS,
     'MAXLEN',
     1000,
@@ -29,7 +29,7 @@ export const addInitializeSearchRoomQueue = async () => {
 }
 
 export const addUpdateSearchRoomQueue = async (roomIds: string[]) => {
-  await client.xadd(
+  await client().xadd(
     config.stream.ELASTICSEARCH_ROOMS,
     'MAXLEN',
     1000,
@@ -51,7 +51,7 @@ export const addSyncSearchRoomQueue = async () => {
     return
   }
 
-  await client.xadd(
+  await client().xadd(
     config.stream.JOB,
     'MAXLEN',
     1000,

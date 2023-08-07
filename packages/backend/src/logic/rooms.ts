@@ -1,6 +1,11 @@
 import { ObjectId, WithId } from 'mongodb'
-import isEmpty from 'validator/lib/isEmpty.js'
-import * as db from '../lib/db.js'
+import {
+  collections,
+  mongoClient,
+  RoomStatusEnum,
+  type Enter,
+  type Room
+} from '../lib/db.js'
 import { logger } from '../lib/logger.js'
 import { lock, release } from '../lib/redis.js'
 import * as config from '../config.js'
@@ -16,14 +21,15 @@ export const initGeneral = async () => {
     return
   }
 
-  await db.collections.rooms.updateOne(
+  const db = await mongoClient()
+  await collections(db).rooms.updateOne(
     {
       name: config.room.GENERAL_ROOM_NAME
     },
     {
       $set: {
         name: config.room.GENERAL_ROOM_NAME,
-        status: db.RoomStatusEnum.OPEN,
+        status: RoomStatusEnum.OPEN,
         createdBy: 'system'
       }
     },
@@ -36,7 +42,7 @@ export const initGeneral = async () => {
 export const isValidateRoomName = (
   name: string
 ): { valid: boolean; reason?: string } => {
-  if (isEmpty(name)) {
+  if (!name.trim()) {
     return { valid: false, reason: 'name is empty' }
   } else if (name.length > config.room.MAX_ROOM_NAME_LENGTH) {
     return {
@@ -66,22 +72,23 @@ export const isValidateRoomName = (
 }
 
 export const enterRoom = async (userId: ObjectId, roomId: ObjectId) => {
-  const enter: db.Enter = {
+  const enter: Enter = {
     userId: userId,
     roomId: roomId,
     unreadCounter: 0,
     replied: 0
   }
 
+  const db = await mongoClient()
   await Promise.all([
-    db.collections.enter.findOneAndUpdate(
+    collections(db).enter.findOneAndUpdate(
       { userId: userId, roomId: roomId },
       { $set: enter },
       {
         upsert: true
       }
     ),
-    db.collections.users.findOneAndUpdate(
+    collections(db).users.findOneAndUpdate(
       { _id: userId },
       { $addToSet: { roomOrder: roomId.toHexString() } }
     )
@@ -91,23 +98,24 @@ export const enterRoom = async (userId: ObjectId, roomId: ObjectId) => {
 export const createRoom = async (
   userId: ObjectId,
   name: string
-): Promise<WithId<db.Room>> => {
+): Promise<WithId<Room> | null> => {
   const lockKey = config.lock.CREATE_ROOM + ':' + name
   const lockVal = new ObjectId().toHexString()
   const locked = await lock(lockKey, lockVal, 1000)
 
   if (!locked) {
     logger.info('[locked] createRoom:' + name)
-    return
+    return null
   }
 
   const createdBy = userId.toHexString()
-  const room: Pick<db.Room, 'name' | 'createdBy' | 'status'> = {
+  const room: Pick<Room, 'name' | 'createdBy' | 'status'> = {
     name,
     createdBy,
-    status: db.RoomStatusEnum.CLOSE
+    status: RoomStatusEnum.CLOSE
   }
-  const inserted = await db.collections.rooms.insertOne(room)
+  const db = await mongoClient()
+  const inserted = await collections(db).rooms.insertOne(room)
   await enterRoom(userId, inserted.insertedId)
 
   const id = inserted.insertedId.toHexString()
@@ -119,16 +127,20 @@ export const createRoom = async (
     _id: inserted.insertedId,
     name,
     createdBy,
-    updatedBy: null,
-    status: db.RoomStatusEnum.CLOSE
+    updatedBy: undefined,
+    status: RoomStatusEnum.CLOSE
   }
 }
 
 export const syncSeachAllRooms = async () => {
   let counter = 0
-  let roomIds = []
+  let roomIds: string[] = []
 
-  const cursor = await db.collections.rooms.find({}, { projection: { _id: 1 } })
+  const db = await mongoClient()
+  const cursor = await collections(db).rooms.find(
+    {},
+    { projection: { _id: 1 } }
+  )
 
   for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
     roomIds.push(doc._id.toHexString())

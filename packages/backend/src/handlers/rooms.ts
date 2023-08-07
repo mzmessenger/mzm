@@ -1,11 +1,17 @@
+import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { Request } from 'express'
 import { ObjectId, type WithId, type Document } from 'mongodb'
-import isEmpty from 'validator/lib/isEmpty.js'
-import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
+import { z } from 'zod'
 import * as config from '../config.js'
-import { BadRequest } from '../lib/errors.js'
+import { BadRequest } from 'mzm-shared/lib/errors'
 import { getRequestUserId } from '../lib/utils.js'
-import * as db from '../lib/db.js'
+import {
+  collections,
+  mongoClient,
+  COLLECTION_NAMES,
+  type Message,
+  type User
+} from '../lib/db.js'
 import { searchRoom } from '../lib/elasticsearch/rooms.js'
 import { popParam, createUserIconPath } from '../lib/utils.js'
 import {
@@ -14,18 +20,27 @@ import {
   createRoom as createRoomLogic
 } from '../logic/rooms.js'
 
+const createRoomParser = z.object({
+  name: z.string().min(1)
+})
+
 export const createRoom = async (
   req: Request
 ): Promise<RESPONSE['/api/rooms']['POST']> => {
   const user = getRequestUserId(req)
-  const body = req.body as Partial<REQUEST['/api/rooms']['POST']['body']>
-  const name = popParam(decodeURIComponent(body.name))
+  const body = createRoomParser.safeParse(req.body)
+  if (body.success === false) {
+    throw new BadRequest({ reason: body.error.message })
+  }
+  const name = body.data.name.trim()
   const valid = isValidateRoomName(name)
   if (!valid.valid) {
     throw new BadRequest({ reason: valid.reason })
   }
 
-  const found = await db.collections.rooms.findOne({ name: name })
+  const found = await collections(await mongoClient()).rooms.findOne({
+    name: name
+  })
   // @todo throw error if room is rocked
   if (found) {
     await enterRoomLogic(new ObjectId(user), new ObjectId(found._id))
@@ -34,40 +49,52 @@ export const createRoom = async (
 
   const created = await createRoomLogic(new ObjectId(user), name)
 
+  // @todo
+  if (!created) {
+    return { id: '', name: '' }
+  }
+
   return { id: created._id.toHexString(), name }
 }
 
 export const enterRoom = async (req: Request) => {
   const user = getRequestUserId(req)
   const room = popParam(req.body.room)
-  if (isEmpty(room)) {
+  if (!room) {
     throw new BadRequest({ reason: 'room is empty' })
   }
 
   await enterRoomLogic(new ObjectId(user), new ObjectId(room))
 }
 
+const exitRoomParser = z.object({
+  room: z.string().min(1)
+})
+
 export const exitRoom = async (req: Request) => {
-  const body = req.body as Partial<
-    REQUEST['/api/rooms/enter']['DELETE']['body']
-  >
-  const user = getRequestUserId(req)
-  const room = popParam(body.room)
-  if (isEmpty(room)) {
-    throw new BadRequest({ reason: 'room is empty' })
+  const body = exitRoomParser.safeParse(req.body)
+  if (body.success === false) {
+    throw new BadRequest({ reason: body.error.message })
   }
+  const room = popParam(body.data.room)
+  const user = getRequestUserId(req)
 
   const roomId = new ObjectId(room)
 
-  const general = await db.collections.rooms.findOne({
+  const db = await mongoClient()
+  const general = await collections(db).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
+
+  if (!general) {
+    return
+  }
 
   if (room === general._id.toHexString()) {
     throw new BadRequest({ reason: 'general room' })
   }
 
-  await db.collections.enter.deleteMany({
+  await collections(db).enter.deleteMany({
     userId: new ObjectId(user),
     roomId
   })
@@ -75,12 +102,17 @@ export const exitRoom = async (req: Request) => {
 
 type EnterUser = RESPONSE['/api/rooms/:roomid/users']['GET']['users'][number]
 
+const getUsersParser = z.object({
+  roomid: z.string().min(1)
+})
+
 export const getUsers = async (
   req: Request
 ): Promise<RESPONSE['/api/rooms/:roomid/users']['GET']> => {
   const room = popParam(req.params.roomid)
-  if (isEmpty(room)) {
-    throw new BadRequest({ reason: 'room is empty' })
+  const params = getUsersParser.safeParse(req.params)
+  if (params.success === false) {
+    throw new BadRequest({ reason: params.error.message })
   }
 
   const roomId = new ObjectId(room)
@@ -91,7 +123,7 @@ export const getUsers = async (
     },
     {
       $lookup: {
-        from: db.COLLECTION_NAMES.USERS,
+        from: COLLECTION_NAMES.USERS,
         localField: 'userId',
         foreignField: '_id',
         as: 'user'
@@ -104,7 +136,7 @@ export const getUsers = async (
   >
 
   const threshold = popParam(
-    typeof reqQuery.threshold === 'string' ? reqQuery.threshold : null
+    typeof reqQuery.threshold === 'string' ? reqQuery.threshold : undefined
   )
   if (threshold) {
     query.push({
@@ -112,12 +144,13 @@ export const getUsers = async (
     })
   }
 
-  const countQuery = db.collections.enter.countDocuments({ roomId })
+  const db = await mongoClient()
+  const countQuery = collections(db).enter.countDocuments({ roomId })
 
-  type AggregateType = WithId<db.Message> & { user: WithId<db.User>[] }
+  type AggregateType = WithId<Message> & { user: WithId<User>[] }
 
-  const enterQuery = db.collections.enter
-    .aggregate<AggregateType>(query)
+  const enterQuery = collections(db)
+    .enter.aggregate<AggregateType>(query)
     .sort({ _id: -1 })
     .limit(config.room.USER_LIMIT)
 
@@ -133,7 +166,7 @@ export const getUsers = async (
     }
     if (doc.user && doc.user[0]) {
       const [u] = doc.user
-      user.account = u.account ? u.account : null
+      user.account = u.account
       user.icon = createUserIconPath(u?.account, u?.icon?.version)
     }
     users.push(user)
@@ -148,11 +181,13 @@ export const search = async (
     REQUEST['/api/rooms/search']['GET']['query']
   >
   const _query = popParam(
-    typeof query.query === 'string' ? decodeURIComponent(query.query) : null
+    typeof query.query === 'string'
+      ? decodeURIComponent(query.query)
+      : undefined
   )
 
   const scroll = popParam(
-    typeof query.scroll === 'string' ? query.scroll : null
+    typeof query.scroll === 'string' ? query.scroll : undefined
   )
 
   return await searchRoom(_query, scroll)

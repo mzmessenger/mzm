@@ -2,9 +2,9 @@ import { vi, test, expect } from 'vitest'
 vi.mock('../logger')
 vi.mock('../redis', () => {
   return {
-    client: {
+    client: vi.fn(() => ({
       xadd: vi.fn()
-    }
+    }))
   }
 })
 import { ObjectId } from 'mongodb'
@@ -14,10 +14,8 @@ import { client } from '../redis'
 import * as config from '../../config'
 import { addQueueToUsers, addUnreadQueue, addRepliedQueue } from './index'
 
-const xadd = createXaddMock(client.xadd)
-
 test('addQueueToUsers', async () => {
-  xadd.mockClear()
+  const xadd = createXaddMock(client)
 
   const users = ['5cc9d148139370d11b706624']
 
@@ -38,6 +36,7 @@ test('addQueueToUsers', async () => {
 })
 
 test('addUnreadQueue', async () => {
+  const xadd = createXaddMock(client)
   xadd.mockClear()
 
   const roomId = new ObjectId()
@@ -52,6 +51,7 @@ test('addUnreadQueue', async () => {
 })
 
 test('addRepliedQueue', async () => {
+  const xadd = createXaddMock(client)
   xadd.mockClear()
 
   const roomId = new ObjectId()

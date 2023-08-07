@@ -1,9 +1,8 @@
-import validator from 'validator'
 import { ACCOUNT_STR } from './constants.js'
 
 export const isValidAccount = (account: string): boolean => {
   if (
-    validator.default.isEmpty(account, { ignore_whitespace: true }) ||
+    !account.trim() ||
     !/^([a-zA-Z\d])/.test(account) ||
     /.*(insert|update|find|remove).*/.test(account) ||
     /^(here|all|online|channel)$/.test(account) ||

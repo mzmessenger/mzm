@@ -1,5 +1,4 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('../lib/logger')
 vi.mock('../lib/redis', () => {
   return {
@@ -7,33 +6,30 @@ vi.mock('../lib/redis', () => {
     release: vi.fn()
   }
 })
+vi.mock('../lib/db.js', async () => {
+  const { mockDb } = await import('../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+})
 
 import { ObjectId } from 'mongodb'
-import { mongoSetup } from '../../test/testUtil'
+import { getTestMongoClient, dropCollection } from '../../test/testUtil'
 import * as config from '../config'
-import * as db from '../lib/db'
+import { collections, RoomStatusEnum, COLLECTION_NAMES } from '../lib/db'
 import * as redis from '../lib/redis'
 import { initGeneral, enterRoom, isValidateRoomName } from './rooms'
 
-let mongoServer: MongoMemoryServer | null = null
+const db = await getTestMongoClient()
 
 beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
+  await dropCollection(db, COLLECTION_NAMES.ROOMS)
 })
 
 test('initGeneral', async () => {
   const release = vi.mocked(redis.release)
   release.mockClear()
 
-  let general = await db.collections.rooms
-    .find({
+  let general = await collections(db)
+    .rooms.find({
       name: config.room.GENERAL_ROOM_NAME
     })
     .toArray()
@@ -42,35 +38,35 @@ test('initGeneral', async () => {
 
   await initGeneral()
 
-  general = await db.collections.rooms
-    .find({
+  general = await collections(db)
+    .rooms.find({
       name: config.room.GENERAL_ROOM_NAME
     })
     .toArray()
 
   expect(general.length).toStrictEqual(1)
   expect(general[0].name).toStrictEqual(config.room.GENERAL_ROOM_NAME)
-  expect(general[0].status).toStrictEqual(db.RoomStatusEnum.OPEN)
+  expect(general[0].status).toStrictEqual(RoomStatusEnum.OPEN)
   expect(release.mock.calls.length).toStrictEqual(1)
 
   // 初期化済みのものはupdateされる
-  await db.collections.rooms.updateOne(
+  await collections(db).rooms.updateOne(
     { _id: general[0]._id },
     {
       $set: {
         name: config.room.GENERAL_ROOM_NAME,
-        status: db.RoomStatusEnum.CLOSE
+        status: RoomStatusEnum.CLOSE
       }
     }
   )
 
   await initGeneral()
 
-  const updated = await db.collections.rooms.findOne({
+  const updated = await collections(db).rooms.findOne({
     _id: general[0]._id
   })
   expect(updated?.name).toStrictEqual(config.room.GENERAL_ROOM_NAME)
-  expect(updated?.status).toStrictEqual(db.RoomStatusEnum.OPEN)
+  expect(updated?.status).toStrictEqual(RoomStatusEnum.OPEN)
 })
 
 test('initGeneral (locked)', async () => {
@@ -80,24 +76,24 @@ test('initGeneral (locked)', async () => {
   const release = vi.mocked(redis.release)
   release.mockClear()
 
-  const originUpdate = db.collections.rooms.updateOne
+  const originUpdate = collections(db).rooms.updateOne
   const updateMock = vi.fn()
-  db.collections.rooms.updateOne = updateMock
+  collections(db).rooms.updateOne = updateMock
 
   await initGeneral()
 
   expect(updateMock.mock.calls.length).toStrictEqual(0)
   expect(release.mock.calls.length).toStrictEqual(0)
 
-  db.collections.rooms.updateOne = originUpdate
+  collections(db).rooms.updateOne = originUpdate
 })
 
 test('enterRoom', async () => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
-  const before = await db.collections.enter
-    .find({
+  const before = await collections(db)
+    .enter.find({
       userId: userId,
       roomId: roomId
     })
@@ -107,8 +103,8 @@ test('enterRoom', async () => {
 
   await enterRoom(userId, roomId)
 
-  const found = await db.collections.enter
-    .find({
+  const found = await collections(db)
+    .enter.find({
       userId: userId,
       roomId: roomId
     })

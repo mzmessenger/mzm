@@ -1,5 +1,4 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { vi, test, expect, beforeEach } from 'vitest'
 
 vi.mock('undici', () => {
   return { request: vi.fn() }
@@ -7,43 +6,35 @@ vi.mock('undici', () => {
 vi.mock('image-size')
 vi.mock('../../lib/logger')
 vi.mock('../../lib/storage')
+vi.mock('../../lib/db.js', async () => {
+  const { mockDb } = await import('../../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../../lib/db.js'))) }
+})
 
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
 import sizeOf from 'image-size'
-import { mongoSetup, createFileRequest } from '../../../test/testUtil'
-import * as db from '../../lib/db'
+import { createFileRequest, getTestMongoClient } from '../../../test/testUtil'
+import { collections, RoomStatusEnum } from '../../lib/db'
 import * as storage from '../../lib/storage'
 import * as config from '../../config'
-import { BadRequest } from '../../lib/errors'
+import { BadRequest } from 'mzm-shared/lib/errors'
 import { uploadRoomIcon } from './index'
-
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
 
 beforeEach(() => {
   vi.resetAllMocks()
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
 })
 
 test('uploadRoomIcon', async () => {
   const roomId = new ObjectId()
   const name = roomId.toHexString()
 
-  await db.collections.rooms.insertOne({
+  const db = await getTestMongoClient()
+  await collections(db).rooms.insertOne({
     _id: roomId,
     name,
     createdBy: new ObjectId().toHexString(),
-    status: db.RoomStatusEnum.CLOSE
+    status: RoomStatusEnum.CLOSE
   })
 
   const putObjectMock = vi.mocked(storage.putObject)
@@ -78,7 +69,7 @@ test('uploadRoomIcon', async () => {
 
   const res = await uploadRoomIcon(req)
 
-  const room = await db.collections.rooms.findOne({ _id: roomId })
+  const room = await collections(db).rooms.findOne({ _id: roomId })
 
   expect(typeof room?.icon?.version).toStrictEqual('string')
   expect(res.version).toStrictEqual(room?.icon?.version)

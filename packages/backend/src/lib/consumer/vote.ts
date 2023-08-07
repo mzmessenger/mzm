@@ -2,7 +2,7 @@ import { ObjectId } from 'mongodb'
 import { TO_CLIENT_CMD } from 'mzm-shared/type/socket'
 import * as config from '../../config.js'
 import { VoteQueue } from '../../types.js'
-import * as db from '../db.js'
+import { collections, mongoClient } from '../db.js'
 import { client } from '../redis.js'
 import { logger } from '../logger.js'
 import { initConsumerGroup, createParser, consumeGroup } from './common.js'
@@ -23,7 +23,12 @@ export const vote = async (ackid: string, messages: string[]) => {
   // @todo lazy 1min
 
   const messageId = new ObjectId(queue.messageId)
-  const message = await db.collections.messages.findOne({ _id: messageId })
+  const message = await collections(await mongoClient()).messages.findOne({
+    _id: messageId
+  })
+  if (!message) {
+    return
+  }
   const users = await getAllUserIdsInRoom(message.roomId.toHexString())
   const answers = await getVoteAnswers(messageId)
 
@@ -33,7 +38,7 @@ export const vote = async (ackid: string, messages: string[]) => {
     answers
   })
 
-  await client.xack(STREAM, VOTE_GROUP, ackid)
+  await client().xack(STREAM, VOTE_GROUP, ackid)
 
   logger.info('[vote]', queue.messageId)
 }

@@ -7,7 +7,9 @@ if (process.env.NODE_ENV !== 'test') {
 export const API_URL_BASE = process.env.API_URL_BASE ?? 'http://localhost:3001'
 
 export const MONGODB_URI =
-  process.env.NODE_ENV === 'test' ? null : process.env.MONGODB_URI
+  process.env.NODE_ENV === 'test' ? '' : process.env.MONGODB_URI ?? ''
+
+export const DB_NAME = process.env.NODE_ENV === 'test' ? 'mzm-test' : 'mzm'
 
 export const PORT = process.env.PORT ?? 3001
 export const CORS_ORIGIN = process.env.CORS_ORIGIN
@@ -107,10 +109,10 @@ export const icon = {
 export const MULTER_PATH = '/tmp' ?? process.env.MULTER_PATH
 
 export const aws = {
-  AWS_BUCKET: process.env.AWS_BUCKET,
-  AWS_REGION: process.env.AWS_REGION,
-  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID,
-  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY
+  AWS_BUCKET: process.env.AWS_BUCKET ?? '',
+  AWS_REGION: process.env.AWS_REGION ?? '',
+  AWS_ACCESS_KEY_ID: process.env.AWS_ACCESS_KEY_ID ?? '',
+  AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ?? ''
 } as const
 
 export const redis = {
@@ -151,8 +153,8 @@ export const vote = {
 } as const
 
 export const JWT = {
-  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
-  internalAccessTokenSecret: process.env.INTERNAL_ACCESS_TOKEN_SECRET,
+  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET ?? '',
+  internalAccessTokenSecret: process.env.INTERNAL_ACCESS_TOKEN_SECRET ?? '',
   issuer: process.env.JWT_ISSURE ?? 'https://mzm.dev',
   audience: process.env.JWT_AUDIENCE
     ? process.env.JWT_AUDIENCE.split(',')

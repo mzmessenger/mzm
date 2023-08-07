@@ -1,48 +1,70 @@
-import type { MulterFile } from '../src/types/index'
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable no-console */
+import type { MulterFile } from '../src/types/index.js'
+import { once } from 'node:events'
+import { Redis, type RedisOptions } from 'ioredis'
 import { vi } from 'vitest'
-import assert from 'assert'
 import { Request } from 'express'
 import { MongoClient, ObjectId } from 'mongodb'
-import { MongoMemoryServer } from 'mongodb-memory-server'
-import { client as Redis } from '../src/lib/redis'
-import { RedisKey, RedisValue } from 'ioredis'
+import { client as RedisClient } from '../src/lib/redis.js'
 
-export const createXaddMock = (xadd: typeof Redis.xadd) => {
-  const mock =
-    vi.mocked<(key: RedisKey, ...args: RedisValue[]) => Promise<string>>(xadd)
-  return mock
+export const createXaddMock = (client: typeof RedisClient) => {
+  const xadd = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xadd }))
+  return xadd
 }
 
-export const createXackMock = (xack: typeof Redis.xack) => {
-  const mock =
-    vi.mocked<(key: RedisKey, ...args: RedisValue[]) => Promise<number>>(xack)
+export const createXackMock = (client: typeof RedisClient) => {
+  const xack = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xack }))
 
-  return mock
+  return xack
 }
 
-export const mongoSetup = async () => {
-  const mongoServer = await MongoMemoryServer.create()
-  const uri = mongoServer.getUri()
-  return { uri, mongoServer }
+const TEST_MONGODB_URI =
+  process.env.TEST_MONTO_URI ??
+  'mongodb://mzm-backend-test:mzm-backend-test-password@localhost:27018/mzm-test'
+
+let mongoClient: MongoClient | null = null
+
+export const getTestMongoClient = async () => {
+  if (!mongoClient) {
+    mongoClient = await MongoClient.connect(TEST_MONGODB_URI)
+  }
+
+  return mongoClient
 }
 
-export const getDbConnection = async (uri: string) => {
-  assert.strictEqual(process.env.NODE_ENV, 'test')
-
-  const client = await MongoClient.connect(uri)
-
-  return client
+const testSessionRedisOptions: RedisOptions = {
+  host: process.env.TEST_SESSION_REDIS_HOST ?? 'localhost',
+  port: process.env.TEST_SESSION_REDIS_PORT
+    ? Number(process.env.TEST_SESSION_REDIS_PORT)
+    : 6380,
+  enableOfflineQueue: false,
+  connectTimeout: 30000,
+  db: 1
 }
 
-export const dropCollection = async (uri: string, name: string) => {
-  const client = await getDbConnection(uri)
-  const db = client.db('mzm')
+const redisClient = new Redis(testSessionRedisOptions)
+redisClient.on('error', (e) => {
+  console.error(e)
+})
+await Promise.all([once(redisClient, 'ready')])
 
-  const collections = (await db.collections()).map((c) => c.collectionName)
+export const getTestRedisClient = async () => {
+  return { client: RedisClient }
+}
+
+export const dropCollection = async (client: MongoClient, name: string) => {
+  const collections = (await client.db().collections()).map(
+    (c) => c.collectionName
+  )
   if (!collections.includes(name)) {
     return Promise.resolve()
   }
-  return await db.collection(name).drop()
+  await client.db().collection(name).drop()
 }
 
 type TestRequest = Request & { file?: MulterFile }

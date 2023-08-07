@@ -8,9 +8,7 @@ import { verifyAccessToken } from 'mzm-shared/auth/index'
 vi.mock('../config.js', async () => ({
   ...(await import('../../test/mock.js')).mockConfig
 }))
-vi.mock('../lib/logger.js', async () => ({
-  ...(await import('../../test/mock.js')).mockLogger
-}))
+vi.mock('../lib/logger.js')
 
 vi.mock('../lib/redis.js', async () => {
   const { mockRedis } = await import('../../test/mock.js')

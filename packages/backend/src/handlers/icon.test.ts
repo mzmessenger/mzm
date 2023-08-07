@@ -1,28 +1,33 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { vi, test, expect, beforeEach } from 'vitest'
 vi.mock('undici', () => {
   return { request: vi.fn() }
 })
 vi.mock('image-size')
 vi.mock('../lib/logger')
 vi.mock('../lib/storage')
+vi.mock('../lib/db.js', async () => {
+  const { mockDb } = await import('../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+})
 
-import { Readable } from 'stream'
 import type { IncomingHttpHeaders } from 'http'
-import type { MongoMemoryServer } from 'mongodb-memory-server'
+import { Readable } from 'stream'
 import { ObjectId, WithId } from 'mongodb'
 import { request } from 'undici'
 import sizeOf from 'image-size'
 import {
-  mongoSetup,
+  getTestMongoClient,
   createRequest,
   createFileRequest
 } from '../../test/testUtil'
-import * as db from '../lib/db'
+import { collections, RoomStatusEnum, type User } from '../lib/db'
 import * as storage from '../lib/storage'
 import * as config from '../config'
-import { BadRequest, NotFound } from '../lib/errors'
+import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
 import * as icon from './icon'
+
+const db = await getTestMongoClient()
 
 type ResponseBody = Awaited<ReturnType<typeof request>>['body']
 
@@ -72,21 +77,8 @@ const createGetObjectMockValue = (options: { createReadStream: Readable }) => {
   return getObject
 }
 
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
 beforeEach(() => {
   vi.resetAllMocks()
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
 })
 
 test('getUserIcon from storage', async () => {
@@ -94,7 +86,7 @@ test('getUserIcon from storage', async () => {
   const account = userId.toHexString()
   const version = '12345'
 
-  await db.collections.users.insertOne({
+  await collections(db).users.insertOne({
     _id: userId,
     account,
     roomOrder: [],
@@ -143,7 +135,7 @@ test.each([
   async (iconVersion, requestVersion) => {
     const id = new ObjectId()
     const account = id.toHexString()
-    const user: WithId<db.User> = {
+    const user: WithId<User> = {
       _id: id,
       account,
       roomOrder: []
@@ -151,7 +143,7 @@ test.each([
     if (iconVersion) {
       user.icon = { key: 'iconkey', version: iconVersion }
     }
-    await db.collections.users.insertOne(user)
+    await collections(db).users.insertOne(user)
 
     const headObjectMock = vi.mocked(storage.headObject)
     const getObjectMock = vi.mocked(storage.getObject)
@@ -194,7 +186,7 @@ test.each([
 test('getUserIcon from identicon: not found on storage', async () => {
   const id = new ObjectId()
   const account = id.toHexString()
-  const user: WithId<db.User> = {
+  const user: WithId<User> = {
     _id: id,
     account,
     roomOrder: [],
@@ -203,7 +195,7 @@ test('getUserIcon from identicon: not found on storage', async () => {
       version: '1234'
     }
   }
-  await db.collections.users.insertOne(user)
+  await collections(db).users.insertOne(user)
 
   const headObjectMock = vi.mocked(storage.headObject)
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
@@ -259,7 +251,7 @@ test('getUserIcon BadRequest: no account', async () => {
 test('uploadUserIcon', async () => {
   const userId = new ObjectId()
 
-  await db.collections.users.insertOne({
+  await collections(db).users.insertOne({
     _id: userId,
     account: userId.toString(),
     roomOrder: []
@@ -291,7 +283,7 @@ test('uploadUserIcon', async () => {
 
   const res = await icon.uploadUserIcon(req)
 
-  const user = await db.collections.users.findOne({ _id: userId })
+  const user = await collections(db).users.findOne({ _id: userId })
 
   expect(typeof user?.icon?.version).toStrictEqual('string')
   expect(res.version).toStrictEqual(user?.icon?.version)
@@ -390,7 +382,7 @@ test('getRoomIcon', async () => {
   const name = roomId.toHexString()
   const version = '12345'
 
-  await db.collections.rooms.insertOne({
+  await collections(db).rooms.insertOne({
     _id: roomId,
     name,
     // @ts-expect-error
@@ -398,7 +390,7 @@ test('getRoomIcon', async () => {
     // @ts-expect-error
     updatedBy: null,
     icon: { key: 'iconkey', version },
-    status: db.RoomStatusEnum.CLOSE
+    status: RoomStatusEnum.CLOSE
   })
 
   const req = createRequest(null, { params: { roomname: name, version } })
@@ -456,13 +448,13 @@ test('getRoomIcon NotFound: different version', async () => {
   const name = roomId.toHexString()
   const version = '12345'
 
-  await db.collections.rooms.insertOne({
+  await collections(db).rooms.insertOne({
     _id: roomId,
     name: name,
     // @ts-expect-error
     createdBy: null,
     icon: { key: 'iconkey', version },
-    status: db.RoomStatusEnum.CLOSE
+    status: RoomStatusEnum.CLOSE
   })
 
   const req = createRequest(null, {
@@ -483,13 +475,13 @@ test('getRoomIcon NotFound: not found on storage', async () => {
   const name = roomId.toHexString()
   const version = '12345'
 
-  await db.collections.rooms.insertOne({
+  await collections(db).rooms.insertOne({
     _id: roomId,
     name: name,
     // @ts-expect-error
     createdBy: null,
     icon: { key: 'iconkey', version },
-    status: db.RoomStatusEnum.CLOSE
+    status: RoomStatusEnum.CLOSE
   })
 
   const headObjectMock = vi.mocked(storage.headObject)
@@ -510,12 +502,12 @@ test('uploadRoomIcon', async () => {
   const roomId = new ObjectId()
   const name = roomId.toHexString()
 
-  await db.collections.rooms.insertOne({
+  await collections(db).rooms.insertOne({
     _id: roomId,
     name,
     // @ts-expect-error
     createdBy: null,
-    status: db.RoomStatusEnum.CLOSE
+    status: RoomStatusEnum.CLOSE
   })
 
   const putObjectMock = vi.mocked(storage.putObject)
@@ -550,7 +542,7 @@ test('uploadRoomIcon', async () => {
 
   const res = await icon.uploadRoomIcon(req)
 
-  const room = await db.collections.rooms.findOne({ _id: roomId })
+  const room = await collections(db).rooms.findOne({ _id: roomId })
 
   expect(typeof room?.icon?.version).toStrictEqual('string')
   expect(res.version).toStrictEqual(room?.icon?.version)

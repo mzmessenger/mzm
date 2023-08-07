@@ -5,19 +5,7 @@ import {
 } from 'mzm-shared/auth/index'
 import { HEADERS } from 'mzm-shared/auth/constants'
 import { JWT } from '../config.js'
-import * as HttpErrors from '../lib/errors.js'
 import { verifyInternalAccessToken } from '../lib/token.js'
-import { logger } from '../lib/logger.js'
-
-const allHttpErrors = Object.keys(HttpErrors).map((err) => HttpErrors[err])
-
-export const errorHandler = (err, _req, res: Response, _next) => {
-  if (allHttpErrors.some((type) => err instanceof type)) {
-    return res.status(err.status).send(err.toResponse())
-  }
-  res.status(500).send('Internal Server Error')
-  logger.error('[Internal Server Error]', err)
-}
 
 export const checkAccessToken = (
   req: Request,

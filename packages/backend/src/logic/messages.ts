@@ -1,16 +1,21 @@
 import { ObjectId, type WithId, type Document } from 'mongodb'
-import unescape from 'validator/lib/unescape.js'
 import { MessageType } from 'mzm-shared/type/socket'
 import * as config from '../config.js'
-import * as db from '../lib/db.js'
-import { createUserIconPath } from '../lib/utils.js'
+import {
+  collections,
+  mongoClient,
+  COLLECTION_NAMES,
+  type Message,
+  type User
+} from '../lib/db.js'
+import { createUserIconPath, unescape } from '../lib/utils.js'
 import { getVoteAnswers } from './vote.js'
 
 export const saveMessage = async (
   message: string,
   roomId: string,
   userId: string,
-  vote?: db.Message['vote']
+  vote?: Message['vote']
 ) => {
   if (
     message.length > config.message.MAX_MESSAGE_LENGTH ||
@@ -19,7 +24,7 @@ export const saveMessage = async (
     return false
   }
 
-  const insert: Omit<db.Message, '_id'> = {
+  const insert: Omit<Message, '_id'> = {
     message: message,
     roomId: new ObjectId(roomId),
     userId: new ObjectId(userId),
@@ -32,7 +37,7 @@ export const saveMessage = async (
   if (vote) {
     insert.vote = vote
   }
-  return await db.collections.messages.insertOne(insert)
+  return await collections(await mongoClient()).messages.insertOne(insert)
 }
 
 export const getMessages = async (
@@ -45,7 +50,7 @@ export const getMessages = async (
     },
     {
       $lookup: {
-        from: db.COLLECTION_NAMES.USERS,
+        from: COLLECTION_NAMES.USERS,
         localField: 'userId',
         foreignField: '_id',
         as: 'user'
@@ -59,12 +64,13 @@ export const getMessages = async (
     })
   }
 
-  type AggregateType = WithId<db.Message> & {
-    user: WithId<db.User>[]
+  type AggregateType = WithId<Message> & {
+    user: WithId<User>[]
   }
 
-  const cursor = await db.collections.messages
-    .aggregate<AggregateType>(query)
+  const db = await mongoClient()
+  const cursor = await collections(db)
+    .messages.aggregate<AggregateType>(query)
     .sort({ _id: -1 })
     .limit(config.room.MESSAGE_LIMIT)
 
@@ -81,7 +87,7 @@ export const getMessages = async (
       removed: doc.removed ? doc.removed : false,
       createdAt: doc.createdAt.getTime().toString(),
       updatedAt: doc.updatedAt ? doc.updatedAt.getTime().toString() : null,
-      userAccount: user ? user.account : null,
+      userAccount: user.account,
       icon: createUserIconPath(user?.account, user?.icon?.version)
     }
 

@@ -10,13 +10,6 @@ export const mockConfig = {
   } satisfies typeof configType.JWT
 }
 
-export const mockLogger = {
-  logger: {
-    info: () => {},
-    error: () => {}
-  }
-}
-
 export const mockRedis = async () => {
   const { sessionRedis } = await getTestRedisClient()
   return {

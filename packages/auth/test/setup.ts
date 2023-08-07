@@ -25,7 +25,12 @@ const createUser = async (
 export async function setup() {
   const client = await MongoClient.connect(TEST_ROOT_MONGODB_URI)
 
-  await createUser(client, 'auth', 'mzm-auth-test', 'mzm-auth-test-password')
+  await createUser(
+    client,
+    'auth-test',
+    'mzm-auth-test',
+    'mzm-auth-test-password'
+  )
 
   await client.close()
 

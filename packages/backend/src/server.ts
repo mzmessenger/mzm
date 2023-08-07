@@ -5,7 +5,7 @@ import schedule from 'node-schedule'
 import { WORKER_NUM, PORT } from './config.js'
 import { logger } from './lib/logger.js'
 import * as redis from './lib/redis.js'
-import * as db from './lib/db.js'
+import { connect, mongoClient } from './lib/db.js'
 import { init } from './logic/server.js'
 import { addSyncSearchRoomQueue } from './lib/provider/index.js'
 import { createApp } from './app.js'
@@ -54,7 +54,8 @@ if (WORKER_NUM > 1 && cluster.isPrimary) {
   const main = async () => {
     await redis.connect()
 
-    await db.connect()
+    const client = await mongoClient()
+    await connect(client)
 
     await init()
 
@@ -62,7 +63,7 @@ if (WORKER_NUM > 1 && cluster.isPrimary) {
     server = http.createServer(app)
 
     server.listen(PORT, () => {
-      logger.info(`(#${process.pid}) Listening on`, server.address())
+      logger.info(`(#${process.pid}) Listening on`, server?.address())
     })
   }
 

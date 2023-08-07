@@ -14,45 +14,7 @@ import { default as jsonwebtoken } from 'jsonwebtoken'
 import { NextFunction, Request, Response } from 'express'
 import { HEADERS } from 'mzm-shared/auth/constants'
 import { verifyAccessToken } from 'mzm-shared/auth/index'
-import { errorHandler, checkAccessToken } from './index'
-import * as HttpErrors from '../lib/errors'
-
-test('errorHandler (Internal Server Error)', async () => {
-  expect.assertions(4)
-
-  const error = new Error('error!')
-
-  const send = vi.fn(function (arg) {
-    expect(this.status.mock.calls.length).toBe(1)
-    expect(this.send.mock.calls.length).toBe(1)
-
-    expect(this.status.mock.calls[0][0]).toEqual(500)
-    expect(arg).toEqual('Internal Server Error')
-  })
-
-  const res = { status: vi.fn().mockReturnThis(), send }
-
-  await errorHandler(error, {}, res as unknown as Response, vi.fn())
-})
-
-test.each([
-  [{ error: new HttpErrors.BadRequest('BadRequest') }],
-  [{ error: new HttpErrors.Forbidden('Forbidden') }]
-])('errorHandler (%s)', async ({ error }) => {
-  expect.assertions(4)
-
-  const send = vi.fn(function (arg) {
-    expect(this.status.mock.calls.length).toBe(1)
-    expect(this.send.mock.calls.length).toBe(1)
-
-    expect(this.status.mock.calls[0][0]).toEqual(error.status)
-    expect(arg).toEqual(error.toResponse())
-  })
-
-  const res = { status: vi.fn().mockReturnThis(), send }
-
-  await errorHandler(error, {}, res as unknown as Response, vi.fn())
-})
+import { checkAccessToken } from './index'
 
 test('checkAccessToken (success)', async () => {
   expect.assertions(3)

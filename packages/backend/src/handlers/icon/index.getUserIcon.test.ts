@@ -1,40 +1,30 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { IncomingHttpHeaders } from 'http'
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, beforeEach, afterAll } from 'vitest'
+import { vi, test, expect, beforeEach } from 'vitest'
 vi.mock('undici', () => {
   return { request: vi.fn() }
 })
 vi.mock('../../lib/logger')
 vi.mock('../../lib/storage')
+vi.mock('../../lib/db.js', async () => {
+  const { mockDb } = await import('../../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../../lib/db.js'))) }
+})
 
 import { Readable } from 'stream'
 import { ObjectId, WithId } from 'mongodb'
 import { request } from 'undici'
-import { mongoSetup, createRequest } from '../../../test/testUtil'
+import { createRequest, getTestMongoClient } from '../../../test/testUtil'
 import { createGetObjectMockValue, createHeadObjectMockValue } from './testUtil'
-import * as db from '../../lib/db'
+import { collections, type User } from '../../lib/db'
 import * as storage from '../../lib/storage'
-import { BadRequest } from '../../lib/errors'
+import { BadRequest } from 'mzm-shared/lib/errors'
 import { getUserIcon } from './index'
 
 type ResponseBody = Awaited<ReturnType<typeof request>>['body']
 
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
 beforeEach(() => {
   vi.resetAllMocks()
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
 })
 
 test('getUserIcon from storage', async () => {
@@ -42,7 +32,8 @@ test('getUserIcon from storage', async () => {
   const account = userId.toHexString()
   const version = '12345'
 
-  await db.collections.users.insertOne({
+  const db = await getTestMongoClient()
+  await collections(db).users.insertOne({
     _id: userId,
     account,
     roomOrder: [],
@@ -91,7 +82,7 @@ test.each([
   async (iconVersion, requestVersion) => {
     const id = new ObjectId()
     const account = id.toHexString()
-    const user: WithId<db.User> = {
+    const user: WithId<User> = {
       _id: id,
       account,
       roomOrder: []
@@ -99,7 +90,8 @@ test.each([
     if (iconVersion) {
       user.icon = { key: 'iconkey', version: iconVersion }
     }
-    await db.collections.users.insertOne(user)
+    const db = await getTestMongoClient()
+    await collections(db).users.insertOne(user)
 
     const headObjectMock = vi.mocked(storage.headObject)
     const getObjectMock = vi.mocked(storage.getObject)
@@ -142,7 +134,7 @@ test.each([
 test('getUserIcon from identicon: not found on storage', async () => {
   const id = new ObjectId()
   const account = id.toHexString()
-  const user: WithId<db.User> = {
+  const user: WithId<User> = {
     _id: id,
     account,
     roomOrder: [],
@@ -151,7 +143,8 @@ test('getUserIcon from identicon: not found on storage', async () => {
       version: '1234'
     }
   }
-  await db.collections.users.insertOne(user)
+  const db = await getTestMongoClient()
+  await collections(db).users.insertOne(user)
 
   const headObjectMock = vi.mocked(storage.headObject)
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })

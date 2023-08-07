@@ -1,5 +1,5 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
-import { MONGODB_URI } from '../config.js'
+import { MONGODB_URI, DB_NAME } from '../config.js'
 import { logger } from './logger.js'
 
 type CollectionType = {
@@ -11,8 +11,6 @@ const _collections: Partial<CollectionType> = {
   users: undefined,
   removed: undefined
 }
-
-const DB_NAME = 'auth'
 
 let connected = false
 

@@ -26,7 +26,7 @@ export const searchRooms = async (ackid: string, messages: string[]) => {
 
     logger.info('[insert:elasticsearch:rooms]', roomIds.length)
   }
-  await redis.xack(STREAM, ELASTICSEARCH_ROOMS_GROUP, ackid)
+  await redis().xack(STREAM, ELASTICSEARCH_ROOMS_GROUP, ackid)
 }
 
 export const consumeSearchRooms = async () => {

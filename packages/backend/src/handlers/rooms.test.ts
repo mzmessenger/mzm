@@ -1,6 +1,5 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+import { vi, test, expect } from 'vitest'
 vi.mock('../lib/logger')
 vi.mock('../lib/redis', () => {
   return {
@@ -13,27 +12,20 @@ vi.mock('../lib/elasticsearch/index', () => {
     client: {}
   }
 })
+vi.mock('../lib/db.js', async () => {
+  const { mockDb } = await import('../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+})
 
 import { ObjectId, WithId } from 'mongodb'
-import { mongoSetup, createRequest } from '../../test/testUtil'
+import { getTestMongoClient, createRequest } from '../../test/testUtil'
 import * as config from '../config'
-import * as db from '../lib/db'
+import { collections, type User, type Enter } from '../lib/db'
 import { initGeneral } from '../logic/rooms'
-import { BadRequest } from '../lib/errors'
+import { BadRequest } from 'mzm-shared/lib/errors'
 import { exitRoom, getUsers } from './rooms'
 
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
-})
+const db = await getTestMongoClient()
 
 test('exitRoom fail (general)', async () => {
   expect.assertions(1)
@@ -41,11 +33,11 @@ test('exitRoom fail (general)', async () => {
 
   const userId = new ObjectId()
 
-  const general = await db.collections.rooms.findOne({
+  const general = await collections(db).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
 
-  await db.collections.enter.insertOne({
+  await collections(db).enter.insertOne({
     userId: userId,
     roomId: general!._id,
     unreadCounter: 0,
@@ -81,16 +73,16 @@ test('getUsers', async () => {
 
   const overNum = 4
 
-  const users: WithId<db.User>[] = []
-  const insert: Omit<db.Enter, '_id'>[] = []
+  const users: WithId<User>[] = []
+  const insert: Omit<Enter, '_id'>[] = []
   for (let i = 0; i < config.room.USER_LIMIT + overNum; i++) {
     const userId = new ObjectId()
-    const user: WithId<db.User> = {
+    const user: WithId<User> = {
       _id: userId,
       account: userId.toHexString(),
       roomOrder: []
     }
-    const enter: Omit<db.Enter, '_id'> = {
+    const enter: Omit<Enter, '_id'> = {
       roomId,
       userId,
       unreadCounter: 0,
@@ -103,17 +95,19 @@ test('getUsers', async () => {
     }
   }
   await Promise.all([
-    db.collections.enter.insertMany(insert),
-    db.collections.users.insertMany(users)
+    collections(db).enter.insertMany(insert),
+    collections(db).users.insertMany(users)
   ])
 
   const userIds = users.map((u) => u._id)
   const userMap = (
-    await db.collections.users.find({ _id: { $in: userIds } }).toArray()
+    await collections(db)
+      .users.find({ _id: { $in: userIds } })
+      .toArray()
   ).reduce((map, current) => {
     map.set(current._id.toHexString(), current)
     return map
-  }, new Map<string, WithId<db.User>>())
+  }, new Map<string, WithId<User>>())
 
   const params = { roomid: roomId.toHexString() }
   let req = createRequest(userId, { params })

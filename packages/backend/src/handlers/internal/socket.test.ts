@@ -1,17 +1,12 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/ban-ts-comment */
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import {
-  vi,
-  test,
-  expect,
-  beforeAll,
-  afterAll,
-  describe,
-  beforeEach
-} from 'vitest'
+import { vi, test, expect, describe, beforeEach } from 'vitest'
 vi.mock('../../lib/logger')
 vi.mock('../../logic/messages')
 vi.mock('../../lib/provider')
+vi.mock('../../lib/db.js', async () => {
+  const { mockDb } = await import('../../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../../lib/db.js'))) }
+})
 
 import { ObjectId } from 'mongodb'
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
@@ -19,8 +14,13 @@ import {
   TO_SERVER_CMD,
   FilterSocketToBackendType
 } from 'mzm-shared/type/socket'
-import { mongoSetup } from '../../../test/testUtil'
-import * as db from '../../lib/db'
+import { getTestMongoClient } from '../../../test/testUtil'
+import {
+  collections,
+  RoomStatusEnum,
+  VoteAnswerEnum,
+  type Message
+} from '../../lib/db'
 import * as logicMessages from '../../logic/messages'
 import {
   addMessageQueue,
@@ -31,24 +31,13 @@ import {
 import * as config from '../../config'
 import * as socket from './socket'
 
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
-})
+const db = await getTestMongoClient()
 
 test('sendMessage', async () => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
-  await db.collections.users.insertOne({
+  await collections(db).users.insertOne({
     _id: userId,
     account: 'test',
     roomOrder: []
@@ -90,13 +79,13 @@ test('fail: sendMessage', async () => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
-  await db.collections.users.insertOne({
+  await collections(db).users.insertOne({
     _id: userId,
     account: 'test',
     roomOrder: []
   })
 
-  const beforeCount = await db.collections.messages.countDocuments()
+  const beforeCount = await collections(db).messages.countDocuments()
   const message = 'a'.repeat(config.message.MAX_MESSAGE_LENGTH + 1)
 
   const saveMessageMock = vi.mocked(logicMessages.saveMessage)
@@ -112,7 +101,7 @@ test('fail: sendMessage', async () => {
     room: roomId.toHexString()
   })
 
-  const afterCount = await db.collections.messages.countDocuments()
+  const afterCount = await collections(db).messages.countDocuments()
 
   expect(beforeCount).toStrictEqual(afterCount)
   expect(saveMessageMock.mock.calls.length).toStrictEqual(1)
@@ -125,13 +114,13 @@ test('modifyMessage', async () => {
   const userId = new ObjectId()
   const createdAt = new Date()
 
-  const user = db.collections.users.insertOne({
+  const user = collections(db).users.insertOne({
     _id: userId,
     account: 'test',
     roomOrder: []
   })
 
-  const message = db.collections.messages.insertOne({
+  const message = collections(db).messages.insertOne({
     roomId,
     userId,
     updated: false,
@@ -153,7 +142,7 @@ test('modifyMessage', async () => {
     message: 'modify'
   })
 
-  const updated = await db.collections.messages.findOne({
+  const updated = await collections(db).messages.findOne({
     _id: created.insertedId
   })
 
@@ -172,12 +161,12 @@ test('readMessage', async () => {
   const userId = new ObjectId()
 
   await Promise.all([
-    db.collections.users.insertOne({
+    collections(db).users.insertOne({
       _id: userId,
       account: 'test',
       roomOrder: []
     }),
-    db.collections.enter.insertOne({
+    collections(db).enter.insertOne({
       userId,
       roomId,
       unreadCounter: 10,
@@ -193,7 +182,7 @@ test('readMessage', async () => {
     room: roomId.toHexString()
   })
 
-  const updated = await db.collections.enter.findOne({ userId, roomId })
+  const updated = await collections(db).enter.findOne({ userId, roomId })
 
   expect(updated?.unreadCounter).toStrictEqual(0)
   expect(updated?.replied).toStrictEqual(0)
@@ -204,7 +193,7 @@ test('readMessage', async () => {
 test('iine', async () => {
   const userId = new ObjectId()
 
-  const seed = await db.collections.messages.insertOne({
+  const seed = await collections(db).messages.insertOne({
     roomId: new ObjectId(),
     userId,
     message: 'iine',
@@ -220,7 +209,7 @@ test('iine', async () => {
     id: seed.insertedId.toHexString()
   })
 
-  const message = await db.collections.messages.findOne({
+  const message = await collections(db).messages.findOne({
     _id: seed.insertedId
   })
 
@@ -233,9 +222,9 @@ test('openRoom', async () => {
 
   const userId = new ObjectId()
 
-  const insert = await db.collections.rooms.insertOne({
+  const insert = await collections(db).rooms.insertOne({
     name: userId.toHexString(),
-    status: db.RoomStatusEnum.CLOSE,
+    status: RoomStatusEnum.CLOSE,
     createdBy: 'system'
   })
 
@@ -244,11 +233,11 @@ test('openRoom', async () => {
     roomId: insert.insertedId.toHexString()
   })
 
-  const updated = await db.collections.rooms.findOne({
+  const updated = await collections(db).rooms.findOne({
     _id: insert.insertedId
   })
 
-  expect(updated?.status).toStrictEqual(db.RoomStatusEnum.OPEN)
+  expect(updated?.status).toStrictEqual(RoomStatusEnum.OPEN)
   expect(updated?.updatedBy).toStrictEqual(userId)
   expect(queueMock.call.length).toStrictEqual(1)
 })
@@ -259,9 +248,9 @@ test('closeRoom', async () => {
 
   const userId = new ObjectId()
 
-  const insert = await db.collections.rooms.insertOne({
+  const insert = await collections(db).rooms.insertOne({
     name: userId.toHexString(),
-    status: db.RoomStatusEnum.OPEN,
+    status: RoomStatusEnum.OPEN,
     createdBy: 'system'
   })
 
@@ -270,24 +259,24 @@ test('closeRoom', async () => {
     roomId: insert.insertedId.toHexString()
   })
 
-  const updated = await db.collections.rooms.findOne({
+  const updated = await collections(db).rooms.findOne({
     _id: insert.insertedId
   })
 
-  expect(updated?.status).toStrictEqual(db.RoomStatusEnum.CLOSE)
+  expect(updated?.status).toStrictEqual(RoomStatusEnum.CLOSE)
   expect(updated?.updatedBy).toStrictEqual(userId)
   expect(queueMock.call.length).toStrictEqual(1)
 })
 
 test('sendVoteAnswer (first time)', async () => {
   const userId = new ObjectId()
-  const vote: db.Message['vote'] = {
+  const vote: Message['vote'] = {
     questions: [{ text: '4/1' }, { text: '4/2' }, { text: '4/3' }],
     status: VoteStatusEnum.OPEN,
     type: VoteTypeEnum.CHOICE
   }
 
-  const message = await db.collections.messages.insertOne({
+  const message = await collections(db).messages.insertOne({
     message: 'vote test',
     iine: 0,
     roomId: new ObjectId(),
@@ -303,11 +292,11 @@ test('sendVoteAnswer (first time)', async () => {
     cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
     messageId: message.insertedId.toHexString(),
     index: 0,
-    answer: db.VoteAnswerEnum.OK
+    answer: VoteAnswerEnum.OK
   })
 
-  const answers = await db.collections.voteAnswer
-    .find({ messageId: message.insertedId })
+  const answers = await collections(db)
+    .voteAnswer.find({ messageId: message.insertedId })
     .toArray()
 
   expect(answers.length).toStrictEqual(1)
@@ -316,13 +305,13 @@ test('sendVoteAnswer (first time)', async () => {
 test('sendVoteAnswer (second time)', async () => {
   const userId = new ObjectId()
 
-  const vote: db.Message['vote'] = {
+  const vote: Message['vote'] = {
     questions: [{ text: '4/1' }, { text: '4/2' }, { text: '4/3' }],
     status: VoteStatusEnum.OPEN,
     type: VoteTypeEnum.CHOICE
   }
 
-  const message = await db.collections.messages.insertOne({
+  const message = await collections(db).messages.insertOne({
     message: 'vote test',
     iine: 0,
     roomId: new ObjectId(),
@@ -334,38 +323,38 @@ test('sendVoteAnswer (second time)', async () => {
     vote: vote
   })
 
-  const insertVote = await db.collections.voteAnswer.insertOne({
+  const insertVote = await collections(db).voteAnswer.insertOne({
     messageId: message.insertedId,
     userId: userId,
     index: 0,
-    answer: db.VoteAnswerEnum.OK
+    answer: VoteAnswerEnum.OK
   })
 
-  const before = await db.collections.voteAnswer
-    .find({ messageId: message.insertedId })
+  const before = await collections(db)
+    .voteAnswer.find({ messageId: message.insertedId })
     .toArray()
 
   expect(before.length).toStrictEqual(1)
-  expect(before[0].answer).toStrictEqual(db.VoteAnswerEnum.OK)
+  expect(before[0].answer).toStrictEqual(VoteAnswerEnum.OK)
 
   await socket.sendVoteAnswer(userId.toHexString(), {
     cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
     messageId: message.insertedId.toHexString(),
     index: 0,
-    answer: db.VoteAnswerEnum.NG
+    answer: VoteAnswerEnum.NG
   })
 
-  const answers = await db.collections.voteAnswer
-    .find({ messageId: message.insertedId })
+  const answers = await collections(db)
+    .voteAnswer.find({ messageId: message.insertedId })
     .toArray()
 
   expect(answers.length).toStrictEqual(1)
 
-  const updated = await db.collections.voteAnswer.findOne({
+  const updated = await collections(db).voteAnswer.findOne({
     _id: insertVote.insertedId
   })
 
-  expect(updated?.answer).toStrictEqual(db.VoteAnswerEnum.NG)
+  expect(updated?.answer).toStrictEqual(VoteAnswerEnum.NG)
 })
 
 describe('sendVoteAnswer: BadRequest', () => {
@@ -375,13 +364,13 @@ describe('sendVoteAnswer: BadRequest', () => {
   beforeEach(async () => {
     userId = new ObjectId()
 
-    const vote: db.Message['vote'] = {
+    const vote: Message['vote'] = {
       questions: [{ text: '4/1' }, { text: '4/2' }, { text: '4/3' }],
       status: VoteStatusEnum.OPEN,
       type: VoteTypeEnum.CHOICE
     }
 
-    const message = await db.collections.messages.insertOne({
+    const message = await collections(db).messages.insertOne({
       message: 'vote test',
       iine: 0,
       roomId: new ObjectId(),
@@ -396,30 +385,25 @@ describe('sendVoteAnswer: BadRequest', () => {
   })
 
   test('no messageId', async () => {
-    const before = await db.collections.voteAnswer
-      .find({ messageId: messageId! })
+    const before = await collections(db)
+      .voteAnswer.find({ messageId: messageId! })
       .toArray()
 
     await socket.sendVoteAnswer(userId!.toHexString(), {
       cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
       index: 0,
-      answer: db.VoteAnswerEnum.OK
+      answer: VoteAnswerEnum.OK
     } as FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_SEND>)
 
-    const after = await db.collections.voteAnswer
-      .find({ messageId: messageId! })
+    const after = await collections(db)
+      .voteAnswer.find({ messageId: messageId! })
       .toArray()
 
     expect(before.length).toStrictEqual(after.length)
   })
 
   test.each([
-    [
-      'no index',
-      TO_SERVER_CMD.VOTE_ANSWER_SEND,
-      db.VoteAnswerEnum.OK,
-      undefined
-    ]
+    ['no index', TO_SERVER_CMD.VOTE_ANSWER_SEND, VoteAnswerEnum.OK, undefined]
   ])('%s', async (_label, cmd, answer, index) => {
     await socket.sendVoteAnswer(userId!.toHexString(), {
       messageId: messageId!.toHexString(),
@@ -429,8 +413,8 @@ describe('sendVoteAnswer: BadRequest', () => {
       index
     })
 
-    const answers = await db.collections.voteAnswer
-      .find({
+    const answers = await collections(db)
+      .voteAnswer.find({
         messageId: messageId!
       })
       .toArray()
@@ -442,13 +426,13 @@ describe('sendVoteAnswer: BadRequest', () => {
 test('removeVoteAnswer', async () => {
   const userId = new ObjectId()
 
-  const vote: db.Message['vote'] = {
+  const vote: Message['vote'] = {
     questions: [{ text: '4/1' }, { text: '4/2' }, { text: '4/3' }],
     status: VoteStatusEnum.OPEN,
     type: VoteTypeEnum.CHOICE
   }
 
-  const message = await db.collections.messages.insertOne({
+  const message = await collections(db).messages.insertOne({
     message: 'vote test',
     iine: 0,
     roomId: new ObjectId(),
@@ -460,19 +444,19 @@ test('removeVoteAnswer', async () => {
     vote: vote
   })
 
-  await db.collections.voteAnswer.insertOne({
+  await collections(db).voteAnswer.insertOne({
     messageId: message.insertedId,
     userId: userId,
     index: 0,
-    answer: db.VoteAnswerEnum.OK
+    answer: VoteAnswerEnum.OK
   })
 
-  const before = await db.collections.voteAnswer
-    .find({ messageId: message.insertedId })
+  const before = await collections(db)
+    .voteAnswer.find({ messageId: message.insertedId })
     .toArray()
 
   expect(before.length).toStrictEqual(1)
-  expect(before[0].answer).toStrictEqual(db.VoteAnswerEnum.OK)
+  expect(before[0].answer).toStrictEqual(VoteAnswerEnum.OK)
 
   await socket.removeVoteAnswer(userId.toHexString(), {
     cmd: TO_SERVER_CMD.VOTE_ANSWER_REMOVE,
@@ -480,8 +464,8 @@ test('removeVoteAnswer', async () => {
     index: 0
   })
 
-  const answers = await db.collections.voteAnswer
-    .find({ messageId: message.insertedId })
+  const answers = await collections(db)
+    .voteAnswer.find({ messageId: message.insertedId })
     .toArray()
 
   expect(answers.length).toStrictEqual(0)

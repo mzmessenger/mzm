@@ -1,11 +1,11 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+import { vi, test, expect } from 'vitest'
 vi.mock('../logger')
+
 vi.mock('../redis', () => {
   return {
-    client: {
+    client: vi.fn(() => ({
       xack: vi.fn()
-    }
+    }))
   }
 })
 vi.mock('./common', () => {
@@ -15,27 +15,20 @@ vi.mock('./common', () => {
     createParser: vi.fn()
   }
 })
+vi.mock('../db.js', async () => {
+  const { mockDb } = await import('../../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../db.js'))) }
+})
 
 import { ObjectId } from 'mongodb'
 import * as config from '../../config'
-import { createXackMock, mongoSetup } from '../../../test/testUtil'
-import * as db from '../db'
+import { createXackMock, getTestMongoClient } from '../../../test/testUtil'
+import { collections } from '../db'
 import { client } from '../redis'
 import { initConsumerGroup, consumeGroup } from './common'
 import { remove, initRemoveConsumerGroup, consumeRemove } from './remove'
 
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
-})
+const db = await getTestMongoClient()
 
 test('initRemoveConsumerGroup', async () => {
   const init = vi.mocked(initConsumerGroup)
@@ -56,13 +49,13 @@ test('consumeRemove', async () => {
 })
 
 test('remove', async () => {
-  const xack = createXackMock(client.xack)
+  const xack = createXackMock(client)
   xack.mockClear()
   xack.mockResolvedValue(1)
 
   const userId = new ObjectId()
   const roomIds = [new ObjectId(), new ObjectId()]
-  await db.collections.users.insertOne({
+  await collections(db).users.insertOne({
     _id: userId,
     account: 'test',
     roomOrder: []
@@ -70,15 +63,15 @@ test('remove', async () => {
   const insert = roomIds.map((roomId) => {
     return { userId, roomId, unreadCounter: 0, replied: 0 }
   })
-  await db.collections.enter.insertMany(insert)
+  await collections(db).enter.insertMany(insert)
 
-  const before = await db.collections.removed.find({ _id: userId }).toArray()
+  const before = await collections(db).removed.find({ _id: userId }).toArray()
   expect(before.length).toStrictEqual(0)
 
   await remove('queue-id', ['user', userId.toHexString()])
 
-  const removed = await db.collections.removed
-    .find({ originId: userId })
+  const removed = await collections(db)
+    .removed.find({ originId: userId })
     .toArray()
   expect(removed.length).toStrictEqual(1)
   const roomIdString = roomIds.map((r) => r.toHexString())
@@ -89,7 +82,7 @@ test('remove', async () => {
     }
   }
 
-  const enter = await db.collections.enter.find({ userId }).toArray()
+  const enter = await collections(db).enter.find({ userId }).toArray()
   expect(enter.length).toStrictEqual(0)
 
   expect(xack.mock.calls.length).toStrictEqual(1)

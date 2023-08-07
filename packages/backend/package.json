@@ -11,9 +11,9 @@
     "cleanbuild": "rm -rf dist/ && npm run build",
     "format": "prettier --write src ./*.{js,json}",
     "lint": "eslint --ext .ts,.js src",
-    "pretest": "npm run lint",
+    "pretest": "concurrently \"npm run lint\" \"npm run build\"",
     "test-ci": "vitest run --config=./vitest.config.js",
-    "test": "vitest run --config ./vitest.config.ts",
+    "test": "vitest run --singleThread --config ./vitest.config.ts",
     "test:watch": "vitest --config ./vitest.config.ts"
   },
   "license": "MIT",
@@ -34,12 +34,11 @@
     "multer": "^1.4.2",
     "node-schedule": "^2.1.0",
     "undici": "^5.14.0",
-    "validator": "^13.7.0"
+    "zod": "^3.21.4"
   },
   "devDependencies": {
     "@types/body-parser": "^1.19.0",
     "@types/bunyan": "^1.8.6",
-    "@types/validator": "^13.7.10",
     "mongodb-memory-server": "^8.10.2",
     "typescript": "^5.1.6"
   }

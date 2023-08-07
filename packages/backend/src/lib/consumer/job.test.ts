@@ -1,10 +1,11 @@
 import { vi, test, expect } from 'vitest'
 vi.mock('../logger')
+
 vi.mock('../redis', () => {
   return {
-    client: {
+    client: vi.fn(() => ({
       xack: vi.fn()
-    }
+    }))
   }
 })
 vi.mock('../../logic/rooms')
@@ -43,7 +44,7 @@ test('consumeJob', async () => {
 })
 
 test(`job: ${JobType.SEARCH_ROOM}`, async () => {
-  const xack = createXackMock(client.xack)
+  const xack = createXackMock(client)
   xack.mockClear()
   xack.mockResolvedValue(1)
 
@@ -58,7 +59,7 @@ test(`job: ${JobType.SEARCH_ROOM}`, async () => {
 })
 
 test('job no-type', async () => {
-  const xack = createXackMock(client.xack)
+  const xack = createXackMock(client)
   xack.mockClear()
   xack.mockResolvedValue(1)
 

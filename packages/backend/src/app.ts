@@ -3,16 +3,18 @@ import cors from 'cors'
 import bodyParser from 'body-parser'
 import multer from 'multer'
 import helmet from 'helmet'
+import { createErrorHandler } from 'mzm-shared/lib/middleware'
 import { MULTER_PATH, CORS_ORIGIN } from './config.js'
-import { wrap, streamWrap } from './lib/wrap.js'
+import { streamWrap } from './lib/wrap.js'
+import { logger } from './lib/logger.js'
+import { wrap } from 'mzm-shared/lib/wrap'
 import * as rooms from './handlers/rooms.js'
 import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import * as internal from './handlers/internal.js'
 import {
   checkAccessToken,
-  checkInternalAccessToken,
-  errorHandler
+  checkInternalAccessToken
 } from './middleware/index.js'
 
 const iconUpload = multer({
@@ -78,7 +80,7 @@ export const createApp = () => {
     wrap(internal.socket)
   )
 
-  app.use(errorHandler)
+  app.use(createErrorHandler(logger))
 
   return app
 }

@@ -1,5 +1,4 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+import { vi, test, expect } from 'vitest'
 vi.mock('../lib/logger')
 vi.mock('../lib/consumer/remove', () => {
   return {
@@ -51,10 +50,13 @@ vi.mock('../lib/provider/index', () => {
     addInitializeSearchRoomQueue: vi.fn()
   }
 })
+vi.mock('../lib/db.js', async () => {
+  const { mockDb } = await import('../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+})
 
-import { mongoSetup } from '../../test/testUtil'
 import { init } from './server'
-import * as db from '../lib/db'
+import { collections } from '../lib/db'
 import * as config from '../config'
 import * as consumerRemove from '../lib/consumer/remove'
 import * as consumerUnread from '../lib/consumer/unread'
@@ -63,19 +65,9 @@ import * as consumeSearchRoom from '../lib/consumer/search/room'
 import * as consumeJob from '../lib/consumer/job'
 import * as consumeVote from '../lib/consumer/vote'
 import { addInitializeSearchRoomQueue } from '../lib/provider/index'
+import { getTestMongoClient } from '../../test/testUtil'
 
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
-})
+const db = await getTestMongoClient()
 
 test('init', async () => {
   const mocks = [
@@ -103,8 +95,8 @@ test('init', async () => {
 
   await init()
 
-  const general = await db.collections.rooms
-    .find({ name: config.room.GENERAL_ROOM_NAME })
+  const general = await collections(db)
+    .rooms.find({ name: config.room.GENERAL_ROOM_NAME })
     .toArray()
 
   expect(general.length).toStrictEqual(1)
@@ -121,8 +113,8 @@ test('init twice', async () => {
   await init()
   await init()
 
-  const general = await db.collections.rooms
-    .find({ name: config.room.GENERAL_ROOM_NAME })
+  const general = await collections(db)
+    .rooms.find({ name: config.room.GENERAL_ROOM_NAME })
     .toArray()
 
   expect(general.length).toStrictEqual(1)

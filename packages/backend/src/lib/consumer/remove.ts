@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb'
 import * as config from '../../config.js'
-import * as db from '../db.js'
+import { collections, mongoClient, type Removed } from '../db.js'
 import { client } from '../redis.js'
 import { logger } from '../logger.js'
 import { initConsumerGroup, createParser, consumeGroup } from './common.js'
@@ -15,26 +15,27 @@ export const initRemoveConsumerGroup = async () => {
 export const remove = async (ackid: string, messages: string[]) => {
   const user = messages[1]
   const userId = new ObjectId(user)
-  const target = await db.collections.users.findOne({ _id: userId })
+  const db = await mongoClient()
+  const target = await collections(db).users.findOne({ _id: userId })
   if (!target) {
     return
   }
-  const enter = await db.collections.enter.find({ userId: userId }).toArray()
+  const enter = await collections(db).enter.find({ userId: userId }).toArray()
   const ids = enter.map((e) => e.roomId)
-  const remove: Pick<db.Removed, 'account' | 'originId' | 'enter'> = {
+  const remove: Pick<Removed, 'account' | 'originId' | 'enter'> = {
     account: target.account,
     originId: target._id,
     enter: ids
   }
-  await db.collections.removed.updateMany(
+  await collections(db).removed.updateMany(
     { originId: target._id },
     { $set: remove },
     { upsert: true }
   )
-  await db.collections.users.deleteOne({ _id: target._id })
-  await db.collections.enter.deleteMany({ userId: target._id })
+  await collections(db).users.deleteOne({ _id: target._id })
+  await collections(db).enter.deleteMany({ userId: target._id })
 
-  await client.xack(REMOVE_STREAM, REMOVE_GROUP, ackid)
+  await client().xack(REMOVE_STREAM, REMOVE_GROUP, ackid)
   logger.info('[remove:user]', user)
 }
 

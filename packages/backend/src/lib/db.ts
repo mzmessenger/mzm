@@ -1,23 +1,65 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
-import { MONGODB_URI } from '../config.js'
+import { MONGODB_URI, DB_NAME } from '../config.js'
 import { logger } from './logger.js'
 
-export const collections: {
+type CollectionType = {
   rooms: Collection<Room>
   enter: Collection<Enter>
   users: Collection<User>
   removed: Collection<Removed>
   messages: Collection<Message>
   voteAnswer: Collection<VoteAnswer>
-} = {
-  rooms: null,
-  enter: null,
-  users: null,
-  messages: null,
-  removed: null,
-  voteAnswer: null
+}
+
+const _collections: Partial<CollectionType> = {
+  rooms: undefined,
+  enter: undefined,
+  users: undefined,
+  messages: undefined,
+  removed: undefined,
+  voteAnswer: undefined
 } as const
+
+let connected = false
+
+const initCollections = (c: MongoClient): CollectionType => {
+  const db = c.db(DB_NAME)
+  const rooms = db.collection<Room>(COLLECTION_NAMES.ROOMS)
+  const enter = db.collection<Enter>(COLLECTION_NAMES.ENTER)
+  const users = db.collection<User>(COLLECTION_NAMES.USERS)
+  const messages = db.collection<Message>(COLLECTION_NAMES.MESSAGES)
+  const removed = db.collection<Removed>(COLLECTION_NAMES.REMOVED)
+  const voteAnswer = db.collection<VoteAnswer>(COLLECTION_NAMES.VOTE_ANSWER)
+
+  _collections.rooms = rooms
+  _collections.enter = enter
+  _collections.users = users
+  _collections.messages = messages
+  _collections.removed = removed
+  _collections.voteAnswer = voteAnswer
+
+  return {
+    rooms,
+    enter,
+    users,
+    messages,
+    removed,
+    voteAnswer
+  }
+}
+
+export const collections = (c: MongoClient): CollectionType => {
+  if (!c) {
+    throw new Error('no db client')
+  }
+
+  if (!connected) {
+    initCollections(c)
+  }
+
+  return _collections as CollectionType
+}
 
 export const COLLECTION_NAMES = {
   ROOMS: 'rooms',
@@ -28,37 +70,28 @@ export const COLLECTION_NAMES = {
   VOTE_ANSWER: 'voteAnswers'
 } as const
 
-let connection: MongoClient = null
+let _client: MongoClient | null = null
 
-export const connect = async (uri: string = MONGODB_URI) => {
-  if (connection) {
-    return connection
+export const mongoClient = async () => {
+  if (!_client) {
+    _client = await MongoClient.connect(MONGODB_URI)
   }
+  return _client
+}
 
-  const client = await MongoClient.connect(uri)
-
-  const db = client.db('mzm')
-  collections.rooms = db.collection<Room>(COLLECTION_NAMES.ROOMS)
-  collections.enter = db.collection<Enter>(COLLECTION_NAMES.ENTER)
-  collections.users = db.collection<User>(COLLECTION_NAMES.USERS)
-  collections.messages = db.collection<Message>(COLLECTION_NAMES.MESSAGES)
-  collections.removed = db.collection<Removed>(COLLECTION_NAMES.REMOVED)
-  collections.voteAnswer = db.collection<VoteAnswer>(
-    COLLECTION_NAMES.VOTE_ANSWER
-  )
+export const connect = async (c: MongoClient) => {
+  initCollections(c)
+  connected = true
 
   if (process.env.NODE_ENV !== 'test') {
     logger.info('[db] connected mongodb')
   }
 
-  // eslint-disable-next-line require-atomic-updates
-  connection = client
-
-  return client
+  return c
 }
 
-export const close = async () => {
-  connection.close()
+export const close = async (c: MongoClient) => {
+  c.close()
 }
 
 export const RoomStatusEnum = {

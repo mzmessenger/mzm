@@ -32,6 +32,8 @@ export const {
   CLIENT_URL_BASE = 'http://localhost:8080'
 } = process.env
 
+export const DB_NAME = process.env.NODE_ENV === 'test' ? 'auth-test' : 'auth'
+
 export const CORS_ORIGIN = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((e) => e.trim())
   : ['http://localhost', 'http://localhost:8080']

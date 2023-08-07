@@ -1,11 +1,10 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+import { vi, test, expect } from 'vitest'
 vi.mock('../logger')
 vi.mock('../redis', () => {
   return {
-    client: {
+    client: vi.fn(() => ({
       xack: vi.fn()
-    }
+    }))
   }
 })
 vi.mock('./common', () => {
@@ -15,28 +14,21 @@ vi.mock('./common', () => {
     createParser: vi.fn()
   }
 })
+vi.mock('../db.js', async () => {
+  const { mockDb } = await import('../../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../db.js'))) }
+})
 
 import { ObjectId } from 'mongodb'
 import * as config from '../../config'
-import { createXackMock, mongoSetup } from '../../../test/testUtil'
+import { createXackMock, getTestMongoClient } from '../../../test/testUtil'
 import { ReplyQueue } from '../../types'
-import * as db from '../db'
+import { collections } from '../db'
 import { client } from '../redis'
 import { initConsumerGroup, consumeGroup } from './common'
 import { reply, initReplyConsumerGroup, consumeReply } from './reply'
 
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
-})
+const db = await getTestMongoClient()
 
 test('initReplyConsumerGroup', async () => {
   const init = vi.mocked(initConsumerGroup)
@@ -57,12 +49,12 @@ test('consumeReply', async () => {
 })
 
 test('reply', async () => {
-  const xack = createXackMock(client.xack)
+  const xack = createXackMock(client)
   xack.mockClear()
   xack.mockResolvedValue(1)
 
   const userId = new ObjectId()
-  await db.collections.users.insertOne({
+  await collections(db).users.insertOne({
     _id: userId,
     account: userId.toHexString(),
     roomOrder: []
@@ -72,7 +64,7 @@ test('reply', async () => {
   const enter = [targetRoomId, new ObjectId(), new ObjectId()].map(
     (roomId) => ({ userId, roomId, unreadCounter: 0, replied: 0 })
   )
-  await db.collections.enter.insertMany(enter)
+  await collections(db).enter.insertMany(enter)
 
   const _replyQueue: ReplyQueue = {
     roomId: targetRoomId.toHexString(),
@@ -81,7 +73,7 @@ test('reply', async () => {
   const replyQueue = JSON.stringify(_replyQueue)
   await reply('queue-id', ['unread', replyQueue])
 
-  let data = await db.collections.enter.find({ userId }).toArray()
+  let data = await collections(db).enter.find({ userId }).toArray()
   for (const d of data) {
     if (d.roomId.toHexString() === targetRoomId.toHexString()) {
       expect(d.replied).toStrictEqual(1)
@@ -95,7 +87,7 @@ test('reply', async () => {
   // call twice
   await reply('queue-id', ['unread', replyQueue])
 
-  data = await db.collections.enter.find({ userId }).toArray()
+  data = await collections(db).enter.find({ userId }).toArray()
   for (const d of data) {
     if (d.roomId.toHexString() === targetRoomId.toHexString()) {
       expect(d.replied).toStrictEqual(2)

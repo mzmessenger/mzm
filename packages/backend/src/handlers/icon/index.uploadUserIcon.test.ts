@@ -1,40 +1,31 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { vi, test, expect, beforeEach } from 'vitest'
 vi.mock('image-size')
 vi.mock('../../lib/logger')
 vi.mock('../../lib/storage')
+vi.mock('../../lib/db.js', async () => {
+  const { mockDb } = await import('../../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../../lib/db.js'))) }
+})
 
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
 import sizeOf from 'image-size'
-import { mongoSetup, createFileRequest } from '../../../test/testUtil'
-import * as db from '../../lib/db'
+import { createFileRequest, getTestMongoClient } from '../../../test/testUtil'
+import { collections } from '../../lib/db'
 import * as storage from '../../lib/storage'
 import * as config from '../../config'
-import { BadRequest } from '../../lib/errors'
+import { BadRequest } from 'mzm-shared/lib/errors'
 import { uploadUserIcon } from './index'
-
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
 
 beforeEach(() => {
   vi.resetAllMocks()
 })
 
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
-})
-
 test('uploadUserIcon', async () => {
   const userId = new ObjectId()
 
-  await db.collections.users.insertOne({
+  const db = await getTestMongoClient()
+  await collections(db).users.insertOne({
     _id: userId,
     account: userId.toString(),
     roomOrder: []
@@ -66,7 +57,7 @@ test('uploadUserIcon', async () => {
 
   const res = await uploadUserIcon(req)
 
-  const user = await db.collections.users.findOne({ _id: userId })
+  const user = await collections(db).users.findOne({ _id: userId })
 
   expect(typeof user?.icon?.version).toStrictEqual('string')
   expect(res.version).toStrictEqual(user?.icon?.version)

@@ -1,5 +1,4 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+import { vi, test, expect } from 'vitest'
 vi.mock('../lib/logger')
 vi.mock('../lib/redis', () => {
   return {
@@ -7,26 +6,17 @@ vi.mock('../lib/redis', () => {
     release: vi.fn()
   }
 })
+vi.mock('../lib/db.js', async () => {
+  const { mockDb } = await import('../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+})
 
 import { ObjectId } from 'mongodb'
-import { mongoSetup } from '../../test/testUtil'
+import { getTestMongoClient } from '../../test/testUtil'
 import * as config from '../config'
-import * as db from '../lib/db'
+import { collections, COLLECTION_NAMES, type Enter, type Room } from '../lib/db'
 import { initGeneral } from './rooms'
 import { initUser, getAllUserIdsInRoom } from './users'
-
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
-})
 
 test('initUser', async () => {
   await initGeneral()
@@ -37,19 +27,20 @@ test('initUser', async () => {
   await initUser(userId, account)
 
   // user
-  const foundUser = await db.collections.users.findOne({ _id: userId })
+  const db = await getTestMongoClient()
+  const foundUser = await collections(db).users.findOne({ _id: userId })
   expect(userId.toHexString()).toStrictEqual(foundUser?._id.toHexString())
   expect(`${account}_${userId.toHexString()}`).toStrictEqual(foundUser?.account)
 
   // default room
-  const foundRooms = await db.collections.enter
-    .aggregate<db.Enter & { room: db.Room[] }>([
+  const foundRooms = await collections(db)
+    .enter.aggregate<Enter & { room: Room[] }>([
       {
         $match: { userId: userId }
       },
       {
         $lookup: {
-          from: db.COLLECTION_NAMES.ROOMS,
+          from: COLLECTION_NAMES.ROOMS,
           localField: 'roomId',
           foreignField: '_id',
           as: 'room'
@@ -69,7 +60,7 @@ test('getAllUserIdsInRoom', async () => {
   const roomId = new ObjectId()
   const users = [new ObjectId(), new ObjectId(), new ObjectId()]
   const userIdStrs = users.map((user) => user.toHexString())
-  const enter: Omit<db.Enter, '_id'>[] = users.map((user) => {
+  const enter: Omit<Enter, '_id'>[] = users.map((user) => {
     return {
       roomId: roomId,
       userId: user,
@@ -78,7 +69,8 @@ test('getAllUserIdsInRoom', async () => {
     }
   })
 
-  await db.collections.enter.insertMany(enter)
+  const db = await getTestMongoClient()
+  await collections(db).enter.insertMany(enter)
 
   const ids = await getAllUserIdsInRoom(roomId.toHexString())
 

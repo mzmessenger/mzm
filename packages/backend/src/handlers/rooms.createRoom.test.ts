@@ -1,5 +1,4 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+import { vi, test, expect } from 'vitest'
 vi.mock('../lib/logger')
 vi.mock('../lib/redis', () => {
   return {
@@ -12,25 +11,18 @@ vi.mock('../lib/elasticsearch/index', () => {
     client: {}
   }
 })
+vi.mock('../lib/db.js', async () => {
+  const { mockDb } = await import('../../test/mock.js')
+  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+})
 
 import { ObjectId } from 'mongodb'
-import { mongoSetup, createRequest } from '../../test/testUtil'
-import * as db from '../lib/db'
-import { BadRequest } from '../lib/errors'
+import { getTestMongoClient, createRequest } from '../../test/testUtil'
+import { collections } from '../lib/db'
+import { BadRequest } from 'mzm-shared/lib/errors'
 import { createRoom } from './rooms'
 
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
-})
+const db = await getTestMongoClient()
 
 test.each([
   ['aaa', 'aaa'],
@@ -43,7 +35,7 @@ test.each([
 
   const { id } = await createRoom(req)
 
-  const created = await db.collections.rooms.findOne({
+  const created = await collections(db).rooms.findOne({
     _id: new ObjectId(id)
   })
 
