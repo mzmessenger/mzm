@@ -4,7 +4,7 @@
     "strict": true,
     "outDir": "dist",
     "sourceMap": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "esModuleInterop": true,
     "target": "esnext",
     "module": "nodenext",

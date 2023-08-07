@@ -1,5 +1,6 @@
 {
   "compilerOptions": {
+    "strict": true,
     "incremental": true,
     "outDir": "dist",
     "sourceMap": true,

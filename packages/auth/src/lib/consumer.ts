@@ -1,7 +1,7 @@
 import type { Redis } from 'ioredis'
 import { ObjectId } from 'mongodb'
 import { logger } from './logger.js'
-import * as db from './db.js'
+import { collections, mongoClient } from './db.js'
 import { REMOVE_STREAM } from '../config.js'
 
 const REMOVE_STREAM_TO_CHAT = 'stream:backend:remove:user'
@@ -34,7 +34,8 @@ export const initRemoveConsumerGroup = async (client: Redis) => {
 
 const remove = async (client: Redis, id: string, user: string) => {
   const userId = new ObjectId(user)
-  const target = await db.collections().users.findOne({ _id: userId })
+  const db = await mongoClient()
+  const target = await collections(db).users.findOne({ _id: userId })
   logger.info('[consumer:remove]', user, target)
   if (!target) {
     return
@@ -42,20 +43,21 @@ const remove = async (client: Redis, id: string, user: string) => {
   // eslint-disable-next-line no-unused-vars,@typescript-eslint/no-unused-vars
   const { _id, ..._target } = target
   const remove = { ..._target, originId: target._id }
-  await db
-    .collections()
-    .removed.findOneAndUpdate(
-      { originId: userId },
-      { $set: remove },
-      { upsert: true }
-    )
-  await db.collections().users.deleteOne({ _id: target._id })
+  await collections(db).removed.findOneAndUpdate(
+    { originId: userId },
+    { $set: remove },
+    { upsert: true }
+  )
+  await collections(db).users.deleteOne({ _id: target._id })
   await client.xadd(REMOVE_STREAM_TO_CHAT, '*', 'user', user)
   await client.xack(REMOVE_STREAM, REMOVE_GROUP, id)
   logger.info('[remove:user]', user)
 }
 
-export const parser = async (client: Redis, read) => {
+export const parser = async (
+  client: Redis,
+  read: [unknown, [string, string[]]][]
+) => {
   if (!read) {
     return
   }
@@ -86,7 +88,8 @@ export const consume = async (client: Redis) => {
       REMOVE_STREAM,
       '>'
     )
-    await parser(client, res)
+    // eslint-disable-next-line @typescript-eslint/no-explicit-any
+    await parser(client, res as any)
   } catch (e) {
     logger.error('[read]', REMOVE_STREAM, e)
   }

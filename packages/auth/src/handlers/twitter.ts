@@ -1,32 +1,34 @@
-import type { PassportRequest, SerializeUser } from '../types.js'
-import type { Response } from 'express'
+import type { PassportRequest } from '../types.js'
+import type { WrapFn } from 'mzm-shared/lib/wrap'
+import type { VerifyCallback } from 'passport-oauth2'
+import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
 import { ObjectId } from 'mongodb'
 import {
   parseAuthorizationHeader,
   verifyAccessToken
 } from 'mzm-shared/auth/index'
 import { logger } from '../lib/logger.js'
-import * as db from '../lib/db.js'
+import { collections, mongoClient, type User } from '../lib/db.js'
 import { JWT } from '../config.js'
 
 export const loginTwitter = async (
   req: PassportRequest,
   twitterId: string,
   twitterUserName: string,
-  // eslint-disable-next-line no-unused-vars
-  cb: (error: unknown, user?: SerializeUser) => void
+  cb: VerifyCallback
 ) => {
   try {
-    const filter: { _id: ObjectId } | Pick<db.User, 'twitterId'> = req.user
+    const filter: { _id: ObjectId } | Pick<User, 'twitterId'> = req.user
       ? { _id: new ObjectId(req.user._id) }
       : { twitterId }
 
-    const update: Pick<db.User, 'twitterId' | 'twitterUserName'> = {
+    const update: Pick<User, 'twitterId' | 'twitterUserName'> = {
       twitterId,
       twitterUserName
     }
 
-    const updated = await db.collections().users.findOneAndUpdate(
+    const db = await mongoClient()
+    const updated = await collections(db).users.findOneAndUpdate(
       filter,
       { $set: update },
       {
@@ -41,19 +43,19 @@ export const loginTwitter = async (
 
     const user = updated.value
       ? updated.value
-      : await db.collections().users.findOne(filter)
+      : await collections(db).users.findOne(filter)
 
     cb(null, user ?? undefined)
   } catch (e) {
     logger.error('[auth:update:twitter] error:', twitterId, twitterUserName)
-    cb(e)
+    cb(e as Error)
   }
 }
 
-export const removeTwitter = async (req: PassportRequest, res: Response) => {
+export const removeTwitter: WrapFn<string> = async (req) => {
   const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
-    return res.status(401).send('not auth token')
+    throw new BadRequest('no auth token')
   }
   const { err, decoded } = await verifyAccessToken(
     accessToken,
@@ -65,33 +67,29 @@ export const removeTwitter = async (req: PassportRequest, res: Response) => {
   )
 
   if (err || !decoded.user) {
-    return res.status(401).send('not auth token')
+    throw new Unauthorized('unauthorized token')
   }
 
   const _id = new ObjectId(decoded.user._id)
-  const user = await db.collections().users.findOne({ _id })
+  const db = await mongoClient()
+  const user = await collections(db).users.findOne({ _id })
 
   if (!user) {
-    res.status(401).send('not exists')
-    return
+    throw new BadRequest('not exists')
   }
 
   if (!user.twitterId) {
-    res.status(400).send('not linked')
-    return
+    throw new BadRequest('not linked')
   }
 
   if (!user.githubId) {
-    res.status(400).send('can not remove')
-    return
+    throw new BadRequest('can not remove twitter account')
   }
 
-  await db
-    .collections()
-    .users.updateOne(
-      { _id },
-      { $unset: { twitterId: '', twitterUserName: '' } }
-    )
+  await collections(db).users.updateOne(
+    { _id },
+    { $unset: { twitterId: '', twitterUserName: '' } }
+  )
 
-  res.status(200).send('ok')
+  return 'ok'
 }

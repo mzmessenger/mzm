@@ -1,7 +1,8 @@
 import type { Redis } from 'ioredis'
 import type { Request } from 'express'
+import type { Result } from 'mzm-shared/type'
 import { z } from 'zod'
-import { generateState, verifyCodeChallenge } from './util.js'
+import { generateState, verifyAuthorizationCode } from './util.js'
 import { logger } from '../logger.js'
 
 export {
@@ -60,15 +61,7 @@ export const verifyAuthorizationCodeFromRedis = async (
     grant_type: string
     code_verifier: string
   }
-): Promise<
-  | { success: true; data: { userId: string } }
-  | {
-      success: false
-      error: {
-        message: string
-      }
-    }
-> => {
+): Promise<Result<{ userId: string }>> => {
   try {
     const key = createAuthorizationCodeRedisKey(args.code)
     const val = await client.get(key)
@@ -101,39 +94,6 @@ export const verifyAuthorizationCodeFromRedis = async (
   }
 }
 
-const verifyAuthorizationCode = async (options: {
-  code: string
-  grant_type: string
-  code_verifier: string
-  code_challenge: string
-}): Promise<
-  | { success: true }
-  | {
-      success: false
-      error: {
-        message: string
-      }
-    }
-> => {
-  try {
-    if (options.grant_type !== 'authorization_code') {
-      return { success: false, error: { message: 'invalid grant type' } }
-    }
-
-    const success = verifyCodeChallenge({
-      code_verifier: options.code_verifier,
-      code_challenge: options.code_challenge
-    })
-    if (!success) {
-      return { success: false, error: { message: 'invalid code_challenge' } }
-    }
-
-    return { success: true }
-  } catch (e) {
-    return { success: false, error: { message: 'invalid code' } }
-  }
-}
-
 const createStateRedisKey = (state: string) => {
   return `state:${state}`
 }
@@ -146,16 +106,7 @@ const queryParser = z.object({
 export const saveParameterWithReuqest = async (
   client: Redis,
   req: Request
-): Promise<
-  | {
-      success: true
-      data: { state: string }
-    }
-  | {
-      success: false
-      error: { message: string }
-    }
-> => {
+): Promise<Result<{ state: string }>> => {
   const query = queryParser.safeParse(req.query)
   if (query.success === false) {
     return { success: false, error: { message: query.error.message } }
@@ -178,14 +129,7 @@ export const getParametaerFromState = async (
   client: Redis,
   state: string
 ): Promise<
-  | {
-      success: true
-      data: { code_challenge: string; code_challenge_method: string }
-    }
-  | {
-      success: false
-      error: { message: string }
-    }
+  Result<{ code_challenge: string; code_challenge_method: string }>
 > => {
   const key = createStateRedisKey(state)
   const val = await client.get(key)

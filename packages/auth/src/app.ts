@@ -8,7 +8,8 @@ import RedisStore from 'connect-redis'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import { Strategy as Oauth2Strategy } from 'passport-oauth2'
 import session from 'express-session'
-import { logger } from './lib/logger.js'
+import { createErrorHandler } from 'mzm-shared/lib/middleware'
+import { wrap } from 'mzm-shared/lib/wrap'
 import {
   TWITTER_CLIENT_ID,
   TWITTER_CLIENT_SECRET,
@@ -21,6 +22,11 @@ import {
   CLIENT_URL_BASE,
   CORS_ORIGIN
 } from './config.js'
+import { logger } from './lib/logger.js'
+import {
+  createNonceMiddleware,
+  type NonceResponse
+} from './middleware/index.js'
 import * as handlers from './handlers/index.js'
 import * as oauthHandlers from './handlers/oauth.js'
 import * as githubHandlers from './handlers/github.js'
@@ -69,7 +75,12 @@ export const createApp = ({ client }: Options) => {
         scope: ['users.read']
       },
       (req, accessToken, refreshToken, profile, done) => {
-        twitterHandlers.loginTwitter(req, profile.id, profile.username, done)
+        twitterHandlers.loginTwitter(
+          req as unknown as PassportRequest,
+          profile.id,
+          profile.username,
+          done
+        )
       }
     )
   )
@@ -84,21 +95,26 @@ export const createApp = ({ client }: Options) => {
         passReqToCallback: true
       },
       (req, accessToken, refreshToken, profile, done) => {
-        githubHandlers.loginGithub(req, profile.id, profile.username, done)
+        githubHandlers.loginGithub(
+          req as PassportRequest,
+          profile.id,
+          profile.username,
+          done
+        )
       }
     )
   )
 
   app.get(
     '/authorize',
-    authorizeHandlers.createNonceMiddleware,
+    createNonceMiddleware,
     helmet({
       contentSecurityPolicy: {
         directives: {
           scriptSrc: [
             "'self'",
             (req, res) => {
-              const { locals } = res as authorizeHandlers.AuthorizationResponse
+              const { locals } = res as NonceResponse
               return `'nonce-${locals.nonce}'`
             }
           ],
@@ -106,15 +122,22 @@ export const createApp = ({ client }: Options) => {
         }
       }
     }),
-    (req, res) => {
-      authorizeHandlers.authorize(req as PassportRequest, res)
+    (req, res, next) => {
+      return wrap<string>(
+        authorizeHandlers.createAuthorize(res as NonceResponse)
+      )(req, res, next)
     }
   )
 
   passport.serializeUser(handlers.serializeUser)
   passport.deserializeUser(handlers.deserializeUser)
 
-  app.post('/auth/token', defaultHelmet, jsonParser, authorizeHandlers.token)
+  app.post(
+    '/auth/token',
+    defaultHelmet,
+    jsonParser,
+    wrap(authorizeHandlers.token)
+  )
 
   app.get(
     '/auth/twitter',
@@ -129,9 +152,11 @@ export const createApp = ({ client }: Options) => {
       oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
     }
   )
-  app.delete('/auth/twitter', defaultHelmet, (req, res) => {
-    twitterHandlers.removeTwitter(req as PassportRequest, res)
-  })
+  app.delete(
+    '/auth/twitter',
+    defaultHelmet,
+    wrap(twitterHandlers.removeTwitter)
+  )
 
   app.get(
     '/auth/github',
@@ -146,9 +171,7 @@ export const createApp = ({ client }: Options) => {
       oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
     }
   )
-  app.delete('/auth/github', defaultHelmet, (req, res) => {
-    githubHandlers.removeGithub(req as PassportRequest, res)
-  })
+  app.delete('/auth/github', defaultHelmet, wrap(githubHandlers.removeGithub))
 
   app.get('/auth/logout', defaultHelmet, (req: Request, res: Response) => {
     req.logout(() => {
@@ -156,15 +179,9 @@ export const createApp = ({ client }: Options) => {
     })
   })
 
-  app.delete('/auth/user', defaultHelmet, (req, res) => {
-    handlers.remove(req as PassportRequest, res)
-  })
+  app.delete('/auth/user', defaultHelmet, wrap(handlers.remove))
 
-  // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
-  app.use((err, req, res, next) => {
-    res.status(500).send('Internal Server Error')
-    logger.error('[Internal Server Error]', err)
-  })
+  app.use(createErrorHandler(logger))
 
   return app
 }

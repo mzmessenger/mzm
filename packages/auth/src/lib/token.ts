@@ -87,17 +87,37 @@ export const createTokens = async (user: CreateAccessTokenArgs) => {
   }
 }
 
+type PartialRefresToken = {
+  user?: Partial<RefeshToken['user']>
+}
+
 export const verifyRefreshToken = (token: string) => {
-  return new Promise<jwt.JwtPayload & RefeshToken>((resolve, reject) => {
+  return new Promise<
+    | {
+        err: jwt.VerifyErrors
+        decoded: null
+      }
+    | {
+        err: null
+        decoded: jwt.JwtPayload & PartialRefresToken
+      }
+  >((resolve) => {
     jwt.verify(
       token,
       JWT.refreshTokenSecret,
       { algorithms: ['HS256'] },
       (err, decode) => {
         if (err) {
-          return reject()
+          return resolve({
+            err,
+            decoded: null
+          })
         }
-        resolve(decode as jwt.JwtPayload & RefeshToken)
+        const d = decode as jwt.JwtPayload & PartialRefresToken
+        resolve({
+          err: null,
+          decoded: d
+        })
       }
     )
   })

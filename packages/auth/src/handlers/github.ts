@@ -1,32 +1,34 @@
-import type { PassportRequest, SerializeUser } from '../types.js'
-import type { Response } from 'express'
+import type { PassportRequest } from '../types.js'
+import type { VerifyCallback } from 'passport-oauth2'
+import type { WrapFn } from 'mzm-shared/lib/wrap'
+import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
 import { ObjectId } from 'mongodb'
 import {
   parseAuthorizationHeader,
   verifyAccessToken
 } from 'mzm-shared/auth/index'
 import { logger } from '../lib/logger.js'
-import * as db from '../lib/db.js'
+import { collections, mongoClient, type User } from '../lib/db.js'
 import { JWT } from '../config.js'
 
 export const loginGithub = async (
   req: PassportRequest,
   githubId: string,
-  githubUserName: string,
-  // eslint-disable-next-line no-unused-vars
-  cb: (error: unknown, user?: SerializeUser) => void
+  githubUserName: string | undefined,
+  cb: VerifyCallback
 ) => {
   try {
-    const filter: { _id: ObjectId } | Pick<db.User, 'githubId'> = req.user
+    const filter: { _id: ObjectId } | Pick<User, 'githubId'> = req.user
       ? { _id: new ObjectId(req.user._id) }
       : { githubId }
 
-    const update: Pick<db.User, 'githubId' | 'githubUserName'> = {
+    const update: Pick<User, 'githubId' | 'githubUserName'> = {
       githubId,
       githubUserName
     }
 
-    const updated = await db.collections().users.findOneAndUpdate(
+    const db = await mongoClient()
+    const updated = await collections(db).users.findOneAndUpdate(
       filter,
       { $set: update },
       {
@@ -40,19 +42,19 @@ export const loginGithub = async (
 
     const user = updated.value
       ? updated.value
-      : await db.collections().users.findOne(filter)
+      : await collections(db).users.findOne(filter)
 
     cb(null, user ?? undefined)
   } catch (e) {
     logger.error('[auth:update:github] error:', githubId, githubUserName)
-    cb(e)
+    cb(e as Error)
   }
 }
 
-export const removeGithub = async (req: PassportRequest, res: Response) => {
+export const removeGithub: WrapFn<string> = async (req) => {
   const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
-    return res.status(401).send('not auth token')
+    throw new BadRequest('no auth token')
   }
   const { err, decoded } = await verifyAccessToken(
     accessToken,
@@ -64,26 +66,28 @@ export const removeGithub = async (req: PassportRequest, res: Response) => {
   )
 
   if (err || !decoded.user) {
-    return res.status(401).send('not auth token')
+    throw new Unauthorized('unauthorized token')
   }
 
   const _id = new ObjectId(decoded.user._id)
-  const user = await db.collections().users.findOne({ _id })
+  const db = await mongoClient()
+  const user = await collections(db).users.findOne({ _id })
   if (!user) {
-    return res.status(400).send('not exists')
+    throw new BadRequest('not exists')
   }
 
   if (!user.githubId) {
-    return res.status(400).send('not linked')
+    throw new BadRequest('not linked')
   }
 
-  if (!user.githubId) {
-    return res.status(400).send('can not remove')
+  if (!user.twitterId) {
+    throw new BadRequest('can not remove github account')
   }
 
-  await db
-    .collections()
-    .users.updateOne({ _id }, { $unset: { githubId: '', githubUserName: '' } })
+  await collections(db).users.updateOne(
+    { _id },
+    { $unset: { githubId: '', githubUserName: '' } }
+  )
 
-  res.status(200).send('ok')
+  return 'ok'
 }

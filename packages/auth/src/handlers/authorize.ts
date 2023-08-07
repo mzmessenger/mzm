@@ -1,11 +1,13 @@
-import type { NextFunction, Request, Response } from 'express'
-import type { PassportRequest } from '../types.js'
+import type { Request } from 'express'
 import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
-import { randomBytes } from 'node:crypto'
+import type { WrapFn } from 'mzm-shared/lib/wrap'
+import type { PassportRequest } from '../types.js'
+import type { NonceResponse } from '../middleware/index.js'
+import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 import { logger } from '../lib/logger.js'
-import * as db from '../lib/db.js'
+import { mongoClient, collections } from '../lib/db.js'
 import { sessionRedis } from '../lib/redis.js'
 import { createTokens, verifyRefreshToken } from '../lib/token.js'
 import {
@@ -28,83 +30,69 @@ const TokenBody = z.union([
   })
 ])
 
-export const token = async (req: Request, res: Response) => {
-  type ResponseType = AUTH_API_RESPONSE['/auth/token']['POST']['body']
-
-  try {
-    logger.info('[accessToken]', 'start')
-    const body = TokenBody.safeParse(req.body)
-    if (body.success === false) {
-      return res.status(400).json({ message: 'bad request' })
-    }
-
-    let userId: string | null = null
-    if (body.data.grant_type === 'authorization_code') {
-      const verify = await verifyAuthorizationCodeFromRedis(sessionRedis!, {
-        code: body.data.code,
-        grant_type: body.data.grant_type,
-        code_verifier: body.data.code_verifier
-      })
-      if (verify.success === false) {
-        return res.status(401).json({ message: verify.error.message })
-      }
-      userId = verify.data.userId
-    } else if (body.data.grant_type === 'refresh_token') {
-      const decode = await verifyRefreshToken(body.data.refresh_token)
-      userId = decode.user._id
-    }
-
-    if (!userId) {
-      return res.status(400).json({ message: 'invalid grant_type' })
-    }
-    const user = await db.collections().users.findOne({
-      _id: new ObjectId(userId)
-    })
-
-    if (!user) {
-      return res.status(400).json({ message: 'invalid user' })
-    }
-
-    const { accessToken, refreshToken } = await createTokens({
-      _id: user._id.toHexString(),
-      twitterId: user.twitterId,
-      twitterUserName: user.twitterUserName,
-      githubId: user.githubId,
-      githubUserName: user.githubUserName
-    })
-    logger.info({
-      label: 'createTokens',
-      user: user._id.toHexString()
-    })
-
-    const response: ResponseType[200] = {
-      accessToken,
-      refreshToken,
-      user: {
-        _id: user._id.toHexString(),
-        twitterId: user.twitterId ?? null,
-        twitterUserName: user.twitterUserName ?? null,
-        githubId: user.githubId ?? null,
-        githubUserName: user.githubUserName ?? null
-      }
-    }
-    res.status(200).json(response)
-  } catch (e) {
-    logger.info('[accessToken]', 'error', e)
-    return res.status(401).json({ message: 'unauthorized' })
+export const token: WrapFn<
+  AUTH_API_RESPONSE['/auth/token']['POST']['body'][200]
+> = async (req: Request) => {
+  logger.info('[accessToken]', 'start')
+  const body = TokenBody.safeParse(req.body)
+  if (body.success === false) {
+    throw new BadRequest({ message: body.error.message })
   }
-}
 
-export type AuthorizationResponse = Response<unknown, { nonce: string }>
+  let userId: string | null = null
+  if (body.data.grant_type === 'authorization_code') {
+    const verify = await verifyAuthorizationCodeFromRedis(sessionRedis!, {
+      code: body.data.code,
+      grant_type: body.data.grant_type,
+      code_verifier: body.data.code_verifier
+    })
+    if (verify.success === false) {
+      throw new Unauthorized({ message: verify.error.message })
+    }
+    userId = verify.data.userId
+  } else if (body.data.grant_type === 'refresh_token') {
+    const { err, decoded } = await verifyRefreshToken(body.data.refresh_token)
+    if (err) {
+      throw new Unauthorized({ message: 'invalid token' })
+    }
+    userId = decoded?.user?._id ?? null
+  }
 
-export const createNonceMiddleware = (
-  req: Request,
-  res: AuthorizationResponse,
-  next: NextFunction
-) => {
-  const nonce = randomBytes(16).toString('hex')
-  res.locals.nonce = nonce
-  next()
+  if (!userId) {
+    throw new BadRequest({ message: 'invalid grant_type' })
+  }
+  const user = await collections(await mongoClient()).users.findOne({
+    _id: new ObjectId(userId)
+  })
+
+  if (!user) {
+    throw new BadRequest({ message: 'invalid user' })
+  }
+
+  const { accessToken, refreshToken } = await createTokens({
+    _id: user._id.toHexString(),
+    twitterId: user.twitterId,
+    twitterUserName: user.twitterUserName,
+    githubId: user.githubId,
+    githubUserName: user.githubUserName
+  })
+  logger.info({
+    label: 'createTokens',
+    user: user._id.toHexString()
+  })
+
+  const response = {
+    accessToken,
+    refreshToken,
+    user: {
+      _id: user._id.toHexString(),
+      twitterId: user.twitterId ?? null,
+      twitterUserName: user.twitterUserName ?? null,
+      githubId: user.githubId ?? null,
+      githubUserName: user.githubUserName ?? null
+    }
+  }
+  return response
 }
 
 const AuthorizationQuery = z.object({
@@ -112,19 +100,17 @@ const AuthorizationQuery = z.object({
   state: z.string().optional()
 })
 
-export const authorize = async (
-  req: PassportRequest,
-  res: AuthorizationResponse
-) => {
-  try {
-    const user = req.user
+export const createAuthorize = (res: NonceResponse): WrapFn<string> => {
+  const nonce = res.locals.nonce
+  return async (req) => {
+    const { user } = req as PassportRequest
     if (!user) {
-      return res.status(401).send('unauthorized')
+      throw new Unauthorized('unauthorized')
     }
     const query = AuthorizationQuery.safeParse(req.query)
     if (query.success === false) {
       logger.error({ label: 'authorize', error: query.error })
-      return res.status(400).send('invalid query')
+      throw new BadRequest('invalid query')
     }
 
     const code = generageAuthorizationCode()
@@ -141,10 +127,8 @@ export const authorize = async (
       targetOrigin: CLIENT_URL_BASE,
       code,
       state,
-      nonce: res.locals.nonce
+      nonce
     })
-    res.status(200).send(html)
-  } catch (e) {
-    res.status(500).send('internal server error')
+    return html
   }
 }

@@ -9,9 +9,10 @@
     "start": "node --watch dist/server.js | bunyan",
     "build": "tsc --build tsconfig.json",
     "cleanbuild": "rm -rf dist && npm run build",
-    "format": "prettier --write src ./*.{js,json}",
+    "format": "prettier --write src test ./*.{js,json}",
     "lint": "eslint --ext .ts,.js src/",
-    "test": "npm run lint"
+    "pretest": "concurrently \"npm run lint\" \"npm run build\"",
+    "test": "vitest run --config ./vitest.config.ts"
   },
   "license": "MIT",
   "dependencies": {
@@ -35,9 +36,12 @@
   },
   "devDependencies": {
     "@types/bunyan": "^1.8.8",
+    "@types/cors": "^2.8.13",
     "@types/express-session": "^1.17.5",
     "@types/helmet": "^4.0.0",
     "@types/passport": "^1.0.11",
+    "@types/passport-github": "^1.1.7",
+    "@types/passport-oauth2": "^1.4.12",
     "typescript": "^5.1.6"
   }
 }

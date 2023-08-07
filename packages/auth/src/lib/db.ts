@@ -12,23 +12,46 @@ const _collections: Partial<CollectionType> = {
   removed: undefined
 }
 
-export const collections = (): CollectionType => {
+const DB_NAME = 'auth'
+
+let connected = false
+
+export const collections = (c: MongoClient): CollectionType => {
+  if (!c) {
+    throw new Error('no db client')
+  }
+
+  if (!connected) {
+    const db = c.db(DB_NAME)
+    _collections.users = db.collection('users')
+    _collections.removed = db.collection('removed')
+  }
+
   return {
     users: _collections.users!,
     removed: _collections.removed!
   }
 }
 
-export const connect = async () => {
-  const client = await MongoClient.connect(MONGODB_URI)
+let _client: MongoClient | null = null
 
-  const db = client.db('auth')
+export const mongoClient = async () => {
+  if (!_client) {
+    _client = await MongoClient.connect(MONGODB_URI)
+  }
+  return _client
+}
+
+export const connect = async (c: MongoClient) => {
+  const db = c.db(DB_NAME)
   _collections.users = db.collection('users')
   _collections.removed = db.collection('removed')
 
+  connected = true
+
   logger.info('[db] connected mongodb')
 
-  return client
+  return mongoClient
 }
 
 export type User = {

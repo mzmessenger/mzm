@@ -21,10 +21,21 @@ services:
       - ./.infra/mongo/mongod.conf:/etc/mongod.conf
       - ./.infra/mongo/db:/data/db
       - ./.infra/mongo/configdb:/data/configdb
+  mongo-test:
+    image: mongo:4.2
+    ports:
+      - 27018:27017
+    environment:
+      MONGO_INITDB_ROOT_USERNAME: root
+      MONGO_INITDB_ROOT_PASSWORD: example
   redis:
     image: redis:6
     ports:
       - 6379:6379
+  redis-test:
+    image: redis:6
+    ports:
+      - 6380:6379
   elasticsearch:
     build:
       context: ./packages/infra/elasticsearch

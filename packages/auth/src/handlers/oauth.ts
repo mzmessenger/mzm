@@ -1,7 +1,8 @@
 import type { Request, Response, NextFunction } from 'express'
 import type { PassportStatic } from 'passport'
 import type { Redis } from 'ioredis'
-import type { SerializeUser, Result } from '../types.js'
+import type { Result } from 'mzm-shared/type'
+import type { SerializeUser } from '../types.js'
 import { sessionRedis } from '../lib/redis.js'
 import {
   getParametaerFromState,
@@ -50,7 +51,7 @@ export const oauthCallback = (
   _oauthCallback(req).then((params) => {
     if (params.success === false) {
       logger.error({ label: 'oauth2Callback', error: params.error.message })
-      return res.status(params.error.status).send(params.error.message)
+      return res.status(params.error.status ?? 500).send(params.error.message)
     }
     return res.redirect(params.data.redirectUrl)
   })
@@ -69,13 +70,13 @@ export const oauth = (
       }
       const save = await saveParameterWithReuqest(client, req)
       if (save.success === false) {
-        return res.status(500).send('intenal server error')
+        return res.status(500).send('Internal Server Error')
       }
       passport.authenticate(strategy, {
         state: save.data.state
       })(req, res, next)
     } catch (e) {
-      return res.status(500).send('intenal server error')
+      return res.status(500).send('Internal Server Error')
     }
   }
 }

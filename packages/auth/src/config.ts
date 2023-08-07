@@ -45,6 +45,9 @@ export const REMOVE_STREAM = 'stream:auth:remove:user'
 export const REDIS = {
   options: {
     host: process.env.REDIS_HOST,
+    port: process.env.REDIS_PORT
+      ? Number(process.env.SESSION_REDIS_PORT)
+      : 6379,
     enableOfflineQueue: false,
     connectTimeout: Number(process.env.REDIS_TIMEOUT) ?? 30000
   } satisfies RedisOptions
@@ -53,6 +56,9 @@ export const REDIS = {
 export const SESSION_REDIS = {
   options: {
     host: process.env.SESSION_REDIS_HOST,
+    port: process.env.SESSION_REDIS_PORT
+      ? Number(process.env.SESSION_REDIS_PORT)
+      : 6379,
     enableOfflineQueue: false,
     connectTimeout: Number(process.env.SESSION_REDIS_TIMEOUT) ?? 30000,
     db: 1
