@@ -7,11 +7,12 @@
   "scripts": {
     "prestart": "npm run build",
     "start": "node --watch dist/server.js | bunyan",
-    "build": "tsc --build tsconfig.json",
     "cleanbuild": "rm -rf dist && npm run build",
+    "build": "tsc --build tsconfig.json",
+    "build:test": "tsc --build tsconfig.test.json",
     "format": "prettier --write src test ./*.{js,json}",
     "lint": "eslint --ext .ts,.js src/",
-    "pretest": "concurrently \"npm run lint\" \"npm run build\"",
+    "pretest": "concurrently \"npm run lint\" \"npm run build:test\"",
     "test": "vitest run --config ./vitest.config.ts"
   },
   "license": "MIT",

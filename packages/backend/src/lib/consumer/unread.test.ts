@@ -1,13 +1,13 @@
-import { vi, test, expect } from 'vitest'
-vi.mock('../logger')
-vi.mock('../redis', () => {
+import { vi, test, expect, beforeAll } from 'vitest'
+vi.mock('../logger.js')
+vi.mock('../redis.js', () => {
   return {
     client: vi.fn(() => ({
       xack: vi.fn()
     }))
   }
 })
-vi.mock('./common', () => {
+vi.mock('./common.js', () => {
   return {
     initConsumerGroup: vi.fn(),
     consumeGroup: vi.fn(),
@@ -15,20 +15,26 @@ vi.mock('./common', () => {
   }
 })
 vi.mock('../db.js', async () => {
-  const { mockDb } = await import('../../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../db.js'))) }
+  const actual = await vi.importActual<typeof import('../db.js')>('../db.js')
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import { ObjectId } from 'mongodb'
-import * as config from '../../config'
-import { createXackMock, getTestMongoClient } from '../../../test/testUtil'
-import { UnreadQueue } from '../../types'
-import { collections, type User } from '../db'
-import * as redis from '../redis'
-import { initConsumerGroup, consumeGroup } from './common'
-import { increment, initUnreadConsumerGroup, consumeUnread } from './unread'
+import * as config from '../../config.js'
+import { createXackMock, getTestMongoClient } from '../../../test/testUtil.js'
+import { UnreadQueue } from '../../types.js'
+import { collections, type User } from '../db.js'
+import * as redis from '../redis.js'
+import { initConsumerGroup, consumeGroup } from './common.js'
+import { increment, initUnreadConsumerGroup, consumeUnread } from './unread.js'
 
-const db = await getTestMongoClient()
+beforeAll(async () => {
+  const { mongoClient } = await import('../db.js')
+  const { getTestMongoClient } = await import('../../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+})
 
 test('initUnreadConsumerGroup', async () => {
   const init = vi.mocked(initConsumerGroup)
@@ -60,6 +66,8 @@ test('increment', async () => {
   const users: User[] = userIds.map((userId) => {
     return { _id: userId, account: userId.toHexString(), roomOrder: [] }
   })
+
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertMany(users)
   const roomId = new ObjectId()
   const enter = userIds.map((userId) => ({

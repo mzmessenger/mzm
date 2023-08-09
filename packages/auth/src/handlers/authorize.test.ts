@@ -1,32 +1,30 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { test, expect, vi, beforeEach } from 'vitest'
+import { test, expect, vi, beforeAll } from 'vitest'
 import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
 import {
   generateCodeVerifier,
-  getTestRedisClient,
+  getTestSessionRedisClient,
   getTestMongoClient
 } from '../../test/testUtil.js'
 import {
   generageAuthorizationCode,
   saveAuthorizationCode
 } from '../lib/pkce/index.js'
-import { generateCodeChallenge } from '../lib/pkce/util'
+import { generateCodeChallenge } from '../lib/pkce/util.js'
 import { collections } from '../lib/db.js'
 import { createTokens, verifyRefreshToken } from '../lib/token.js'
 
-vi.mock('../config.js', async () => ({
-  ...(await import('../../test/mock.js')).mockConfig
-}))
 vi.mock('../lib/logger.js')
 
 vi.mock('../lib/redis.js', async () => {
-  const { mockRedis } = await import('../../test/mock.js')
-  return { ...(await mockRedis()) }
+  return { sessionRedis: vi.fn() }
 })
 
 vi.mock('../lib/db.js', async () => {
-  const { mockDb } = await import('../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 vi.mock('../lib/token.js', async () => {
@@ -40,22 +38,34 @@ vi.mock('../lib/token.js', async () => {
   }
 })
 
-import { token } from './authorize'
+import { token } from './authorize.js'
 
-beforeEach(() => {
-  vi.resetAllMocks()
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient, getTestSessionRedisClient } = await import(
+    '../../test/testUtil.js'
+  )
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+  const { sessionRedis } = await import('../lib/redis.js')
+  vi.mocked(sessionRedis).mockImplementation(() => {
+    return getTestSessionRedisClient(globalThis)
+  })
 })
 
 test('token (authorization_code)', async () => {
   const code = generageAuthorizationCode()
   const code_verifier = generateCodeVerifier()
   const code_challenge = generateCodeChallenge(code_verifier)
-  const user = await collections(await getTestMongoClient()).users.insertOne({
+  const user = await collections(
+    await getTestMongoClient(globalThis)
+  ).users.insertOne({
     twitterId: 'twitterId',
     githubId: 'githubId'
   })
 
-  const { sessionRedis } = await getTestRedisClient()
+  const sessionRedis = await getTestSessionRedisClient(globalThis)
   await saveAuthorizationCode(sessionRedis, {
     code,
     code_challenge,
@@ -83,7 +93,9 @@ test('token (authorization_code)', async () => {
 })
 
 test('token (refresh_token)', async () => {
-  const user = await collections(await getTestMongoClient()).users.insertOne({
+  const user = await collections(
+    await getTestMongoClient(globalThis)
+  ).users.insertOne({
     twitterId: 'twitterId',
     githubId: 'githubId'
   })
@@ -140,12 +152,14 @@ test('fail token (invalid code)', async () => {
   const code = generageAuthorizationCode()
   const code_verifier = generateCodeVerifier()
   const code_challenge = generateCodeChallenge(code_verifier)
-  const user = await collections(await getTestMongoClient()).users.insertOne({
+  const user = await collections(
+    await getTestMongoClient(globalThis)
+  ).users.insertOne({
     twitterId: 'twitterId',
     githubId: 'githubId'
   })
 
-  const { sessionRedis } = await getTestRedisClient()
+  const sessionRedis = await getTestSessionRedisClient(globalThis)
   await saveAuthorizationCode(sessionRedis, {
     code,
     code_challenge,
@@ -173,7 +187,8 @@ test('fail token (invalid refresh_token)', async () => {
   )
   const verifyRefreshTokenMock = vi
     .mocked(verifyRefreshToken)
-    .mockImplementation(actual.verifyRefreshToken)
+    .mockClear()
+    .mockImplementationOnce(actual.verifyRefreshToken)
 
   const body = {
     grant_type: 'refresh_token',

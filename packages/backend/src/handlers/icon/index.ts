@@ -1,10 +1,8 @@
 import type { MulterFile } from '../../types/index.js'
-import { promisify } from 'node:util'
 import { Request } from 'express'
 import { request } from 'undici'
 import { ObjectId } from 'mongodb'
 import { RESPONSE } from 'mzm-shared/type/api'
-import imageSize from 'image-size'
 import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
 import { popParam, getRequestUserId } from '../../lib/utils.js'
 import * as storage from '../../lib/storage.js'
@@ -13,10 +11,7 @@ import { logger } from '../../lib/logger.js'
 import * as config from '../../config.js'
 import { StreamWrapResponse } from '../../types.js'
 import { isValidMimetype, createVersion } from './internal.js'
-
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-expect-error
-const sizeOf = promisify(imageSize)
+import { sizeOf } from '../../lib/image.js'
 
 const returnIconStream = async (key: string): StreamWrapResponse => {
   const head = await storage.headObject({ Key: key })

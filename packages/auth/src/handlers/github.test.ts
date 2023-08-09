@@ -1,23 +1,22 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import { test, expect, vi, beforeEach } from 'vitest'
+import assert from 'node:assert'
+import { test, expect, vi, beforeAll } from 'vitest'
 import { BadRequest } from 'mzm-shared/lib/errors'
 import { getTestMongoClient } from '../../test/testUtil.js'
 import { collections } from '../lib/db.js'
 import { verifyAccessToken } from 'mzm-shared/auth/index'
 
-vi.mock('../config.js', async () => ({
-  ...(await import('../../test/mock.js')).mockConfig
-}))
 vi.mock('../lib/logger.js')
 
 vi.mock('../lib/redis.js', async () => {
-  const { mockRedis } = await import('../../test/mock.js')
-  return { ...(await mockRedis()) }
+  return { sessionRedis: vi.fn() }
 })
 
 vi.mock('../lib/db.js', async () => {
-  const { mockDb } = await import('../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 vi.mock('mzm-shared/auth/index', async () => {
@@ -32,12 +31,16 @@ vi.mock('mzm-shared/auth/index', async () => {
 
 import { removeGithub } from './github.js'
 
-beforeEach(() => {
-  vi.resetAllMocks()
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
 test('removeGithub', async () => {
-  const db = await getTestMongoClient()
+  const db = await getTestMongoClient(globalThis)
   const user = await collections(db).users.insertOne({
     twitterId: 'twitterId',
     twitterUserName: 'twitterUserName',
@@ -45,18 +48,21 @@ test('removeGithub', async () => {
     githubUserName: 'githubUserName'
   })
 
-  const verifyAccessTokenMock = vi.mocked(verifyAccessToken).mockResolvedValue({
-    err: null,
-    decoded: {
-      user: {
-        _id: user.insertedId.toHexString(),
-        twitterUserName: 'twitterUserName',
-        twitterId: 'twitterId',
-        githubId: 'githubId',
-        githubUserName: 'githubUserName'
+  const verifyAccessTokenMock = vi
+    .mocked(verifyAccessToken)
+    .mockClear()
+    .mockResolvedValueOnce({
+      err: null,
+      decoded: {
+        user: {
+          _id: user.insertedId.toHexString(),
+          twitterUserName: 'twitterUserName',
+          twitterId: 'twitterId',
+          githubId: 'githubId',
+          githubUserName: 'githubUserName'
+        }
       }
-    }
-  })
+    })
 
   const req = {
     headers: {
@@ -93,24 +99,27 @@ test('removeGithub (no access token)', async () => {
 test('removeGithub (not linked)', async () => {
   expect.assertions(3)
 
-  const db = await getTestMongoClient()
+  const db = await getTestMongoClient(globalThis)
   const user = await collections(db).users.insertOne({
     twitterId: 'twitterId',
     twitterUserName: 'twitterUserName'
   })
 
-  const verifyAccessTokenMock = vi.mocked(verifyAccessToken).mockResolvedValue({
-    err: null,
-    decoded: {
-      user: {
-        _id: user.insertedId.toHexString(),
-        twitterUserName: 'twitterUserName',
-        twitterId: 'twitterId',
-        githubId: null,
-        githubUserName: null
+  const verifyAccessTokenMock = vi
+    .mocked(verifyAccessToken)
+    .mockClear()
+    .mockResolvedValueOnce({
+      err: null,
+      decoded: {
+        user: {
+          _id: user.insertedId.toHexString(),
+          twitterUserName: 'twitterUserName',
+          twitterId: 'twitterId',
+          githubId: null,
+          githubUserName: null
+        }
       }
-    }
-  })
+    })
 
   const req = {
     headers: {
@@ -122,6 +131,7 @@ test('removeGithub (not linked)', async () => {
     await removeGithub(req as any)
   } catch (e) {
     expect(verifyAccessTokenMock).toHaveBeenCalledTimes(1)
+    assert(e instanceof BadRequest)
     expect(e instanceof BadRequest).toStrictEqual(true)
     expect(e.toResponse()).contains('not linked')
   }
@@ -130,24 +140,27 @@ test('removeGithub (not linked)', async () => {
 test('removeGithub (can not remove)', async () => {
   expect.assertions(3)
 
-  const db = await getTestMongoClient()
+  const db = await getTestMongoClient(globalThis)
   const user = await collections(db).users.insertOne({
     githubId: 'githubId',
     githubUserName: 'githubUserName'
   })
 
-  const verifyAccessTokenMock = vi.mocked(verifyAccessToken).mockResolvedValue({
-    err: null,
-    decoded: {
-      user: {
-        _id: user.insertedId.toHexString(),
-        twitterUserName: null,
-        twitterId: null,
-        githubId: 'githubId',
-        githubUserName: 'githubUserName'
+  const verifyAccessTokenMock = vi
+    .mocked(verifyAccessToken)
+    .mockClear()
+    .mockResolvedValueOnce({
+      err: null,
+      decoded: {
+        user: {
+          _id: user.insertedId.toHexString(),
+          twitterUserName: null,
+          twitterId: null,
+          githubId: 'githubId',
+          githubUserName: 'githubUserName'
+        }
       }
-    }
-  })
+    })
 
   const req = {
     headers: {
@@ -159,6 +172,7 @@ test('removeGithub (can not remove)', async () => {
     await removeGithub(req as any)
   } catch (e) {
     expect(verifyAccessTokenMock).toHaveBeenCalledTimes(1)
+    assert(e instanceof BadRequest)
     expect(e instanceof BadRequest).toStrictEqual(true)
     expect(e.toResponse()).contains('can not remove')
   }

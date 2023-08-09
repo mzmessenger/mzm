@@ -2,10 +2,6 @@
 import { test, expect, vi, beforeEach } from 'vitest'
 import { ObjectId } from 'mongodb'
 
-vi.mock('../config.js', async () => ({
-  ...(await import('../../test/mock.js')).mockConfig
-}))
-
 import { createTokens, verifyRefreshToken } from './token.js'
 
 beforeEach(() => {

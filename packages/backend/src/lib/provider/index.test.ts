@@ -1,6 +1,6 @@
 import { vi, test, expect } from 'vitest'
-vi.mock('../logger')
-vi.mock('../redis', () => {
+vi.mock('../logger.js')
+vi.mock('../redis.js', () => {
   return {
     client: vi.fn(() => ({
       xadd: vi.fn()
@@ -9,10 +9,10 @@ vi.mock('../redis', () => {
 })
 import { ObjectId } from 'mongodb'
 import { ToClientType } from 'mzm-shared/type/socket'
-import { createXaddMock } from '../../../test/testUtil'
-import { client } from '../redis'
-import * as config from '../../config'
-import { addQueueToUsers, addUnreadQueue, addRepliedQueue } from './index'
+import { createXaddMock } from '../../../test/testUtil.js'
+import { client } from '../redis.js'
+import * as config from '../../config.js'
+import { addQueueToUsers, addUnreadQueue, addRepliedQueue } from './index.js'
 
 test('addQueueToUsers', async () => {
   const xadd = createXaddMock(client)

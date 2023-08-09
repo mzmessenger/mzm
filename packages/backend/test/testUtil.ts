@@ -1,11 +1,9 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 /* eslint-disable no-console */
 import type { MulterFile } from '../src/types/index.js'
-import { once } from 'node:events'
-import { Redis, type RedisOptions } from 'ioredis'
+import type { MongoClient, ObjectId } from 'mongodb'
 import { vi } from 'vitest'
 import { Request } from 'express'
-import { MongoClient, ObjectId } from 'mongodb'
 import { client as RedisClient } from '../src/lib/redis.js'
 
 export const createXaddMock = (client: typeof RedisClient) => {
@@ -23,38 +21,16 @@ export const createXackMock = (client: typeof RedisClient) => {
   return xack
 }
 
-const TEST_MONGODB_URI =
-  process.env.TEST_MONTO_URI ??
-  'mongodb://mzm-backend-test:mzm-backend-test-password@localhost:27018/mzm-test'
-
-let mongoClient: MongoClient | null = null
-
-export const getTestMongoClient = async () => {
-  if (!mongoClient) {
-    mongoClient = await MongoClient.connect(TEST_MONGODB_URI)
-  }
-
-  return mongoClient
+export const getTestDbName = (suffix: string) => {
+  return `mzm-test-${suffix}`
 }
 
-const testSessionRedisOptions: RedisOptions = {
-  host: process.env.TEST_SESSION_REDIS_HOST ?? 'localhost',
-  port: process.env.TEST_SESSION_REDIS_PORT
-    ? Number(process.env.TEST_SESSION_REDIS_PORT)
-    : 6380,
-  enableOfflineQueue: false,
-  connectTimeout: 30000,
-  db: 1
+export const getTestMongoClient = async (context: typeof globalThis) => {
+  return context.mongoClient as MongoClient
 }
 
-const redisClient = new Redis(testSessionRedisOptions)
-redisClient.on('error', (e) => {
-  console.error(e)
-})
-await Promise.all([once(redisClient, 'ready')])
-
-export const getTestRedisClient = async () => {
-  return { client: RedisClient }
+export const getTestRedisClient = async (context: typeof globalThis) => {
+  return context.redisClient
 }
 
 export const dropCollection = async (client: MongoClient, name: string) => {

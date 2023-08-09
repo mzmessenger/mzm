@@ -41,7 +41,8 @@ export const token: WrapFn<
 
   let userId: string | null = null
   if (body.data.grant_type === 'authorization_code') {
-    const verify = await verifyAuthorizationCodeFromRedis(sessionRedis!, {
+    const client = await sessionRedis()
+    const verify = await verifyAuthorizationCodeFromRedis(client, {
       code: body.data.code,
       grant_type: body.data.grant_type,
       code_verifier: body.data.code_verifier
@@ -116,7 +117,8 @@ export const createAuthorize = (res: NonceResponse): WrapFn<string> => {
     const code = generageAuthorizationCode()
     const code_challenge = encodeURIComponent(query.data.code_challenge)
 
-    await saveAuthorizationCode(sessionRedis!, {
+    const client = await sessionRedis()
+    await saveAuthorizationCode(client, {
       code,
       code_challenge,
       userId: user._id.toHexString()

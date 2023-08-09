@@ -1,4 +1,4 @@
-import { vi, test, expect } from 'vitest'
+import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('../lib/logger')
 vi.mock('../lib/redis', () => {
   return {
@@ -12,17 +12,25 @@ vi.mock('../lib/elasticsearch/index', () => {
   }
 })
 vi.mock('../lib/db.js', async () => {
-  const { mockDb } = await import('../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import { ObjectId } from 'mongodb'
-import { getTestMongoClient, createRequest } from '../../test/testUtil'
-import { collections } from '../lib/db'
 import { BadRequest } from 'mzm-shared/lib/errors'
-import { createRoom } from './rooms'
+import { createRequest, getTestMongoClient } from '../../test/testUtil.js'
+import { collections } from '../lib/db.js'
+import { createRoom } from './rooms.js'
 
-const db = await getTestMongoClient()
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+})
 
 test.each([
   ['aaa', 'aaa'],
@@ -35,6 +43,7 @@ test.each([
 
   const { id } = await createRoom(req)
 
+  const db = await getTestMongoClient(globalThis)
   const created = await collections(db).rooms.findOne({
     _id: new ObjectId(id)
   })

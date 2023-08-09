@@ -1,14 +1,14 @@
-import { vi, test, expect } from 'vitest'
-vi.mock('../logger')
+import { vi, test, expect, beforeAll } from 'vitest'
+vi.mock('../logger.js')
 
-vi.mock('../redis', () => {
+vi.mock('../redis.js', () => {
   return {
     client: vi.fn(() => ({
       xack: vi.fn()
     }))
   }
 })
-vi.mock('./common', () => {
+vi.mock('./common.js', () => {
   return {
     initConsumerGroup: vi.fn(),
     consumeGroup: vi.fn(),
@@ -16,19 +16,25 @@ vi.mock('./common', () => {
   }
 })
 vi.mock('../db.js', async () => {
-  const { mockDb } = await import('../../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../db.js'))) }
+  const actual = await vi.importActual<typeof import('../db.js')>('../db.js')
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import { ObjectId } from 'mongodb'
-import * as config from '../../config'
-import { createXackMock, getTestMongoClient } from '../../../test/testUtil'
-import { collections } from '../db'
-import { client } from '../redis'
-import { initConsumerGroup, consumeGroup } from './common'
-import { remove, initRemoveConsumerGroup, consumeRemove } from './remove'
+import * as config from '../../config.js'
+import { createXackMock, getTestMongoClient } from '../../../test/testUtil.js'
+import { collections } from '../db.js'
+import { client } from '../redis.js'
+import { initConsumerGroup, consumeGroup } from './common.js'
+import { remove, initRemoveConsumerGroup, consumeRemove } from './remove.js'
 
-const db = await getTestMongoClient()
+beforeAll(async () => {
+  const { mongoClient } = await import('../db.js')
+  const { getTestMongoClient } = await import('../../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+})
 
 test('initRemoveConsumerGroup', async () => {
   const init = vi.mocked(initConsumerGroup)
@@ -55,6 +61,7 @@ test('remove', async () => {
 
   const userId = new ObjectId()
   const roomIds = [new ObjectId(), new ObjectId()]
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({
     _id: userId,
     account: 'test',

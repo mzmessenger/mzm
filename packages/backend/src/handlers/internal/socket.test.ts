@@ -1,11 +1,13 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/ban-ts-comment */
-import { vi, test, expect, describe, beforeEach } from 'vitest'
-vi.mock('../../lib/logger')
-vi.mock('../../logic/messages')
-vi.mock('../../lib/provider')
+import { vi, test, expect, describe, beforeEach, beforeAll } from 'vitest'
+vi.mock('../../lib/logger.js')
+vi.mock('../../logic/messages.js')
+vi.mock('../../lib/provider/index.js')
 vi.mock('../../lib/db.js', async () => {
-  const { mockDb } = await import('../../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../../lib/db.js')>(
+    '../../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import { ObjectId } from 'mongodb'
@@ -14,29 +16,36 @@ import {
   TO_SERVER_CMD,
   FilterSocketToBackendType
 } from 'mzm-shared/type/socket'
-import { getTestMongoClient } from '../../../test/testUtil'
+import { getTestMongoClient } from '../../../test/testUtil.js'
 import {
   collections,
   RoomStatusEnum,
   VoteAnswerEnum,
   type Message
-} from '../../lib/db'
-import * as logicMessages from '../../logic/messages'
+} from '../../lib/db.js'
+import * as logicMessages from '../../logic/messages.js'
 import {
   addMessageQueue,
   addQueueToUsers,
   addUnreadQueue,
   addUpdateSearchRoomQueue
-} from '../../lib/provider'
-import * as config from '../../config'
-import * as socket from './socket'
+} from '../../lib/provider/index.js'
+import * as config from '../../config.js'
+import * as socket from './socket.js'
 
-const db = await getTestMongoClient()
+beforeAll(async () => {
+  const { mongoClient } = await import('../../lib/db.js')
+  const { getTestMongoClient } = await import('../../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+})
 
 test('sendMessage', async () => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({
     _id: userId,
     account: 'test',
@@ -79,6 +88,7 @@ test('fail: sendMessage', async () => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({
     _id: userId,
     account: 'test',
@@ -114,6 +124,7 @@ test('modifyMessage', async () => {
   const userId = new ObjectId()
   const createdAt = new Date()
 
+  const db = await getTestMongoClient(globalThis)
   const user = collections(db).users.insertOne({
     _id: userId,
     account: 'test',
@@ -159,6 +170,7 @@ test('modifyMessage', async () => {
 test('readMessage', async () => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
+  const db = await getTestMongoClient(globalThis)
 
   await Promise.all([
     collections(db).users.insertOne({
@@ -193,6 +205,7 @@ test('readMessage', async () => {
 test('iine', async () => {
   const userId = new ObjectId()
 
+  const db = await getTestMongoClient(globalThis)
   const seed = await collections(db).messages.insertOne({
     roomId: new ObjectId(),
     userId,
@@ -222,6 +235,7 @@ test('openRoom', async () => {
 
   const userId = new ObjectId()
 
+  const db = await getTestMongoClient(globalThis)
   const insert = await collections(db).rooms.insertOne({
     name: userId.toHexString(),
     status: RoomStatusEnum.CLOSE,
@@ -248,6 +262,7 @@ test('closeRoom', async () => {
 
   const userId = new ObjectId()
 
+  const db = await getTestMongoClient(globalThis)
   const insert = await collections(db).rooms.insertOne({
     name: userId.toHexString(),
     status: RoomStatusEnum.OPEN,
@@ -276,6 +291,7 @@ test('sendVoteAnswer (first time)', async () => {
     type: VoteTypeEnum.CHOICE
   }
 
+  const db = await getTestMongoClient(globalThis)
   const message = await collections(db).messages.insertOne({
     message: 'vote test',
     iine: 0,
@@ -311,6 +327,7 @@ test('sendVoteAnswer (second time)', async () => {
     type: VoteTypeEnum.CHOICE
   }
 
+  const db = await getTestMongoClient(globalThis)
   const message = await collections(db).messages.insertOne({
     message: 'vote test',
     iine: 0,
@@ -370,6 +387,7 @@ describe('sendVoteAnswer: BadRequest', () => {
       type: VoteTypeEnum.CHOICE
     }
 
+    const db = await getTestMongoClient(globalThis)
     const message = await collections(db).messages.insertOne({
       message: 'vote test',
       iine: 0,
@@ -385,6 +403,7 @@ describe('sendVoteAnswer: BadRequest', () => {
   })
 
   test('no messageId', async () => {
+    const db = await getTestMongoClient(globalThis)
     const before = await collections(db)
       .voteAnswer.find({ messageId: messageId! })
       .toArray()
@@ -413,6 +432,7 @@ describe('sendVoteAnswer: BadRequest', () => {
       index
     })
 
+    const db = await getTestMongoClient(globalThis)
     const answers = await collections(db)
       .voteAnswer.find({
         messageId: messageId!
@@ -432,6 +452,7 @@ test('removeVoteAnswer', async () => {
     type: VoteTypeEnum.CHOICE
   }
 
+  const db = await getTestMongoClient(globalThis)
   const message = await collections(db).messages.insertOne({
     message: 'vote test',
     iine: 0,

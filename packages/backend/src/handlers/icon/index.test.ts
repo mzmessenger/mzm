@@ -1,33 +1,41 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-import { vi, test, expect, beforeEach } from 'vitest'
+import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('undici', () => {
   return { request: vi.fn() }
 })
-vi.mock('image-size')
-vi.mock('../lib/logger')
-vi.mock('../lib/storage')
-vi.mock('../lib/db.js', async () => {
-  const { mockDb } = await import('../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+vi.mock('../../lib/image.js')
+vi.mock('../../lib/logger.js')
+vi.mock('../../lib/storage.js')
+vi.mock('../../lib/db.js', async () => {
+  const actual = await vi.importActual<typeof import('../../lib/db.js')>(
+    '../../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import type { IncomingHttpHeaders } from 'http'
 import { Readable } from 'stream'
 import { ObjectId, WithId } from 'mongodb'
 import { request } from 'undici'
-import sizeOf from 'image-size'
+import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
 import {
   getTestMongoClient,
   createRequest,
   createFileRequest
-} from '../../test/testUtil'
-import { collections, RoomStatusEnum, type User } from '../lib/db'
-import * as storage from '../lib/storage'
-import * as config from '../config'
-import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
-import * as icon from './icon'
+} from '../../../test/testUtil.js'
+import { collections, RoomStatusEnum, type User } from '../../lib/db.js'
+import * as storage from '../../lib/storage.js'
+import * as config from '../../config.js'
+import * as icon from './index.js'
+import { sizeOf } from '../../lib/image.js'
 
-const db = await getTestMongoClient()
+beforeAll(async () => {
+  const { mongoClient } = await import('../../lib/db.js')
+  const { getTestMongoClient } = await import('../../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+})
 
 type ResponseBody = Awaited<ReturnType<typeof request>>['body']
 
@@ -77,15 +85,12 @@ const createGetObjectMockValue = (options: { createReadStream: Readable }) => {
   return getObject
 }
 
-beforeEach(() => {
-  vi.resetAllMocks()
-})
-
 test('getUserIcon from storage', async () => {
   const userId = new ObjectId()
   const account = userId.toHexString()
   const version = '12345'
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({
     _id: userId,
     account,
@@ -143,11 +148,12 @@ test.each([
     if (iconVersion) {
       user.icon = { key: 'iconkey', version: iconVersion }
     }
+    const db = await getTestMongoClient(globalThis)
     await collections(db).users.insertOne(user)
 
-    const headObjectMock = vi.mocked(storage.headObject)
-    const getObjectMock = vi.mocked(storage.getObject)
-    const requestMock = vi.mocked(request)
+    const headObjectMock = vi.mocked(storage.headObject).mockClear()
+    const getObjectMock = vi.mocked(storage.getObject).mockClear()
+    const requestMock = vi.mocked(request).mockClear()
     const headers: IncomingHttpHeaders = {
       ETag: 'etag',
       'content-type': 'image/png',
@@ -195,6 +201,7 @@ test('getUserIcon from identicon: not found on storage', async () => {
       version: '1234'
     }
   }
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne(user)
 
   const headObjectMock = vi.mocked(storage.headObject)
@@ -251,6 +258,7 @@ test('getUserIcon BadRequest: no account', async () => {
 test('uploadUserIcon', async () => {
   const userId = new ObjectId()
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({
     _id: userId,
     account: userId.toString(),
@@ -260,9 +268,8 @@ test('uploadUserIcon', async () => {
   const putObjectMock = vi.mocked(storage.putObject)
   putObjectMock.mockResolvedValueOnce({} as never)
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, { width: 100, height: 100 })
+  vi.mocked(sizeOf).mockImplementationOnce(() => {
+    return Promise.resolve({ width: 100, height: 100 })
   })
   const createBodyFromFilePath = vi.mocked(storage.createBodyFromFilePath)
   const readableStream = new Readable() as ReturnType<
@@ -329,9 +336,8 @@ test('uploadUserIcon validation: size over', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, {
+  vi.mocked(sizeOf).mockImplementationOnce(() => {
+    return Promise.resolve({
       width: config.icon.MAX_USER_ICON_SIZE + 1,
       height: config.icon.MAX_USER_ICON_SIZE + 1
     })
@@ -360,9 +366,8 @@ test('uploadUserIcon validation: not square', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, {
+  vi.mocked(sizeOf).mockImplementation(() => {
+    return Promise.resolve({
       width: config.icon.MAX_USER_ICON_SIZE - 1,
       height: config.icon.MAX_USER_ICON_SIZE - 2
     })
@@ -382,6 +387,7 @@ test('getRoomIcon', async () => {
   const name = roomId.toHexString()
   const version = '12345'
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).rooms.insertOne({
     _id: roomId,
     name,
@@ -395,7 +401,7 @@ test('getRoomIcon', async () => {
 
   const req = createRequest(null, { params: { roomname: name, version } })
 
-  const headObjectMock = vi.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject).mockClear()
   const headers = createHeadObjectMockValue({
     ETag: 'etag',
     ContentType: 'image/png',
@@ -404,7 +410,7 @@ test('getRoomIcon', async () => {
     CacheControl: 'max-age=604800'
   })
   headObjectMock.mockResolvedValueOnce(headers)
-  const getObjectMock = vi.mocked(storage.getObject)
+  const getObjectMock = vi.mocked(storage.getObject).mockClear()
   const readableStream = new Readable()
   const getObject = createGetObjectMockValue({
     createReadStream: readableStream
@@ -448,6 +454,7 @@ test('getRoomIcon NotFound: different version', async () => {
   const name = roomId.toHexString()
   const version = '12345'
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).rooms.insertOne({
     _id: roomId,
     name: name,
@@ -475,6 +482,7 @@ test('getRoomIcon NotFound: not found on storage', async () => {
   const name = roomId.toHexString()
   const version = '12345'
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).rooms.insertOne({
     _id: roomId,
     name: name,
@@ -502,6 +510,7 @@ test('uploadRoomIcon', async () => {
   const roomId = new ObjectId()
   const name = roomId.toHexString()
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).rooms.insertOne({
     _id: roomId,
     name,
@@ -513,9 +522,8 @@ test('uploadRoomIcon', async () => {
   const putObjectMock = vi.mocked(storage.putObject)
   putObjectMock.mockResolvedValueOnce({} as never)
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, {
+  vi.mocked(sizeOf).mockImplementation(() => {
+    return Promise.resolve({
       width: config.icon.MAX_USER_ICON_SIZE,
       height: config.icon.MAX_USER_ICON_SIZE
     })
@@ -589,9 +597,8 @@ test('uploadRoomIcon: validation: size over ', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, {
+  vi.mocked(sizeOf).mockImplementationOnce(() => {
+    return Promise.resolve({
       width: config.icon.MAX_ROOM_ICON_SIZE + 1,
       height: config.icon.MAX_ROOM_ICON_SIZE + 1
     })
@@ -620,9 +627,8 @@ test('uploadUserIcon validation: not square', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, {
+  vi.mocked(sizeOf).mockImplementation(() => {
+    return Promise.resolve({
       width: config.icon.MAX_ROOM_ICON_SIZE - 1,
       height: config.icon.MAX_ROOM_ICON_SIZE - 2
     })

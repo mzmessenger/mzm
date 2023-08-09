@@ -1,6 +1,6 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
-import { MONGODB_URI, DB_NAME } from '../config.js'
+import { MONGODB_URI } from '../config.js'
 import { logger } from './logger.js'
 
 type CollectionType = {
@@ -24,7 +24,7 @@ const _collections: Partial<CollectionType> = {
 let connected = false
 
 const initCollections = (c: MongoClient): CollectionType => {
-  const db = c.db(DB_NAME)
+  const db = c.db()
   const rooms = db.collection<Room>(COLLECTION_NAMES.ROOMS)
   const enter = db.collection<Enter>(COLLECTION_NAMES.ENTER)
   const users = db.collection<User>(COLLECTION_NAMES.USERS)

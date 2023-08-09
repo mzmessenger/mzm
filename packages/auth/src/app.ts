@@ -11,12 +11,8 @@ import session from 'express-session'
 import { createErrorHandler } from 'mzm-shared/lib/middleware'
 import { wrap } from 'mzm-shared/lib/wrap'
 import {
-  TWITTER_CLIENT_ID,
-  TWITTER_CLIENT_SECRET,
-  TWITTER_CALLBACK_URL,
-  GITHUB_CLIENT_ID,
-  GITHUB_CLIENT_SECRET,
-  GITHUB_CALLBACK_URL,
+  TWITTER_STRATEGY_OPTIONS,
+  GITHUB_STRATEGY_OPTIONS,
   TRUST_PROXY,
   SESSION_PARSER,
   CLIENT_URL_BASE,
@@ -64,16 +60,7 @@ export const createApp = ({ client }: Options) => {
   passport.use(
     'twitter-oauth2',
     new Oauth2Strategy(
-      {
-        authorizationURL: 'https://twitter.com/i/oauth2/authorize',
-        tokenURL: 'https://api.twitter.com/2/oauth2/token',
-        clientID: TWITTER_CLIENT_ID,
-        clientSecret: TWITTER_CLIENT_SECRET,
-        callbackURL: TWITTER_CALLBACK_URL,
-        pkce: true,
-        state: true,
-        scope: ['users.read']
-      },
+      TWITTER_STRATEGY_OPTIONS,
       (req, accessToken, refreshToken, profile, done) => {
         twitterHandlers.loginTwitter(
           req as unknown as PassportRequest,
@@ -88,12 +75,7 @@ export const createApp = ({ client }: Options) => {
   passport.use(
     'github',
     new GitHubStrategy(
-      {
-        clientID: GITHUB_CLIENT_ID,
-        clientSecret: GITHUB_CLIENT_SECRET,
-        callbackURL: GITHUB_CALLBACK_URL,
-        passReqToCallback: true
-      },
+      GITHUB_STRATEGY_OPTIONS,
       (req, accessToken, refreshToken, profile, done) => {
         githubHandlers.loginGithub(
           req as PassportRequest,

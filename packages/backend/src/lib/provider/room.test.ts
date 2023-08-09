@@ -1,6 +1,6 @@
 import { vi, test, expect, beforeEach } from 'vitest'
-vi.mock('../logger')
-vi.mock('../redis', () => {
+vi.mock('../logger.js')
+vi.mock('../redis.js', () => {
   return {
     client: vi.fn(() => ({
       xadd: vi.fn()
@@ -9,12 +9,12 @@ vi.mock('../redis', () => {
     release: vi.fn()
   }
 })
-import { createXaddMock } from '../../../test/testUtil'
-import { client, lock, release } from '../redis'
-import * as types from '../../types'
-import * as config from '../../config'
+import { createXaddMock } from '../../../test/testUtil.js'
+import { client, lock, release } from '../redis.js'
+import * as types from '../../types.js'
+import * as config from '../../config.js'
 
-import * as room from './room'
+import * as room from './room.js'
 
 beforeEach(() => {
   vi.clearAllMocks()

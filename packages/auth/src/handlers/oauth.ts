@@ -21,7 +21,8 @@ const _oauthCallback = async (
     return { success: false, error: { status: 400, message: 'invalid state' } }
   }
 
-  const params = await getParametaerFromState(sessionRedis!, state as string)
+  const client = await sessionRedis()
+  const params = await getParametaerFromState(client, state as string)
   if (params.success === false) {
     return {
       success: false,
@@ -30,7 +31,7 @@ const _oauthCallback = async (
   }
   const code = generageAuthorizationCode()
 
-  await saveAuthorizationCode(sessionRedis!, {
+  await saveAuthorizationCode(client, {
     code,
     code_challenge: params.data.code_challenge,
     userId: req.user._id.toHexString()

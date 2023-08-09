@@ -1,20 +1,29 @@
-import { vi, test, expect, beforeEach } from 'vitest'
-vi.mock('../lib/logger')
+import { vi, test, expect, beforeEach, beforeAll } from 'vitest'
+vi.mock('../lib/logger.js')
 vi.mock('../lib/db.js', async () => {
-  const { mockDb } = await import('../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import { ObjectId } from 'mongodb'
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
-import { getTestMongoClient, dropCollection } from '../../test/testUtil'
-import { collections, COLLECTION_NAMES, type Message } from '../lib/db'
-import { saveMessage, getMessages } from './messages'
-import * as config from '../config'
+import { getTestMongoClient, dropCollection } from '../../test/testUtil.js'
+import { collections, COLLECTION_NAMES, type Message } from '../lib/db.js'
+import { saveMessage, getMessages } from './messages.js'
+import * as config from '../config.js'
 
-const db = await getTestMongoClient()
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+})
 
 beforeEach(async () => {
+  const db = await getTestMongoClient(globalThis)
   await dropCollection(db, COLLECTION_NAMES.MESSAGES)
 })
 
@@ -34,6 +43,7 @@ test('saveMessage', async () => {
     return
   }
 
+  const db = await getTestMongoClient(globalThis)
   const found = await collections(db).messages.findOne({ _id: save.insertedId })
 
   expect(found?._id).toStrictEqual(save.insertedId)
@@ -48,6 +58,7 @@ test.each([[''], ['a'.repeat(config.message.MAX_MESSAGE_LENGTH + 1)]])(
     const roomId = new ObjectId()
     const userId = new ObjectId()
 
+    const db = await getTestMongoClient(globalThis)
     const beforeCount = await collections(db).messages.countDocuments()
 
     const save = await saveMessage(
@@ -67,6 +78,7 @@ test('getMessages', async () => {
   const overNum = 2
   const userId = new ObjectId()
   const account = 'test'
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
   const roomId = new ObjectId()
 
@@ -122,6 +134,7 @@ test('getMessages', async () => {
 test('getMessages just', async () => {
   const userId = new ObjectId()
   const account = 'test'
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
   const roomId = new ObjectId()
 
@@ -161,6 +174,7 @@ test('getMessages just', async () => {
 test('getMessages vote', async () => {
   const userId = new ObjectId()
   const account = 'test'
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
   const roomId = new ObjectId()
 
@@ -199,6 +213,7 @@ test('getMessages vote', async () => {
 test('getMessages removed', async () => {
   const userId = new ObjectId()
   const account = 'test'
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
   const roomId = new ObjectId()
 

@@ -1,49 +1,72 @@
 /* eslint-disable no-console */
+import { once } from 'node:events'
+import { afterAll, beforeAll } from 'vitest'
 import { MongoClient } from 'mongodb'
+import { Redis, type RedisOptions } from 'ioredis'
+import { getTestDbName } from './testUtil.js'
 
 const TEST_ROOT_MONGODB_URI =
   process.env.TEST_ROOT_MONGODB_URI ?? 'mongodb://root:example@localhost:27018'
 
-const createUser = async (
+async function createMongoUser(
   client: MongoClient,
   dbname: string,
   user: string,
   password: string
-) => {
+) {
+  if (process.env.NODE_ENV !== 'test') {
+    throw new Error('not test!!!!')
+  }
   try {
     await client.db(dbname).removeUser(user)
   } catch (e) {
-    /* empty */
+    console.log(e)
   }
 
-  console.log(`create user: ${user} to ${dbname}`)
   await client.db(dbname).addUser(user, password, {
-    roles: ['readWrite']
+    roles: ['readWrite', 'dbAdmin']
   })
 }
 
-export async function setup() {
-  const client = await MongoClient.connect(TEST_ROOT_MONGODB_URI)
+beforeAll(async () => {
+  const rootClient = await MongoClient.connect(TEST_ROOT_MONGODB_URI)
 
-  await createUser(
-    client,
-    'mzm-test',
-    'mzm-backend-test',
-    'mzm-backend-test-password'
+  const dbName = getTestDbName(process.env.VITEST_POOL_ID!)
+  const testUserName = 'mzm-backend-test'
+  const testUserPssword = 'mzm-backend-test-password'
+
+  await createMongoUser(rootClient, dbName, testUserName, testUserPssword)
+
+  await rootClient.close()
+
+  globalThis.mongoClient = await MongoClient.connect(
+    `mongodb://${testUserName}:${testUserPssword}@localhost:27018/${dbName}`
   )
+})
 
-  await client.close()
-
-  return async () => {
-    const TEST_MONGODB_URI =
-      process.env.TEST_MONTO_URI ??
-      'mongodb://mzm-backend-test:mzm-backend-test-password@localhost:27018/mzm-test'
-
-    const client = await MongoClient.connect(TEST_MONGODB_URI)
-    const collections = await client.db().collections()
-    for (const collection of collections) {
-      await collection.drop()
-    }
-    await client.close()
+beforeAll(async () => {
+  const testSessionRedisOptions: RedisOptions = {
+    host: process.env.TEST_SESSION_REDIS_HOST ?? 'localhost',
+    port: process.env.TEST_SESSION_REDIS_PORT
+      ? Number(process.env.TEST_SESSION_REDIS_PORT)
+      : 6380,
+    enableOfflineQueue: false,
+    connectTimeout: 30000,
+    db: 1
   }
-}
+  const redisClient = new Redis(testSessionRedisOptions)
+  redisClient.on('error', (e) => {
+    console.error(e)
+  })
+
+  await Promise.all([once(redisClient, 'ready')])
+  globalThis.redisClient = redisClient
+})
+
+afterAll(async () => {
+  await globalThis.mongoClient.db().dropDatabase()
+  await Promise.all([
+    globalThis.mongoClient.close(),
+    globalThis.redisClient.disconnect()
+  ])
+})

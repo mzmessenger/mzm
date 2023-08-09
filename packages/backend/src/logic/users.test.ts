@@ -1,22 +1,37 @@
-import { vi, test, expect } from 'vitest'
-vi.mock('../lib/logger')
-vi.mock('../lib/redis', () => {
+import { vi, test, expect, beforeAll } from 'vitest'
+vi.mock('../lib/logger.js')
+vi.mock('../lib/redis.js', () => {
   return {
     lock: vi.fn(() => Promise.resolve(true)),
     release: vi.fn()
   }
 })
 vi.mock('../lib/db.js', async () => {
-  const { mockDb } = await import('../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import { ObjectId } from 'mongodb'
-import { getTestMongoClient } from '../../test/testUtil'
-import * as config from '../config'
-import { collections, COLLECTION_NAMES, type Enter, type Room } from '../lib/db'
-import { initGeneral } from './rooms'
-import { initUser, getAllUserIdsInRoom } from './users'
+import { getTestMongoClient } from '../../test/testUtil.js'
+import * as config from '../config.js'
+import {
+  collections,
+  COLLECTION_NAMES,
+  type Enter,
+  type Room
+} from '../lib/db.js'
+import { initGeneral } from './rooms.js'
+import { initUser, getAllUserIdsInRoom } from './users.js'
+
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+})
 
 test('initUser', async () => {
   await initGeneral()
@@ -27,7 +42,7 @@ test('initUser', async () => {
   await initUser(userId, account)
 
   // user
-  const db = await getTestMongoClient()
+  const db = await getTestMongoClient(globalThis)
   const foundUser = await collections(db).users.findOne({ _id: userId })
   expect(userId.toHexString()).toStrictEqual(foundUser?._id.toHexString())
   expect(`${account}_${userId.toHexString()}`).toStrictEqual(foundUser?.account)
@@ -69,7 +84,7 @@ test('getAllUserIdsInRoom', async () => {
     }
   })
 
-  const db = await getTestMongoClient()
+  const db = await getTestMongoClient(globalThis)
   await collections(db).enter.insertMany(enter)
 
   const ids = await getAllUserIdsInRoom(roomId.toHexString())

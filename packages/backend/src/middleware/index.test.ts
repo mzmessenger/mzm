@@ -14,7 +14,7 @@ import { default as jsonwebtoken } from 'jsonwebtoken'
 import { NextFunction, Request, Response } from 'express'
 import { HEADERS } from 'mzm-shared/auth/constants'
 import { verifyAccessToken } from 'mzm-shared/auth/index'
-import { checkAccessToken } from './index'
+import { checkAccessToken } from './index.js'
 
 test('checkAccessToken (success)', async () => {
   expect.assertions(3)

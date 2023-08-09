@@ -1,31 +1,39 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import { vi, test, expect } from 'vitest'
-vi.mock('../lib/logger')
-vi.mock('../lib/redis', () => {
+import { vi, test, expect, beforeAll } from 'vitest'
+vi.mock('../lib/logger.js')
+vi.mock('../lib/redis.js', () => {
   return {
     lock: vi.fn(() => Promise.resolve(true)),
     release: vi.fn()
   }
 })
-vi.mock('../lib/elasticsearch/index', () => {
+vi.mock('../lib/elasticsearch/index.js', () => {
   return {
     client: {}
   }
 })
 vi.mock('../lib/db.js', async () => {
-  const { mockDb } = await import('../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import { ObjectId, WithId } from 'mongodb'
-import { getTestMongoClient, createRequest } from '../../test/testUtil'
-import * as config from '../config'
-import { collections, type User, type Enter } from '../lib/db'
-import { initGeneral } from '../logic/rooms'
 import { BadRequest } from 'mzm-shared/lib/errors'
-import { exitRoom, getUsers } from './rooms'
+import { getTestMongoClient, createRequest } from '../../test/testUtil.js'
+import * as config from '../config.js'
+import { collections, type User, type Enter } from '../lib/db.js'
+import { initGeneral } from '../logic/rooms.js'
+import { exitRoom, getUsers } from './rooms.js'
 
-const db = await getTestMongoClient()
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+})
 
 test('exitRoom fail (general)', async () => {
   expect.assertions(1)
@@ -33,6 +41,7 @@ test('exitRoom fail (general)', async () => {
 
   const userId = new ObjectId()
 
+  const db = await getTestMongoClient(globalThis)
   const general = await collections(db).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
@@ -94,6 +103,7 @@ test('getUsers', async () => {
       users.push(user)
     }
   }
+  const db = await getTestMongoClient(globalThis)
   await Promise.all([
     collections(db).enter.insertMany(insert),
     collections(db).users.insertMany(users)

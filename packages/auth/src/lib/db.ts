@@ -1,5 +1,5 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
-import { MONGODB_URI, DB_NAME } from '../config.js'
+import { MONGODB_URI } from '../config.js'
 import { logger } from './logger.js'
 
 type CollectionType = {
@@ -20,7 +20,7 @@ export const collections = (c: MongoClient): CollectionType => {
   }
 
   if (!connected) {
-    const db = c.db(DB_NAME)
+    const db = c.db()
     _collections.users = db.collection('users')
     _collections.removed = db.collection('removed')
   }
@@ -41,7 +41,7 @@ export const mongoClient = async () => {
 }
 
 export const connect = async (c: MongoClient) => {
-  const db = c.db(DB_NAME)
+  const db = c.db()
   _collections.users = db.collection('users')
   _collections.removed = db.collection('removed')
 

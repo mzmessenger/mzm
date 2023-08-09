@@ -1,35 +1,44 @@
-import { vi, test, expect, beforeEach } from 'vitest'
+import { vi, test, expect, beforeAll } from 'vitest'
 
 vi.mock('undici', () => {
   return { request: vi.fn() }
 })
-vi.mock('image-size')
-vi.mock('../../lib/logger')
-vi.mock('../../lib/storage')
+vi.mock('../../lib/image.js')
+vi.mock('../../lib/logger.js')
+vi.mock('../../lib/storage.js')
 vi.mock('../../lib/db.js', async () => {
-  const { mockDb } = await import('../../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../../lib/db.js')>(
+    '../../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
-import sizeOf from 'image-size'
-import { createFileRequest, getTestMongoClient } from '../../../test/testUtil'
-import { collections, RoomStatusEnum } from '../../lib/db'
-import * as storage from '../../lib/storage'
-import * as config from '../../config'
 import { BadRequest } from 'mzm-shared/lib/errors'
-import { uploadRoomIcon } from './index'
+import {
+  createFileRequest,
+  getTestMongoClient
+} from '../../../test/testUtil.js'
+import { collections, RoomStatusEnum } from '../../lib/db.js'
+import * as storage from '../../lib/storage.js'
+import * as config from '../../config.js'
+import { uploadRoomIcon } from './index.js'
+import { sizeOf } from '../../lib/image.js'
 
-beforeEach(() => {
-  vi.resetAllMocks()
+beforeAll(async () => {
+  const { mongoClient } = await import('../../lib/db.js')
+  const { getTestMongoClient } = await import('../../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
 test('uploadRoomIcon', async () => {
   const roomId = new ObjectId()
   const name = roomId.toHexString()
 
-  const db = await getTestMongoClient()
+  const db = await getTestMongoClient(globalThis)
   await collections(db).rooms.insertOne({
     _id: roomId,
     name,
@@ -37,12 +46,10 @@ test('uploadRoomIcon', async () => {
     status: RoomStatusEnum.CLOSE
   })
 
-  const putObjectMock = vi.mocked(storage.putObject)
-  putObjectMock.mockResolvedValueOnce({} as never)
+  vi.mocked(storage.putObject).mockResolvedValueOnce({} as never)
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, {
+  vi.mocked(sizeOf).mockImplementationOnce(() => {
+    return Promise.resolve({
       width: config.icon.MAX_USER_ICON_SIZE,
       height: config.icon.MAX_USER_ICON_SIZE
     })
@@ -133,9 +140,8 @@ test('uploadRoomIcon: validation: size over ', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, {
+  vi.mocked(sizeOf).mockImplementationOnce(() => {
+    return Promise.resolve({
       width: config.icon.MAX_ROOM_ICON_SIZE + 1,
       height: config.icon.MAX_ROOM_ICON_SIZE + 1
     })

@@ -1,32 +1,40 @@
-import { vi, test, expect, beforeEach } from 'vitest'
-vi.mock('../lib/logger')
+import { vi, test, expect, beforeEach, beforeAll } from 'vitest'
 vi.mock('../lib/db.js', async () => {
-  const { mockDb } = await import('../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
-import { ObjectId } from 'mongodb'
 import type { REQUEST } from 'mzm-shared/type/api'
+import { ObjectId } from 'mongodb'
+import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
 import {
   dropCollection,
   createRequest,
   getTestMongoClient
-} from '../../test/testUtil'
-import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
-import { collections, COLLECTION_NAMES } from '../lib/db'
-import { update, getUserInfo, updateAccount } from './users'
+} from '../../test/testUtil.js'
+import { collections, COLLECTION_NAMES } from '../lib/db.js'
+import { update, getUserInfo, updateAccount } from './users.js'
 
-beforeEach(async () => {
-  const client = await getTestMongoClient()
-  await dropCollection(client, COLLECTION_NAMES.USERS)
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
-const db = await getTestMongoClient()
+beforeEach(async () => {
+  const client = await getTestMongoClient(globalThis)
+  await dropCollection(client, COLLECTION_NAMES.USERS)
+})
 
 test('update', async () => {
   const userId = new ObjectId()
   const account = `aaa-${userId.toHexString()}`
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
 
   const body: Partial<REQUEST['/api/user/@me']['PUT']['body']> = {
@@ -47,6 +55,7 @@ test('update failed: exists account', async () => {
   const userId = new ObjectId()
   const account = 'aaa'
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
   await collections(db).users.insertOne({
     _id: new ObjectId(),
@@ -67,6 +76,7 @@ test('getUserInfo', async () => {
   const userId = new ObjectId()
   const account = 'aaa'
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
 
   const body = { account }
@@ -86,6 +96,7 @@ test('getUserInfo before signUp', async () => {
   const userId = new ObjectId()
   const account = ''
 
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({
     _id: userId,
     account,

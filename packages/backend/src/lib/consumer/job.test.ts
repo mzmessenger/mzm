@@ -1,15 +1,15 @@
 import { vi, test, expect } from 'vitest'
-vi.mock('../logger')
+vi.mock('../logger.js')
 
-vi.mock('../redis', () => {
+vi.mock('../redis.js', () => {
   return {
     client: vi.fn(() => ({
       xack: vi.fn()
     }))
   }
 })
-vi.mock('../../logic/rooms')
-vi.mock('./common', () => {
+vi.mock('../../logic/rooms.js')
+vi.mock('./common.js', () => {
   return {
     initConsumerGroup: vi.fn(),
     consumeGroup: vi.fn(),
@@ -17,13 +17,13 @@ vi.mock('./common', () => {
   }
 })
 
-import { createXackMock } from '../../../test/testUtil'
-import * as config from '../../config'
-import { JobType } from '../../types'
-import { client } from '../redis'
-import { syncSeachAllRooms } from '../../logic/rooms'
-import { initConsumerGroup, consumeGroup } from './common'
-import { job, initJobConsumerGroup, consumeJob } from './job'
+import { createXackMock } from '../../../test/testUtil.js'
+import * as config from '../../config.js'
+import { JobType } from '../../types.js'
+import { client } from '../redis.js'
+import { syncSeachAllRooms } from '../../logic/rooms.js'
+import { initConsumerGroup, consumeGroup } from './common.js'
+import { job, initJobConsumerGroup, consumeJob } from './job.js'
 
 test('initJobConsumerGroup', async () => {
   const init = vi.mocked(initConsumerGroup)

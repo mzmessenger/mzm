@@ -1,26 +1,36 @@
-import { vi, test, expect, beforeAll } from 'vitest'
-vi.mock('../lib/logger')
-vi.mock('../lib/redis', () => {
+/* eslint-disable no-irregular-whitespace */
+import { vi, test, expect, beforeAll, beforeEach } from 'vitest'
+vi.mock('../lib/logger.js')
+vi.mock('../lib/redis.js', () => {
   return {
     lock: vi.fn(() => Promise.resolve(true)),
     release: vi.fn()
   }
 })
 vi.mock('../lib/db.js', async () => {
-  const { mockDb } = await import('../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import { ObjectId } from 'mongodb'
-import { getTestMongoClient, dropCollection } from '../../test/testUtil'
-import * as config from '../config'
-import { collections, RoomStatusEnum, COLLECTION_NAMES } from '../lib/db'
-import * as redis from '../lib/redis'
-import { initGeneral, enterRoom, isValidateRoomName } from './rooms'
-
-const db = await getTestMongoClient()
+import { getTestMongoClient, dropCollection } from '../../test/testUtil.js'
+import * as config from '../config.js'
+import { collections, RoomStatusEnum, COLLECTION_NAMES } from '../lib/db.js'
+import * as redis from '../lib/redis.js'
+import { initGeneral, enterRoom, isValidateRoomName } from './rooms.js'
 
 beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+})
+
+beforeEach(async () => {
+  const db = await getTestMongoClient(globalThis)
   await dropCollection(db, COLLECTION_NAMES.ROOMS)
 })
 
@@ -28,6 +38,7 @@ test('initGeneral', async () => {
   const release = vi.mocked(redis.release)
   release.mockClear()
 
+  const db = await getTestMongoClient(globalThis)
   let general = await collections(db)
     .rooms.find({
       name: config.room.GENERAL_ROOM_NAME
@@ -76,6 +87,7 @@ test('initGeneral (locked)', async () => {
   const release = vi.mocked(redis.release)
   release.mockClear()
 
+  const db = await getTestMongoClient(globalThis)
   const originUpdate = collections(db).rooms.updateOne
   const updateMock = vi.fn()
   collections(db).rooms.updateOne = updateMock
@@ -92,6 +104,7 @@ test('enterRoom', async () => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
+  const db = await getTestMongoClient(globalThis)
   const before = await collections(db)
     .enter.find({
       userId: userId,

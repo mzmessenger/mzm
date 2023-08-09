@@ -1,38 +1,47 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { IncomingHttpHeaders } from 'http'
-import { vi, test, expect, beforeEach } from 'vitest'
+import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('undici', () => {
   return { request: vi.fn() }
 })
-vi.mock('../../lib/logger')
-vi.mock('../../lib/storage')
+vi.mock('../../lib/logger.js')
+vi.mock('../../lib/storage.js')
 vi.mock('../../lib/db.js', async () => {
-  const { mockDb } = await import('../../../test/mock.js')
-  return { ...(await mockDb(await vi.importActual('../../lib/db.js'))) }
+  const actual = await vi.importActual<typeof import('../../lib/db.js')>(
+    '../../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
 import { Readable } from 'stream'
 import { ObjectId, WithId } from 'mongodb'
 import { request } from 'undici'
-import { createRequest, getTestMongoClient } from '../../../test/testUtil'
-import { createGetObjectMockValue, createHeadObjectMockValue } from './testUtil'
-import { collections, type User } from '../../lib/db'
-import * as storage from '../../lib/storage'
 import { BadRequest } from 'mzm-shared/lib/errors'
-import { getUserIcon } from './index'
+import { createRequest, getTestMongoClient } from '../../../test/testUtil.js'
+import {
+  createGetObjectMockValue,
+  createHeadObjectMockValue
+} from './testUtil.js'
+import { collections, type User } from '../../lib/db.js'
+import * as storage from '../../lib/storage.js'
+import { getUserIcon } from './index.js'
+
+beforeAll(async () => {
+  const { mongoClient } = await import('../../lib/db.js')
+  const { getTestMongoClient } = await import('../../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
+})
 
 type ResponseBody = Awaited<ReturnType<typeof request>>['body']
-
-beforeEach(() => {
-  vi.resetAllMocks()
-})
 
 test('getUserIcon from storage', async () => {
   const userId = new ObjectId()
   const account = userId.toHexString()
   const version = '12345'
 
-  const db = await getTestMongoClient()
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({
     _id: userId,
     account,
@@ -42,7 +51,7 @@ test('getUserIcon from storage', async () => {
 
   const req = createRequest(null, { params: { account, version } })
 
-  const headObjectMock = vi.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject).mockClear()
   const headers = createHeadObjectMockValue({
     ETag: 'etag',
     ContentType: 'image/png',
@@ -90,12 +99,12 @@ test.each([
     if (iconVersion) {
       user.icon = { key: 'iconkey', version: iconVersion }
     }
-    const db = await getTestMongoClient()
+    const db = await getTestMongoClient(globalThis)
     await collections(db).users.insertOne(user)
 
-    const headObjectMock = vi.mocked(storage.headObject)
-    const getObjectMock = vi.mocked(storage.getObject)
-    const requestMock = vi.mocked(request)
+    const headObjectMock = vi.mocked(storage.headObject).mockClear()
+    const getObjectMock = vi.mocked(storage.getObject).mockClear()
+    const requestMock = vi.mocked(request).mockClear()
     const headers: IncomingHttpHeaders = {
       ETag: 'etag',
       'content-type': 'image/png',
@@ -143,10 +152,10 @@ test('getUserIcon from identicon: not found on storage', async () => {
       version: '1234'
     }
   }
-  const db = await getTestMongoClient()
+  const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne(user)
 
-  const headObjectMock = vi.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject).mockClear()
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
   const requestMock = vi.mocked(request)
   const headers: IncomingHttpHeaders = {

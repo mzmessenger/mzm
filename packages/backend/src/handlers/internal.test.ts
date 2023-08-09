@@ -1,11 +1,11 @@
 import { vi, test, expect } from 'vitest'
-vi.mock('../lib/logger')
-vi.mock('./internal/socket')
+vi.mock('../lib/logger.js')
+vi.mock('./internal/socket.js')
 
 import { ObjectId } from 'mongodb'
 import { TO_SERVER_CMD } from 'mzm-shared/type/socket'
-import { createRequest } from '../../test/testUtil'
-import { socket } from './internal'
+import { createRequest } from '../../test/testUtil.js'
+import { socket } from './internal.js'
 import {
   connection,
   sendMessage,
@@ -21,7 +21,7 @@ import {
   sendVoteAnswer,
   removeVoteAnswer,
   updateRoomDescription
-} from './internal/socket'
+} from './internal/socket.js'
 
 test.each([
   [TO_SERVER_CMD.CONNECTION, connection],
