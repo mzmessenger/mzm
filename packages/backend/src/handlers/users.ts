@@ -94,7 +94,9 @@ export const updateAccount = async (req: Request) => {
     }
   )
 
-  return updated.value
+  return {
+    update: updated.value?._id.toHexString()
+  }
 }
 
 const sortRoomsParser = z.object({

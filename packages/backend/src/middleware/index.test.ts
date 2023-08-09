@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { vi, test, expect } from 'vitest'
 vi.mock('mzm-shared/auth/index', async () => {
   const module = await vi.importActual<typeof import('mzm-shared/auth/index')>(
@@ -42,6 +43,7 @@ test('checkAccessToken (success)', async () => {
   const next = vi.fn(() => {
     expect(verifyAccessTokenMock).toHaveBeenCalledTimes(1)
     expect(verifyAccessTokenMock.mock.calls[0][0]).toStrictEqual('accesstoken')
+    // @ts-expect-error
     expect(req.headers[HEADERS.USER_ID]).toStrictEqual('aaa')
   })
 

@@ -1,4 +1,4 @@
-import React, { forwardRef, useState } from 'react'
+import React, { forwardRef, useState, type MutableRefObject } from 'react'
 import styled from '@emotion/styled'
 import {
   WIDTH_MOBILE,
@@ -15,7 +15,10 @@ export type EmojiSelectorProps = {
   onClose?: () => void
 }
 
-function EmojiSelector(props: EmojiSelectorProps, ref) {
+function EmojiSelector(
+  props: EmojiSelectorProps,
+  ref: MutableRefObject<HTMLDialogElement>
+) {
   const [emojiKey, setEmojiKey] = useState<EmojisKey>(emojiList[0][0])
 
   const candidateEmoji = emojis.get(emojiKey) ?? emojiList[0][1]

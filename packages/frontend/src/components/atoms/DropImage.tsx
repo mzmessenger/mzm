@@ -11,8 +11,8 @@ export const DropImage: React.FC<Props> = ({ onloadFile }) => {
 
   // ターゲット以外の場所にdropしてしまった時にブラウザで画像を開かないように
   useEffect(() => {
-    const _onDragOver = (e) => e.preventDefault()
-    const _onDrop = (e) => e.preventDefault()
+    const _onDragOver: EventListener = (e) => e.preventDefault()
+    const _onDrop: EventListener = (e) => e.preventDefault()
     document.addEventListener('dragover', _onDragOver, false)
     document.addEventListener('drop', _onDrop, false)
 

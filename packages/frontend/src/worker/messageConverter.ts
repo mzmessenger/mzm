@@ -2,7 +2,7 @@ import { marked } from 'marked'
 import { mangle } from 'marked-mangle'
 import escape from 'validator/lib/escape'
 import { expose } from 'comlink'
-import { emojis } from '../constants'
+import { emojis, type EmojisKey } from '../constants'
 
 // bundle size
 import hljs from 'highlight.js/lib/common'
@@ -84,7 +84,9 @@ function emojiConvert(text: string): string {
     const [, p1, emojiStr] = found
     const offset = found.index + p1.length
     convertedStr += found.input.substring(0, offset)
-    convertedStr += emojis.has(emojiStr) ? emojis.get(emojiStr).value : emojiStr
+    convertedStr += emojis.has(emojiStr as EmojisKey)
+      ? emojis.get(emojiStr as EmojisKey).value
+      : emojiStr
     index += offset + emojiStr.length
     found = text.substring(index).match(regexp)
   }

@@ -1,4 +1,5 @@
 /* eslint-disable no-console */
+import('./types.js')
 import { once } from 'node:events'
 import { afterAll, beforeAll } from 'vitest'
 import { MongoClient } from 'mongodb'
@@ -39,7 +40,7 @@ beforeAll(async () => {
 
   await rootClient.close()
 
-  globalThis.mongoClient = await MongoClient.connect(
+  globalThis.testMongoClient = await MongoClient.connect(
     `mongodb://${testUserName}:${testUserPssword}@localhost:27018/${dbName}`
   )
 })
@@ -60,13 +61,13 @@ beforeAll(async () => {
   })
 
   await Promise.all([once(redisClient, 'ready')])
-  globalThis.redisClient = redisClient
+  globalThis.testRedisClient = redisClient
 })
 
 afterAll(async () => {
-  await globalThis.mongoClient.db().dropDatabase()
+  await globalThis.testMongoClient.db().dropDatabase()
   await Promise.all([
-    globalThis.mongoClient.close(),
-    globalThis.redisClient.disconnect()
+    globalThis.testMongoClient.close(),
+    globalThis.testRedisClient.disconnect()
   ])
 })

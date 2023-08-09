@@ -1,3 +1,4 @@
+import type { Request } from 'express'
 import type { SerializeUser, RequestUser } from '../types.js'
 import type { WrapFn } from 'mzm-shared/lib/wrap'
 import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
@@ -33,7 +34,7 @@ export const deserializeUser = (
     .catch((err) => done(err))
 }
 
-export const remove: WrapFn<string> = async (req) => {
+export const remove: WrapFn<Request, string> = async (req) => {
   const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
     throw new Unauthorized('no auth token')

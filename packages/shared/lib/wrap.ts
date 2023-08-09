@@ -1,13 +1,14 @@
 import type { Request, Response, NextFunction } from 'express'
 
-export type WrapFn<Res = unknown> = {
-  (_req: Request): Promise<Res>
+export type WrapFn<Req = Request, Res = string | object | void> = {
+  (_req: Req): Promise<Res>
 }
 
-export const wrap = <T>(fn: WrapFn<T>) => {
-  return (req: Request, res: Response, next: NextFunction) => {
+export const wrap = <Req>(fn: WrapFn<Req>) => {
+  return (req: unknown, res: Response, next: NextFunction) => {
     try {
-      return fn(req)
+      // eslint-disable-next-line @typescript-eslint/no-explicit-any
+      return fn(req as any)
         .then((data) => {
           if (!data) {
             return res.status(200).send('')

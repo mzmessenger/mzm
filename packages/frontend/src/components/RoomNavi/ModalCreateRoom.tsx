@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import React, { useState, type FormEventHandler } from 'react'
 import { useNavigate } from 'react-router-dom'
 import styled from '@emotion/styled'
 import { useRoomActions } from '../../recoil/rooms/hooks'
@@ -6,7 +6,7 @@ import { useSocketActions } from '../../recoil/socket/hooks'
 import { Button } from '../atoms/Button'
 import { TransparentButton } from '../atoms/Button'
 import { ModalProps, ModalBase } from '../atoms/Modal'
-import { InputText } from '../atoms/InputText'
+import { InputText, type Props as InputTextProps } from '../atoms/InputText'
 
 type Props = ModalProps
 
@@ -17,8 +17,8 @@ export const ModalCraeteRoom = ({ open, onClose }: Props) => {
   const { getRooms } = useSocketActions()
   const { createRoom } = useRoomActions({ getRooms })
 
-  const handleSubmit = (evt) => {
-    evt.preventDefault()
+  const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
+    e.preventDefault()
     // @todo エラー時の処理
     createRoom(txt)
       .then((data) => {
@@ -36,7 +36,7 @@ export const ModalCraeteRoom = ({ open, onClose }: Props) => {
       })
   }
 
-  const onChange = (e) => {
+  const onChange: InputTextProps['onChange'] = (e) => {
     setTxt(e.target.value)
   }
 

@@ -71,6 +71,7 @@ export default defineConfig(({ mode }) => {
     build: {
       emptyOutDir: true,
       sourcemap: true,
+      target: 'esnext',
       outDir: path.resolve(dirname, 'dist')
     },
     root: path.resolve(__dirname, 'src'),

@@ -1,4 +1,9 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  type FormEventHandler
+} from 'react'
 import styled from '@emotion/styled'
 import Add from '@mui/icons-material/Add'
 import SendIcon from '@mui/icons-material/Send'
@@ -52,7 +57,7 @@ export const InputArea = () => {
     setRows(1)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault()
     submit()
   }

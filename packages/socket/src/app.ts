@@ -13,7 +13,7 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
   consume()
 
   wss.on('connection', async function connection(ws: ExtWebSocket, req) {
-    let userId = null
+    let userId: string | null = null
     let twitterUserName = null
     let githubUserName = null
 

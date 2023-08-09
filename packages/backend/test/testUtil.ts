@@ -2,6 +2,7 @@
 /* eslint-disable no-console */
 import type { MulterFile } from '../src/types/index.js'
 import type { MongoClient, ObjectId } from 'mongodb'
+import('./types.js')
 import { vi } from 'vitest'
 import { Request } from 'express'
 import { client as RedisClient } from '../src/lib/redis.js'
@@ -26,11 +27,11 @@ export const getTestDbName = (suffix: string) => {
 }
 
 export const getTestMongoClient = async (context: typeof globalThis) => {
-  return context.mongoClient as MongoClient
+  return context.testMongoClient as MongoClient
 }
 
 export const getTestRedisClient = async (context: typeof globalThis) => {
-  return context.redisClient
+  return context.testRedisClient
 }
 
 export const dropCollection = async (client: MongoClient, name: string) => {

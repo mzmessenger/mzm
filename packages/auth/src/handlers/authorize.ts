@@ -31,8 +31,9 @@ const TokenBody = z.union([
 ])
 
 export const token: WrapFn<
+  Request,
   AUTH_API_RESPONSE['/auth/token']['POST']['body'][200]
-> = async (req: Request) => {
+> = async (req) => {
   logger.info('[accessToken]', 'start')
   const body = TokenBody.safeParse(req.body)
   if (body.success === false) {
@@ -101,7 +102,9 @@ const AuthorizationQuery = z.object({
   state: z.string().optional()
 })
 
-export const createAuthorize = (res: NonceResponse): WrapFn<string> => {
+export const createAuthorize = (
+  res: NonceResponse
+): WrapFn<Request, string> => {
   const nonce = res.locals.nonce
   return async (req) => {
     const { user } = req as PassportRequest

@@ -37,7 +37,8 @@ export const initConsumerGroup = async (stream: string, groupName: string) => {
 export const createParser = (
   handler: (id: string, messages: string[]) => Promise<void | null>
 ) => {
-  return async (read) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return async (read: any) => {
     if (!read) {
       return null
     }

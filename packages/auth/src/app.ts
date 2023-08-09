@@ -105,9 +105,11 @@ export const createApp = ({ client }: Options) => {
       }
     }),
     (req, res, next) => {
-      return wrap<string>(
-        authorizeHandlers.createAuthorize(res as NonceResponse)
-      )(req, res, next)
+      return wrap(authorizeHandlers.createAuthorize(res as NonceResponse))(
+        req,
+        res,
+        next
+      )
     }
   )
 

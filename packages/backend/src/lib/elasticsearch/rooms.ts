@@ -198,7 +198,11 @@ export const insertRooms = async (roomIds: string[]) => {
       operation: unknown
       document: unknown
     }[] = []
-    bulkResponse.items.forEach((action, i) => {
+
+    const items = bulkResponse.items as {
+      [key: string]: { error: unknown; status: unknown }
+    }[]
+    items.forEach((action, i) => {
       const operation = Object.keys(action)[0]
       if (action[operation].error) {
         erroredDocuments.push({
@@ -264,7 +268,8 @@ export const searchRoom = async (
     body: body
   })
 
-  const ids = resBody.hits.hits.map((elem) => new ObjectId(elem._id))
+  const hits = resBody.hits.hits as { _id: string }[]
+  const ids = hits.map((elem) => new ObjectId(elem._id))
   const db = await mongoClient()
   const cursor = await collections(db).rooms.find({ _id: { $in: ids } })
 

@@ -14,7 +14,11 @@ export type Cache = {
   code_verifier?: string
 }
 
-const decodeAccessToken = (accessToken: string) => {
+type DecodeAccessToken =
+  | { expired: boolean; user: AccessToken['user'] }
+  | { expired: true; user: null }
+
+const decodeAccessToken = (accessToken: string): DecodeAccessToken => {
   try {
     const decoded = jwt_decode<JwtPayload & AccessToken>(accessToken)
     const exp = dayjs(new Date(decoded.exp * 1000))
@@ -23,7 +27,7 @@ const decodeAccessToken = (accessToken: string) => {
     return { expired: exp <= Date.now(), user: decoded.user }
   } catch (e) {
     logger.error(e)
-    return { expired: true, accessToken: '', user: null }
+    return { expired: true, user: null }
   }
 }
 

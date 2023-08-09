@@ -1,4 +1,5 @@
-import express from 'express'
+import type { MulterFile } from './types/index.js'
+import express, { type Request } from 'express'
 import cors from 'cors'
 import bodyParser from 'body-parser'
 import multer from 'multer'
@@ -63,7 +64,7 @@ export const createApp = () => {
     '/api/icon/user',
     checkAccessToken,
     iconUpload.single('icon'),
-    wrap(icon.uploadUserIcon)
+    wrap<Request & { file?: MulterFile }>(icon.uploadUserIcon)
   )
   app.get('/api/icon/rooms/:roomname/:version', streamWrap(icon.getRoomIcon))
   app.post(

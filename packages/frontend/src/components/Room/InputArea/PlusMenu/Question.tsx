@@ -1,14 +1,16 @@
-import React from 'react'
+import React, { type ChangeEventHandler, type MouseEventHandler } from 'react'
 import styled from '@emotion/styled'
 import { Clear } from '@mui/icons-material'
 import { InputText } from '../../../atoms/InputText'
 
-export const Question: React.FC<{
+export type Props = {
   value: string
   showClearButton: boolean
-  onChange: (e) => void
-  onClear: (e) => void
-}> = ({ value, showClearButton, onChange, onClear }) => {
+  onChange: ChangeEventHandler<HTMLInputElement>
+  onClear: MouseEventHandler<HTMLButtonElement>
+}
+
+export function Question({ value, showClearButton, onChange, onClear }: Props) {
   return (
     <QuestionWrap>
       <InputText

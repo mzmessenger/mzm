@@ -1,5 +1,5 @@
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
-import { Request } from 'express'
+import type { Request } from 'express'
 import { ObjectId, type WithId, type Document } from 'mongodb'
 import { z } from 'zod'
 import * as config from '../config.js'

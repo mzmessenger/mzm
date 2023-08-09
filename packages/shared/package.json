@@ -18,8 +18,8 @@
   "scripts": {
     "format": "prettier --write auth type ./*.{js,json}",
     "build": "tsc --build tsconfig.json",
-    "pretest": "eslint --ext .ts,.js auth type validator",
     "lint": "eslint --ext .ts,.js auth type validator",
+    "pretest": "concurrently \"npm run lint\" \"npm run build\"",
     "test": "vitest run --config ./vitest.config.ts",
     "test:watch": "vitest --config ./vitest.config.ts"
   },
