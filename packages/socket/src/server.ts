@@ -51,7 +51,7 @@ if (WORKER_NUM > 1 && cluster.isPrimary) {
         port: PORT
       },
       () => {
-        logger.info(`(#${process.pid}) Listening on`, server.address())
+        logger.info(`(#${process.pid}) Listening on`, server?.address())
       }
     )
     createApp({ wss: server })

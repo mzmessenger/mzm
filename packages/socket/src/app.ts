@@ -14,13 +14,17 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
 
   wss.on('connection', async function connection(ws: ExtWebSocket, req) {
     let userId: string | null = null
-    let twitterUserName = null
-    let githubUserName = null
+    let twitterUserName: string | null = null
+    let githubUserName: string | null = null
 
+    if (!req.url) {
+      return
+    }
     const url = new URL(req.url, `http://${req.headers.host}`)
-    if (url.searchParams.has('token')) {
+    const token = url.searchParams.get('token')
+    if (token) {
       const { err, decoded } = await verifyAccessToken(
-        url.searchParams.get('token'),
+        token,
         JWT.accessTokenSecret,
         {
           issuer: JWT.issuer,
@@ -51,6 +55,9 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
       if (message === 'pong') {
         return
       }
+      if (!userId) {
+        return
+      }
       try {
         const res = await requestSocketAPI(message, userId, id)
         if (res.body) {
@@ -63,6 +70,9 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
     })
 
     ws.on('close', function close() {
+      if (!userId) {
+        return
+      }
       logger.info('closed:', userId, ws.id)
       removeSocket(ws.id, userId)
     })

@@ -10,7 +10,7 @@ COPY ./packages/socket/package.json \
   ./packages/socket/
 COPY ./packages/socket/src/ ./packages/socket/src/
 
-RUN npm install -w packages/socket -w packages/shared && npm run -w packages/socket cleanbuild
+RUN npm install -w mzm-socket -w mzm-shared && npm run -w mzm-socket cleanbuild
 
 FROM node:18-alpine
 
@@ -21,7 +21,7 @@ COPY --from=builder /usr/app/packages/shared/dist/ packages/shared/dist/
 COPY --from=builder /usr/app/packages/shared/package.json packages/shared/package.json
 COPY --from=builder /usr/app/packages/socket/package.json ./packages/socket/
 COPY --from=builder /usr/app/packages/socket/dist/ packages/socket/dist/
-RUN npm install -w packages/socket -w packages/shared --production
+RUN npm install -w mzm-socket -w mzm-shared --production
 
 ENV NODE_ENV=production
 CMD [ "node", "packages/socket/dist/server.js" ]

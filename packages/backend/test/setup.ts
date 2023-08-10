@@ -6,8 +6,17 @@ import { MongoClient } from 'mongodb'
 import { Redis, type RedisOptions } from 'ioredis'
 import { getTestDbName } from './testUtil.js'
 
-const TEST_ROOT_MONGODB_URI =
-  process.env.TEST_ROOT_MONGODB_URI ?? 'mongodb://root:example@localhost:27018'
+const TEST_MONGODB_HOST = process.env.TEST_MONGODB_HOST ?? 'localhost'
+const TEST_MONGODB_PORT = process.env.TEST_MONGODB_PORT ?? '27018'
+const TEST_MONGO_ROOT_USER = process.env.TEST_MONGO_ROOT_USER ?? 'root'
+const TEST_MONGO_ROOT_PASSWORD = process.env.TEST_MONGO_ROOT_PASSWORD ?? 'example'
+const TEST_ROOT_MONGODB_URI = `mongodb://${TEST_MONGO_ROOT_USER}:${TEST_MONGO_ROOT_PASSWORD}@${TEST_MONGODB_HOST}:${TEST_MONGODB_PORT}`
+const TEST_REDIS_HOST = process.env.TEST_REDIS_HOST ?? 'localhost'
+const TEST_REDIS_PORT = process.env.TEST_REDIS_PORT
+  ? Number(process.env.TEST_REDIS_PORT)
+  : 6380
+
+const VERBOSE = process.env.VERBOSE === 'true'
 
 async function createMongoUser(
   client: MongoClient,
@@ -21,12 +30,17 @@ async function createMongoUser(
   try {
     await client.db(dbname).removeUser(user)
   } catch (e) {
-    console.log(e)
+    if (VERBOSE) {
+      console.log('remove user:', e)
+    }
   }
 
   await client.db(dbname).addUser(user, password, {
     roles: ['readWrite', 'dbAdmin']
   })
+  if (VERBOSE) {
+    console.log('createMongoUser:', dbname, user)
+  }
 }
 
 beforeAll(async () => {
@@ -40,34 +54,31 @@ beforeAll(async () => {
 
   await rootClient.close()
 
-  globalThis.testMongoClient = await MongoClient.connect(
-    `mongodb://${testUserName}:${testUserPssword}@localhost:27018/${dbName}`
-  )
+  const testMongoUri = `mongodb://${testUserName}:${testUserPssword}@${TEST_MONGODB_HOST}:${TEST_MONGODB_PORT}/${dbName}`
+  globalThis.testMongoClient = await MongoClient.connect(testMongoUri)
 })
 
 beforeAll(async () => {
-  const testSessionRedisOptions: RedisOptions = {
-    host: process.env.TEST_SESSION_REDIS_HOST ?? 'localhost',
-    port: process.env.TEST_SESSION_REDIS_PORT
-      ? Number(process.env.TEST_SESSION_REDIS_PORT)
-      : 6380,
+  const testRedisOptions: RedisOptions = {
+    host: TEST_REDIS_HOST,
+    port: TEST_REDIS_PORT,
     enableOfflineQueue: false,
     connectTimeout: 30000,
     db: 1
   }
-  const redisClient = new Redis(testSessionRedisOptions)
+  const redisClient = new Redis(testRedisOptions)
   redisClient.on('error', (e) => {
     console.error(e)
   })
 
-  await Promise.all([once(redisClient, 'ready')])
+  await once(redisClient, 'ready')
   globalThis.testRedisClient = redisClient
 })
 
 afterAll(async () => {
   await globalThis.testMongoClient.db().dropDatabase()
   await Promise.all([
-    globalThis.testMongoClient.close(),
-    globalThis.testRedisClient.disconnect()
+    globalThis.testMongoClient?.close(),
+    globalThis.testRedisClient?.disconnect()
   ])
 })

@@ -39,7 +39,7 @@ export const consume = async (startId = '$') => {
   let nextId = startId ? startId : '$'
 
   try {
-    const res = await redis.xread(
+    const res = await redis().xread(
       'COUNT',
       '100',
       'BLOCK',

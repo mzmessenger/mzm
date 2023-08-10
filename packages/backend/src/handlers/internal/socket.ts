@@ -1,3 +1,4 @@
+import { randomUUID } from 'node:crypto'
 import { ObjectId, WithId } from 'mongodb'
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
 import {
@@ -59,7 +60,10 @@ export const connection = async (
   let signup = false
 
   if (!user || !user.account || user.account === '') {
-    const account = data.payload.twitterUserName || data.payload.githubUserName
+    const account =
+      data.payload.twitterUserName ??
+      data.payload.githubUserName ??
+      randomUUID()
     await initUser(id, account)
     signup = true
   }

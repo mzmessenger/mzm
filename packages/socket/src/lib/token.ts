@@ -22,6 +22,9 @@ export const createInternalAccessToken = () => {
         if (err) {
           return reject(err)
         }
+        if (!token) {
+          return reject('no token')
+        }
         resolve(token)
       }
     )

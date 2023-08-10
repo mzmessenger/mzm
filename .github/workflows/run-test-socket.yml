@@ -22,6 +22,17 @@ jobs:
       matrix:
         node-version: [18.x]
 
+    services:
+      redis:
+        image: redis
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
     steps:
       - uses: actions/checkout@v2
       - name: Use Node.js ${{ matrix.node-version }}
@@ -29,10 +40,11 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
-      - run: npm run build -w packages/socket
-      - run: npm run test -w packages/socket
+      - run: npx concurrently "npm run build -w mzm-socket" "npm run lint -w mzm-socket" "npm run build:test -w mzm-socket"
+      - run: npm run test -w mzm-socket
         env:
           CI: true
+          TEST_REDIS_PORT: 6379
       - name: test docker build
         uses: docker/build-push-action@v2
         with:

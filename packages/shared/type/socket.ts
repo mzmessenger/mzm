@@ -179,7 +179,11 @@ export type ClientToSocketType =
 export type SocketToBackendType =
   | {
       cmd: typeof TO_SERVER_CMD.CONNECTION
-      payload: { user: string; twitterUserName: string; githubUserName: string }
+      payload: {
+        user: string
+        twitterUserName: string | null
+        githubUserName: string | null
+      }
     }
   | ClientToSocketType
 

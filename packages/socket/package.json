@@ -8,11 +8,13 @@
     "prestart": "npm run build",
     "start": "node --watch dist/server.js | bunyan",
     "build": "tsc --build tsconfig.json",
+    "build:test": "tsc --build tsconfig.test.json",
     "cleanbuild": "rm -rf dist && npm run build",
     "format": "prettier --write src ./*.{js,json}",
     "lint": "eslint --ext .ts,.js src",
     "pretest": "concurrently \"npm run lint\" \"npm run build\"",
     "test": "vitest run --config ./vitest.config.ts",
+    "test:ci": "vitest run --config ./vitest.config.ts",
     "test:watch": "vitest --config ./vitest.config.ts"
   },
   "dependencies": {

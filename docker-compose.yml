@@ -11,7 +11,7 @@ services:
       - ./.infra/nginx/logs/:/var/log/nginx/
       - ./.infra/nginx/cache/:/var/cache/nginx/
   mongo:
-    image: mongo:4.2
+    image: mongo:5
     ports:
       - 27017:27017
     environment:
@@ -22,7 +22,7 @@ services:
       - ./.infra/mongo/db:/data/db
       - ./.infra/mongo/configdb:/data/configdb
   mongo-test:
-    image: mongo:4.2
+    image: mongo:5
     ports:
       - 27018:27017
     environment:

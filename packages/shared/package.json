@@ -29,5 +29,8 @@
     "jsonwebtoken": "^9.0.0",
     "typescript": "^5.1.6",
     "undici": "^5.14.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.2"
   }
 }
