@@ -1,37 +1,34 @@
 import type { Result } from 'mzm-shared/type'
 import { createHash, randomUUID, getRandomValues } from 'node:crypto'
 
-export const generateState = () => {
+const urlsafeBase64Encode = (str: string) => {
+  const encoded = str.replace(/\//g, '_').replace(/\+/g, '-').replace(/=/g, '')
+
+  return encoded
+}
+
+export const generateAuthorizationCode = () => {
+  return urlsafeBase64Encode(randomUUID())
+}
+export const generateCodeVerifier = () => {
   const mask =
     '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_~.'
-  const randomValues = getRandomValues(new Uint8Array(32))
+
+  const randomValues = getRandomValues(new Uint8Array(43))
+
   let random = ''
   for (const value of randomValues) {
     random += mask[value % mask.length]
   }
 
-  return urlsafeBase64Encode(random)
+  return random
 }
 
-const urlsafeBase64Encode = (str: string) => {
-  const hash = createHash('sha256')
-    .update(str)
-    .digest('base64')
-    .replace(/\//g, '_')
-    .replace(/\+/g, '-')
-    .replace(/=/g, '')
+export const generateCodeChallenge = (code_verifier: string) => {
+  const hash = createHash('sha256').update(code_verifier).digest('base64')
+  const encoded = urlsafeBase64Encode(hash)
 
-  return hash
-}
-
-export const generageAuthorizationCode = () => {
-  return urlsafeBase64Encode(randomUUID())
-}
-
-export const generateCodeChallenge = (str: string) => {
-  const hash = urlsafeBase64Encode(str)
-
-  return hash
+  return encoded
 }
 
 export const verifyCodeChallenge = (options: {

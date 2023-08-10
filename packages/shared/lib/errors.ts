@@ -58,6 +58,18 @@ export class NotFound<T extends object | string>
   }
 }
 
+export class InternalServerError<T extends object | string>
+  extends HttpError
+  implements HttpResponse
+{
+  readonly status: number = 500
+
+  constructor(res: T) {
+    super('InternalServerError')
+    this.res = res
+  }
+}
+
 export const isHttpError = (err: unknown): err is HttpError => {
   return err instanceof HttpError
 }

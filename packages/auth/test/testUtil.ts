@@ -12,17 +12,3 @@ export const getTestMongoClient = async (context: typeof globalThis) => {
 export const getTestSessionRedisClient = async (context: typeof globalThis) => {
   return context.testSessionRedisClient
 }
-
-export const generateCodeVerifier = () => {
-  const mask =
-    '0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz-_~.'
-
-  const randomValues = crypto.getRandomValues(new Uint8Array(43))
-
-  let random = ''
-  for (const value of randomValues) {
-    random += mask[value % mask.length]
-  }
-
-  return random
-}

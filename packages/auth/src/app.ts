@@ -6,7 +6,7 @@ import helmet from 'helmet'
 import passport from 'passport'
 import RedisStore from 'connect-redis'
 import { Strategy as GitHubStrategy } from 'passport-github'
-import { Strategy as Oauth2Strategy } from 'passport-oauth2'
+import { Strategy as TwitterStrategy } from 'passport-twitter'
 import session from 'express-session'
 import { createErrorHandler } from 'mzm-shared/lib/middleware'
 import { wrap } from 'mzm-shared/lib/wrap'
@@ -58,8 +58,8 @@ export const createApp = ({ client }: Options) => {
   })
 
   passport.use(
-    'twitter-oauth2',
-    new Oauth2Strategy(
+    'twitter',
+    new TwitterStrategy(
       TWITTER_STRATEGY_OPTIONS,
       (req, accessToken, refreshToken, profile, done) => {
         twitterHandlers.loginTwitter(
@@ -105,11 +105,9 @@ export const createApp = ({ client }: Options) => {
       }
     }),
     (req, res, next) => {
-      return wrap(authorizeHandlers.createAuthorize(res as NonceResponse))(
-        req,
-        res,
-        next
-      )
+      return wrap(
+        authorizeHandlers.createAuthorize(res as NonceResponse, client)
+      )(req, res, next)
     }
   )
 
@@ -126,12 +124,15 @@ export const createApp = ({ client }: Options) => {
   app.get(
     '/auth/twitter',
     defaultHelmet,
-    oauthHandlers.oauth(client, passport, 'twitter-oauth2')
+    oauthHandlers.oauth(client, passport, 'twitter')
   )
   app.get(
     '/auth/twitter/callback',
     defaultHelmet,
-    passport.authenticate('twitter-oauth2', { failureRedirect: '/' }),
+    passport.authenticate('twitter', {
+      keepSessionInfo: true,
+      failureRedirect: '/auth/error'
+    }),
     (req, res) => {
       oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
     }
@@ -150,7 +151,10 @@ export const createApp = ({ client }: Options) => {
   app.get(
     '/auth/github/callback',
     defaultHelmet,
-    passport.authenticate('github', { failureRedirect: '/' }),
+    passport.authenticate('github', {
+      keepSessionInfo: true,
+      failureRedirect: '/auth/error'
+    }),
     (req, res) => {
       oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
     }
@@ -164,6 +168,10 @@ export const createApp = ({ client }: Options) => {
   })
 
   app.delete('/auth/user', defaultHelmet, wrap(handlers.remove))
+  app.get('/auth/error', defaultHelmet, (_, res) =>
+    // res.status(200).send('error')
+    res.redirect(CLIENT_URL_BASE)
+  )
 
   app.use(createErrorHandler(logger))
 

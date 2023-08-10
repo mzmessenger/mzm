@@ -1,16 +1,19 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
+import assert from 'node:assert'
 import { test, expect, vi, beforeAll } from 'vitest'
 import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
 import {
-  generateCodeVerifier,
   getTestSessionRedisClient,
   getTestMongoClient
 } from '../../test/testUtil.js'
 import {
-  generageAuthorizationCode,
-  saveAuthorizationCode
+  saveAuthorizationCode,
+  generateUniqAuthorizationCode
 } from '../lib/pkce/index.js'
-import { generateCodeChallenge } from '../lib/pkce/util.js'
+import {
+  generateCodeChallenge,
+  generateCodeVerifier
+} from '../lib/pkce/util.js'
 import { collections } from '../lib/db.js'
 import { createTokens, verifyRefreshToken } from '../lib/token.js'
 
@@ -55,7 +58,8 @@ beforeAll(async () => {
 })
 
 test('token (authorization_code)', async () => {
-  const code = generageAuthorizationCode()
+  const sessionRedis = await getTestSessionRedisClient(globalThis)
+  const genCode = await generateUniqAuthorizationCode(sessionRedis)
   const code_verifier = generateCodeVerifier()
   const code_challenge = generateCodeChallenge(code_verifier)
   const user = await collections(
@@ -65,9 +69,11 @@ test('token (authorization_code)', async () => {
     githubId: 'githubId'
   })
 
-  const sessionRedis = await getTestSessionRedisClient(globalThis)
+  expect(genCode.success).toStrictEqual(true)
+  assert.strictEqual(genCode.success, true)
+
   await saveAuthorizationCode(sessionRedis, {
-    code,
+    code: genCode.data.code,
     code_challenge,
     userId: user.insertedId.toHexString()
   })
@@ -78,7 +84,7 @@ test('token (authorization_code)', async () => {
   })
 
   const body = {
-    code,
+    code: genCode.data.code,
     grant_type: 'authorization_code',
     code_verifier
   }
@@ -148,8 +154,9 @@ test('fail token (invalid grant_type)', async () => {
 
 test('fail token (invalid code)', async () => {
   expect.assertions(1)
+  const sessionRedis = await getTestSessionRedisClient(globalThis)
 
-  const code = generageAuthorizationCode()
+  const genCode = await generateUniqAuthorizationCode(sessionRedis)
   const code_verifier = generateCodeVerifier()
   const code_challenge = generateCodeChallenge(code_verifier)
   const user = await collections(
@@ -159,9 +166,10 @@ test('fail token (invalid code)', async () => {
     githubId: 'githubId'
   })
 
-  const sessionRedis = await getTestSessionRedisClient(globalThis)
+  assert.strictEqual(genCode.success, true)
+
   await saveAuthorizationCode(sessionRedis, {
-    code,
+    code: genCode.data.code,
     code_challenge,
     userId: user.insertedId.toHexString()
   })

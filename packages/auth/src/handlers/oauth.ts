@@ -5,32 +5,35 @@ import type { Result } from 'mzm-shared/type'
 import type { SerializeUser } from '../types.js'
 import { sessionRedis } from '../lib/redis.js'
 import {
-  getParametaerFromState,
-  generageAuthorizationCode,
+  getParametaerFromSession,
+  generateUniqAuthorizationCode,
   saveAuthorizationCode,
-  saveParameterWithReuqest
+  saveParameterToSession
 } from '../lib/pkce/index.js'
 import { logger } from '../lib/logger.js'
 import { CLIENT_URL_BASE } from '../config.js'
 
 const _oauthCallback = async (
-  req: Request & { user: SerializeUser }
+  req: Request & { user?: SerializeUser }
 ): Promise<Result<{ redirectUrl: string }>> => {
-  const { state } = req.query
-  if (!state) {
-    return { success: false, error: { status: 400, message: 'invalid state' } }
+  if (!req.user) {
+    return { success: false, error: { status: 400, message: 'invalid user' } }
   }
 
   const client = await sessionRedis()
-  const params = await getParametaerFromState(client, state as string)
+  const params = await getParametaerFromSession(req)
   if (params.success === false) {
     return {
       success: false,
       error: { status: 400, message: params.error.message }
     }
   }
-  const code = generageAuthorizationCode()
+  const generateCode = await generateUniqAuthorizationCode(client)
+  if (generateCode.success === false) {
+    return generateCode
+  }
 
+  const { code } = generateCode.data
   await saveAuthorizationCode(client, {
     code,
     code_challenge: params.data.code_challenge,
@@ -46,7 +49,7 @@ const _oauthCallback = async (
 }
 
 export const oauthCallback = (
-  req: Request & { user: SerializeUser },
+  req: Request & { user?: SerializeUser },
   res: Response
 ) => {
   _oauthCallback(req).then((params) => {
@@ -69,12 +72,12 @@ export const oauth = (
       if (!code_challenge || !code_challenge_method) {
         return res.status(400).send('Bad Request')
       }
-      const save = await saveParameterWithReuqest(client, req)
+      const save = await saveParameterToSession(req)
       if (save.success === false) {
         return res.status(500).send('Internal Server Error')
       }
       passport.authenticate(strategy, {
-        state: save.data.state
+        keepSessionInfo: true
       })(req, res, next)
     } catch (e) {
       return res.status(500).send('Internal Server Error')

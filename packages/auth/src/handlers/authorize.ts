@@ -3,7 +3,12 @@ import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
 import type { WrapFn } from 'mzm-shared/lib/wrap'
 import type { PassportRequest } from '../types.js'
 import type { NonceResponse } from '../middleware/index.js'
-import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
+import type { Redis } from 'ioredis'
+import {
+  BadRequest,
+  Unauthorized,
+  InternalServerError
+} from 'mzm-shared/lib/errors'
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 import { logger } from '../lib/logger.js'
@@ -11,7 +16,7 @@ import { mongoClient, collections } from '../lib/db.js'
 import { sessionRedis } from '../lib/redis.js'
 import { createTokens, verifyRefreshToken } from '../lib/token.js'
 import {
-  generageAuthorizationCode,
+  generateUniqAuthorizationCode,
   saveAuthorizationCode
 } from '../lib/pkce/index.js'
 import { verifyAuthorizationCodeFromRedis } from '../lib/pkce/index.js'
@@ -103,7 +108,8 @@ const AuthorizationQuery = z.object({
 })
 
 export const createAuthorize = (
-  res: NonceResponse
+  res: NonceResponse,
+  client: Redis
 ): WrapFn<Request, string> => {
   const nonce = res.locals.nonce
   return async (req) => {
@@ -117,10 +123,14 @@ export const createAuthorize = (
       throw new BadRequest('invalid query')
     }
 
-    const code = generageAuthorizationCode()
+    const generateCode = await generateUniqAuthorizationCode(client)
+    if (generateCode.success === false) {
+      throw new InternalServerError('code generate error')
+    }
     const code_challenge = encodeURIComponent(query.data.code_challenge)
 
-    const client = await sessionRedis()
+    const { code } = generateCode.data
+
     await saveAuthorizationCode(client, {
       code,
       code_challenge,

@@ -1,9 +1,9 @@
 import { test, expect } from 'vitest'
-import { generateCodeVerifier } from '../../../test/testUtil.js'
 import {
   verifyCodeChallenge,
   generateCodeChallenge,
-  verifyAuthorizationCode
+  verifyAuthorizationCode,
+  generateCodeVerifier
 } from './util.js'
 
 test('verifyCodeChallenge', () => {

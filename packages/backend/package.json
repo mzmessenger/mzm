@@ -5,7 +5,7 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "prestart": "npm run build",
+    "prestart": "npm run cleanbuild",
     "start": "node --watch dist/src/server.js | bunyan",
     "build": "tsc --build tsconfig.json",
     "build:test": "tsc --build tsconfig.test.json",

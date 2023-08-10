@@ -2,14 +2,55 @@ import type { Redis } from 'ioredis'
 import type { Request } from 'express'
 import type { Result } from 'mzm-shared/type'
 import { z } from 'zod'
-import { generateState, verifyAuthorizationCode } from './util.js'
+import { verifyAuthorizationCode, generateAuthorizationCode } from './util.js'
 import { logger } from '../logger.js'
+import {
+  saveCodeChallenge,
+  getCodeChallenge,
+  removeCodeChallenge
+} from '../session.js'
 
-export {
-  generageAuthorizationCode,
-  generateState,
-  verifyCodeChallenge
-} from './util.js'
+export { verifyCodeChallenge } from './util.js'
+
+export const generateUniqAuthorizationCode = async (
+  client: Redis
+): Promise<Result<{ code: string }>> => {
+  try {
+    let generated = false
+    let code = null
+    for (let i = 0; i < 10; i++) {
+      code = generateAuthorizationCode()
+      // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
+      // A maximum authorization code lifetime of 10 minutes is RECOMMENDED.
+      const res = await client.set(
+        `codegen:${code}`,
+        code,
+        'EX',
+        6000 * 10,
+        'NX'
+      )
+      if (res !== null) {
+        generated = true
+        break
+      }
+    }
+    if (!generated || !code) {
+      return { success: false, error: { message: 'failed to generate code' } }
+    }
+    return { success: true, data: { code } }
+  } catch (e) {
+    logger.error({ label: 'generateUniqAuthorizationCode', error: e })
+    return { success: false, error: { message: 'failed to generate code' } }
+  }
+}
+
+export const removeCodeFromCodeGenerator = async (
+  client: Redis,
+  code: string
+) => {
+  const res = await client.del(`codegen:${code}`)
+  return res
+}
 
 const createAuthorizationCodeRedisKey = (code: string) => {
   return `code:${code}`
@@ -28,6 +69,7 @@ export const saveAuthorizationCode = async (
   await client.set(
     createAuthorizationCodeRedisKey(options.code),
     JSON.stringify({
+      code: options.code,
       code_challenge: options.code_challenge,
       code_challenge_method: 'S256',
       userId: options.userId
@@ -37,6 +79,17 @@ export const saveAuthorizationCode = async (
   )
 
   return { code: options.code, code_challenge: options.code_challenge }
+}
+
+const getAuthorizationCode = async (client: Redis, code: string) => {
+  const key = createAuthorizationCodeRedisKey(code)
+  const val = await client.get(key)
+  return val
+}
+
+const removeAuthorizationCode = async (client: Redis, code: string) => {
+  const key = createAuthorizationCodeRedisKey(code)
+  return await client.del(key)
 }
 
 const AuthorizationCode = z.string().transform((str, ctx) => {
@@ -63,15 +116,17 @@ export const verifyAuthorizationCodeFromRedis = async (
   }
 ): Promise<Result<{ userId: string }>> => {
   try {
-    const key = createAuthorizationCodeRedisKey(args.code)
-    const val = await client.get(key)
+    const val = await getAuthorizationCode(client, args.code)
     if (!val) {
       return { success: false, error: { message: 'invalid code' } }
     }
 
     const parsedAuthorizationCode = AuthorizationCode.safeParse(val)
     if (parsedAuthorizationCode.success === false) {
-      return { success: false, error: { message: 'invalid code' } }
+      return {
+        success: false,
+        error: { message: parsedAuthorizationCode.error.message }
+      }
     }
 
     const res = await verifyAuthorizationCode({
@@ -84,7 +139,10 @@ export const verifyAuthorizationCodeFromRedis = async (
       return res
     }
 
-    await client.del(key)
+    await Promise.any([
+      removeAuthorizationCode(client, args.code),
+      removeCodeFromCodeGenerator(client, args.code)
+    ])
     return {
       success: true,
       data: { userId: parsedAuthorizationCode.data.userId }
@@ -94,56 +152,52 @@ export const verifyAuthorizationCodeFromRedis = async (
   }
 }
 
-const createStateRedisKey = (state: string) => {
-  return `state:${state}`
-}
-
 const queryParser = z.object({
   code_challenge: z.string().min(1),
   code_challenge_method: z.literal('S256')
 })
 
-export const saveParameterWithReuqest = async (
-  client: Redis,
+export const saveParameterToSession = async (
   req: Request
-): Promise<Result<{ state: string }>> => {
+): Promise<
+  Result<{ code_challenge: string; code_challenge_method: string }>
+> => {
   const query = queryParser.safeParse(req.query)
   if (query.success === false) {
     return { success: false, error: { message: query.error.message } }
   }
-  const state = generateState()
-
-  await client.set(
-    createStateRedisKey(state),
-    JSON.stringify({
-      code_challenge: query.data.code_challenge,
-      code_challenge_method: query.data.code_challenge_method
-    }),
-    'EX',
-    60 * 5
-  )
-  return { success: true, data: { state } }
+  const data = {
+    code_challenge: query.data.code_challenge,
+    code_challenge_method: query.data.code_challenge_method
+  }
+  try {
+    await saveCodeChallenge(req, data)
+    return { success: true, data }
+  } catch (e) {
+    return {
+      success: false,
+      error: { message: 'fail to save parameter' }
+    }
+  }
 }
 
-export const getParametaerFromState = async (
-  client: Redis,
-  state: string
+export const getParametaerFromSession = async (
+  req: Request
 ): Promise<
   Result<{ code_challenge: string; code_challenge_method: string }>
 > => {
-  const key = createStateRedisKey(state)
-  const val = await client.get(key)
+  const val = await getCodeChallenge(req)
   if (!val) {
     logger.error({
       label: 'getParametaerFromState',
       error: {
-        message: 'invalid state',
-        state,
-        key
+        message: 'invalid'
       }
     })
-    return { success: false, error: { message: 'invalid state' } }
+    return { success: false, error: { message: 'invalid session' } }
   }
 
-  return { success: true, data: JSON.parse(val) }
+  await removeCodeChallenge(req)
+
+  return { success: true, data: val }
 }

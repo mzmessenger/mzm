@@ -5,8 +5,8 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "prestart": "npm run build",
-    "start": "node --watch dist/server.js | bunyan",
+    "prestart": "npm run cleanbuild",
+    "start": "node --watch dist/src/server.js | bunyan",
     "cleanbuild": "rm -rf dist && npm run build",
     "build": "tsc --build tsconfig.json",
     "build:test": "tsc --build tsconfig.test.json",
@@ -32,7 +32,7 @@
     "mongodb": "^4.13.0",
     "passport": "^0.6.0",
     "passport-github": "^1.1.0",
-    "passport-oauth2": "^1.7.0",
+    "passport-twitter": "^1.0.4",
     "zod": "^3.21.4"
   },
   "devDependencies": {
@@ -42,7 +42,7 @@
     "@types/helmet": "^4.0.0",
     "@types/passport": "^1.0.11",
     "@types/passport-github": "^1.1.7",
-    "@types/passport-oauth2": "^1.4.12",
+    "@types/passport-twitter": "^1.0.37",
     "typescript": "^5.1.6"
   }
 }

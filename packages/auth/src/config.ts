@@ -1,10 +1,9 @@
 import type { SessionOptions } from 'express-session'
 import type { RedisOptions } from 'ioredis'
-import type { StrategyOptions as Oauth2StrategyOptions } from 'passport-oauth2'
 import type { StrategyOptionsWithRequest as GitHubStrategyOptions } from 'passport-github'
 import { config } from 'dotenv'
 
-const isTest = process.env.NODE_ENV !== 'test'
+const isTest = process.env.NODE_ENV === 'test'
 
 if (!isTest) {
   config()
@@ -14,15 +13,12 @@ export const CLIENT_URL_BASE =
   process.env.CLIENT_URL_BASE ?? 'http://localhost:8080'
 
 export const TWITTER_STRATEGY_OPTIONS = {
-  authorizationURL: 'https://twitter.com/i/oauth2/authorize',
-  tokenURL: 'https://api.twitter.com/2/oauth2/token',
-  clientID: process.env.TWITTER_CLIENT_ID!,
-  clientSecret: process.env.TWITTER_CLIENT_SECRET!,
-  callbackURL: process.env.TWITTER_CALLBACK_URL,
-  pkce: true,
-  state: true,
-  scope: ['users.read'] satisfies string[]
-} as const satisfies Oauth2StrategyOptions
+  consumerKey: process.env.TWITTER_CONSUMER_KEY!,
+  consumerSecret: process.env.TWITTER_CONSUMER_SECRET!,
+  callbackURL: process.env.TWITTER_CALLBACK_URL!,
+  includeEmail: true,
+  passReqToCallback: true
+} as const
 
 export const GITHUB_STRATEGY_OPTIONS = {
   clientID: process.env.GITHUB_CLIENT_ID!,
