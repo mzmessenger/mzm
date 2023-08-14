@@ -25,7 +25,11 @@ const Settings = () => {
             <li>アカウント</li>
             <li>
               <div className="logout">
-                <a href={AUTH_URL_BASE + '/auth/logout'}>Logout</a>
+                <a
+                  href={`${AUTH_URL_BASE}/auth/logout?redirect_uri=${location.origin}`}
+                >
+                  Logout
+                </a>
               </div>
             </li>
           </ul>

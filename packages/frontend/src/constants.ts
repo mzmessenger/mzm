@@ -5,6 +5,8 @@ export const API_URL_BASE = process.env.API_URL_BASE ?? ''
 export const SOCKET_URL = process.env.SOCKET_URL ?? ''
 export const AUTH_URL_BASE = process.env.AUTH_URL_BASE ?? ''
 
+export const REDIRECT_URI = `${location.origin}/login/success`
+
 export const WIDTH_MOBILE = 720
 
 export type EmojisKey = `:${string}:`

@@ -1,7 +1,7 @@
 import type { AuthProxy, Cache } from '../../worker/authProxy/index'
 import { wrap } from 'comlink'
 import { set, get, remove } from '../cookie'
-import { AUTH_URL_BASE } from '../../constants'
+import { AUTH_URL_BASE, REDIRECT_URI } from '../../constants'
 import { logger } from '../logger'
 
 const cacheKey = 'mzm:transaction'
@@ -67,7 +67,11 @@ export async function authTokenAfterRedirect(code: string) {
   return res
 }
 
-const runIframe = async (code_challenge: string, state: string) => {
+const runIframe = async (
+  code_challenge: string,
+  state: string,
+  redirect_uri: string
+) => {
   return new Promise<{ code: string }>((resolve, reject) => {
     const iframe = window.document.createElement('iframe')
     iframe.setAttribute('width', '0')
@@ -106,7 +110,8 @@ const runIframe = async (code_challenge: string, state: string) => {
     window.document.body.appendChild(iframe)
     const query = new URLSearchParams([
       ['code_challenge', code_challenge],
-      ['state', state]
+      ['state', state],
+      ['redirect_uri', redirect_uri]
     ])
     iframe.setAttribute('src', `${AUTH_URL_BASE}/authorize?${query.toString()}`)
   })
@@ -115,7 +120,7 @@ const runIframe = async (code_challenge: string, state: string) => {
 export async function getAccessTokenFromIframe() {
   const state = generateState()
   const { code_challenge, code_verifier } = await worker.pkceChallenge()
-  const { code } = await runIframe(code_challenge, state)
+  const { code } = await runIframe(code_challenge, state, REDIRECT_URI)
   const res = await worker.authToken(code, code_verifier)
   return res
 }

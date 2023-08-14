@@ -21,7 +21,7 @@ import {
 } from '../lib/pkce/index.js'
 import { verifyAuthorizationCodeFromRedis } from '../lib/pkce/index.js'
 import { authorizeTemplate } from '../views/authorize.js'
-import { CLIENT_URL_BASE } from '../config.js'
+import { ALLOW_REDIRECT_URIS } from '../config.js'
 
 const TokenBody = z.union([
   z.object({
@@ -103,7 +103,8 @@ export const token: WrapFn<
 }
 
 const AuthorizationQuery = z.object({
-  code_challenge: z.string(),
+  code_challenge: z.string().min(1),
+  redirect_uri: z.string().min(1),
   state: z.string().optional()
 })
 
@@ -123,6 +124,10 @@ export const createAuthorize = (
       throw new BadRequest('invalid query')
     }
 
+    if (!ALLOW_REDIRECT_URIS.includes(query.data.redirect_uri)) {
+      throw new BadRequest('invalid host')
+    }
+
     const generateCode = await generateUniqAuthorizationCode(client)
     if (generateCode.success === false) {
       throw new InternalServerError('code generate error')
@@ -139,7 +144,7 @@ export const createAuthorize = (
 
     const state = encodeURIComponent(query.data.state ?? '')
     const html = authorizeTemplate({
-      targetOrigin: CLIENT_URL_BASE,
+      targetOrigin: new URL(query.data.redirect_uri).origin,
       code,
       state,
       nonce

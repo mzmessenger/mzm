@@ -15,7 +15,8 @@ import {
   GITHUB_STRATEGY_OPTIONS,
   TRUST_PROXY,
   SESSION_PARSER,
-  CLIENT_URL_BASE,
+  ALLOW_REDIRECT_URIS,
+  ALLOW_REDIRECT_ORIGINS,
   CORS_ORIGIN
 } from './config.js'
 import { logger } from './lib/logger.js'
@@ -100,7 +101,7 @@ export const createApp = ({ client }: Options) => {
               return `'nonce-${locals.nonce}'`
             }
           ],
-          frameAncestors: ["'self'", CLIENT_URL_BASE]
+          frameAncestors: ["'self'", ...ALLOW_REDIRECT_ORIGINS]
         }
       }
     }),
@@ -124,7 +125,7 @@ export const createApp = ({ client }: Options) => {
   app.get(
     '/auth/twitter',
     defaultHelmet,
-    oauthHandlers.oauth(client, passport, 'twitter')
+    oauthHandlers.oauth(passport, 'twitter')
   )
   app.get(
     '/auth/twitter/callback',
@@ -146,7 +147,7 @@ export const createApp = ({ client }: Options) => {
   app.get(
     '/auth/github',
     defaultHelmet,
-    oauthHandlers.oauth(client, passport, 'github')
+    oauthHandlers.oauth(passport, 'github')
   )
   app.get(
     '/auth/github/callback',
@@ -161,16 +162,11 @@ export const createApp = ({ client }: Options) => {
   )
   app.delete('/auth/github', defaultHelmet, wrap(githubHandlers.removeGithub))
 
-  app.get('/auth/logout', defaultHelmet, (req: Request, res: Response) => {
-    req.logout(() => {
-      res.redirect(CLIENT_URL_BASE)
-    })
-  })
+  app.get('/auth/logout', defaultHelmet, handlers.logout)
 
   app.delete('/auth/user', defaultHelmet, wrap(handlers.remove))
   app.get('/auth/error', defaultHelmet, (_, res) =>
-    // res.status(200).send('error')
-    res.redirect(CLIENT_URL_BASE)
+    res.redirect(ALLOW_REDIRECT_ORIGINS[0])
   )
 
   app.use(createErrorHandler(logger))

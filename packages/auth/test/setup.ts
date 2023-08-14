@@ -9,7 +9,8 @@ import { getTestDbName } from './testUtil.js'
 const TEST_MONGODB_HOST = process.env.TEST_MONGODB_HOST ?? 'localhost'
 const TEST_MONGODB_PORT = process.env.TEST_MONGODB_PORT ?? '27018'
 const TEST_MONGO_ROOT_USER = process.env.TEST_MONGO_ROOT_USER ?? 'root'
-const TEST_MONGO_ROOT_PASSWORD = process.env.TEST_MONGO_ROOT_PASSWORD ?? 'example'
+const TEST_MONGO_ROOT_PASSWORD =
+  process.env.TEST_MONGO_ROOT_PASSWORD ?? 'example'
 const TEST_ROOT_MONGODB_URI = `mongodb://${TEST_MONGO_ROOT_USER}:${TEST_MONGO_ROOT_PASSWORD}@${TEST_MONGODB_HOST}:${TEST_MONGODB_PORT}`
 const TEST_REDIS_HOST = process.env.TEST_REDIS_HOST ?? 'localhost'
 const TEST_REDIS_PORT = process.env.TEST_REDIS_PORT

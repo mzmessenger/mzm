@@ -1,6 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
 import type { PassportStatic } from 'passport'
-import type { Redis } from 'ioredis'
 import type { Result } from 'mzm-shared/type'
 import type { SerializeUser } from '../types.js'
 import { sessionRedis } from '../lib/redis.js'
@@ -11,7 +10,6 @@ import {
   saveParameterToSession
 } from '../lib/pkce/index.js'
 import { logger } from '../lib/logger.js'
-import { CLIENT_URL_BASE } from '../config.js'
 
 const _oauthCallback = async (
   req: Request & { user?: SerializeUser }
@@ -25,7 +23,10 @@ const _oauthCallback = async (
   if (params.success === false) {
     return {
       success: false,
-      error: { status: 400, message: params.error.message }
+      error: {
+        status: params.error.status ?? 400,
+        message: params.error.message
+      }
     }
   }
   const generateCode = await generateUniqAuthorizationCode(client)
@@ -43,7 +44,7 @@ const _oauthCallback = async (
   return {
     success: true,
     data: {
-      redirectUrl: `${CLIENT_URL_BASE}/login/success?${queryParams.toString()}`
+      redirectUrl: `${params.data.redirect_uri}?${queryParams.toString()}`
     }
   }
 }
@@ -61,20 +62,12 @@ export const oauthCallback = (
   })
 }
 
-export const oauth = (
-  client: Redis,
-  passport: PassportStatic,
-  strategy: string
-) => {
+export const oauth = (passport: PassportStatic, strategy: string) => {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
-      const { code_challenge, code_challenge_method } = req.query
-      if (!code_challenge || !code_challenge_method) {
-        return res.status(400).send('Bad Request')
-      }
       const save = await saveParameterToSession(req)
       if (save.success === false) {
-        return res.status(500).send('Internal Server Error')
+        return res.status(save.error.status ?? 500).send(save.error.message)
       }
       passport.authenticate(strategy, {
         keepSessionInfo: true

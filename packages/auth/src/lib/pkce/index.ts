@@ -9,6 +9,7 @@ import {
   getCodeChallenge,
   removeCodeChallenge
 } from '../session.js'
+import { ALLOW_REDIRECT_URIS } from '../../config.js'
 
 export { verifyCodeChallenge } from './util.js'
 
@@ -153,22 +154,33 @@ export const verifyAuthorizationCodeFromRedis = async (
 }
 
 const queryParser = z.object({
-  code_challenge: z.string().min(1),
-  code_challenge_method: z.literal('S256')
+  code_challenge: z.string().min(1).trim(),
+  code_challenge_method: z.literal('S256'),
+  redirect_uri: z.string().min(1).trim()
 })
 
 export const saveParameterToSession = async (
   req: Request
-): Promise<
-  Result<{ code_challenge: string; code_challenge_method: string }>
-> => {
+): Promise<Result<z.infer<typeof queryParser>>> => {
   const query = queryParser.safeParse(req.query)
   if (query.success === false) {
-    return { success: false, error: { message: query.error.message } }
+    return {
+      success: false,
+      error: { status: 400, message: query.error.message }
+    }
   }
+  const { redirect_uri } = query.data
+  if (!ALLOW_REDIRECT_URIS.includes(redirect_uri)) {
+    return {
+      success: false,
+      error: { status: 400, message: 'not allowed redirect_uri' }
+    }
+  }
+
   const data = {
     code_challenge: query.data.code_challenge,
-    code_challenge_method: query.data.code_challenge_method
+    code_challenge_method: query.data.code_challenge_method,
+    redirect_uri
   }
   try {
     await saveCodeChallenge(req, data)
@@ -184,7 +196,7 @@ export const saveParameterToSession = async (
 export const getParametaerFromSession = async (
   req: Request
 ): Promise<
-  Result<{ code_challenge: string; code_challenge_method: string }>
+  Result<Exclude<Awaited<ReturnType<typeof getCodeChallenge>>, null>>
 > => {
   const val = await getCodeChallenge(req)
   if (!val) {

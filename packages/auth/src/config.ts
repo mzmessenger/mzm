@@ -9,8 +9,16 @@ if (!isTest) {
   config()
 }
 
-export const CLIENT_URL_BASE =
-  process.env.CLIENT_URL_BASE ?? 'http://localhost:8080'
+export const ALLOW_REDIRECT_URIS = process.env.ALLOW_REDIRECT_URIS?.split(
+  ','
+).map((e) => e.trim()) ?? [
+  'http://localhost:8080',
+  'http://localhost:8080/login/success'
+]
+
+export const ALLOW_REDIRECT_ORIGINS = ALLOW_REDIRECT_URIS.map(
+  (e) => new URL(e).origin
+)
 
 export const TWITTER_STRATEGY_OPTIONS = {
   consumerKey: process.env.TWITTER_CONSUMER_KEY!,

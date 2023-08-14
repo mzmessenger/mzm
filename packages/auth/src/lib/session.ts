@@ -20,6 +20,7 @@ const save = async (req: Request, key: string, data: unknown) => {
 type SaveCodeChallenge = {
   code_challenge: string
   code_challenge_method: string
+  redirect_uri: string
 }
 const codeChallengeKey = 'mzm:oauth:code_challenge'
 

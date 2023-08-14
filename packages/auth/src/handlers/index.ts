@@ -1,8 +1,9 @@
-import type { Request } from 'express'
+import type { Request, Response } from 'express'
 import type { SerializeUser, RequestUser } from '../types.js'
 import type { WrapFn } from 'mzm-shared/lib/wrap'
 import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
 import { ObjectId } from 'mongodb'
+import { z } from 'zod'
 import {
   parseAuthorizationHeader,
   verifyAccessToken
@@ -10,7 +11,7 @@ import {
 import { collections, mongoClient } from '../lib/db.js'
 import { logger } from '../lib/logger.js'
 import { redis } from '../lib/redis.js'
-import { JWT, REMOVE_STREAM } from '../config.js'
+import { JWT, REMOVE_STREAM, ALLOW_REDIRECT_URIS } from '../config.js'
 
 export const serializeUser = (
   user: Express.User,
@@ -56,4 +57,20 @@ export const remove: WrapFn<Request, string> = async (req) => {
   }
   await redis!.xadd(REMOVE_STREAM, '*', 'user', decoded.user._id)
   return 'ok'
+}
+
+const LogoutQuery = z.object({
+  redirect_uri: z.string().trim().min(1).optional()
+})
+
+export const logout = (req: Request, res: Response) => {
+  let redirect = ALLOW_REDIRECT_URIS[0]
+  const query = LogoutQuery.safeParse(req.query)
+  if (query.success && !!query.data.redirect_uri) {
+    redirect = query.data.redirect_uri
+  }
+
+  req.logout(() => {
+    res.redirect(redirect)
+  })
 }
