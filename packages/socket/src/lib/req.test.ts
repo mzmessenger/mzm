@@ -27,7 +27,7 @@ vi.mock('undici', async () => {
   }
 })
 
-import { requestSocketAPI } from './req'
+import { requestSocketAPI } from './req.js'
 
 test('requestSocketAPI', async () => {
   const user = 'user-id'

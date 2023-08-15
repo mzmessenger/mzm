@@ -1,5 +1,5 @@
 import { once } from 'node:events'
-import Redis from 'ioredis'
+import { Redis } from 'ioredis'
 import { logger } from './logger.js'
 import * as config from '../config.js'
 

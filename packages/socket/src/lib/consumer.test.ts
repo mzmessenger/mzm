@@ -1,6 +1,6 @@
 import { vi, test, expect } from 'vitest'
-vi.mock('./logger')
-vi.mock('./redis', () => {
+vi.mock('./logger.js')
+vi.mock('./redis.js', () => {
   return {
     redis: {
       xread: vi.fn(),
@@ -9,12 +9,12 @@ vi.mock('./redis', () => {
   }
 })
 
-vi.mock('./sender')
-import * as sender from './sender'
+vi.mock('./sender.js')
+import * as sender from './sender.js'
 
 const sendToUser = vi.mocked(sender.sendToUser)
 
-import { parser } from './consumer'
+import { parser } from './consumer.js'
 
 test('parser sendToUser', async () => {
   sendToUser.mockClear()

@@ -1,7 +1,7 @@
 import { vi, test, expect } from 'vitest'
 vi.mock('./logger')
-import { ExtWebSocket } from '../types'
-import * as sender from './sender'
+import { ExtWebSocket } from '../types.js'
+import * as sender from './sender.js'
 
 test('removeSocket', () => {
   const id = 'id-1'

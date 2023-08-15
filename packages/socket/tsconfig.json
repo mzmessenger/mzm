@@ -4,11 +4,9 @@
     "strict": true,
     "outDir": "dist",
     "sourceMap": true,
-    "noImplicitAny": true,
     "esModuleInterop": true,
     "target": "esnext",
     "module": "nodenext",
-    "moduleResolution": "node",
     "skipLibCheck": true,
     "paths": {
       "mzm-shared": ["../shared"]
