@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "prestart": "npm run build",
-    "start": "node --watch dist/server.js | bunyan",
+    "start": "node --watch dist/src/server.js | bunyan",
     "build": "tsc --build tsconfig.json",
     "build:test": "tsc --build tsconfig.test.json",
     "cleanbuild": "rm -rf dist && npm run build",
