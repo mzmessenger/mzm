@@ -36,7 +36,12 @@ const remove = async (client: Redis, id: string, user: string) => {
   const userId = new ObjectId(user)
   const db = await mongoClient()
   const target = await collections(db).users.findOne({ _id: userId })
-  logger.info('[consumer:remove]', user, target)
+  logger.info({
+    label: 'consumer:remove',
+    message: 'consumer:remove',
+    user,
+    target
+  })
   if (!target) {
     return
   }
@@ -51,7 +56,10 @@ const remove = async (client: Redis, id: string, user: string) => {
   await collections(db).users.deleteOne({ _id: target._id })
   await client.xadd(REMOVE_STREAM_TO_CHAT, '*', 'user', user)
   await client.xack(REMOVE_STREAM, REMOVE_GROUP, id)
-  logger.info('[remove:user]', user)
+  logger.info({
+    label: 'remove:user',
+    user
+  })
 }
 
 export const parser = async (
@@ -66,6 +74,10 @@ export const parser = async (
     for (const [id, messages] of val) {
       try {
         const user = messages[1]
+        logger.info({
+          label: 'queue',
+          message: user
+        })
         await remove(client, id, user)
       } catch (e) {
         logger.error('parse error', e, id, messages)

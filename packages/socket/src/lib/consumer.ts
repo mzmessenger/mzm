@@ -25,7 +25,7 @@ export const parser = async (read: any) => {
         const queue = JSON.parse(messages[1]) as ReceiveQueue
         logger.info({
           label: 'queue',
-          queue
+          message: queue
         })
         if (queue.user) {
           sendToUser(queue.user, queue)
@@ -40,6 +40,10 @@ export const parser = async (read: any) => {
 }
 
 export const consume = async (startId = '$') => {
+  logger.info({
+    label: 'consume',
+    message: `consume ${startId}`
+  })
   let nextId = startId ? startId : '$'
 
   try {
@@ -54,7 +58,11 @@ export const consume = async (startId = '$') => {
     )
     nextId = await parser(res)
   } catch (e) {
-    logger.error('[read]', 'stream:socket:message', e)
+    logger.error({
+      label: 'consume',
+      message: 'error',
+      err: e
+    })
   }
   if (!nextId) {
     nextId = '$'
