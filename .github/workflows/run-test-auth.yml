@@ -53,7 +53,7 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
       - run: npx concurrently "npm run build -w mzm-auth" "npm run lint -w mzm-auth" "npm run build:test -w mzm-auth"
-      - run: npm run test:ci --single-thread -w mzm-auth
+      - run: npm run test:ci -w mzm-auth
         env:
           CI: true
           TEST_MONGODB_PORT: ${{ job.services.mongodb.ports[27017] }}
