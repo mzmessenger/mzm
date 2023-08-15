@@ -31,14 +31,21 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
           audience: JWT.audience
         }
       )
-      logger.info('[ws:verifyAccessToken]', err, decoded)
+      logger.info({
+        label: 'ws:verifyAccessToken',
+        err,
+        decoded
+      })
       if (!err && decoded) {
         userId = decoded.user._id
         twitterUserName = decoded.user.twitterUserName
         githubUserName = decoded.user.githubUserName
       }
     }
-    logger.info('[ws:connection]', userId)
+    logger.info({
+      label: 'ws:connection',
+      userId
+    })
 
     if (!userId) {
       ws.close()
@@ -51,7 +58,12 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
 
     ws.on('message', async function incoming(data) {
       const message = data.toString()
-      logger.info('[ws:message]', userId, id, message)
+      logger.info({
+        label: 'ws:message',
+        userId,
+        id,
+        message
+      })
       if (message === 'pong') {
         return
       }
@@ -62,10 +74,18 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
         const res = await requestSocketAPI(message, userId, id)
         if (res.body) {
           ws.send(res.body)
-          logger.info('[ws:send]', userId, id, res.body)
+          logger.info({
+            label: 'ws:send',
+            userId,
+            id,
+            body: res.body
+          })
         }
       } catch (e) {
-        logger.error('[post:error]', e)
+        logger.error({
+          label: 'post:error',
+          err: e
+        })
       }
     })
 
@@ -73,12 +93,15 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
       if (!userId) {
         return
       }
-      logger.info('closed:', userId, ws.id)
+      logger.info('ws:closed', userId, ws.id)
       removeSocket(ws.id, userId)
     })
 
     ws.on('error', function error(e) {
-      logger.error('error: ', e)
+      logger.error({
+        label: 'ws:error',
+        err: e
+      })
     })
 
     const data: SocketToBackendType = {
@@ -93,7 +116,10 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
         }
       })
       .catch((e) => {
-        logger.error('[post:error]', e)
+        logger.error({
+          label: 'post:error',
+          err: e
+        })
       })
   })
 

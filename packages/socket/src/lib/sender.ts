@@ -38,6 +38,10 @@ export const sendToUser = (user: string, payload: unknown) => {
     return false
   }
   sockets.forEach((s) => s.send(JSON.stringify(payload)))
-  logger.info('[send:message:user]', user, payload)
+  logger.info({
+    label: 'send:message:user',
+    user,
+    payload
+  })
   return true
 }

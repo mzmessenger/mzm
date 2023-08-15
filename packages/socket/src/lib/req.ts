@@ -28,13 +28,13 @@ export const requestSocketAPI = async (
 
   const resBody = res.statusCode === 200 ? await res.body.text() : null
 
-  logger.info(
-    '[post:response]',
-    INTERNAL_API_URL,
-    body,
-    res.statusCode,
-    resBody
-  )
+  logger.info({
+    label: 'post:response',
+    url: INTERNAL_API_URL,
+    send: body,
+    status: res.statusCode,
+    body: resBody
+  })
 
   return { body: resBody }
 }

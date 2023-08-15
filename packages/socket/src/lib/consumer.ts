@@ -23,6 +23,10 @@ export const parser = async (read: any) => {
       nextId = id
       try {
         const queue = JSON.parse(messages[1]) as ReceiveQueue
+        logger.info({
+          label: 'queue',
+          queue
+        })
         if (queue.user) {
           sendToUser(queue.user, queue)
         }

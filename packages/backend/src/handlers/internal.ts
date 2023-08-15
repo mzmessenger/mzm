@@ -1,11 +1,13 @@
 import { Request } from 'express'
 import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
 import { getRequestUserId } from '../lib/utils.js'
+import { logger } from '../lib/logger.js'
 import * as _socket from './internal/socket.js'
 
 export const socket = async (req: Request) => {
   const user = getRequestUserId(req)
   const data = req.body as SocketToBackendType
+  logger.info('socket', user, data)
   if (data.cmd === TO_SERVER_CMD.CONNECTION) {
     return await _socket.connection(user, data)
   } else if (data.cmd === TO_SERVER_CMD.MESSAGE_SEND) {

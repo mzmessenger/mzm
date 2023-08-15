@@ -19,7 +19,10 @@ export const addMessageQueue = async (data: ToClientType) => {
     'message',
     message
   )
-  logger.info('[queue:add:user]', message)
+  logger.info({
+    label: 'queue:add:user',
+    message
+  })
 }
 
 export const addQueueToUsers = async (users: string[], data: ToClientType) => {

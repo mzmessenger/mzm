@@ -39,7 +39,10 @@ export const token: WrapFn<
   Request,
   AUTH_API_RESPONSE['/auth/token']['POST']['body'][200]
 > = async (req) => {
-  logger.info('[accessToken]', 'start')
+  logger.info({
+    label: 'accessToken',
+    message: 'start'
+  })
   const body = TokenBody.safeParse(req.body)
   if (body.success === false) {
     throw new BadRequest({ message: body.error.message })
@@ -84,7 +87,8 @@ export const token: WrapFn<
     githubUserName: user.githubUserName
   })
   logger.info({
-    label: 'createTokens',
+    label: 'accessToken',
+    message: 'createTokens',
     user: user._id.toHexString()
   })
 
