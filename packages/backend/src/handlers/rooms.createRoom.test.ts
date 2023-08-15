@@ -1,5 +1,4 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
+import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('../lib/logger')
 vi.mock('../lib/redis', () => {
   return {
@@ -12,24 +11,25 @@ vi.mock('../lib/elasticsearch/index', () => {
     client: {}
   }
 })
-
-import { ObjectId } from 'mongodb'
-import { mongoSetup, createRequest } from '../../test/testUtil'
-import * as db from '../lib/db'
-import { BadRequest } from '../lib/errors'
-import { createRoom } from './rooms'
-
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
+vi.mock('../lib/db.js', async () => {
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
+import { ObjectId } from 'mongodb'
+import { BadRequest } from 'mzm-shared/lib/errors'
+import { createRequest, getTestMongoClient } from '../../test/testUtil.js'
+import { collections } from '../lib/db.js'
+import { createRoom } from './rooms.js'
+
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
 test.each([
@@ -43,7 +43,8 @@ test.each([
 
   const { id } = await createRoom(req)
 
-  const created = await db.collections.rooms.findOne({
+  const db = await getTestMongoClient(globalThis)
+  const created = await collections(db).rooms.findOne({
     _id: new ObjectId(id)
   })
 

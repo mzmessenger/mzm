@@ -49,6 +49,7 @@ export const useSearch = () => {
       [['query', q]]
     const params = new URLSearchParams(init)
 
+    // @todo
     const res = await fetch(`/api/rooms/search?${params.toString()}`, {
       method: 'GET',
       mode: 'cors',

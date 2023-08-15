@@ -8,12 +8,7 @@ export type Props = {
   style?: React.CSSProperties
 }
 
-export const InputText: React.FC<Props> = ({
-  value,
-  onChange,
-  errorText,
-  style
-}) => {
+export function InputText({ value, onChange, errorText, style }: Props) {
   return (
     <Wrap style={style} className={errorText ? 'error' : ''}>
       <input type="text" value={value} onChange={onChange} />

@@ -1,43 +1,42 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
-vi.mock('../lib/logger')
-vi.mock('../lib/consumer/remove', () => {
+import { vi, test, expect, beforeAll } from 'vitest'
+vi.mock('../lib/logger.js')
+vi.mock('../lib/consumer/remove.js', () => {
   return {
     initRemoveConsumerGroup: vi.fn(),
     consumeRemove: vi.fn()
   }
 })
-vi.mock('../lib/consumer/unread', () => {
+vi.mock('../lib/consumer/unread.js', () => {
   return {
     initUnreadConsumerGroup: vi.fn(),
     consumeUnread: vi.fn()
   }
 })
-vi.mock('../lib/consumer/reply', () => {
+vi.mock('../lib/consumer/reply.js', () => {
   return {
     initReplyConsumerGroup: vi.fn(),
     consumeReply: vi.fn()
   }
 })
-vi.mock('../lib/consumer/search/room', () => {
+vi.mock('../lib/consumer/search/room.js', () => {
   return {
     initSearchRoomConsumerGroup: vi.fn(),
     consumeSearchRooms: vi.fn()
   }
 })
-vi.mock('../lib/consumer/job', () => {
+vi.mock('../lib/consumer/job.js', () => {
   return {
     initJobConsumerGroup: vi.fn(),
     consumeJob: vi.fn()
   }
 })
-vi.mock('../lib/consumer/vote', () => {
+vi.mock('../lib/consumer/vote.js', () => {
   return {
     initRenameConsumerGroup: vi.fn(),
     consumeVote: vi.fn()
   }
 })
-vi.mock('../lib/redis', () => {
+vi.mock('../lib/redis.js', () => {
   return {
     client: {
       xadd: vi.fn()
@@ -46,35 +45,36 @@ vi.mock('../lib/redis', () => {
     release: vi.fn()
   }
 })
-vi.mock('../lib/provider/index', () => {
+vi.mock('../lib/provider/index.js', () => {
   return {
     addInitializeSearchRoomQueue: vi.fn()
   }
 })
-
-import { mongoSetup } from '../../test/testUtil'
-import { init } from './server'
-import * as db from '../lib/db'
-import * as config from '../config'
-import * as consumerRemove from '../lib/consumer/remove'
-import * as consumerUnread from '../lib/consumer/unread'
-import * as consumeReply from '../lib/consumer/reply'
-import * as consumeSearchRoom from '../lib/consumer/search/room'
-import * as consumeJob from '../lib/consumer/job'
-import * as consumeVote from '../lib/consumer/vote'
-import { addInitializeSearchRoomQueue } from '../lib/provider/index'
-
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
+vi.mock('../lib/db.js', async () => {
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
+import { init } from './server.js'
+import { collections } from '../lib/db.js'
+import * as config from '../config.js'
+import * as consumerRemove from '../lib/consumer/remove.js'
+import * as consumerUnread from '../lib/consumer/unread.js'
+import * as consumeReply from '../lib/consumer/reply.js'
+import * as consumeSearchRoom from '../lib/consumer/search/room.js'
+import * as consumeJob from '../lib/consumer/job.js'
+import * as consumeVote from '../lib/consumer/vote.js'
+import { addInitializeSearchRoomQueue } from '../lib/provider/index.js'
+import { getTestMongoClient } from '../../test/testUtil.js'
+
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
 test('init', async () => {
@@ -103,8 +103,9 @@ test('init', async () => {
 
   await init()
 
-  const general = await db.collections.rooms
-    .find({ name: config.room.GENERAL_ROOM_NAME })
+  const db = await getTestMongoClient(globalThis)
+  const general = await collections(db)
+    .rooms.find({ name: config.room.GENERAL_ROOM_NAME })
     .toArray()
 
   expect(general.length).toStrictEqual(1)
@@ -121,8 +122,9 @@ test('init twice', async () => {
   await init()
   await init()
 
-  const general = await db.collections.rooms
-    .find({ name: config.room.GENERAL_ROOM_NAME })
+  const db = await getTestMongoClient(globalThis)
+  const general = await collections(db)
+    .rooms.find({ name: config.room.GENERAL_ROOM_NAME })
     .toArray()
 
   expect(general.length).toStrictEqual(1)

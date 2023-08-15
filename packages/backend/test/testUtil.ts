@@ -1,48 +1,47 @@
-import type { MulterFile } from '../src/types/index'
+/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable no-console */
+import type { MulterFile } from '../src/types/index.js'
+import type { MongoClient, ObjectId } from 'mongodb'
+import('./types.js')
 import { vi } from 'vitest'
-import assert from 'assert'
 import { Request } from 'express'
-import { MongoClient, ObjectId } from 'mongodb'
-import { MongoMemoryServer } from 'mongodb-memory-server'
-import { client as Redis } from '../src/lib/redis'
-import { RedisKey, RedisValue } from 'ioredis'
+import { client as RedisClient } from '../src/lib/redis.js'
 
-export const createXaddMock = (xadd: typeof Redis.xadd) => {
-  const mock =
-    vi.mocked<(key: RedisKey, ...args: RedisValue[]) => Promise<string>>(xadd)
-  return mock
+export const createXaddMock = (client: typeof RedisClient) => {
+  const xadd = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xadd }))
+  return xadd
 }
 
-export const createXackMock = (xack: typeof Redis.xack) => {
-  const mock =
-    vi.mocked<(key: RedisKey, ...args: RedisValue[]) => Promise<number>>(xack)
+export const createXackMock = (client: typeof RedisClient) => {
+  const xack = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xack }))
 
-  return mock
+  return xack
 }
 
-export const mongoSetup = async () => {
-  const mongoServer = await MongoMemoryServer.create()
-  const uri = mongoServer.getUri()
-  return { uri, mongoServer }
+export const getTestDbName = (suffix: string) => {
+  return `mzm-test-${suffix}`
 }
 
-export const getDbConnection = async (uri: string) => {
-  assert.strictEqual(process.env.NODE_ENV, 'test')
-
-  const client = await MongoClient.connect(uri)
-
-  return client
+export const getTestMongoClient = async (context: typeof globalThis) => {
+  return context.testMongoClient as MongoClient
 }
 
-export const dropCollection = async (uri: string, name: string) => {
-  const client = await getDbConnection(uri)
-  const db = client.db('mzm')
+export const getTestRedisClient = async (context: typeof globalThis) => {
+  return context.testRedisClient
+}
 
-  const collections = (await db.collections()).map((c) => c.collectionName)
+export const dropCollection = async (client: MongoClient, name: string) => {
+  const collections = (await client.db().collections()).map(
+    (c) => c.collectionName
+  )
   if (!collections.includes(name)) {
     return Promise.resolve()
   }
-  return await db.collection(name).drop()
+  await client.db().collection(name).drop()
 }
 
 type TestRequest = Request & { file?: MulterFile }
@@ -50,7 +49,7 @@ type TestRequest = Request & { file?: MulterFile }
 export const createFileRequest = (
   ...args: Parameters<typeof createRequest>
 ) => {
-  return createRequest(...args) as Request & { file: MulterFile }
+  return createRequest(...args) as Request & { file?: MulterFile }
 }
 
 export const createRequest = <T>(

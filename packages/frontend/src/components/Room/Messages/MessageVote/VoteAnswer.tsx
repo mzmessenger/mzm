@@ -28,7 +28,7 @@ export const VoteAnswer: React.FC<Props> = ({ className, type, answers }) => {
       <div className="users">
         {answers.map((e) => (
           <div key={e.userId}>
-            <img src={e.icon} width="24" height="24" />
+            <img src={e.icon} width="24" height="24" crossOrigin="anonymous" />
           </div>
         ))}
       </div>

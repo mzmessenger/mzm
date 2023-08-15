@@ -16,7 +16,7 @@ export const createAccessToken = (user: CreateAccessTokenArgs) => {
       user: {
         _id: user._id,
         twitterId: user.twitterId ?? null,
-        twitterUserName: user.twitterUserName,
+        twitterUserName: user.twitterUserName ?? null,
         githubId: user.githubId ?? null,
         githubUserName: user.githubUserName ?? null
       }
@@ -34,6 +34,9 @@ export const createAccessToken = (user: CreateAccessTokenArgs) => {
       (err, token) => {
         if (err) {
           return reject(err)
+        }
+        if (!token) {
+          return reject('no token')
         }
         resolve(token)
       }
@@ -65,6 +68,9 @@ const createRefreshToken = (_id: string) => {
         if (err) {
           return reject(err)
         }
+        if (!token) {
+          return reject('no token')
+        }
         resolve(token)
       }
     )
@@ -81,17 +87,37 @@ export const createTokens = async (user: CreateAccessTokenArgs) => {
   }
 }
 
+type PartialRefresToken = {
+  user?: Partial<RefeshToken['user']>
+}
+
 export const verifyRefreshToken = (token: string) => {
-  return new Promise<jwt.JwtPayload | string>((resolve, reject) => {
+  return new Promise<
+    | {
+        err: jwt.VerifyErrors
+        decoded: null
+      }
+    | {
+        err: null
+        decoded: jwt.JwtPayload & PartialRefresToken
+      }
+  >((resolve) => {
     jwt.verify(
       token,
       JWT.refreshTokenSecret,
       { algorithms: ['HS256'] },
       (err, decode) => {
         if (err) {
-          return reject()
+          return resolve({
+            err,
+            decoded: null
+          })
         }
-        resolve(decode)
+        const d = decode as jwt.JwtPayload & PartialRefresToken
+        resolve({
+          err: null,
+          decoded: d
+        })
       }
     )
   })

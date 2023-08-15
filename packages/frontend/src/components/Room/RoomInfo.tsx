@@ -2,7 +2,6 @@ import React, { useEffect, useState } from 'react'
 import styled from '@emotion/styled'
 import { Home, Person, ExpandMore } from '@mui/icons-material'
 import { useUiActions } from '../../recoil/ui/hooks'
-import { useAuth } from '../../recoil/auth/hooks'
 import {
   useRoomUserActions,
   useRoomSettingActions,
@@ -10,11 +9,15 @@ import {
   useOpenRoomSettingFlag,
   useCurrentRoom
 } from '../../recoil/rooms/hooks'
-import { WIDTH_MOBILE } from '../../lib/constants'
+import { WIDTH_MOBILE } from '../../constants'
 import { ModalUsersList } from './ModalUsersList'
 
 const RoomIcon = React.memo(({ iconUrl }: { iconUrl: string }) => {
-  return iconUrl ? <img src={iconUrl} /> : <Home fontSize="small" />
+  return iconUrl ? (
+    <img src={iconUrl} crossOrigin="anonymous" />
+  ) : (
+    <Home fontSize="small" />
+  )
 })
 
 export const RoomInfo = () => {
@@ -25,9 +28,8 @@ export const RoomInfo = () => {
     currentRoomDescription,
     currentRoomIcon
   } = useCurrentRoom()
-  const { getAccessToken } = useAuth()
   const { toggleRoomSetting } = useRoomSettingActions()
-  const { getUsers } = useRoomUserActions({ getAccessToken })
+  const { getUsers } = useRoomUserActions()
   const { openUserDetail } = useUiActions()
   const [open, setOpen] = useState(false)
   const users = useGetUsersById(currentRoomId)
@@ -44,13 +46,20 @@ export const RoomInfo = () => {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRoomId])
 
-  const clickUser = (user) => {
-    openUserDetail(user.id, user.account, user.icon)
+  const clickUser = (user: (typeof users)['users'][number]) => {
+    openUserDetail(user.userId, user.account, user.icon)
   }
 
   const userIcons = (users?.users || [])
     .slice(0, 10)
-    .map((u, i) => <img key={i} src={u.icon} onClick={() => clickUser(u)} />)
+    .map((u, i) => (
+      <img
+        key={i}
+        src={u.icon}
+        onClick={() => clickUser(u)}
+        crossOrigin="anonymous"
+      />
+    ))
 
   const expandClassName = ['expand-icon']
   if (openRoomSetting) {

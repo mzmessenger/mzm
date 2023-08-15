@@ -3,7 +3,7 @@ import styled from '@emotion/styled'
 import Clear from '@mui/icons-material/Clear'
 import { ModalBase } from './atoms/Modal'
 import { IconButton } from './atoms/Button'
-import { WIDTH_MOBILE } from '../lib/constants'
+import { WIDTH_MOBILE } from '../constants'
 import { useUiActions, useUserDetailUi } from '../recoil/ui/hooks'
 
 export const ModalUserProfile: React.FC = () => {
@@ -27,7 +27,7 @@ export const ModalUserProfile: React.FC = () => {
           </IconButton>
         </header>
         <div className="icon">
-          <img src={userDetail.icon} />
+          <img src={userDetail.icon} crossOrigin="anonymous" />
         </div>
         <div className="account">{userDetail.account}</div>
       </ModalInner>

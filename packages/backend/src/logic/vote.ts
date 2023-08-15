@@ -1,13 +1,20 @@
 import { ObjectId } from 'mongodb'
 import { MessageType } from 'mzm-shared/type/socket'
-import * as db from '../lib/db.js'
+import {
+  collections,
+  mongoClient,
+  COLLECTION_NAMES,
+  type VoteAnswer,
+  type User
+} from '../lib/db.js'
 import { createUserIconPath } from '../lib/utils.js'
 
 export const getVoteAnswers = async (messageId: ObjectId) => {
-  const answers: MessageType['vote']['answers'] = []
+  const answers: Exclude<MessageType['vote'], undefined>['answers'] = []
 
-  const cursor = await db.collections.voteAnswer.aggregate<
-    db.VoteAnswer & { user: db.User[] }
+  const db = await mongoClient()
+  const cursor = await collections(db).voteAnswer.aggregate<
+    VoteAnswer & { user: User[] }
   >([
     {
       $match: {
@@ -16,7 +23,7 @@ export const getVoteAnswers = async (messageId: ObjectId) => {
     },
     {
       $lookup: {
-        from: db.COLLECTION_NAMES.USERS,
+        from: COLLECTION_NAMES.USERS,
         localField: 'userId',
         foreignField: '_id',
         as: 'user'
@@ -35,7 +42,7 @@ export const getVoteAnswers = async (messageId: ObjectId) => {
     const [answerUser] = answer.user
     answers.push({
       userId: answer.userId.toHexString(),
-      userAccount: answerUser?.account || null,
+      userAccount: answerUser.account,
       icon: createUserIconPath(answerUser?.account, answerUser?.icon?.version),
       index: answer.index,
       answer: answer.answer

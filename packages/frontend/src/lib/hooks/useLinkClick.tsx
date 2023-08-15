@@ -20,15 +20,19 @@ export const useLinkClick = () => {
     if (!ref.current) {
       return
     }
-    const listener = (e) => {
-      const href = e.target.getAttribute('href')
-      const url = new URL(href)
-      if (url.host === window.location.host) {
-        navigate(url.pathname)
-        const roomName = getRoomName(url.pathname)
-        enterRoom(roomName)
-      } else {
-        window.open(url.href, '_blank')
+    document.querySelector('a').getAttribute('href')
+    const listener = (e: MouseEvent) => {
+      if (e.target instanceof Element) {
+        const href = e.target.getAttribute('href')
+        const url = new URL(href)
+        if (url.host === window.location.host) {
+          navigate(url.pathname)
+          const roomName = getRoomName(url.pathname)
+          enterRoom(roomName)
+        } else {
+          window.open(url.href, '_blank')
+        }
+        return
       }
 
       e.preventDefault()

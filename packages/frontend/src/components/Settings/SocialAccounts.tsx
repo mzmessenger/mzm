@@ -13,21 +13,22 @@ import {
 
 export const SocialAccounts = () => {
   const { twitterUserName, githubUserName } = useSocialAccount()
-  const { refreshToken, getAccessToken } = useAuth()
-  const { removeTwitter, removeGithub } = useRemoveAccountActions({
-    getAccessToken,
-    refreshToken
-  })
+  const { getAccessTokenFromIframe } = useAuth()
+  const { removeTwitter, removeGithub } = useRemoveAccountActions()
 
   const isTwitterLinked = !!twitterUserName
   const isGithubLinked = !!githubUserName
 
   const onRemoveTwitter = () => {
-    removeTwitter()
+    removeTwitter(() => {
+      getAccessTokenFromIframe()
+    })
   }
 
   const onRemoveGithub = () => {
-    removeGithub()
+    removeGithub(() => {
+      getAccessTokenFromIframe()
+    })
   }
 
   return (

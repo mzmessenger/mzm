@@ -4,11 +4,11 @@ export type RESPONSE = {
   }
   '/api/rooms/search': {
     GET: {
-      query: string
+      query: string | null
       hits: {
         id: string
         name: string
-        iconUrl: string
+        iconUrl: string | null
         description?: string
       }[]
       total: number
@@ -21,7 +21,7 @@ export type RESPONSE = {
       users: {
         userId: string
         account: string
-        icon: string
+        icon: string | null
         enterId: string
       }[]
     }
@@ -43,7 +43,7 @@ export type RESPONSE = {
         200: {
           id: string
           account: string
-          icon: string
+          icon: string | null
         }
         404: {
           reason: string
@@ -110,20 +110,20 @@ export type REQUEST = {
 }
 
 export type AUTH_API_RESPONSE = {
-  '/auth/token/refresh': {
+  '/auth/token': {
     POST: {
       body: {
         200: {
           accessToken: string
+          refreshToken: string
           user: {
             _id: string
-            twitterId?: string
-            twitterUserName?: string
-            githubId?: string
-            githubUserName?: string
+            twitterId: string | null
+            twitterUserName: string | null
+            githubId: string | null
+            githubUserName: string | null
           }
         }
-        400: 'not login'
       }
     }
   }

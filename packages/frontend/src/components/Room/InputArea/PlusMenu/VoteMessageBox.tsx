@@ -1,13 +1,18 @@
-import React, { useState, forwardRef } from 'react'
+import React, {
+  useState,
+  forwardRef,
+  type MutableRefObject,
+  type MouseEventHandler
+} from 'react'
 import styled from '@emotion/styled'
 import { Add } from '@mui/icons-material'
-import { WIDTH_MOBILE } from '../../../../lib/constants'
+import { WIDTH_MOBILE } from '../../../../constants'
 import { useCurrentRoom } from '../../../../recoil/rooms/hooks'
 import { useSocketActions } from '../../../../recoil/socket/hooks'
-import { TextArea } from '../../../atoms/TextArea'
+import { TextArea, type Props as TextAreaProps } from '../../../atoms/TextArea'
 import { Button } from '../../../atoms/Button'
 import { TransparentButton } from '../../../atoms/Button'
-import { Question } from './Question'
+import { Question, type Props as QuestionProps } from './Question'
 import Dialog from '../../../Dialog'
 
 type Props = {
@@ -15,22 +20,31 @@ type Props = {
   onCancel: (e: React.MouseEvent) => void
 }
 
-function VoteMessageBox({ onSave, onCancel }: Props, ref) {
+function VoteMessageBox(
+  { onSave, onCancel }: Props,
+  ref: MutableRefObject<HTMLDialogElement>
+) {
   const { currentRoomId } = useCurrentRoom()
   const [text, setText] = useState('候補日')
   const [questions, setQuestions] = useState<string[]>(['4/1', '4/2', '4/3'])
   const { sendMessage } = useSocketActions()
 
-  const onChange = (e) => {
+  const onChange: TextAreaProps['onChange'] = (e) => {
     setText(e.target.value)
   }
 
-  const onQuestionChange = (e, i: number) => {
+  const onQuestionChange = (
+    e: Parameters<QuestionProps['onChange']>[0],
+    i: number
+  ) => {
     questions[i] = e.target.value
     setQuestions([...questions])
   }
 
-  const onQuestionClear = (e, i: number) => {
+  const onQuestionClear = (
+    e: Parameters<QuestionProps['onClear']>[0],
+    i: number
+  ) => {
     if (questions.length <= 1) {
       return
     }
@@ -40,7 +54,7 @@ function VoteMessageBox({ onSave, onCancel }: Props, ref) {
 
   const addQuestion = () => setQuestions([...questions, ''])
 
-  const post = async (e) => {
+  const post: MouseEventHandler<HTMLButtonElement> = async (e) => {
     const q = questions
       .filter((e) => e.trim())
       .map((e) => {

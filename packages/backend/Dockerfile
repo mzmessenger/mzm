@@ -10,7 +10,7 @@ COPY ./packages/backend/package.json \
   ./packages/backend/
 COPY ./packages/backend/src/ ./packages/backend/src/
 
-RUN npm install -w packages/backend -w packages/shared && npm run -w packages/backend cleanbuild
+RUN npm install -w mzm-backend -w mzm-shared && npm run -w mzm-backend cleanbuild
 
 FROM node:18-alpine
 
@@ -21,7 +21,7 @@ COPY --from=builder /usr/app/packages/shared/dist/ packages/shared/dist/
 COPY --from=builder /usr/app/packages/shared/package.json packages/shared/package.json
 COPY --from=builder /usr/app/packages/backend/package.json ./packages/backend/
 COPY --from=builder /usr/app/packages/backend/dist/ packages/backend/dist/
-RUN npm install -w packages/backend -w packages/shared --production
+RUN npm install -w mzm-backend -w mzm-shared --production
 
 ENV NODE_ENV=production
 CMD [ "node", "packages/backend/dist/server.js" ]

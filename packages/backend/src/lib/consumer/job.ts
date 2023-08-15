@@ -17,7 +17,7 @@ export const job = async (ackid: string, messages: string[]) => {
     await syncSeachAllRooms()
   }
 
-  await client.xack(STREAM, JOB_GROUP, ackid)
+  await client().xack(STREAM, JOB_GROUP, ackid)
 
   logger.info('[job]', messages[0])
 }

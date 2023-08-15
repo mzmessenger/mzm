@@ -1,9 +1,14 @@
-import React, { useState, useRef, useEffect } from 'react'
+import React, {
+  useState,
+  useRef,
+  useEffect,
+  type FormEventHandler
+} from 'react'
 import styled from '@emotion/styled'
 import Add from '@mui/icons-material/Add'
 import SendIcon from '@mui/icons-material/Send'
 import CancelOutlinedIcon from '@mui/icons-material/CancelOutlined'
-import { WIDTH_MOBILE } from '../../../lib/constants'
+import { WIDTH_MOBILE } from '../../../constants'
 import { useCurrentRoom } from '../../../recoil/rooms/hooks'
 import { useSocketActions } from '../../../recoil/socket/hooks'
 import { usePostTextArea } from '../../../recoil/postTextArea/hooks'
@@ -52,7 +57,7 @@ export const InputArea = () => {
     setRows(1)
   }
 
-  const handleSubmit = (e) => {
+  const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault()
     submit()
   }

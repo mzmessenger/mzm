@@ -1,11 +1,8 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import {
-  Twitter as TwitterIcon,
-  GitHub as GitHubIcon
-} from '@mui/icons-material'
-import { LoginHeader as Header } from '../components/atoms/LoginHeader'
-import { Link } from '../components/atoms/Link'
+import { LoginHeader as Header } from '../../components/atoms/LoginHeader'
+import { Link } from '../../components/atoms/Link'
+import LoginButtons from './Buttons'
 
 const Login = () => {
   return (
@@ -15,16 +12,7 @@ const Login = () => {
         <h4>
           <Link to="/tos">利用規約</Link>に同意してログイン
         </h4>
-        <div className="button">
-          <a href="/auth/twitter" className="login-link">
-            <TwitterIcon className="icon" />
-            Twitter
-          </a>
-          <a href="/auth/github" className="login-link">
-            <GitHubIcon className="icon" />
-            GitHub
-          </a>
-        </div>
+        <LoginButtons />
       </div>
       <div className="attention">
         <h2>注意事項</h2>
@@ -52,29 +40,6 @@ const Wrap = styled.div`
       a {
         margin: 0 0.5em 0 0;
       }
-    }
-    .button {
-      display: grid;
-      grid-template-columns: 1fr 1fr;
-      grid-gap: 1em;
-      margin: 1em 0 0 0;
-    }
-    .login-link {
-      padding: 0 14px 0 10px;
-      font-size: 1rem;
-      background-color: var(--color-guide);
-      color: var(--color-on-guide);
-      border-radius: 4px;
-      height: 40px;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-    }
-    .icon {
-      width: 20px;
-      height: 20px;
-      background-size: contain;
-      margin: 0 8px 0 0;
     }
   }
 

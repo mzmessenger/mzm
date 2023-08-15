@@ -1,38 +1,38 @@
 /* eslint-disable @typescript-eslint/no-non-null-assertion */
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
-vi.mock('../lib/logger')
-vi.mock('../lib/redis', () => {
+import { vi, test, expect, beforeAll } from 'vitest'
+vi.mock('../lib/logger.js')
+vi.mock('../lib/redis.js', () => {
   return {
     lock: vi.fn(() => Promise.resolve(true)),
     release: vi.fn()
   }
 })
-vi.mock('../lib/elasticsearch/index', () => {
+vi.mock('../lib/elasticsearch/index.js', () => {
   return {
     client: {}
   }
 })
-
-import { ObjectId, WithId } from 'mongodb'
-import { mongoSetup, createRequest } from '../../test/testUtil'
-import * as config from '../config'
-import * as db from '../lib/db'
-import { initGeneral } from '../logic/rooms'
-import { BadRequest } from '../lib/errors'
-import { exitRoom, getUsers } from './rooms'
-
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
+vi.mock('../lib/db.js', async () => {
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
+import { ObjectId, WithId } from 'mongodb'
+import { BadRequest } from 'mzm-shared/lib/errors'
+import { getTestMongoClient, createRequest } from '../../test/testUtil.js'
+import * as config from '../config.js'
+import { collections, type User, type Enter } from '../lib/db.js'
+import { initGeneral } from '../logic/rooms.js'
+import { exitRoom, getUsers } from './rooms.js'
+
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
 test('exitRoom fail (general)', async () => {
@@ -41,11 +41,12 @@ test('exitRoom fail (general)', async () => {
 
   const userId = new ObjectId()
 
-  const general = await db.collections.rooms.findOne({
+  const db = await getTestMongoClient(globalThis)
+  const general = await collections(db).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
 
-  await db.collections.enter.insertOne({
+  await collections(db).enter.insertOne({
     userId: userId,
     roomId: general!._id,
     unreadCounter: 0,
@@ -81,16 +82,16 @@ test('getUsers', async () => {
 
   const overNum = 4
 
-  const users: WithId<db.User>[] = []
-  const insert: Omit<db.Enter, '_id'>[] = []
+  const users: WithId<User>[] = []
+  const insert: Omit<Enter, '_id'>[] = []
   for (let i = 0; i < config.room.USER_LIMIT + overNum; i++) {
     const userId = new ObjectId()
-    const user: WithId<db.User> = {
+    const user: WithId<User> = {
       _id: userId,
       account: userId.toHexString(),
       roomOrder: []
     }
-    const enter: Omit<db.Enter, '_id'> = {
+    const enter: Omit<Enter, '_id'> = {
       roomId,
       userId,
       unreadCounter: 0,
@@ -102,18 +103,21 @@ test('getUsers', async () => {
       users.push(user)
     }
   }
+  const db = await getTestMongoClient(globalThis)
   await Promise.all([
-    db.collections.enter.insertMany(insert),
-    db.collections.users.insertMany(users)
+    collections(db).enter.insertMany(insert),
+    collections(db).users.insertMany(users)
   ])
 
   const userIds = users.map((u) => u._id)
   const userMap = (
-    await db.collections.users.find({ _id: { $in: userIds } }).toArray()
+    await collections(db)
+      .users.find({ _id: { $in: userIds } })
+      .toArray()
   ).reduce((map, current) => {
     map.set(current._id.toHexString(), current)
     return map
-  }, new Map<string, WithId<db.User>>())
+  }, new Map<string, WithId<User>>())
 
   const params = { roomid: roomId.toHexString() }
   let req = createRequest(userId, { params })

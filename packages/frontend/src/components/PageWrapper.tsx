@@ -1,7 +1,7 @@
 import React, { type PropsWithChildren, type FC, type ReactNode } from 'react'
 import styled from '@emotion/styled'
 import { useUiActions, useMenuUi } from '../recoil/ui/hooks'
-import { WIDTH_MOBILE } from '../lib/constants'
+import { WIDTH_MOBILE } from '../constants'
 export { Header } from './Header'
 
 type Props = {

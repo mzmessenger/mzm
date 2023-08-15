@@ -2,7 +2,14 @@ import { ObjectId, WithId } from 'mongodb'
 import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/type/socket'
 import * as config from '../config.js'
 import { logger } from '../lib/logger.js'
-import * as db from '../lib/db.js'
+import {
+  collections,
+  mongoClient,
+  RoomStatusEnum,
+  COLLECTION_NAMES,
+  type Enter,
+  type Room
+} from '../lib/db.js'
 import { createRoomIconPath } from '../lib/utils.js'
 import { enterRoom } from './rooms.js'
 
@@ -11,15 +18,16 @@ type SendRoomType = FilterToClientType<
 >['rooms'][number]
 
 const enterGeneral = async (userId: ObjectId) => {
-  const general = await db.collections.rooms.findOne({
+  const general = await collections(await mongoClient()).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
-  await enterRoom(userId, general._id)
+  await enterRoom(userId, general!._id)
 }
 
 export const initUser = async (userId: ObjectId, account: string) => {
+  const db = await mongoClient()
   const [user] = await Promise.all([
-    db.collections.users.findOneAndUpdate(
+    collections(db).users.findOneAndUpdate(
       {
         _id: userId
       },
@@ -40,13 +48,14 @@ export const initUser = async (userId: ObjectId, account: string) => {
 }
 
 export const getRooms = async (userId: string): Promise<SendRoomType[]> => {
-  type AggregateType = WithId<db.Enter> & { room: WithId<db.Room>[] }
+  type AggregateType = WithId<Enter> & { room: WithId<Room>[] }
 
-  const cursor = await db.collections.enter.aggregate<AggregateType>([
+  const db = await mongoClient()
+  const cursor = await collections(db).enter.aggregate<AggregateType>([
     { $match: { userId: new ObjectId(userId) } },
     {
       $lookup: {
-        from: db.COLLECTION_NAMES.ROOMS,
+        from: COLLECTION_NAMES.ROOMS,
         localField: 'roomId',
         foreignField: '_id',
         as: 'room'
@@ -63,14 +72,14 @@ export const getRooms = async (userId: string): Promise<SendRoomType[]> => {
       iconUrl: createRoomIconPath(room),
       unread: doc.unreadCounter ? doc.unreadCounter : 0,
       replied: doc.replied ? doc.replied : 0,
-      status: room.status === db.RoomStatusEnum.OPEN ? 'open' : 'close'
+      status: room.status === RoomStatusEnum.OPEN ? 'open' : 'close'
     })
   }
   return rooms
 }
 
 export const getAllUserIdsInRoom = async (roomId: string) => {
-  const cursor = await db.collections.enter.find({
+  const cursor = await collections(await mongoClient()).enter.find({
     roomId: new ObjectId(roomId)
   })
 

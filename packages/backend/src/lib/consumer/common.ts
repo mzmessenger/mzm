@@ -16,12 +16,12 @@ export const initConsumerGroup = async (stream: string, groupName: string) => {
 
   // create consumer group
   try {
-    await client.xgroup('SETID', stream, groupName, '$')
+    await client().xgroup('SETID', stream, groupName, '$')
   } catch (e) {
     try {
-      await client.xgroup('CREATE', stream, groupName, '$', 'MKSTREAM')
+      await client().xgroup('CREATE', stream, groupName, '$', 'MKSTREAM')
     } catch (e) {
-      if (e?.toSring().includes('already exists')) {
+      if (`${e}`.includes('already exists')) {
         return
       }
       logger.error(`failed creating xgroup (${stream}, ${groupName}):`, e)
@@ -37,7 +37,8 @@ export const initConsumerGroup = async (stream: string, groupName: string) => {
 export const createParser = (
   handler: (id: string, messages: string[]) => Promise<void | null>
 ) => {
-  return async (read) => {
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  return async (read: any) => {
     if (!read) {
       return null
     }
@@ -61,7 +62,7 @@ export const consumeGroup = async (
   parser: ReturnType<typeof createParser>
 ) => {
   try {
-    const res = await client.xreadgroup(
+    const res = await client().xreadgroup(
       'GROUP',
       groupName,
       consumerName,

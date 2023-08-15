@@ -1,12 +1,12 @@
 {
   "compilerOptions": {
     "incremental": true,
+    "strict": true,
     "outDir": "dist",
     "sourceMap": true,
-    "noImplicitAny": false,
     "esModuleInterop": true,
     "target": "esnext",
-    "moduleResolution": "node",
+    "module": "nodenext",
     "skipLibCheck": true,
     "paths": {
       "mzm-shared": ["../shared"]

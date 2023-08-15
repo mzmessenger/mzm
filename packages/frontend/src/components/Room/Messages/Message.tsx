@@ -38,10 +38,10 @@ const MessageElementInner: React.FC<Props> = (props) => {
   const [iineAction, setIineAction] = useState(false)
 
   useEffect(() => {
-    let timer = null
+    let timer: number | null = null
     if (firstIineRef !== undefined && firstIineRef.current !== iine) {
       setIineAction(true)
-      timer = setTimeout(() => {
+      timer = window.setTimeout(() => {
         setIineAction(false)
       }, 1000)
     }
@@ -69,7 +69,7 @@ const MessageElementInner: React.FC<Props> = (props) => {
 
   return (
     <MessageWrap className={className}>
-      <img className="user-icon" src={icon} />
+      <img className="user-icon" src={icon} crossOrigin="anonymous" />
       <MessageHeader
         id={userId}
         account={account}

@@ -31,7 +31,7 @@ export const RoomElem = ({
   return (
     <RoomWrap className={className} onClick={onClick}>
       <div className="room-icon">
-        {iconUrl ? <img src={iconUrl} /> : <Home />}
+        {iconUrl ? <img src={iconUrl} crossOrigin="anonymous" /> : <Home />}
       </div>
       <div className="room-name">{name}</div>
       <div className={unreadClass.join(' ')}>{unread}</div>

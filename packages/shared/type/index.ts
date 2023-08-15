@@ -1,1 +1,3 @@
-export * as socket from './socket.js'
+export type Result<T> =
+  | { success: true; data: T }
+  | { success: false; error: { status?: number; message: string } }

@@ -22,7 +22,7 @@ test('sendToUser', () => {
 
   const send = vi.fn()
 
-  const save = (id, user) => {
+  const save = (id: string, user: string) => {
     const socket = { id } as ExtWebSocket
     socket.send = send
     sender.saveSocket(id, user, socket)

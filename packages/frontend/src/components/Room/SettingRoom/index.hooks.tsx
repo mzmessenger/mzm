@@ -6,15 +6,13 @@ import {
   useRoomById
 } from '../../../recoil/rooms/hooks'
 import { useSocketActions } from '../../../recoil/socket/hooks'
-import { useAuth } from '../../../recoil/auth/hooks'
 import { Props as RoomInfoProps } from './RoomInfo'
 
 export const useSettiongRooms = () => {
   const navigate = useNavigate()
   const { currentRoomId, currentRoomName } = useCurrentRoom()
-  const { getAccessToken } = useAuth()
   const { getRooms, updateRoomDescription } = useSocketActions()
-  const { exitRoom, uploadIcon } = useRoomActions({ getAccessToken, getRooms })
+  const { exitRoom, uploadIcon } = useRoomActions({ getRooms })
   const room = useRoomById(currentRoomId)
   const [image, setImage] = useState('')
   const [open, setOpen] = useState(false)
@@ -47,9 +45,7 @@ export const useSettiongRooms = () => {
         if (res.ok) {
           setOpen(false)
         } else {
-          res.text().then((text) => {
-            alert(`アップロードにエラーが発生しました(${text})`)
-          })
+          alert(`アップロードでエラーが発生しました`)
         }
       })
     },

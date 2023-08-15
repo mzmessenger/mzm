@@ -1,12 +1,9 @@
-import React, { Suspense, lazy, PropsWithChildren } from 'react'
+import React, { Suspense, lazy, PropsWithChildren, useEffect } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useApp } from './App.hooks'
 import { Loading } from './components/Loading'
 import Top from './pages/Top'
 import Room from './pages/Room'
-
-const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:'
-const url = `${protocol}//${window.location.host}/socket`
 
 const WithSuspense: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
   return <Suspense fallback={<Loading />}>{children}</Suspense>
@@ -14,7 +11,7 @@ const WithSuspense: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
 
 // reduce rerender app
 const NoRenderApp = () => {
-  useApp(url)
+  useApp()
   return <></>
 }
 
@@ -22,6 +19,8 @@ const App = () => {
   const PageTos = lazy(() => import('./pages/Tos'))
   const PagePrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
   const LoginSuccess = lazy(() => import('./pages/LoginSuccess'))
+
+  useEffect(() => {}, [])
 
   return (
     <>

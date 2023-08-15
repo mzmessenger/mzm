@@ -10,7 +10,8 @@ type ReceiveQueue = {
 
 const READ_STREAM = 'stream:socket:message'
 
-export const parser = async (read) => {
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+export const parser = async (read: any) => {
   if (!read) {
     return
   }
@@ -38,7 +39,7 @@ export const consume = async (startId = '$') => {
   let nextId = startId ? startId : '$'
 
   try {
-    const res = await redis.xread(
+    const res = await redis().xread(
       'COUNT',
       '100',
       'BLOCK',

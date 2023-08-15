@@ -1,25 +1,36 @@
+import type { Redis } from 'ioredis'
+import type { PassportRequest, SerializeUser } from './types.js'
 import express, { type Request, type Response } from 'express'
-import cookieParser from 'cookie-parser'
+import cors from 'cors'
 import helmet from 'helmet'
 import passport from 'passport'
-import type { Redis } from 'ioredis'
 import RedisStore from 'connect-redis'
-import { Strategy as TwitterStrategy } from 'passport-twitter'
 import { Strategy as GitHubStrategy } from 'passport-github'
+import { Strategy as TwitterStrategy } from 'passport-twitter'
 import session from 'express-session'
-import { COOKIES } from 'mzm-shared/auth/constants'
+import { createErrorHandler } from 'mzm-shared/lib/middleware'
+import { wrap } from 'mzm-shared/lib/wrap'
+import {
+  TWITTER_STRATEGY_OPTIONS,
+  GITHUB_STRATEGY_OPTIONS,
+  TRUST_PROXY,
+  SESSION_PARSER,
+  ALLOW_REDIRECT_URIS,
+  ALLOW_REDIRECT_ORIGINS,
+  CORS_ORIGIN
+} from './config.js'
 import { logger } from './lib/logger.js'
 import {
-  TWITTER_CONSUMER_KEY,
-  TWITTER_CONSUMER_SECRET,
-  TWITTER_CALLBACK_URL,
-  GITHUB_CLIENT_ID,
-  GITHUB_CLIENT_SECRET,
-  GITHUB_CALLBACK_URL,
-  TRUST_PROXY,
-  SESSION_PARSER
-} from './config.js'
-import * as handlers from './handlers.js'
+  createNonceMiddleware,
+  type NonceResponse
+} from './middleware/index.js'
+import * as handlers from './handlers/index.js'
+import * as oauthHandlers from './handlers/oauth.js'
+import * as githubHandlers from './handlers/github.js'
+import * as twitterHandlers from './handlers/twitter.js'
+import * as authorizeHandlers from './handlers/authorize.js'
+
+const jsonParser = express.json({ limit: '1mb' })
 
 type Options = {
   client: Redis
@@ -27,33 +38,37 @@ type Options = {
 
 export const createApp = ({ client }: Options) => {
   const app = express()
-  app.use(helmet())
+  const defaultHelmet = helmet()
+  app.use(
+    cors({
+      origin: CORS_ORIGIN
+    })
+  )
   app.set('trust proxy', TRUST_PROXY)
-
-  const sessionParser = session({
-    store: new RedisStore({ client: client }),
-    ...SESSION_PARSER
-  })
-
-  app.use(sessionParser)
-
+  app.use(
+    session({
+      store: new RedisStore({ client: client }),
+      ...SESSION_PARSER
+    })
+  )
   app.use(passport.initialize())
   app.use(passport.session())
 
-  passport.serializeUser(handlers.serializeUser)
-  passport.deserializeUser(handlers.deserializeUser)
+  app.get('/', defaultHelmet, (_, res) => {
+    res.status(200).send('ok')
+  })
 
   passport.use(
+    'twitter',
     new TwitterStrategy(
-      {
-        consumerKey: TWITTER_CONSUMER_KEY,
-        consumerSecret: TWITTER_CONSUMER_SECRET,
-        callbackURL: TWITTER_CALLBACK_URL,
-        includeEmail: true,
-        passReqToCallback: true
-      },
-      (req, token, tokenSecret, profile, done) => {
-        handlers.loginTwitter(req, profile.id, profile.username, done)
+      TWITTER_STRATEGY_OPTIONS,
+      (req, accessToken, refreshToken, profile, done) => {
+        twitterHandlers.loginTwitter(
+          req as unknown as PassportRequest,
+          profile.id,
+          profile.username,
+          done
+        )
       }
     )
   )
@@ -61,67 +76,100 @@ export const createApp = ({ client }: Options) => {
   passport.use(
     'github',
     new GitHubStrategy(
-      {
-        clientID: GITHUB_CLIENT_ID,
-        clientSecret: GITHUB_CLIENT_SECRET,
-        callbackURL: GITHUB_CALLBACK_URL,
-        passReqToCallback: true
-      },
+      GITHUB_STRATEGY_OPTIONS,
       (req, accessToken, refreshToken, profile, done) => {
-        handlers.loginGithub(req, profile.id, profile.username, done)
+        githubHandlers.loginGithub(
+          req as PassportRequest,
+          profile.id,
+          profile.username,
+          done
+        )
       }
     )
   )
 
-  app.post('/auth/token/refresh', cookieParser(), (req, res) => {
-    return handlers.refreshAccessToken(req, res)
-  })
+  app.get(
+    '/authorize',
+    createNonceMiddleware,
+    helmet({
+      contentSecurityPolicy: {
+        directives: {
+          scriptSrc: [
+            "'self'",
+            (req, res) => {
+              const { locals } = res as NonceResponse
+              return `'nonce-${locals.nonce}'`
+            }
+          ],
+          frameAncestors: ["'self'", ...ALLOW_REDIRECT_ORIGINS]
+        }
+      }
+    }),
+    (req, res, next) => {
+      return wrap(
+        authorizeHandlers.createAuthorize(res as NonceResponse, client)
+      )(req, res, next)
+    }
+  )
 
-  const callbackHandler = (
-    req: Request & { user: handlers.SerializeUser },
-    res: Response
-  ) => {
-    return res
-      .cookie(COOKIES.ACCESS_TOKEN, req.user.accessToken)
-      .cookie(COOKIES.REFRESH_TOKEN, req.user.refreshToken, {
-        secure: true,
-        httpOnly: true
-      })
-      .redirect('/login/success')
-  }
+  passport.serializeUser(handlers.serializeUser)
+  passport.deserializeUser(handlers.deserializeUser)
 
-  app.get('/auth/twitter', passport.authenticate('twitter'))
+  app.post(
+    '/auth/token',
+    defaultHelmet,
+    jsonParser,
+    wrap(authorizeHandlers.token)
+  )
+
+  app.get(
+    '/auth/twitter',
+    defaultHelmet,
+    oauthHandlers.oauth(passport, 'twitter')
+  )
   app.get(
     '/auth/twitter/callback',
-    passport.authenticate('twitter', { failureRedirect: '/' }),
-    callbackHandler
+    defaultHelmet,
+    passport.authenticate('twitter', {
+      keepSessionInfo: true,
+      failureRedirect: '/auth/error'
+    }),
+    (req, res) => {
+      oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
+    }
   )
-  app.delete('/auth/twitter', handlers.removeTwitter)
+  app.delete(
+    '/auth/twitter',
+    defaultHelmet,
+    wrap(twitterHandlers.removeTwitter)
+  )
 
-  app.get('/auth/github', passport.authenticate('github'))
+  app.get(
+    '/auth/github',
+    defaultHelmet,
+    oauthHandlers.oauth(passport, 'github')
+  )
   app.get(
     '/auth/github/callback',
-    passport.authenticate('github', { failureRedirect: '/' }),
-    callbackHandler
+    defaultHelmet,
+    passport.authenticate('github', {
+      keepSessionInfo: true,
+      failureRedirect: '/auth/error'
+    }),
+    (req, res) => {
+      oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
+    }
   )
-  app.delete('/auth/github', handlers.removeGithub)
+  app.delete('/auth/github', defaultHelmet, wrap(githubHandlers.removeGithub))
 
-  app.get('/auth/logout', (req: Request, res: Response) => {
-    req.logout(() => {
-      res
-        .clearCookie(COOKIES.ACCESS_TOKEN)
-        .clearCookie(COOKIES.REFRESH_TOKEN)
-        .redirect('/')
-    })
-  })
+  app.get('/auth/logout', defaultHelmet, handlers.logout)
 
-  app.delete('/auth/user', handlers.remove)
+  app.delete('/auth/user', defaultHelmet, wrap(handlers.remove))
+  app.get('/auth/error', defaultHelmet, (_, res) =>
+    res.redirect(ALLOW_REDIRECT_ORIGINS[0])
+  )
 
-  // eslint-disable-next-line no-unused-vars, @typescript-eslint/no-unused-vars
-  app.use((err, req, res, next) => {
-    res.status(500).send('Internal Server Error')
-    logger.error('[Internal Server Error]', err)
-  })
+  app.use(createErrorHandler(logger))
 
   return app
 }

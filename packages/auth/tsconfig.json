@@ -1,17 +1,19 @@
 {
   "compilerOptions": {
     "incremental": true,
+    "strict": true,
     "outDir": "dist",
     "sourceMap": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "esModuleInterop": true,
     "target": "esnext",
-    "moduleResolution": "node",
+    "module": "nodenext",
+    "moduleResolution": "nodenext",
     "skipLibCheck": true,
     "paths": {
       "mzm-shared": ["../shared"]
     }
   },
-  "exclude": ["node_modules", "**/*.test.ts"],
+  "exclude": ["node_modules", "**/*.test.ts", "test/**/*"],
   "references": [{ "path": "../shared" }]
 }

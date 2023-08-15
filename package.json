@@ -8,7 +8,7 @@
     "test": "npm test --workspaces --if-present",
     "lint": "npm run lint --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",
-    "start": "concurrently -c \"auto\" npm:start:*",
+    "start": "concurrently -c \"auto\" npm:start:auth npm:start:socket npm:start:backend npm:start:frontend",
     "start:without:frontend": "concurrently -c \"auto\" npm:start:auth npm:start:socket npm:start:backend",
     "start:auth": "npm start -w packages/auth",
     "start:socket": "npm start -w packages/socket",
@@ -21,7 +21,6 @@
   },
   "devDependencies": {
     "@types/express": "^4.17.15",
-    "@types/jsonwebtoken": "^9.0.0",
     "@types/node": "^20.4.4",
     "@typescript-eslint/eslint-plugin": "^6.2.0",
     "@typescript-eslint/parser": "^6.2.0",

@@ -1,40 +1,41 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-vi.mock('../lib/logger')
-
-import { ObjectId } from 'mongodb'
-import type { REQUEST } from 'mzm-shared/type/api'
-import { mongoSetup, dropCollection, createRequest } from '../../test/testUtil'
-import { BadRequest, NotFound } from '../lib/errors'
-import * as db from '../lib/db'
-import { update, getUserInfo, updateAccount } from './users'
-
-let mongoServer: MongoMemoryServer | null = null
-let mongoUri: string | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  mongoUri = mongo.uri
-  await db.connect(mongo.uri)
+import { vi, test, expect, beforeEach, beforeAll } from 'vitest'
+vi.mock('../lib/db.js', async () => {
+  const actual = await vi.importActual<typeof import('../lib/db.js')>(
+    '../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
 })
 
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
+import type { REQUEST } from 'mzm-shared/type/api'
+import { ObjectId } from 'mongodb'
+import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
+import {
+  dropCollection,
+  createRequest,
+  getTestMongoClient
+} from '../../test/testUtil.js'
+import { collections, COLLECTION_NAMES } from '../lib/db.js'
+import { update, getUserInfo, updateAccount } from './users.js'
+
+beforeAll(async () => {
+  const { mongoClient } = await import('../lib/db.js')
+  const { getTestMongoClient } = await import('../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
 beforeEach(async () => {
-  if (mongoUri) {
-    dropCollection(mongoUri, db.COLLECTION_NAMES.MESSAGES)
-  }
+  const client = await getTestMongoClient(globalThis)
+  await dropCollection(client, COLLECTION_NAMES.USERS)
 })
 
 test('update', async () => {
   const userId = new ObjectId()
   const account = `aaa-${userId.toHexString()}`
 
-  await db.collections.users.insertOne({ _id: userId, account, roomOrder: [] })
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
 
   const body: Partial<REQUEST['/api/user/@me']['PUT']['body']> = {
     account: 'changed-account'
@@ -43,7 +44,7 @@ test('update', async () => {
 
   const user = await update(req)
 
-  const found = await db.collections.users.findOne({ _id: userId })
+  const found = await collections(db).users.findOne({ _id: userId })
 
   expect(user.id).toStrictEqual(found?._id.toHexString())
   expect(user.account).toStrictEqual(found?.account)
@@ -54,8 +55,9 @@ test('update failed: exists account', async () => {
   const userId = new ObjectId()
   const account = 'aaa'
 
-  await db.collections.users.insertOne({ _id: userId, account, roomOrder: [] })
-  await db.collections.users.insertOne({
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(db).users.insertOne({
     _id: new ObjectId(),
     account: 'exists',
     roomOrder: []
@@ -74,14 +76,15 @@ test('getUserInfo', async () => {
   const userId = new ObjectId()
   const account = 'aaa'
 
-  await db.collections.users.insertOne({ _id: userId, account, roomOrder: [] })
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
 
   const body = { account }
   const req = createRequest(userId, { body })
 
   const user = await getUserInfo(req)
 
-  const found = await db.collections.users.findOne({ _id: userId })
+  const found = await collections(db).users.findOne({ _id: userId })
 
   expect(user.id).toStrictEqual(found?._id.toHexString())
   expect(user.account).toStrictEqual(found?.account)
@@ -93,7 +96,8 @@ test('getUserInfo before signUp', async () => {
   const userId = new ObjectId()
   const account = ''
 
-  await db.collections.users.insertOne({
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).users.insertOne({
     _id: userId,
     account,
     roomOrder: []

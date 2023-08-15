@@ -1,13 +1,13 @@
-import React from 'react'
+import React, { MouseEventHandler } from 'react'
 import ListIcon from '@mui/icons-material/List'
 import styled from '@emotion/styled'
 
 type Props = {
   className?: string
-  onClick
+  onClick: MouseEventHandler<HTMLElement>
 }
 
-export const MobileMenuIcon: React.FC<Props> = ({ className, onClick }) => {
+export function MobileMenuIcon({ className, onClick }: Props) {
   return (
     <Wrap className={className} onClick={onClick}>
       <ListIcon />

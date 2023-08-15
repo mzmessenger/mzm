@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import { Home, DirectionsRun } from '@mui/icons-material'
-import { WIDTH_MOBILE } from '../../../lib/constants'
+import { WIDTH_MOBILE } from '../../../constants'
 import { DropImage } from '../../atoms/DropImage'
 import { Button } from '../../atoms/Button'
 import { ModalIcon } from '../../atoms/ModalIcon'
@@ -10,7 +10,7 @@ import { SettingRoomStatus } from './RoomStatus'
 import { RoomInfo } from './RoomInfo'
 
 const IconImage = ({ iconUrl }: { iconUrl: string }) => {
-  return iconUrl ? <img src={iconUrl} /> : <Home />
+  return iconUrl ? <img src={iconUrl} crossOrigin="anonymous" /> : <Home />
 }
 
 export const SettingRoom = () => {

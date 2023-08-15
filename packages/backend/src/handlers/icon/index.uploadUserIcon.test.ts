@@ -1,40 +1,40 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
-vi.mock('image-size')
-vi.mock('../../lib/logger')
-vi.mock('../../lib/storage')
+import { vi, test, expect, beforeAll } from 'vitest'
+vi.mock('../../lib/image.js')
+vi.mock('../../lib/logger.js')
+vi.mock('../../lib/storage.js')
+vi.mock('../../lib/db.js', async () => {
+  const actual = await vi.importActual<typeof import('../../lib/db.js')>(
+    '../../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
+})
 
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
-import sizeOf from 'image-size'
-import { mongoSetup, createFileRequest } from '../../../test/testUtil'
-import * as db from '../../lib/db'
-import * as storage from '../../lib/storage'
-import * as config from '../../config'
-import { BadRequest } from '../../lib/errors'
-import { uploadUserIcon } from './index'
-
-let mongoServer: MongoMemoryServer | null = null
+import { BadRequest } from 'mzm-shared/lib/errors'
+import {
+  createFileRequest,
+  getTestMongoClient
+} from '../../../test/testUtil.js'
+import { collections } from '../../lib/db.js'
+import * as storage from '../../lib/storage.js'
+import * as config from '../../config.js'
+import { uploadUserIcon } from './index.js'
+import { sizeOf } from '../../lib/image.js'
 
 beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
-beforeEach(() => {
-  vi.resetAllMocks()
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
+  const { mongoClient } = await import('../../lib/db.js')
+  const { getTestMongoClient } = await import('../../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
 test('uploadUserIcon', async () => {
   const userId = new ObjectId()
 
-  await db.collections.users.insertOne({
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).users.insertOne({
     _id: userId,
     account: userId.toString(),
     roomOrder: []
@@ -43,9 +43,8 @@ test('uploadUserIcon', async () => {
   const putObjectMock = vi.mocked(storage.putObject)
   putObjectMock.mockResolvedValueOnce({} as never)
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, { width: 100, height: 100 })
+  vi.mocked(sizeOf).mockImplementationOnce(() => {
+    return Promise.resolve({ width: 100, height: 100 })
   })
   const createBodyFromFilePath = vi.mocked(storage.createBodyFromFilePath)
   const readableStream = new Readable() as ReturnType<
@@ -66,7 +65,7 @@ test('uploadUserIcon', async () => {
 
   const res = await uploadUserIcon(req)
 
-  const user = await db.collections.users.findOne({ _id: userId })
+  const user = await collections(db).users.findOne({ _id: userId })
 
   expect(typeof user?.icon?.version).toStrictEqual('string')
   expect(res.version).toStrictEqual(user?.icon?.version)
@@ -98,6 +97,23 @@ test.each([['image/gif'], ['image/svg+xml']])(
   }
 )
 
+test('uploadUserIcon: empty file', async () => {
+  expect.assertions(1)
+
+  const name = new ObjectId().toHexString()
+
+  const req = createFileRequest(new ObjectId(), {
+    file: undefined,
+    params: { roomname: name }
+  })
+
+  try {
+    await uploadUserIcon(req)
+  } catch (e) {
+    expect(e instanceof BadRequest).toStrictEqual(true)
+  }
+})
+
 test('uploadUserIcon validation: size over', async () => {
   expect.assertions(1)
 
@@ -112,9 +128,8 @@ test('uploadUserIcon validation: size over', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, {
+  vi.mocked(sizeOf).mockImplementationOnce(() => {
+    return Promise.resolve({
       width: config.icon.MAX_USER_ICON_SIZE + 1,
       height: config.icon.MAX_USER_ICON_SIZE + 1
     })
@@ -143,9 +158,8 @@ test('uploadUserIcon validation: not square', async () => {
     path: '/path/to/file'
   }
 
-  const sizeOfMock = vi.mocked(sizeOf)
-  sizeOfMock.mockImplementation((path, cb) => {
-    cb(null, {
+  vi.mocked(sizeOf).mockImplementation(() => {
+    return Promise.resolve({
       width: config.icon.MAX_USER_ICON_SIZE - 1,
       height: config.icon.MAX_USER_ICON_SIZE - 2
     })

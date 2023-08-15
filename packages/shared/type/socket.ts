@@ -24,7 +24,7 @@ type VoteType = {
     index: number
     userId: string
     userAccount: string
-    icon: string
+    icon: string | null
   }[]
   status: (typeof VoteStatusEnum)[keyof typeof VoteStatusEnum]
 }
@@ -39,7 +39,7 @@ export type MessageType = {
   createdAt: string
   updatedAt: string | null
   userAccount: string
-  icon: string
+  icon: string | null
   vote?: VoteType
 }
 
@@ -62,7 +62,7 @@ export type ToClientType =
         id: string
         name: string
         description: string
-        iconUrl: string
+        iconUrl: string | null
         unread: number
         replied: number
         status: 'open' | 'close'
@@ -70,7 +70,7 @@ export type ToClientType =
       roomOrder: string[]
     }
   | {
-      user: string
+      user: string | null
       cmd: typeof TO_CLIENT_CMD.MESSAGE_RECEIVE
       message: MessageType
       room: string
@@ -87,15 +87,15 @@ export type ToClientType =
       cmd: typeof TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS
       id: string
       name: string
-      iconUrl: string
+      iconUrl: string | null
       description: string
     }
   | {
       user: string
       cmd: typeof TO_CLIENT_CMD.ROOMS_ENTER_FAIL
-      id: string
-      name: string
-      reason: string
+      id: string | null
+      name: string | null
+      reason: string | null
     }
   | {
       user: string
@@ -179,7 +179,11 @@ export type ClientToSocketType =
 export type SocketToBackendType =
   | {
       cmd: typeof TO_SERVER_CMD.CONNECTION
-      payload: { user: string; twitterUserName: string; githubUserName: string }
+      payload: {
+        user: string
+        twitterUserName: string | null
+        githubUserName: string | null
+      }
     }
   | ClientToSocketType
 

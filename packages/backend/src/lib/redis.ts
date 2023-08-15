@@ -1,5 +1,5 @@
 import { once } from 'node:events'
-import Redis from 'ioredis'
+import { Redis } from 'ioredis'
 import { logger } from './logger.js'
 import * as config from '../config.js'
 
@@ -14,28 +14,35 @@ type ExRedisClient = Redis & {
 }
 
 export const connect = async () => {
-  client = new Redis(config.redis.options) as ExRedisClient
+  _client = new Redis(config.redis.options) as ExRedisClient
 
-  client.on('error', function error(e) {
+  _client.on('error', function error(e) {
     logger.error('[redis]', 'error', e)
     process.exit(1)
   })
 
-  client.defineCommand('release', {
+  _client.defineCommand('release', {
     lua: releaseScript,
     numberOfKeys: 1
   })
 
-  await once(client, 'ready')
+  await once(_client, 'ready')
 
   logger.info('[redis] connected')
 }
 
-export let client: ExRedisClient = null
+let _client: ExRedisClient | null = null
+
+export const client = () => {
+  if (!_client) {
+    throw new Error('redis client not initialized')
+  }
+  return _client
+}
 
 export const lock = async (key: string, val: string, millisec: number) => {
   try {
-    const res = await client.set(key, val, 'PX', millisec, 'NX')
+    const res = await client().set(key, val, 'PX', millisec, 'NX')
     return (res || '').toLocaleLowerCase().includes('ok')
   } catch (e) {
     return false
@@ -43,5 +50,5 @@ export const lock = async (key: string, val: string, millisec: number) => {
 }
 
 export const release = async (key: string, val: string) => {
-  return await client.release(key, val)
+  return await client().release(key, val)
 }

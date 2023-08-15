@@ -6,17 +6,20 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.js",
+    "./lib/*": "./dist/lib/*.js",
     "./auth/*": "./dist/auth/*.js",
     "./type/db": "./dist/type/db.js",
     "./type/socket": "./dist/type/socket.js",
     "./type/api": "./dist/type/api.js",
+    "./type/auth": "./dist/type/auth.js",
+    "./type": "./dist/type/index.js",
     "./validator": "./dist/validator/index.js"
   },
   "scripts": {
     "format": "prettier --write auth type ./*.{js,json}",
     "build": "tsc --build tsconfig.json",
-    "pretest": "eslint --ext .ts,.js auth type validator",
     "lint": "eslint --ext .ts,.js auth type validator",
+    "pretest": "concurrently \"npm run lint\" \"npm run build\"",
     "test": "vitest run --config ./vitest.config.ts",
     "test:watch": "vitest --config ./vitest.config.ts"
   },
@@ -25,7 +28,9 @@
     "express": "^4.18.2",
     "jsonwebtoken": "^9.0.0",
     "typescript": "^5.1.6",
-    "undici": "^5.14.0",
-    "validator": "^13.7.0"
+    "undici": "^5.14.0"
+  },
+  "devDependencies": {
+    "@types/jsonwebtoken": "^9.0.2"
   }
 }

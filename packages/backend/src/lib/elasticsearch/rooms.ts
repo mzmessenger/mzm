@@ -1,8 +1,9 @@
+import type { RESPONSE } from 'mzm-shared/type/api'
 import { ObjectId } from 'mongodb'
 import { logger } from '../logger.js'
 import { lock, release } from '../redis.js'
 import * as config from '../../config.js'
-import * as db from '../db.js'
+import { mongoClient, collections, RoomStatusEnum, type Room } from '../db.js'
 import { client as es } from './index.js'
 import { createRoomIconPath } from '../utils.js'
 
@@ -97,7 +98,7 @@ export type RoomMappingsProperties = {
     ngram: string
     kuromoji: string
   }
-} & Pick<db.Room, 'status'>
+} & Pick<Room, 'status'>
 
 export type RoomMappings = {
   _doc: {
@@ -158,7 +159,8 @@ export const initAlias = async () => {
 
 export const insertRooms = async (roomIds: string[]) => {
   const ids = roomIds.map((e) => new ObjectId(e))
-  const cursor = await db.collections.rooms.find({ _id: { $in: ids } })
+  const db = await mongoClient()
+  const cursor = await collections(db).rooms.find({ _id: { $in: ids } })
 
   type Body =
     | { index: { _index: string; _id: string } }
@@ -179,9 +181,9 @@ export const insertRooms = async (roomIds: string[]) => {
         ngram: doc.description || ''
       },
       status:
-        doc.status === db.RoomStatusEnum.OPEN
-          ? db.RoomStatusEnum.OPEN
-          : db.RoomStatusEnum.CLOSE
+        doc.status === RoomStatusEnum.OPEN
+          ? RoomStatusEnum.OPEN
+          : RoomStatusEnum.CLOSE
     })
   }
 
@@ -190,8 +192,17 @@ export const insertRooms = async (roomIds: string[]) => {
     body: body
   })
   if (bulkResponse.errors) {
-    const erroredDocuments = []
-    bulkResponse.items.forEach((action, i) => {
+    const erroredDocuments: {
+      status: unknown
+      error: unknown
+      operation: unknown
+      document: unknown
+    }[] = []
+
+    const items = bulkResponse.items as {
+      [key: string]: { error: unknown; status: unknown }
+    }[]
+    items.forEach((action, i) => {
       const operation = Object.keys(action)[0]
       if (action[operation].error) {
         erroredDocuments.push({
@@ -209,7 +220,7 @@ export const insertRooms = async (roomIds: string[]) => {
 export const searchRoom = async (
   query: string | null,
   scroll: string | null
-) => {
+): Promise<RESPONSE['/api/rooms/search']['GET']> => {
   // @todo multi query
   const must: object[] = []
 
@@ -241,7 +252,7 @@ export const searchRoom = async (
     query: {
       bool: {
         must: must,
-        filter: [{ match: { status: db.RoomStatusEnum.OPEN } }]
+        filter: [{ match: { status: RoomStatusEnum.OPEN } }]
       }
     },
     sort: [{ _id: 'asc' }]
@@ -257,12 +268,14 @@ export const searchRoom = async (
     body: body
   })
 
-  const ids = resBody.hits.hits.map((elem) => new ObjectId(elem._id))
-  const cursor = await db.collections.rooms.find({ _id: { $in: ids } })
+  const hits = resBody.hits.hits as { _id: string }[]
+  const ids = hits.map((elem) => new ObjectId(elem._id))
+  const db = await mongoClient()
+  const cursor = await collections(db).rooms.find({ _id: { $in: ids } })
 
-  type ResRoom = Pick<db.Room, 'name' | 'description'> & {
+  type ResRoom = Pick<Room, 'name' | 'description'> & {
     id: string
-    iconUrl: string
+    iconUrl: string | null
   }
   const rooms: ResRoom[] = []
   for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
@@ -270,7 +283,7 @@ export const searchRoom = async (
       id: doc._id.toHexString(),
       name: doc.name,
       description: doc.description,
-      iconUrl: createRoomIconPath(doc)
+      iconUrl: createRoomIconPath(doc) ?? null
     })
   }
 

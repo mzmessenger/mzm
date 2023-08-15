@@ -1,32 +1,36 @@
-type FetchInit = Parameters<typeof fetch>[1]
+import type { RESPONSE } from 'mzm-shared/type/api'
+import { API_URL_BASE } from '../constants'
+import { proxyRequest, proxyRequestWithFormData } from '../lib/auth'
 
-type Options = { accessToken: string; headers?: FetchInit['headers'] } & (
+type Init = Parameters<typeof proxyRequest>[1]
+
+type Options = {
+  headers?: Record<string, string>
+} & (
   | {
       method?: 'GET'
     }
   | {
       method: 'POST' | 'PUT' | 'DELETE'
-      accessToken: string
-      body?: FetchInit['body']
+      body?: Init['body']
     }
 )
 
+type Parser<T> = (res: Awaited<ReturnType<typeof proxyRequest>>) => Promise<T>
+
 export const createApiClient = async <T>(
-  url: string,
+  path: string,
   options: Options,
-  parser: (res: Awaited<ReturnType<typeof fetch>>) => Promise<T>
+  parser: Parser<T>
 ) => {
-  const headers = new Headers({
-    Authorization: `Bearer ${options.accessToken}`,
-    'Content-Type': 'application/json; charset=utf-8',
+  const headers = {
     ...options.headers
-  })
+  }
 
   const method = options.method ?? 'GET'
 
-  const init: FetchInit = {
+  const init: Init = {
     method,
-    credentials: 'include',
     headers,
     ...options
   }
@@ -39,8 +43,43 @@ export const createApiClient = async <T>(
   ) {
     init.body = options.body
   }
-
-  const res = await fetch(url, init)
+  const res = await proxyRequest(API_URL_BASE + path, init)
 
   return await parser(res)
+}
+
+export const uploadRoomIcon = async (name: string, blob: Blob) => {
+  const res = await proxyRequestWithFormData(
+    API_URL_BASE + `/api/icon/rooms/${name}`,
+    {
+      body: [['icon', blob]]
+    }
+  )
+
+  if (res.ok) {
+    const body = res.body as RESPONSE['/api/icon/rooms/:roomname']['POST']
+    return {
+      ...res,
+      ok: true,
+      body: body
+    }
+  }
+
+  return res
+}
+
+export const uploadUserIcon = async (blob: Blob) => {
+  const res = await proxyRequestWithFormData(API_URL_BASE + '/api/icon/user', {
+    body: [['icon', blob]]
+  })
+
+  if (res.ok) {
+    const body = res.body as RESPONSE['/api/icon/user']['POST']
+    return {
+      ...res,
+      body
+    }
+  }
+
+  return res
 }

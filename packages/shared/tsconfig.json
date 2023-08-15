@@ -1,9 +1,10 @@
 {
   "compilerOptions": {
+    "strict": true,
     "incremental": true,
     "outDir": "dist",
     "sourceMap": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "esModuleInterop": true,
     "module": "NodeNext",
     "target": "esnext",

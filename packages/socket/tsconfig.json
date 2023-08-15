@@ -1,11 +1,13 @@
 {
   "compilerOptions": {
     "incremental": true,
+    "strict": true,
     "outDir": "dist",
     "sourceMap": true,
-    "noImplicitAny": false,
+    "noImplicitAny": true,
     "esModuleInterop": true,
     "target": "esnext",
+    "module": "nodenext",
     "moduleResolution": "node",
     "skipLibCheck": true,
     "paths": {

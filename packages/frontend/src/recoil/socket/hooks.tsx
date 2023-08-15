@@ -1,4 +1,3 @@
-import type { useAuth } from '../auth/hooks'
 import type { useUserAccount } from '../user/hooks'
 import { useNavigate } from 'react-router-dom'
 import { useCallback, useEffect, useRef } from 'react'
@@ -16,6 +15,7 @@ import { useUiActions } from '../ui/hooks'
 import { atom, useRecoilState, useRecoilValue } from 'recoil'
 import dayjs from 'dayjs'
 import { sendSocket, getRoomName, sleep } from '../../lib/util'
+import { generateSocketUrl } from '../../lib/auth'
 import { logger } from '../../lib/logger'
 
 const DEFAULT_INTERVAL = 1000
@@ -29,10 +29,6 @@ type HandlerArgs<P extends ToClientType['cmd']> = {
 }
 type MessageHandlers = {
   [P in ToClientType['cmd']]?: (args: HandlerArgs<P>) => void
-}
-
-type InitOptions = {
-  url: string
 }
 
 type SocketState = {
@@ -261,14 +257,10 @@ export const useSocketActions = () => {
 
 export const useSocket = ({
   pathname,
-  userAccount,
-  getAccessToken,
-  logout
+  userAccount
 }: {
   pathname: string
   userAccount: ReturnType<typeof useUserAccount>['userAccount']
-  getAccessToken: ReturnType<typeof useAuth>['getAccessToken']
-  logout: ReturnType<typeof useAuth>['logout']
 }) => {
   const navigate = useNavigate()
   const handlers = useRef<MessageHandlers>({})
@@ -297,7 +289,7 @@ export const useSocket = ({
     changeRoom
   } = useRoomActionsForSocket()
   const { closeMenu } = useUiActions()
-  const { fetchMyInfo } = useMyInfoActions({ getAccessToken, logout })
+  const { fetchMyInfo } = useMyInfoActions()
 
   useEffect(() => {
     handlers.current[TO_CLIENT_CMD.SOCKET_CONNECTION] = ({ ws, message }) => {
@@ -447,146 +439,133 @@ export const useSocket = ({
     }
   }, [])
 
-  const connect = useCallback(
-    async (connectUrl: string) => {
-      if (socket.ws || socket.connecting) {
+  const connect = useCallback(async () => {
+    if (socket.ws || socket.connecting) {
+      return
+    }
+
+    setSocket((current) => {
+      return { ...current, connecting: true }
+    })
+    const url = await generateSocketUrl()
+    if (!url) {
+      return
+    }
+    const socketInstance = new WebSocket(url)
+
+    setSocket((current) => {
+      return { ...current, ws: socketInstance }
+    })
+
+    socketInstance.addEventListener('open', () => {
+      logger.log('ws open')
+      setSocket((current) => {
+        return {
+          ...current,
+          connecting: false
+        }
+      })
+      setSocketRecoonect({
+        reconnectInterval: INIT_RECONNECT_INTERVAL,
+        reconnectAttempts: 0
+      })
+    })
+
+    socketInstance.onmessage = (e) => {
+      if (!e) {
+        return
+      }
+      if (e.data === 'ping') {
+        socketInstance.send('pong')
+        return
+      }
+      try {
+        const parsed: ToClientType = JSON.parse(e.data)
+        if (handlers.current[parsed.cmd]) {
+          const handler = handlers.current[parsed.cmd]
+          const args: HandlerArgs<typeof parsed.cmd> = {
+            ws: socketInstance,
+            message: parsed
+          }
+          // @todo remove any
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          handler(args as any)
+        }
+      } catch (err) {
+        logger.error(err)
+      }
+    }
+
+    const reconnect = async () => {
+      const counter = socketRecoonect.reconnectAttempts + 1
+      setSocketRecoonect((current) => {
+        return {
+          ...current,
+          reconnectAttempts: counter
+        }
+      })
+
+      if (counter >= MAX_RECONNECT) {
         return
       }
 
-      setSocket((current) => {
-        return { ...current, connecting: true }
+      logger.warn(
+        `ws reconnect: ${socketRecoonect.reconnectAttempts} `,
+        dayjs().format('YYYY/MM/DD HH:mm:ss'),
+        socketRecoonect.reconnectInterval
+      )
+
+      await sleep(socketRecoonect.reconnectInterval)
+      connect()
+
+      const newInterval =
+        socketRecoonect.reconnectInterval <= INIT_RECONNECT_INTERVAL
+          ? DEFAULT_INTERVAL
+          : socketRecoonect.reconnectInterval *
+            Math.floor(
+              Math.pow(RECONNECT_DECAY, socketRecoonect.reconnectAttempts)
+            )
+
+      setSocketRecoonect((current) => {
+        return {
+          ...current,
+          reconnectInterval: newInterval
+        }
       })
-      const { accessToken } = await getAccessToken()
-      if (!accessToken) {
-        logout()
-        return
+    }
+
+    socketInstance.addEventListener('close', (e) => {
+      logger.warn('ws close:', e)
+      try {
+        close(socketInstance)
+        reconnect()
+      } catch (err) {
+        logger.error(err)
       }
-      const socketInstance = new WebSocket(connectUrl + `?token=${accessToken}`)
+    })
 
-      setSocket((current) => {
-        return { ...current, ws: socketInstance }
-      })
-
-      socketInstance.addEventListener('open', () => {
-        logger.log('ws open')
-        setSocket((current) => {
-          return {
-            ...current,
-            connecting: false
-          }
-        })
-        setSocketRecoonect({
-          reconnectInterval: INIT_RECONNECT_INTERVAL,
-          reconnectAttempts: 0
-        })
-      })
-
-      socketInstance.onmessage = (e) => {
-        if (!e) {
-          return
-        }
-        if (e.data === 'ping') {
-          socketInstance.send('pong')
-          return
-        }
-        try {
-          const parsed: ToClientType = JSON.parse(e.data)
-          if (handlers.current[parsed.cmd]) {
-            const handler = handlers.current[parsed.cmd]
-            const args: HandlerArgs<typeof parsed.cmd> = {
-              ws: socketInstance,
-              message: parsed
-            }
-            // @todo remove any
-            // eslint-disable-next-line @typescript-eslint/no-explicit-any
-            handler(args as any)
-          }
-        } catch (err) {
-          logger.error(err)
-        }
+    socketInstance.addEventListener('error', (e) => {
+      logger.warn('ws error:', e)
+      try {
+        close(socketInstance)
+        reconnect()
+      } catch (err) {
+        logger.error(err)
       }
+    })
+  }, [
+    socket.ws,
+    socket.connecting,
+    setSocket,
+    setSocketRecoonect,
+    socketRecoonect.reconnectAttempts,
+    socketRecoonect.reconnectInterval,
+    close
+  ])
 
-      const reconnect = async () => {
-        const counter = socketRecoonect.reconnectAttempts + 1
-        setSocketRecoonect((current) => {
-          return {
-            ...current,
-            reconnectAttempts: counter
-          }
-        })
-
-        if (counter >= MAX_RECONNECT) {
-          return
-        }
-
-        logger.warn(
-          `ws reconnect: ${socketRecoonect.reconnectAttempts} `,
-          dayjs().format('YYYY/MM/DD HH:mm:ss'),
-          socketRecoonect.reconnectInterval
-        )
-
-        await sleep(socketRecoonect.reconnectInterval)
-        connect(connectUrl)
-
-        const newInterval =
-          socketRecoonect.reconnectInterval <= INIT_RECONNECT_INTERVAL
-            ? DEFAULT_INTERVAL
-            : socketRecoonect.reconnectInterval *
-              Math.floor(
-                Math.pow(RECONNECT_DECAY, socketRecoonect.reconnectAttempts)
-              )
-
-        setSocketRecoonect((current) => {
-          return {
-            ...current,
-            reconnectInterval: newInterval
-          }
-        })
-      }
-
-      socketInstance.addEventListener('close', (e) => {
-        logger.warn('ws close:', e)
-        try {
-          close(socketInstance)
-          reconnect()
-        } catch (err) {
-          logger.error(err)
-        }
-      })
-
-      socketInstance.addEventListener('error', (e) => {
-        logger.warn('ws error:', e)
-        try {
-          close(socketInstance)
-          reconnect()
-        } catch (err) {
-          logger.error(err)
-        }
-      })
-    },
-    [
-      socket.ws,
-      socket.connecting,
-      setSocket,
-      getAccessToken,
-      logout,
-      setSocketRecoonect,
-      socketRecoonect.reconnectAttempts,
-      socketRecoonect.reconnectInterval,
-      close
-    ]
-  )
-
-  const init = useCallback(
-    (options: InitOptions) => {
-      if (!options.url || options.url === '') {
-        throw new Error('no url')
-      }
-
-      connect(options.url)
-    },
-    [connect]
-  )
+  const init = useCallback(() => {
+    connect()
+  }, [connect])
 
   return {
     state: {

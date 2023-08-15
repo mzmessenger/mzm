@@ -1,20 +1,21 @@
 import { vi, test, expect } from 'vitest'
-vi.mock('../../logger')
-vi.mock('../../redis', () => {
+
+vi.mock('../../logger.js')
+vi.mock('../../redis.js', () => {
   return {
-    client: {
+    client: vi.fn(() => ({
       xack: vi.fn()
-    }
+    }))
   }
 })
-vi.mock('../common', () => {
+vi.mock('../common.js', () => {
   return {
     initConsumerGroup: vi.fn(),
     consumeGroup: vi.fn(),
     createParser: vi.fn()
   }
 })
-vi.mock('../../elasticsearch/rooms', () => {
+vi.mock('../../elasticsearch/rooms.js', () => {
   return {
     initAlias: vi.fn(),
     insertRooms: vi.fn()
@@ -22,17 +23,17 @@ vi.mock('../../elasticsearch/rooms', () => {
 })
 
 import { ObjectId } from 'mongodb'
-import { createXackMock } from '../../../../test/testUtil'
-import * as config from '../../../config'
-import { RoomQueueType } from '../../../types'
-import { client } from '../../redis'
-import { initConsumerGroup, consumeGroup } from '../common'
-import * as esLogic from '../../elasticsearch/rooms'
+import { createXackMock } from '../../../../test/testUtil.js'
+import * as config from '../../../config.js'
+import { RoomQueueType } from '../../../types.js'
+import { client } from '../../redis.js'
+import { initConsumerGroup, consumeGroup } from '../common.js'
+import * as esLogic from '../../elasticsearch/rooms.js'
 import {
   searchRooms,
   initSearchRoomConsumerGroup,
   consumeSearchRooms
-} from './room'
+} from './room.js'
 
 test('initSearchRoomConsumerGroup', async () => {
   const init = vi.mocked(initConsumerGroup)
@@ -65,7 +66,7 @@ test.each([
     ]
   ]
 ])(`searchRooms: %s`, async (_type, logic, messages) => {
-  const xack = createXackMock(client.xack)
+  const xack = createXackMock(client)
   xack.mockClear()
   xack.mockResolvedValue(1)
 
@@ -80,7 +81,7 @@ test.each([
 })
 
 test('search no-type', async () => {
-  const xack = createXackMock(client.xack)
+  const xack = createXackMock(client)
   xack.mockClear()
   xack.mockResolvedValue(1)
 

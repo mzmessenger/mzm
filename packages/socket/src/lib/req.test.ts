@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi, test, expect } from 'vitest'
 import { request } from 'undici'
 import { INTERNAL_API_URL } from '../config.js'
@@ -41,9 +42,9 @@ test('requestSocketAPI', async () => {
   expect(requestMock.mock.calls.length).toBe(1)
   const [url, options] = requestMock.mock.calls[0]
   expect(url).toStrictEqual(INTERNAL_API_URL)
-  expect(options!.headers!['x-user-id']).toStrictEqual(user)
-  expect(options!.headers!['x-socket-id']).toStrictEqual(socket)
-  expect(options!.headers!['Authorization']).toStrictEqual(
+  expect((options!.headers! as any)['x-user-id']).toStrictEqual(user)
+  expect((options!.headers! as any)['x-socket-id']).toStrictEqual(socket)
+  expect((options!.headers! as any)['Authorization']).toStrictEqual(
     `Bearer internal-access-token`
   )
   expect(options?.body).toStrictEqual(message)

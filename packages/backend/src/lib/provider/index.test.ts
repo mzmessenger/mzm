@@ -1,23 +1,21 @@
 import { vi, test, expect } from 'vitest'
-vi.mock('../logger')
-vi.mock('../redis', () => {
+vi.mock('../logger.js')
+vi.mock('../redis.js', () => {
   return {
-    client: {
+    client: vi.fn(() => ({
       xadd: vi.fn()
-    }
+    }))
   }
 })
 import { ObjectId } from 'mongodb'
 import { ToClientType } from 'mzm-shared/type/socket'
-import { createXaddMock } from '../../../test/testUtil'
-import { client } from '../redis'
-import * as config from '../../config'
-import { addQueueToUsers, addUnreadQueue, addRepliedQueue } from './index'
-
-const xadd = createXaddMock(client.xadd)
+import { createXaddMock } from '../../../test/testUtil.js'
+import { client } from '../redis.js'
+import * as config from '../../config.js'
+import { addQueueToUsers, addUnreadQueue, addRepliedQueue } from './index.js'
 
 test('addQueueToUsers', async () => {
-  xadd.mockClear()
+  const xadd = createXaddMock(client)
 
   const users = ['5cc9d148139370d11b706624']
 
@@ -38,6 +36,7 @@ test('addQueueToUsers', async () => {
 })
 
 test('addUnreadQueue', async () => {
+  const xadd = createXaddMock(client)
   xadd.mockClear()
 
   const roomId = new ObjectId()
@@ -52,6 +51,7 @@ test('addUnreadQueue', async () => {
 })
 
 test('addRepliedQueue', async () => {
+  const xadd = createXaddMock(client)
   xadd.mockClear()
 
   const roomId = new ObjectId()

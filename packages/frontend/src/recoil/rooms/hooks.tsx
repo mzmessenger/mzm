@@ -1,7 +1,6 @@
 import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { useSocketActions } from '../../recoil/socket/hooks'
 import type { useUiActions } from '../../recoil/ui/hooks'
-import type { useAuth } from '../../recoil/auth/hooks'
 import type { Room } from './types'
 import { useCallback } from 'react'
 import {
@@ -13,7 +12,7 @@ import {
   type SetterOrUpdater
 } from 'recoil'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
-import { createApiClient } from '../../lib/client'
+import { createApiClient, uploadRoomIcon } from '../../lib/client'
 import { isReplied } from '../../lib/util'
 
 type RoomUser = {
@@ -361,11 +360,7 @@ export const useRoomMessageActions = ({
   }
 }
 
-export const useRoomUserActions = ({
-  getAccessToken
-}: {
-  getAccessToken: ReturnType<typeof useAuth>['getAccessToken']
-}) => {
+export const useRoomUserActions = () => {
   const [rooms, setRooms] = useRecoilState(roomsState)
 
   const fetchStartRoomUsers = useCallback(() => {
@@ -383,47 +378,41 @@ export const useRoomUserActions = ({
 
       fetchStartRoomUsers()
 
-      const { accessToken } = await getAccessToken()
-
       return await createApiClient(
         `/api/rooms/${roomId}/users`,
         {
-          method: 'GET',
-          accessToken
+          method: 'GET'
         },
         async (res) => {
           if (res.status !== 200) {
             return res
           }
 
-          res
-            .json()
-            .then((body: RESPONSE['/api/rooms/:roomid/users']['GET']) => {
-              setRooms((current) => {
-                const usersById = {
-                  ...current.usersById,
-                  [roomId]: {
-                    users: body.users,
-                    count: body.count
-                  }
-                }
-                const usersAllIds = current.usersAllIds.includes(roomId)
-                  ? current.usersAllIds
-                  : [...current.usersAllIds, roomId]
-                return {
-                  ...current,
-                  usersById,
-                  usersAllIds,
-                  usersLoading: false
-                }
-              })
-            })
+          const body = res.body as RESPONSE['/api/rooms/:roomid/users']['GET']
+          setRooms((current) => {
+            const usersById = {
+              ...current.usersById,
+              [roomId]: {
+                users: body.users,
+                count: body.count
+              }
+            }
+            const usersAllIds = current.usersAllIds.includes(roomId)
+              ? current.usersAllIds
+              : [...current.usersAllIds, roomId]
+            return {
+              ...current,
+              usersById,
+              usersAllIds,
+              usersLoading: false
+            }
+          })
 
           return res
         }
       )
     },
-    [fetchStartRoomUsers, getAccessToken, rooms.usersLoading, setRooms]
+    [fetchStartRoomUsers, rooms.usersLoading, setRooms]
   )
 
   const getNextUsers = useCallback(
@@ -452,50 +441,38 @@ export const useRoomUserActions = ({
 
       const query = new URLSearchParams(init)
 
-      const { accessToken } = await getAccessToken()
-
       return await createApiClient(
         `/api/rooms/${roomId}/users?${query.toString()}`,
         {
-          method: 'GET',
-          accessToken
+          method: 'GET'
         },
         async (res) => {
           if (res.status !== 200) {
             return res
           }
 
-          res
-            .json()
-            .then((body: RESPONSE['/api/rooms/:roomid/users']['GET']) => {
-              setRooms((current) => {
-                const users = current.usersById[roomId]
-                const usersById = {
-                  ...current.usersById,
-                  [roomId]: {
-                    ...users,
-                    users: [...users.users, ...body.users]
-                  }
-                }
-                return {
-                  ...current,
-                  usersById,
-                  usersLoading: false
-                }
-              })
-            })
+          const body = res.body as RESPONSE['/api/rooms/:roomid/users']['GET']
+          setRooms((current) => {
+            const users = current.usersById[roomId]
+            const usersById = {
+              ...current.usersById,
+              [roomId]: {
+                ...users,
+                users: [...users.users, ...body.users]
+              }
+            }
+            return {
+              ...current,
+              usersById,
+              usersLoading: false
+            }
+          })
 
           return res
         }
       )
     },
-    [
-      fetchStartRoomUsers,
-      getAccessToken,
-      rooms.usersById,
-      rooms.usersLoading,
-      setRooms
-    ]
+    [fetchStartRoomUsers, rooms.usersById, rooms.usersLoading, setRooms]
   )
 
   return {
@@ -505,10 +482,8 @@ export const useRoomUserActions = ({
 }
 
 export const useRoomActions = ({
-  getAccessToken,
   getRooms
 }: {
-  getAccessToken: ReturnType<typeof useAuth>['getAccessToken']
   getRooms: ReturnType<typeof useSocketActions>['getRooms']
 }) => {
   const setCurrentRoom = useSetRecoilState(currentRoomState)
@@ -521,13 +496,10 @@ export const useRoomActions = ({
         name
       }
 
-      const { accessToken } = await getAccessToken()
-
       return await createApiClient(
         '/api/rooms',
         {
           method: 'POST',
-          accessToken,
           body: JSON.stringify(body)
         },
         async (res) => {
@@ -535,7 +507,7 @@ export const useRoomActions = ({
             return res
           }
 
-          const room = (await res.json()) as RESPONSE['/api/rooms']['POST']
+          const room = res.body as RESPONSE['/api/rooms']['POST']
           getRooms()
 
           setCurrentRoom({
@@ -549,7 +521,7 @@ export const useRoomActions = ({
         }
       )
     },
-    [getAccessToken, getRooms, setCurrentRoom]
+    [getRooms, setCurrentRoom]
   )
 
   const exitRoom = useCallback(
@@ -558,13 +530,10 @@ export const useRoomActions = ({
         room: roomId
       }
 
-      const { accessToken } = await getAccessToken()
-
       return await createApiClient(
         '/api/rooms/enter',
         {
           method: 'DELETE',
-          accessToken,
           body: JSON.stringify(body)
         },
         async (res) => {
@@ -584,26 +553,16 @@ export const useRoomActions = ({
         }
       )
     },
-    [getAccessToken, getRooms, setCurrentRoom, setOpenRoomSettingState]
+    [getRooms, setCurrentRoom, setOpenRoomSettingState]
   )
 
   const uploadIcon = useCallback(
     async (name: string, blob: Blob) => {
       const formData = new FormData()
       formData.append('icon', blob)
-      const { accessToken } = await getAccessToken()
-      const res = await fetch(`/api/icon/rooms/${name}`, {
-        method: 'POST',
-        body: formData,
-        credentials: 'include',
-        headers: {
-          Authorization: `Bearer ${accessToken}`
-        }
-      })
-
+      const res = await uploadRoomIcon(name, blob)
       if (res.ok) {
-        const { id, version } =
-          (await res.json()) as RESPONSE['/api/icon/rooms/:roomname']['POST']
+        const { id, version } = res.body
 
         setRoomsById((current) => {
           const room = current[id]
@@ -619,10 +578,9 @@ export const useRoomActions = ({
           }
         })
       }
-
       return res
     },
-    [getAccessToken, setRoomsById]
+    [setRoomsById]
   )
 
   return {

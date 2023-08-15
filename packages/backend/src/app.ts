@@ -1,17 +1,21 @@
-import express from 'express'
+import type { MulterFile } from './types/index.js'
+import express, { type Request } from 'express'
+import cors from 'cors'
 import bodyParser from 'body-parser'
 import multer from 'multer'
 import helmet from 'helmet'
-import { MULTER_PATH } from './config.js'
-import { wrap, streamWrap } from './lib/wrap.js'
+import { createErrorHandler } from 'mzm-shared/lib/middleware'
+import { MULTER_PATH, CORS_ORIGIN } from './config.js'
+import { streamWrap } from './lib/wrap.js'
+import { logger } from './lib/logger.js'
+import { wrap } from 'mzm-shared/lib/wrap'
 import * as rooms from './handlers/rooms.js'
 import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import * as internal from './handlers/internal.js'
 import {
   checkAccessToken,
-  checkInternalAccessToken,
-  errorHandler
+  checkInternalAccessToken
 } from './middleware/index.js'
 
 const iconUpload = multer({
@@ -24,6 +28,11 @@ const jsonParser = bodyParser.json({ limit: '1mb' })
 export const createApp = () => {
   const app = express()
   app.use(helmet())
+  app.use(
+    cors({
+      origin: CORS_ORIGIN
+    })
+  )
 
   app.post('/api/rooms', checkAccessToken, jsonParser, wrap(rooms.createRoom))
   app.post(
@@ -55,7 +64,7 @@ export const createApp = () => {
     '/api/icon/user',
     checkAccessToken,
     iconUpload.single('icon'),
-    wrap(icon.uploadUserIcon)
+    wrap<Request & { file?: MulterFile }>(icon.uploadUserIcon)
   )
   app.get('/api/icon/rooms/:roomname/:version', streamWrap(icon.getRoomIcon))
   app.post(
@@ -72,8 +81,7 @@ export const createApp = () => {
     wrap(internal.socket)
   )
 
-  // 必ず最後に use する
-  app.use(errorHandler)
+  app.use(createErrorHandler(logger))
 
   return app
 }

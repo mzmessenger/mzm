@@ -1,7 +1,7 @@
 import React, { type PropsWithChildren, type FC, type ReactNode } from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
-import { WIDTH_MOBILE } from '../lib/constants'
+import { WIDTH_MOBILE } from '../constants'
 import { useNumberLocalStorage } from '../lib/hooks/useLocalStorage'
 import { useMenuUi, useUiActions } from '../recoil/ui/hooks'
 import { ResizerX } from './atoms/ResizerX'

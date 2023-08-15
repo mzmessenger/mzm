@@ -1,36 +1,35 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll, beforeEach } from 'vitest'
+import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('undici', () => {
   return { request: vi.fn() }
 })
 vi.mock('image-size')
-vi.mock('../../lib/logger')
-vi.mock('../../lib/storage')
+vi.mock('../../lib/logger.js')
+vi.mock('../../lib/storage.js')
+vi.mock('../../lib/db.js', async () => {
+  const actual = await vi.importActual<typeof import('../../lib/db.js')>(
+    '../../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
+})
 
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
-import { mongoSetup, createRequest } from '../../../test/testUtil'
-import { createHeadObjectMockValue, createGetObjectMockValue } from './testUtil'
-import * as db from '../../lib/db'
-import * as storage from '../../lib/storage'
-import { BadRequest, NotFound } from '../../lib/errors'
-import { getRoomIcon } from './index'
-
-let mongoServer: MongoMemoryServer | null = null
+import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
+import { createRequest, getTestMongoClient } from '../../../test/testUtil.js'
+import {
+  createHeadObjectMockValue,
+  createGetObjectMockValue
+} from './testUtil.js'
+import { collections, RoomStatusEnum } from '../../lib/db.js'
+import * as storage from '../../lib/storage.js'
+import { getRoomIcon } from './index.js'
 
 beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
-})
-
-beforeEach(() => {
-  vi.resetAllMocks()
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
+  const { mongoClient } = await import('../../lib/db.js')
+  const { getTestMongoClient } = await import('../../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
 test('getRoomIcon', async () => {
@@ -38,13 +37,14 @@ test('getRoomIcon', async () => {
   const name = roomId.toHexString()
   const version = '12345'
 
-  await db.collections.rooms.insertOne({
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).rooms.insertOne({
     _id: roomId,
     name,
     createdBy: new ObjectId().toHexString(),
     updatedBy: undefined,
     icon: { key: 'iconkey', version },
-    status: db.RoomStatusEnum.CLOSE
+    status: RoomStatusEnum.CLOSE
   })
 
   const req = createRequest(null, { params: { roomname: name, version } })
@@ -102,12 +102,13 @@ test('getRoomIcon NotFound: different version', async () => {
   const name = roomId.toHexString()
   const version = '12345'
 
-  await db.collections.rooms.insertOne({
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).rooms.insertOne({
     _id: roomId,
     name: name,
     createdBy: new ObjectId().toHexString(),
     icon: { key: 'iconkey', version },
-    status: db.RoomStatusEnum.CLOSE
+    status: RoomStatusEnum.CLOSE
   })
 
   const req = createRequest(null, {
@@ -128,12 +129,13 @@ test('getRoomIcon NotFound: not found on storage', async () => {
   const name = roomId.toHexString()
   const version = '12345'
 
-  await db.collections.rooms.insertOne({
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).rooms.insertOne({
     _id: roomId,
     name: name,
     createdBy: new ObjectId().toHexString(),
     icon: { key: 'iconkey', version },
-    status: db.RoomStatusEnum.CLOSE
+    status: RoomStatusEnum.CLOSE
   })
 
   const headObjectMock = vi.mocked(storage.headObject)

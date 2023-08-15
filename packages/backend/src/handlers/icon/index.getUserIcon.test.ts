@@ -1,48 +1,48 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { IncomingHttpHeaders } from 'http'
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, beforeEach, afterAll } from 'vitest'
+import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('undici', () => {
   return { request: vi.fn() }
 })
-vi.mock('../../lib/logger')
-vi.mock('../../lib/storage')
+vi.mock('../../lib/logger.js')
+vi.mock('../../lib/storage.js')
+vi.mock('../../lib/db.js', async () => {
+  const actual = await vi.importActual<typeof import('../../lib/db.js')>(
+    '../../lib/db.js'
+  )
+  return { ...actual, mongoClient: vi.fn() }
+})
 
 import { Readable } from 'stream'
 import { ObjectId, WithId } from 'mongodb'
 import { request } from 'undici'
-import { mongoSetup, createRequest } from '../../../test/testUtil'
-import { createGetObjectMockValue, createHeadObjectMockValue } from './testUtil'
-import * as db from '../../lib/db'
-import * as storage from '../../lib/storage'
-import { BadRequest } from '../../lib/errors'
-import { getUserIcon } from './index'
-
-type ResponseBody = Awaited<ReturnType<typeof request>>['body']
-
-let mongoServer: MongoMemoryServer | null = null
+import { BadRequest } from 'mzm-shared/lib/errors'
+import { createRequest, getTestMongoClient } from '../../../test/testUtil.js'
+import {
+  createGetObjectMockValue,
+  createHeadObjectMockValue
+} from './testUtil.js'
+import { collections, type User } from '../../lib/db.js'
+import * as storage from '../../lib/storage.js'
+import { getUserIcon } from './index.js'
 
 beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
+  const { mongoClient } = await import('../../lib/db.js')
+  const { getTestMongoClient } = await import('../../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
-beforeEach(() => {
-  vi.resetAllMocks()
-})
-
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
-})
+type ResponseBody = Awaited<ReturnType<typeof request>>['body']
 
 test('getUserIcon from storage', async () => {
   const userId = new ObjectId()
   const account = userId.toHexString()
   const version = '12345'
 
-  await db.collections.users.insertOne({
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).users.insertOne({
     _id: userId,
     account,
     roomOrder: [],
@@ -51,7 +51,7 @@ test('getUserIcon from storage', async () => {
 
   const req = createRequest(null, { params: { account, version } })
 
-  const headObjectMock = vi.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject).mockClear()
   const headers = createHeadObjectMockValue({
     ETag: 'etag',
     ContentType: 'image/png',
@@ -91,7 +91,7 @@ test.each([
   async (iconVersion, requestVersion) => {
     const id = new ObjectId()
     const account = id.toHexString()
-    const user: WithId<db.User> = {
+    const user: WithId<User> = {
       _id: id,
       account,
       roomOrder: []
@@ -99,11 +99,12 @@ test.each([
     if (iconVersion) {
       user.icon = { key: 'iconkey', version: iconVersion }
     }
-    await db.collections.users.insertOne(user)
+    const db = await getTestMongoClient(globalThis)
+    await collections(db).users.insertOne(user)
 
-    const headObjectMock = vi.mocked(storage.headObject)
-    const getObjectMock = vi.mocked(storage.getObject)
-    const requestMock = vi.mocked(request)
+    const headObjectMock = vi.mocked(storage.headObject).mockClear()
+    const getObjectMock = vi.mocked(storage.getObject).mockClear()
+    const requestMock = vi.mocked(request).mockClear()
     const headers: IncomingHttpHeaders = {
       ETag: 'etag',
       'content-type': 'image/png',
@@ -142,7 +143,7 @@ test.each([
 test('getUserIcon from identicon: not found on storage', async () => {
   const id = new ObjectId()
   const account = id.toHexString()
-  const user: WithId<db.User> = {
+  const user: WithId<User> = {
     _id: id,
     account,
     roomOrder: [],
@@ -151,9 +152,10 @@ test('getUserIcon from identicon: not found on storage', async () => {
       version: '1234'
     }
   }
-  await db.collections.users.insertOne(user)
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).users.insertOne(user)
 
-  const headObjectMock = vi.mocked(storage.headObject)
+  const headObjectMock = vi.mocked(storage.headObject).mockClear()
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
   const requestMock = vi.mocked(request)
   const headers: IncomingHttpHeaders = {

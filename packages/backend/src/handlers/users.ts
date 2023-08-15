@@ -1,17 +1,25 @@
-import { Request } from 'express'
+import type { Request } from 'express'
+import type { RESPONSE } from 'mzm-shared/type/api'
+import { z } from 'zod'
 import { ObjectId } from 'mongodb'
-import isEmpty from 'validator/lib/isEmpty.js'
-import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import { isValidAccount } from 'mzm-shared/validator'
 import { getRequestUserId, createUserIconPath, popParam } from '../lib/utils.js'
-import { NotFound, BadRequest } from '../lib/errors.js'
-import * as db from '../lib/db.js'
+import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
+import { collections, mongoClient, User } from '../lib/db.js'
+
+const UpdateParser = z.object({
+  account: z.string().min(1)
+})
 
 export const update = async (req: Request) => {
   type ResponseType = RESPONSE['/api/user/@me']['PUT']['body']
 
-  const body = req.body as Partial<REQUEST['/api/user/@me']['PUT']['body']>
-  const account = popParam(body?.account)
+  const parsed = UpdateParser.safeParse(req.body)
+  if (parsed.success === false) {
+    throw new BadRequest<ResponseType[400]>('bad request')
+  }
+  const body = parsed.data
+  const account = popParam(body.account)
   if (!account) {
     throw new BadRequest<ResponseType[400]>('account is empty')
   }
@@ -20,7 +28,8 @@ export const update = async (req: Request) => {
   }
 
   const id = getRequestUserId(req)
-  const user = await db.collections.users.findOne({
+  const db = await mongoClient()
+  const user = await collections(db).users.findOne({
     account: account
   })
   if (user && user._id.toHexString() !== id) {
@@ -28,7 +37,7 @@ export const update = async (req: Request) => {
   }
 
   const userId = new ObjectId(id)
-  await db.collections.users.findOneAndUpdate(
+  await collections(db).users.findOneAndUpdate(
     { _id: userId },
     { $set: { account } },
     { upsert: true }
@@ -43,7 +52,8 @@ export const getUserInfo = async (req: Request) => {
 
   const id = getRequestUserId(req)
 
-  const user = await db.collections.users.findOne(
+  const db = await mongoClient()
+  const user = await collections(db).users.findOne(
     { _id: new ObjectId(id) },
     { projection: { account: 1, icon: 1 } }
   )
@@ -74,8 +84,9 @@ export const updateAccount = async (req: Request) => {
     throw new BadRequest('account is not valid')
   }
 
-  const update: Pick<db.User, 'account'> = { account }
-  const updated = await db.collections.users.findOneAndUpdate(
+  const update: Pick<User, 'account'> = { account }
+  const db = await mongoClient()
+  const updated = await collections(db).users.findOneAndUpdate(
     { _id: new ObjectId(id) },
     { $set: update },
     {
@@ -83,18 +94,23 @@ export const updateAccount = async (req: Request) => {
     }
   )
 
-  return updated.value
+  return {
+    update: updated.value?._id.toHexString()
+  }
 }
 
+const sortRoomsParser = z.object({
+  rooms: z.array(z.string())
+})
+
 export const sortRooms = async (req: Request) => {
-  const id = getRequestUserId(req)
-  const rooms = popParam(req.body.rooms)
-  if (isEmpty(rooms)) {
-    throw new BadRequest({ reason: 'rooms is empty' })
-  } else if (!Array.isArray(rooms)) {
-    throw new BadRequest({ reason: 'rooms is not array' })
+  const body = sortRoomsParser.safeParse(req.body)
+  if (body.success === false) {
+    throw new BadRequest({ reason: body.error.message })
   }
-  const roomOrder = []
+  const id = getRequestUserId(req)
+  const rooms = body.data.rooms
+  const roomOrder: string[] = []
   for (const room of rooms) {
     if (typeof room !== 'string') {
       throw new BadRequest({ reason: `${room} is not string` })
@@ -102,7 +118,8 @@ export const sortRooms = async (req: Request) => {
     roomOrder.push(room)
   }
 
-  db.collections.users.updateOne(
+  const db = await mongoClient()
+  await collections(db).users.updateOne(
     { _id: new ObjectId(id) },
     { $set: { roomOrder } }
   )

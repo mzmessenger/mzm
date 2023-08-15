@@ -1,4 +1,8 @@
-import React, { forwardRef, type MouseEventHandler } from 'react'
+import React, {
+  forwardRef,
+  type MouseEventHandler,
+  type MutableRefObject
+} from 'react'
 import styled from '@emotion/styled'
 
 type Props = {
@@ -6,7 +10,7 @@ type Props = {
   children: React.ReactNode
 }
 
-export function Dialog(props: Props, ref) {
+export function Dialog(props: Props, ref: MutableRefObject<HTMLDialogElement>) {
   const onClick: MouseEventHandler<HTMLDialogElement> = (e) => {
     const rect = ref.current.getBoundingClientRect()
     const inner =

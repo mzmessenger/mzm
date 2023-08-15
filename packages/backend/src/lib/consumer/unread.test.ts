@@ -1,41 +1,39 @@
-import type { MongoMemoryServer } from 'mongodb-memory-server'
-import { vi, test, expect, beforeAll, afterAll } from 'vitest'
-vi.mock('../logger')
-vi.mock('../redis', () => {
+import { vi, test, expect, beforeAll } from 'vitest'
+vi.mock('../logger.js')
+vi.mock('../redis.js', () => {
   return {
-    client: {
+    client: vi.fn(() => ({
       xack: vi.fn()
-    }
+    }))
   }
 })
-vi.mock('./common', () => {
+vi.mock('./common.js', () => {
   return {
     initConsumerGroup: vi.fn(),
     consumeGroup: vi.fn(),
     createParser: vi.fn()
   }
 })
-
-import { ObjectId } from 'mongodb'
-import * as config from '../../config'
-import { createXackMock, mongoSetup } from '../../../test/testUtil'
-import { UnreadQueue } from '../../types'
-import * as db from '../db'
-import * as redis from '../redis'
-import { initConsumerGroup, consumeGroup } from './common'
-import { increment, initUnreadConsumerGroup, consumeUnread } from './unread'
-
-let mongoServer: MongoMemoryServer | null = null
-
-beforeAll(async () => {
-  const mongo = await mongoSetup()
-  mongoServer = mongo.mongoServer
-  await db.connect(mongo.uri)
+vi.mock('../db.js', async () => {
+  const actual = await vi.importActual<typeof import('../db.js')>('../db.js')
+  return { ...actual, mongoClient: vi.fn() }
 })
 
-afterAll(async () => {
-  await db.close()
-  await mongoServer?.stop()
+import { ObjectId } from 'mongodb'
+import * as config from '../../config.js'
+import { createXackMock, getTestMongoClient } from '../../../test/testUtil.js'
+import { UnreadQueue } from '../../types.js'
+import { collections, type User } from '../db.js'
+import * as redis from '../redis.js'
+import { initConsumerGroup, consumeGroup } from './common.js'
+import { increment, initUnreadConsumerGroup, consumeUnread } from './unread.js'
+
+beforeAll(async () => {
+  const { mongoClient } = await import('../db.js')
+  const { getTestMongoClient } = await import('../../../test/testUtil.js')
+  vi.mocked(mongoClient).mockImplementation(() => {
+    return getTestMongoClient(globalThis)
+  })
 })
 
 test('initUnreadConsumerGroup', async () => {
@@ -57,7 +55,7 @@ test('consumeUnread', async () => {
 })
 
 test('increment', async () => {
-  const xack = createXackMock(redis.client.xack)
+  const xack = createXackMock(redis.client)
   xack.mockClear()
   xack.mockResolvedValue(1)
 
@@ -65,10 +63,12 @@ test('increment', async () => {
   const maxValue = 100
 
   const userIds = [new ObjectId(), new ObjectId(), new ObjectId()]
-  const users: db.User[] = userIds.map((userId) => {
+  const users: User[] = userIds.map((userId) => {
     return { _id: userId, account: userId.toHexString(), roomOrder: [] }
   })
-  await db.collections.users.insertMany(users)
+
+  const db = await getTestMongoClient(globalThis)
+  await collections(db).users.insertMany(users)
   const roomId = new ObjectId()
   const enter = userIds.map((userId) => ({
     userId,
@@ -78,7 +78,7 @@ test('increment', async () => {
   }))
   // max test
   enter[maxIndex].unreadCounter = maxValue
-  await db.collections.enter.insertMany(enter)
+  await collections(db).enter.insertMany(enter)
 
   const _unreadQueue: UnreadQueue = {
     roomId: roomId.toHexString(),
@@ -87,8 +87,8 @@ test('increment', async () => {
   const unreadQueue = JSON.stringify(_unreadQueue)
   await increment('queue-id', ['unread', unreadQueue])
 
-  let targets = await db.collections.enter
-    .find({ userId: { $in: userIds }, roomId })
+  let targets = await collections(db)
+    .enter.find({ userId: { $in: userIds }, roomId })
     .toArray()
   expect(targets.length).toStrictEqual(enter.length)
   for (const target of targets) {
@@ -106,8 +106,8 @@ test('increment', async () => {
   // call twice
   await increment('queue-id', ['unread', unreadQueue])
 
-  targets = await db.collections.enter
-    .find({ userId: { $in: userIds }, roomId })
+  targets = await collections(db)
+    .enter.find({ userId: { $in: userIds }, roomId })
     .toArray()
   for (const target of targets) {
     if (target.userId.toHexString() === userIds[maxIndex].toHexString()) {
