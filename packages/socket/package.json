@@ -18,7 +18,6 @@
     "test:watch": "vitest --config ./vitest.config.ts"
   },
   "dependencies": {
-    "@types/ioredis": "^5.0.0",
     "@types/validator": "^13.7.10",
     "bunyan": "^1.8.15",
     "dotenv": "^16.0.3",
