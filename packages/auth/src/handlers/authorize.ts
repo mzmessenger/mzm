@@ -7,7 +7,8 @@ import type { Redis } from 'ioredis'
 import {
   BadRequest,
   Unauthorized,
-  InternalServerError
+  InternalServerError,
+  isHttpError
 } from 'mzm-shared/lib/errors'
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
@@ -20,7 +21,10 @@ import {
   saveAuthorizationCode
 } from '../lib/pkce/index.js'
 import { verifyAuthorizationCodeFromRedis } from '../lib/pkce/index.js'
-import { authorizeTemplate } from '../views/authorize.js'
+import {
+  authorizeTemplate,
+  authorizeErrorTemplate
+} from '../views/authorize.js'
 import { ALLOW_REDIRECT_URIS } from '../config.js'
 
 const TokenBody = z.union([
@@ -118,41 +122,47 @@ export const createAuthorize = (
 ): WrapFn<Request, string> => {
   const nonce = res.locals.nonce
   return async (req) => {
-    const { user } = req as PassportRequest
-    if (!user) {
-      throw new Unauthorized('unauthorized')
+    try {
+      const { user } = req as PassportRequest
+      if (!user) {
+        throw new Unauthorized('unauthorized')
+      }
+      const query = AuthorizationQuery.safeParse(req.query)
+      if (query.success === false) {
+        logger.error({ label: 'authorize', error: query.error })
+        throw new BadRequest('invalid query')
+      }
+
+      if (!ALLOW_REDIRECT_URIS.includes(query.data.redirect_uri)) {
+        throw new BadRequest('invalid host')
+      }
+
+      const generateCode = await generateUniqAuthorizationCode(client)
+      if (generateCode.success === false) {
+        throw new InternalServerError('code generate error')
+      }
+      const code_challenge = encodeURIComponent(query.data.code_challenge)
+
+      const { code } = generateCode.data
+
+      await saveAuthorizationCode(client, {
+        code,
+        code_challenge,
+        userId: user._id.toHexString()
+      })
+
+      const state = encodeURIComponent(query.data.state ?? '')
+      const html = authorizeTemplate({
+        targetOrigin: new URL(query.data.redirect_uri).origin,
+        code,
+        state,
+        nonce
+      })
+      return html
+    } catch (e) {
+      const status = isHttpError(e) ? e.status : 500
+      const html = authorizeErrorTemplate({ nonce, status })
+      return html
     }
-    const query = AuthorizationQuery.safeParse(req.query)
-    if (query.success === false) {
-      logger.error({ label: 'authorize', error: query.error })
-      throw new BadRequest('invalid query')
-    }
-
-    if (!ALLOW_REDIRECT_URIS.includes(query.data.redirect_uri)) {
-      throw new BadRequest('invalid host')
-    }
-
-    const generateCode = await generateUniqAuthorizationCode(client)
-    if (generateCode.success === false) {
-      throw new InternalServerError('code generate error')
-    }
-    const code_challenge = encodeURIComponent(query.data.code_challenge)
-
-    const { code } = generateCode.data
-
-    await saveAuthorizationCode(client, {
-      code,
-      code_challenge,
-      userId: user._id.toHexString()
-    })
-
-    const state = encodeURIComponent(query.data.state ?? '')
-    const html = authorizeTemplate({
-      targetOrigin: new URL(query.data.redirect_uri).origin,
-      code,
-      state,
-      nonce
-    })
-    return html
   }
 }

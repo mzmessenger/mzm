@@ -67,6 +67,14 @@ export async function authTokenAfterRedirect(code: string) {
   return res
 }
 
+class AuthorizationErrorResponse extends Error {
+  status: number = 500
+  constructor(message: string, status: number) {
+    super(message)
+    this.status = status
+  }
+}
+
 const runIframe = async (
   code_challenge: string,
   state: string,
@@ -88,11 +96,21 @@ const runIframe = async (
     const timeoutSetTimeoutId = setTimeout(() => {
       reject(new Error('timeout'))
       removeIframe()
-    }, 60 * 1000)
+    }, 30 * 1000)
 
     const iframeEventHandler = (e: MessageEvent) => {
       if (e.origin !== AUTH_URL_BASE) return
-      if (!e.data || e.data.type !== 'authorization_response') return
+      if (!e.data) return
+      if (e.data.type === 'authorization_error_response') {
+        removeIframe()
+        return reject(
+          new AuthorizationErrorResponse(
+            'authorization_error_response',
+            e.data.response.status
+          )
+        )
+      }
+      if (e.data.type !== 'authorization_response') return
 
       if (state !== e.data.response.state) return
 
@@ -117,11 +135,32 @@ const runIframe = async (
   })
 }
 
-export async function getAccessTokenFromIframe() {
+async function _getAccessTokenFromIframe() {
   const state = generateState()
   const { code_challenge, code_verifier } = await worker.pkceChallenge()
   const { code } = await runIframe(code_challenge, state, REDIRECT_URI)
   const res = await worker.authToken(code, code_verifier)
+  return res
+}
+
+export async function getAccessTokenFromIframe() {
+  let res: Awaited<ReturnType<typeof _getAccessTokenFromIframe>> = {
+    success: false,
+    status: 500
+  }
+  for (let i = 0; i < 5; i++) {
+    try {
+      res = await _getAccessTokenFromIframe()
+      if (res) {
+        break
+      }
+    } catch (e) {
+      if (e instanceof AuthorizationErrorResponse) {
+        continue
+      }
+      break
+    }
+  }
   return res
 }
 
