@@ -1,45 +1,90 @@
-export type RESPONSE = {
+export type API = {
   '/api/rooms': {
-    POST: { id: string; name: string }
+    POST: {
+      REQUEST: {
+        body: {
+          name: string
+        }
+      }
+      RESPONSE: {
+        200: { id: string; name: string }
+      }
+    }
+  }
+  '/api/rooms/enter': {
+    DELETE: {
+      REQUEST: {
+        body: {
+          room: string
+        }
+      }
+    }
   }
   '/api/rooms/search': {
     GET: {
-      query: string | null
-      hits: {
-        id: string
-        name: string
-        iconUrl: string | null
-        description?: string
-      }[]
-      total: number
-      scroll: string | null
+      REQUEST: {
+        query: {
+          query?: string
+          scroll?: string
+        }
+      }
+      RESPONSE: {
+        200: {
+          query: string | null
+          hits: {
+            id: string
+            name: string
+            iconUrl: string | null
+            description?: string
+          }[]
+          total: number
+          scroll: string | null
+        }
+      }
     }
   }
   '/api/rooms/:roomid/users': {
     GET: {
-      count: number
-      users: {
-        userId: string
-        account: string
-        icon: string | null
-        enterId: string
-      }[]
+      REQUEST: {
+        query: {
+          threshold: string
+        }
+      }
+      RESPONSE: {
+        200: {
+          count: number
+          users: {
+            userId: string
+            account: string
+            icon: string | null
+            enterId: string
+          }[]
+        }
+      }
     }
   }
   '/api/icon/rooms/:roomname': {
     POST: {
-      id: string
-      version: string
+      RESPONSE: {
+        200: {
+          id: string
+          version: string
+        }
+      }
     }
   }
   '/api/icon/user': {
     POST: {
-      version: string
+      RESPONSE: {
+        200: {
+          version: string
+        }
+      }
     }
   }
   '/api/user/@me': {
     GET: {
-      body: {
+      RESPONSE: {
         200: {
           id: string
           account: string
@@ -52,7 +97,12 @@ export type RESPONSE = {
       }
     }
     PUT: {
-      body: {
+      REQUEST: {
+        body: {
+          account: string
+        }
+      }
+      RESPONSE: {
         200: {
           id: string
           account: string
@@ -61,49 +111,12 @@ export type RESPONSE = {
       }
     }
   }
-}
-
-export type REQUEST = {
-  '/api/rooms': {
-    POST: {
-      body: {
-        name: string
-      }
-    }
-  }
-  '/api/rooms/enter': {
-    DELETE: {
-      body: {
-        room: string
-      }
-    }
-  }
-  '/api/rooms/:roomid/users': {
-    GET: {
-      query: {
-        threshold: string
-      }
-    }
-  }
-  '/api/rooms/search': {
-    GET: {
-      query: {
-        query?: string
-        scroll?: string
-      }
-    }
-  }
-  '/api/user/@me': {
-    PUT: {
-      body: {
-        account: string
-      }
-    }
-  }
   '/api/user/signup': {
     POST: {
-      body: {
-        account: string
+      REQUEST: {
+        body: {
+          account: string
+        }
       }
     }
   }
@@ -112,7 +125,7 @@ export type REQUEST = {
 export type AUTH_API_RESPONSE = {
   '/auth/token': {
     POST: {
-      body: {
+      RESPONSE: {
         200: {
           accessToken: string
           refreshToken: string

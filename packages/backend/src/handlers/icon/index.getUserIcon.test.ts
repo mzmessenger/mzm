@@ -67,7 +67,7 @@ test('getUserIcon from storage', async () => {
   })
   getObjectMock.mockReturnValueOnce(getObject)
 
-  const res = await getUserIcon(req)
+  const res = await getUserIcon.handler(req)
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
@@ -128,7 +128,7 @@ test.each([
       params: { account, version: requestVersion }
     })
 
-    const res = await getUserIcon(req)
+    const res = await getUserIcon.handler(req)
 
     expect(headObjectMock.mock.calls.length).toStrictEqual(0)
     expect(getObjectMock.mock.calls.length).toStrictEqual(0)
@@ -181,7 +181,7 @@ test('getUserIcon from identicon: not found on storage', async () => {
     params: { account, version: user?.icon?.version ?? '' }
   })
 
-  const res = await getUserIcon(req)
+  const res = await getUserIcon.handler(req)
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(res.headers.ETag).toStrictEqual(headers.ETag)
@@ -200,7 +200,7 @@ test('getUserIcon BadRequest: no account', async () => {
   const req = createRequest(null, { params: { account: '', version } })
 
   try {
-    await getUserIcon(req)
+    await getUserIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

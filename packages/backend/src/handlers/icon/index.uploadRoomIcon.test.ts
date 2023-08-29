@@ -74,7 +74,7 @@ test('uploadRoomIcon', async () => {
     params: { roomname: name }
   })
 
-  const res = await uploadRoomIcon(req)
+  const res = await uploadRoomIcon.handler(req)
 
   const room = await collections(db).rooms.findOne({ _id: roomId })
 
@@ -104,7 +104,7 @@ test.each([['image/gif'], ['image/svg+xml']])(
     })
 
     try {
-      await uploadRoomIcon(req)
+      await uploadRoomIcon.handler(req)
     } catch (e) {
       expect(e instanceof BadRequest).toStrictEqual(true)
     }
@@ -122,7 +122,7 @@ test('uploadRoomIcon: empty file', async () => {
   })
 
   try {
-    await uploadRoomIcon(req)
+    await uploadRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -150,7 +150,7 @@ test('uploadRoomIcon: validation: size over ', async () => {
   const req = createFileRequest(new ObjectId(), { file })
 
   try {
-    await uploadRoomIcon(req)
+    await uploadRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

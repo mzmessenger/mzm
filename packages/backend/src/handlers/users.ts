@@ -1,8 +1,9 @@
 import type { Request } from 'express'
-import type { RESPONSE } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/type/api'
 import { z } from 'zod'
 import { ObjectId } from 'mongodb'
 import { isValidAccount } from 'mzm-shared/validator'
+import { createHandler } from '../lib/wrap.js'
 import { getRequestUserId, createUserIconPath, popParam } from '../lib/utils.js'
 import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
 import { collections, mongoClient, User } from '../lib/db.js'
@@ -11,20 +12,22 @@ const UpdateParser = z.object({
   account: z.string().min(1)
 })
 
-export const update = async (req: Request) => {
-  type ResponseType = RESPONSE['/api/user/@me']['PUT']['body']
-
+export const update = createHandler(
+  '/api/user/@me',
+  'put'
+)(async (req: Request) => {
+  type ResType = API['/api/user/@me']['PUT']['RESPONSE']
   const parsed = UpdateParser.safeParse(req.body)
   if (parsed.success === false) {
-    throw new BadRequest<ResponseType[400]>('bad request')
+    throw new BadRequest<ResType[400]>('bad request')
   }
   const body = parsed.data
   const account = popParam(body.account)
   if (!account) {
-    throw new BadRequest<ResponseType[400]>('account is empty')
+    throw new BadRequest<ResType[400]>('account is empty')
   }
   if (!isValidAccount(account)) {
-    throw new BadRequest<ResponseType[400]>('account is not valid')
+    throw new BadRequest<ResType[400]>('account is not valid')
   }
 
   const id = getRequestUserId(req)
@@ -33,7 +36,7 @@ export const update = async (req: Request) => {
     account: account
   })
   if (user && user._id.toHexString() !== id) {
-    throw new BadRequest<ResponseType[400]>(`${account} is already exists`)
+    throw new BadRequest<ResType[400]>(`${account} is already exists`)
   }
 
   const userId = new ObjectId(id)
@@ -43,12 +46,15 @@ export const update = async (req: Request) => {
     { upsert: true }
   )
 
-  const response: ResponseType[200] = { id: id, account: account }
+  const response: ResType[200] = { id: id, account: account }
   return response
-}
+})
 
-export const getUserInfo = async (req: Request) => {
-  type ResponseType = RESPONSE['/api/user/@me']['GET']['body']
+export const getUserInfo = createHandler(
+  '/api/user/@me',
+  'get'
+)(async (req: Request) => {
+  type ResType = API['/api/user/@me']['GET']['RESPONSE']
 
   const id = getRequestUserId(req)
 
@@ -59,22 +65,25 @@ export const getUserInfo = async (req: Request) => {
   )
 
   if (!user || !user.account) {
-    throw new NotFound<ResponseType[404]>({
+    throw new NotFound<ResType[404]>({
       reason: 'account is not found',
       id
     })
   }
 
-  const response: ResponseType[200] = {
+  const response: ResType[200] = {
     id: user._id.toHexString(),
     account: user.account,
     icon: createUserIconPath(user.account, user.icon?.version)
   }
 
   return response
-}
+})
 
-export const updateAccount = async (req: Request) => {
+export const updateAccount = createHandler(
+  '/api/user/@me/account',
+  'post'
+)(async (req: Request) => {
   const id = getRequestUserId(req)
   const account = popParam(req.body.account)
   if (!account) {
@@ -97,30 +106,4 @@ export const updateAccount = async (req: Request) => {
   return {
     update: updated.value?._id.toHexString()
   }
-}
-
-const sortRoomsParser = z.object({
-  rooms: z.array(z.string())
 })
-
-export const sortRooms = async (req: Request) => {
-  const body = sortRoomsParser.safeParse(req.body)
-  if (body.success === false) {
-    throw new BadRequest({ reason: body.error.message })
-  }
-  const id = getRequestUserId(req)
-  const rooms = body.data.rooms
-  const roomOrder: string[] = []
-  for (const room of rooms) {
-    if (typeof room !== 'string') {
-      throw new BadRequest({ reason: `${room} is not string` })
-    }
-    roomOrder.push(room)
-  }
-
-  const db = await mongoClient()
-  await collections(db).users.updateOne(
-    { _id: new ObjectId(id) },
-    { $set: { roomOrder } }
-  )
-}

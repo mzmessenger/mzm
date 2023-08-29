@@ -1,9 +1,10 @@
-import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/type/api'
 import type { Request } from 'express'
 import { ObjectId, type WithId, type Document } from 'mongodb'
 import { z } from 'zod'
-import * as config from '../config.js'
 import { BadRequest } from 'mzm-shared/lib/errors'
+import * as config from '../config.js'
+import { createHandler } from '../lib/wrap.js'
 import { getRequestUserId } from '../lib/utils.js'
 import {
   collections,
@@ -24,9 +25,12 @@ const createRoomParser = z.object({
   name: z.string().min(1)
 })
 
-export const createRoom = async (
+export const createRoom = createHandler(
+  '/api/rooms',
+  'post'
+)(async function (
   req: Request
-): Promise<RESPONSE['/api/rooms']['POST']> => {
+): Promise<API['/api/rooms']['POST']['RESPONSE'][200]> {
   const user = getRequestUserId(req)
   const body = createRoomParser.safeParse(req.body)
   if (body.success === false) {
@@ -55,9 +59,12 @@ export const createRoom = async (
   }
 
   return { id: created._id.toHexString(), name }
-}
+})
 
-export const enterRoom = async (req: Request) => {
+export const enterRoom = createHandler(
+  '/api/rooms/enter',
+  'post'
+)(async (req: Request) => {
   const user = getRequestUserId(req)
   const room = popParam(req.body.room)
   if (!room) {
@@ -65,13 +72,16 @@ export const enterRoom = async (req: Request) => {
   }
 
   await enterRoomLogic(new ObjectId(user), new ObjectId(room))
-}
+})
 
 const exitRoomParser = z.object({
   room: z.string().min(1)
 })
 
-export const exitRoom = async (req: Request) => {
+export const exitRoom = createHandler(
+  '/api/rooms/enter',
+  'delete'
+)(async (req: Request) => {
   const body = exitRoomParser.safeParse(req.body)
   if (body.success === false) {
     throw new BadRequest({ reason: body.error.message })
@@ -98,17 +108,21 @@ export const exitRoom = async (req: Request) => {
     userId: new ObjectId(user),
     roomId
   })
-}
+})
 
-type EnterUser = RESPONSE['/api/rooms/:roomid/users']['GET']['users'][number]
+type EnterUser =
+  API['/api/rooms/:roomid/users']['GET']['RESPONSE'][200]['users'][number]
 
 const getUsersParser = z.object({
   roomid: z.string().min(1)
 })
 
-export const getUsers = async (
+export const getUsers = createHandler(
+  '/api/rooms/:roomid/users',
+  'get'
+)(async function (
   req: Request
-): Promise<RESPONSE['/api/rooms/:roomid/users']['GET']> => {
+): Promise<API['/api/rooms/:roomid/users']['GET']['RESPONSE'][200]> {
   const room = popParam(req.params.roomid)
   const params = getUsersParser.safeParse(req.params)
   if (params.success === false) {
@@ -132,7 +146,7 @@ export const getUsers = async (
   ]
 
   const reqQuery = req.query as Partial<
-    REQUEST['/api/rooms/:roomid/users']['GET']['query']
+    API['/api/rooms/:roomid/users']['GET']['REQUEST']['query']
   >
 
   const threshold = popParam(
@@ -172,13 +186,16 @@ export const getUsers = async (
     users.push(user)
   }
   return { count, users }
-}
+})
 
-export const search = async (
+export const search = createHandler(
+  '/api/rooms/search',
+  'get'
+)(async function (
   req: Request
-): Promise<RESPONSE['/api/rooms/search']['GET']> => {
+): Promise<API['/api/rooms/search']['GET']['RESPONSE'][200]> {
   const query = req.query as Partial<
-    REQUEST['/api/rooms/search']['GET']['query']
+    API['/api/rooms/search']['GET']['REQUEST']['query']
   >
   const _query = popParam(
     typeof query.query === 'string'
@@ -191,4 +208,4 @@ export const search = async (
   )
 
   return await searchRoom(_query, scroll)
-}
+})

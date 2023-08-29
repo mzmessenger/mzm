@@ -1,4 +1,4 @@
-import type { RESPONSE } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/type/api'
 import { API_URL_BASE } from '../constants'
 import { proxyRequest, proxyRequestWithFormData } from '../lib/auth'
 
@@ -57,7 +57,8 @@ export const uploadRoomIcon = async (name: string, blob: Blob) => {
   )
 
   if (res.ok) {
-    const body = res.body as RESPONSE['/api/icon/rooms/:roomname']['POST']
+    const body =
+      res.body as API['/api/icon/rooms/:roomname']['POST']['RESPONSE'][200]
     return {
       ...res,
       ok: true,
@@ -74,7 +75,7 @@ export const uploadUserIcon = async (blob: Blob) => {
   })
 
   if (res.ok) {
-    const body = res.body as RESPONSE['/api/icon/user']['POST']
+    const body = res.body as API['/api/icon/user']['POST']['RESPONSE'][200]
     return {
       ...res,
       body

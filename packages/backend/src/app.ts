@@ -34,44 +34,71 @@ export const createApp = () => {
     })
   )
 
-  app.post('/api/rooms', checkAccessToken, jsonParser, wrap(rooms.createRoom))
-  app.post(
-    '/api/rooms/enter',
+  app[rooms.createRoom.method](
+    rooms.createRoom.path,
     checkAccessToken,
     jsonParser,
-    wrap(rooms.enterRoom)
+    wrap(rooms.createRoom.handler)
   )
-  app.delete(
-    '/api/rooms/enter',
+  app[rooms.enterRoom.method](
+    rooms.enterRoom.path,
     checkAccessToken,
     jsonParser,
-    wrap(rooms.exitRoom)
+    wrap(rooms.enterRoom.handler)
   )
-  app.get('/api/rooms/search', wrap(rooms.search))
-  app.get('/api/rooms/:roomid/users', checkAccessToken, wrap(rooms.getUsers))
-  app.get('/api/user/@me', checkAccessToken, wrap(user.getUserInfo))
-  app.put('/api/user/@me', checkAccessToken, jsonParser, wrap(user.update))
-  app.post(
-    '/api/user/@me/account',
+  app[rooms.enterRoom.method](
+    rooms.enterRoom.path,
     checkAccessToken,
     jsonParser,
-    wrap(user.updateAccount)
+    wrap(rooms.exitRoom.handler)
+  )
+  app[rooms.search.method](rooms.search.path, wrap(rooms.search.handler))
+  app[rooms.getUsers.method](
+    rooms.getUsers.path,
+    checkAccessToken,
+    wrap(rooms.getUsers.handler)
+  )
+  app[user.getUserInfo.method](
+    user.getUserInfo.path,
+    checkAccessToken,
+    wrap(user.getUserInfo.handler)
+  )
+  app[user.update.method](
+    user.update.path,
+    checkAccessToken,
+    jsonParser,
+    wrap(user.update.handler)
+  )
+  app[user.updateAccount.method](
+    user.updateAccount.path,
+    checkAccessToken,
+    jsonParser,
+    wrap(user.updateAccount.handler)
   )
 
-  app.get('/api/icon/user/:account', streamWrap(icon.getUserIcon))
-  app.get('/api/icon/user/:account/:version', streamWrap(icon.getUserIcon))
-  app.post(
-    '/api/icon/user',
-    checkAccessToken,
-    iconUpload.single('icon'),
-    wrap<Request & { file?: MulterFile }>(icon.uploadUserIcon)
+  app[icon.getUserIcon.method](
+    icon.getUserIcon.path,
+    streamWrap(icon.getUserIcon.handler)
   )
-  app.get('/api/icon/rooms/:roomname/:version', streamWrap(icon.getRoomIcon))
-  app.post(
-    '/api/icon/rooms/:roomname',
+  app[icon.getUserIcon.method](
+    '/api/icon/user/:account/:version',
+    streamWrap(icon.getUserIcon.handler)
+  )
+  app[icon.uploadUserIcon.method](
+    icon.uploadUserIcon.path,
     checkAccessToken,
     iconUpload.single('icon'),
-    wrap(icon.uploadRoomIcon)
+    wrap<Request & { file?: MulterFile }>(icon.uploadUserIcon.handler)
+  )
+  app[icon.getRoomIcon.method](
+    icon.getRoomIcon.path,
+    streamWrap(icon.getRoomIcon.handler)
+  )
+  app[icon.uploadRoomIcon.method](
+    icon.uploadRoomIcon.path,
+    checkAccessToken,
+    iconUpload.single('icon'),
+    wrap(icon.uploadRoomIcon.handler)
   )
 
   app.post(

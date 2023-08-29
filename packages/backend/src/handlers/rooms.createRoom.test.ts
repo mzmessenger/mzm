@@ -41,7 +41,7 @@ test.each([
   const body = { name }
   const req = createRequest(userId, { body })
 
-  const { id } = await createRoom(req)
+  const { id } = await createRoom.handler(req)
 
   const db = await getTestMongoClient(globalThis)
   const created = await collections(db).rooms.findOne({
@@ -63,7 +63,7 @@ test.each([
   const req = createRequest(userId, { body })
 
   try {
-    await createRoom(req)
+    await createRoom.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

@@ -1,4 +1,4 @@
-import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/type/api'
 import type { useSocketActions } from '../../recoil/socket/hooks'
 import type { useUiActions } from '../../recoil/ui/hooks'
 import type { Room } from './types'
@@ -388,7 +388,8 @@ export const useRoomUserActions = () => {
             return res
           }
 
-          const body = res.body as RESPONSE['/api/rooms/:roomid/users']['GET']
+          const body =
+            res.body as API['/api/rooms/:roomid/users']['GET']['RESPONSE'][200]
           setRooms((current) => {
             const usersById = {
               ...current.usersById,
@@ -435,7 +436,7 @@ export const useRoomUserActions = () => {
       const lastId = users[users.length - 1].enterId
 
       const init: [
-        keyof REQUEST['/api/rooms/:roomid/users']['GET']['query'],
+        keyof API['/api/rooms/:roomid/users']['GET']['REQUEST']['query'],
         string
       ][] = [['threshold', lastId]]
 
@@ -451,7 +452,8 @@ export const useRoomUserActions = () => {
             return res
           }
 
-          const body = res.body as RESPONSE['/api/rooms/:roomid/users']['GET']
+          const body =
+            res.body as API['/api/rooms/:roomid/users']['GET']['RESPONSE'][200]
           setRooms((current) => {
             const users = current.usersById[roomId]
             const usersById = {
@@ -492,7 +494,7 @@ export const useRoomActions = ({
 
   const createRoom = useCallback(
     async (name: string) => {
-      const body: REQUEST['/api/rooms']['POST']['body'] = {
+      const body: API['/api/rooms']['POST']['REQUEST']['body'] = {
         name
       }
 
@@ -507,7 +509,7 @@ export const useRoomActions = ({
             return res
           }
 
-          const room = res.body as RESPONSE['/api/rooms']['POST']
+          const room = res.body as API['/api/rooms']['POST']['RESPONSE'][200]
           getRooms()
 
           setCurrentRoom({
@@ -526,7 +528,7 @@ export const useRoomActions = ({
 
   const exitRoom = useCallback(
     async (roomId: string) => {
-      const body: REQUEST['/api/rooms/enter']['DELETE']['body'] = {
+      const body: API['/api/rooms/enter']['DELETE']['REQUEST']['body'] = {
         room: roomId
       }
 

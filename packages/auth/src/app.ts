@@ -1,6 +1,6 @@
 import type { Redis } from 'ioredis'
 import type { PassportRequest, SerializeUser } from './types.js'
-import express, { type Request, type Response } from 'express'
+import express, { type Request } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import passport from 'passport'
@@ -15,7 +15,6 @@ import {
   GITHUB_STRATEGY_OPTIONS,
   TRUST_PROXY,
   SESSION_PARSER,
-  ALLOW_REDIRECT_URIS,
   ALLOW_REDIRECT_ORIGINS,
   CORS_ORIGIN
 } from './config.js'

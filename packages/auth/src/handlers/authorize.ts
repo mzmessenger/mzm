@@ -41,7 +41,7 @@ const TokenBody = z.union([
 
 export const token: WrapFn<
   Request,
-  AUTH_API_RESPONSE['/auth/token']['POST']['body'][200]
+  AUTH_API_RESPONSE['/auth/token']['POST']['RESPONSE'][200]
 > = async (req) => {
   logger.info({
     label: 'accessToken',

@@ -1,4 +1,4 @@
-import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/type/api'
 import type { useAuth } from '../../recoil/auth/hooks'
 import { useCallback } from 'react'
 import {
@@ -73,7 +73,7 @@ export const useUser = () => {
 
   const updateUser = useCallback(
     async (account: string) => {
-      const body: REQUEST['/api/user/@me']['PUT']['body'] = { account }
+      const body: API['/api/user/@me']['PUT']['REQUEST']['body'] = { account }
 
       return await createApiClient(
         '/api/user/@me',
@@ -84,7 +84,7 @@ export const useUser = () => {
         async (res) => {
           if (res.status === 200) {
             const body =
-              res.body as RESPONSE['/api/user/@me']['PUT']['body'][200]
+              res.body as API['/api/user/@me']['PUT']['RESPONSE'][200]
             setUser((current) => ({
               ...current,
               account: body.account,
@@ -139,7 +139,7 @@ export const useMyInfoActions = () => {
       '/api/user/@me',
       { method: 'GET' },
       async (res) => {
-        type ResponseType = RESPONSE['/api/user/@me']['GET']['body']
+        type ResponseType = API['/api/user/@me']['GET']['RESPONSE']
 
         if (res.status === 200) {
           const payload = res.body as ResponseType[200]

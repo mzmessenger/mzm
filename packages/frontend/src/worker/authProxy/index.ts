@@ -7,7 +7,7 @@ import { pkceChallenge, verifyCodeChallenge } from './pkce'
 import { AUTH_URL_BASE, SOCKET_URL } from '../../constants'
 import { logger } from '../../lib/logger'
 
-type TokenResponse = AUTH_API_RESPONSE['/auth/token']['POST']['body'][200]
+type TokenResponse = AUTH_API_RESPONSE['/auth/token']['POST']['RESPONSE'][200]
 
 export type Cache = {
   code_challenge?: string
@@ -62,8 +62,8 @@ export class AuthProxy {
       method?: RequestInit['method']
       headers?: Record<string, string>
       body?: string | FormData
-    },
-    bodyParser: 'json' | 'text' = 'json'
+      bodyParser?: 'json' | 'text'
+    }
   ) {
     if (!this.#accessToken) {
       return { ok: false, status: 401, body: null }
@@ -80,7 +80,8 @@ export class AuthProxy {
     if (res.status === 500) {
       return { ok: res.ok, status: res.status, body: await res.text() }
     }
-    const body = bodyParser === 'json' ? await res.json() : await res.text()
+    const body =
+      options.bodyParser === 'text' ? await res.text() : await res.json()
     if (res.ok) {
       return {
         ok: true,

@@ -1,4 +1,4 @@
-import type { RESPONSE } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/type/api'
 import { ObjectId } from 'mongodb'
 import { logger } from '../logger.js'
 import { lock, release } from '../redis.js'
@@ -220,7 +220,7 @@ export const insertRooms = async (roomIds: string[]) => {
 export const searchRoom = async (
   query: string | null,
   scroll: string | null
-): Promise<RESPONSE['/api/rooms/search']['GET']> => {
+): Promise<API['/api/rooms/search']['GET']['RESPONSE'][200]> => {
   // @todo multi query
   const must: object[] = []
 

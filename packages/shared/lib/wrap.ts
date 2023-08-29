@@ -1,7 +1,7 @@
 import type { Request, Response, NextFunction } from 'express'
 
-export type WrapFn<Req = Request, Res = string | object | void> = {
-  (_req: Req): Promise<Res>
+export type WrapFn<TReq = Request, TRes = string | object | void> = {
+  (_req: TReq): Promise<TRes>
 }
 
 export const wrap = <Req>(fn: WrapFn<Req>) => {

@@ -65,7 +65,7 @@ test('getRoomIcon', async () => {
   })
   getObjectMock.mockReturnValueOnce(getObject)
 
-  const res = await getRoomIcon(req)
+  const res = await getRoomIcon.handler(req)
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
@@ -89,7 +89,7 @@ test('getRoomIcon BadRequest: no room name', async () => {
   const req = createRequest(null, { params: { roomname: '', version } })
 
   try {
-    await getRoomIcon(req)
+    await getRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -116,7 +116,7 @@ test('getRoomIcon NotFound: different version', async () => {
   })
 
   try {
-    await getRoomIcon(req)
+    await getRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }
@@ -146,7 +146,7 @@ test('getRoomIcon NotFound: not found on storage', async () => {
   })
 
   try {
-    await getRoomIcon(req)
+    await getRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }

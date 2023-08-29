@@ -116,7 +116,7 @@ test('getUserIcon from storage', async () => {
   })
   getObjectMock.mockReturnValueOnce(getObject)
 
-  const res = await icon.getUserIcon(req)
+  const res = await icon.getUserIcon.handler(req)
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
@@ -177,7 +177,7 @@ test.each([
       params: { account, version: requestVersion }
     })
 
-    const res = await icon.getUserIcon(req)
+    const res = await icon.getUserIcon.handler(req)
 
     expect(headObjectMock.mock.calls.length).toStrictEqual(0)
     expect(getObjectMock.mock.calls.length).toStrictEqual(0)
@@ -230,7 +230,7 @@ test('getUserIcon from identicon: not found on storage', async () => {
     params: { account, version: user.icon?.version || '' }
   })
 
-  const res = await icon.getUserIcon(req)
+  const res = await icon.getUserIcon.handler(req)
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(res.headers.ETag).toStrictEqual(headers.ETag)
@@ -249,7 +249,7 @@ test('getUserIcon BadRequest: no account', async () => {
   const req = createRequest(null, { params: { account: '', version } })
 
   try {
-    await icon.getUserIcon(req)
+    await icon.getUserIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -288,7 +288,7 @@ test('uploadUserIcon', async () => {
 
   const req = createFileRequest(userId, { file })
 
-  const res = await icon.uploadUserIcon(req)
+  const res = await icon.uploadUserIcon.handler(req)
 
   const user = await collections(db).users.findOne({ _id: userId })
 
@@ -315,7 +315,7 @@ test.each([['image/gif'], ['image/svg+xml']])(
     const req = createFileRequest(userId, { file })
 
     try {
-      await icon.uploadUserIcon(req)
+      await icon.uploadUserIcon.handler(req)
     } catch (e) {
       expect(e instanceof BadRequest).toStrictEqual(true)
     }
@@ -346,7 +346,7 @@ test('uploadUserIcon validation: size over', async () => {
   const req = createFileRequest(userId, { file })
 
   try {
-    await icon.uploadUserIcon(req)
+    await icon.uploadUserIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -376,7 +376,7 @@ test('uploadUserIcon validation: not square', async () => {
   const req = createFileRequest(userId, { file })
 
   try {
-    await icon.uploadUserIcon(req)
+    await icon.uploadUserIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -417,7 +417,7 @@ test('getRoomIcon', async () => {
   })
   getObjectMock.mockReturnValueOnce(getObject)
 
-  const res = await icon.getRoomIcon(req)
+  const res = await icon.getRoomIcon.handler(req)
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
@@ -441,7 +441,7 @@ test('getRoomIcon BadRequest: no room name', async () => {
   const req = createRequest(null, { params: { roomname: '', version } })
 
   try {
-    await icon.getRoomIcon(req)
+    await icon.getRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -469,7 +469,7 @@ test('getRoomIcon NotFound: different version', async () => {
   })
 
   try {
-    await icon.getRoomIcon(req)
+    await icon.getRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }
@@ -500,7 +500,7 @@ test('getRoomIcon NotFound: not found on storage', async () => {
   })
 
   try {
-    await icon.getRoomIcon(req)
+    await icon.getRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }
@@ -548,7 +548,7 @@ test('uploadRoomIcon', async () => {
     params: { roomname: name }
   })
 
-  const res = await icon.uploadRoomIcon(req)
+  const res = await icon.uploadRoomIcon.handler(req)
 
   const room = await collections(db).rooms.findOne({ _id: roomId })
 
@@ -578,7 +578,7 @@ test.each([['image/gif'], ['image/svg+xml']])(
     })
 
     try {
-      await icon.uploadRoomIcon(req)
+      await icon.uploadRoomIcon.handler(req)
     } catch (e) {
       expect(e instanceof BadRequest).toStrictEqual(true)
     }
@@ -607,7 +607,7 @@ test('uploadRoomIcon: validation: size over ', async () => {
   const req = createFileRequest(new ObjectId(), { file })
 
   try {
-    await icon.uploadRoomIcon(req)
+    await icon.uploadRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -637,7 +637,7 @@ test('uploadUserIcon validation: not square', async () => {
   const req = createFileRequest(userId, { file })
 
   try {
-    await icon.uploadUserIcon(req)
+    await icon.uploadUserIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

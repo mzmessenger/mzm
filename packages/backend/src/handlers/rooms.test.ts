@@ -57,7 +57,7 @@ test('exitRoom fail (general)', async () => {
   const req = createRequest(userId, { body })
 
   try {
-    await exitRoom(req)
+    await exitRoom.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -70,7 +70,7 @@ test.each([[null, '']])('exitRoom BadRequest (%s)', async (arg) => {
   const req = createRequest(new ObjectId(), { body })
 
   try {
-    await exitRoom(req)
+    await exitRoom.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -122,7 +122,7 @@ test('getUsers', async () => {
   const params = { roomid: roomId.toHexString() }
   let req = createRequest(userId, { params })
 
-  let res = await getUsers(req)
+  let res = await getUsers.handler(req)
 
   expect(res.count).toStrictEqual(config.room.USER_LIMIT + overNum)
   expect(res.users.length).toStrictEqual(config.room.USER_LIMIT)
@@ -140,7 +140,7 @@ test('getUsers', async () => {
   // threshold
   const query = { threshold: res.users[res.users.length - 1].enterId }
   req = createRequest(userId, { params, query })
-  res = await getUsers(req)
+  res = await getUsers.handler(req)
 
   expect(res.count).toStrictEqual(config.room.USER_LIMIT + overNum)
   expect(res.users.length).toStrictEqual(overNum)

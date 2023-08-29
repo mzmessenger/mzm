@@ -6,7 +6,7 @@ vi.mock('../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
-import type { REQUEST } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/type/api'
 import { ObjectId } from 'mongodb'
 import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
 import {
@@ -37,12 +37,12 @@ test('update', async () => {
   const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
 
-  const body: Partial<REQUEST['/api/user/@me']['PUT']['body']> = {
+  const body: Partial<API['/api/user/@me']['PUT']['REQUEST']['body']> = {
     account: 'changed-account'
   }
   const req = createRequest(userId, { body })
 
-  const user = await update(req)
+  const user = await update.handler(req)
 
   const found = await collections(db).users.findOne({ _id: userId })
 
@@ -63,13 +63,16 @@ test('update failed: exists account', async () => {
     roomOrder: []
   })
 
-  const req = createRequest<REQUEST['/api/user/@me']['PUT']['body']>(userId, {
-    body: {
-      account: 'exists'
+  const req = createRequest<API['/api/user/@me']['PUT']['REQUEST']['body']>(
+    userId,
+    {
+      body: {
+        account: 'exists'
+      }
     }
-  })
+  )
 
-  await expect(update(req)).rejects.toThrow(BadRequest)
+  await expect(update.handler(req)).rejects.toThrow(BadRequest)
 })
 
 test('getUserInfo', async () => {
@@ -82,7 +85,7 @@ test('getUserInfo', async () => {
   const body = { account }
   const req = createRequest(userId, { body })
 
-  const user = await getUserInfo(req)
+  const user = await getUserInfo.handler(req)
 
   const found = await collections(db).users.findOne({ _id: userId })
 
@@ -106,7 +109,7 @@ test('getUserInfo before signUp', async () => {
   const req = createRequest(userId, {})
 
   try {
-    await getUserInfo(req)
+    await getUserInfo.handler(req)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }
@@ -128,7 +131,7 @@ test.each([
   const req = createRequest(userId, { body })
 
   try {
-    await updateAccount(req)
+    await updateAccount.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

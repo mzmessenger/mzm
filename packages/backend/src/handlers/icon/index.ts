@@ -1,10 +1,11 @@
 import type { MulterFile } from '../../types/index.js'
+import type { API } from 'mzm-shared/type/api'
 import { Request } from 'express'
 import { request } from 'undici'
 import { ObjectId } from 'mongodb'
-import { RESPONSE } from 'mzm-shared/type/api'
 import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
 import { popParam, getRequestUserId } from '../../lib/utils.js'
+import { createStreamHandler, createHandler } from '../../lib/wrap.js'
 import * as storage from '../../lib/storage.js'
 import { collections, mongoClient, type User, type Room } from '../../lib/db.js'
 import { logger } from '../../lib/logger.js'
@@ -40,7 +41,10 @@ const fromIdenticon = async (account: string): StreamWrapResponse => {
   return { headers: res.headers, stream: res.body }
 }
 
-export const getUserIcon = async (req: Request): StreamWrapResponse => {
+export const getUserIcon = createStreamHandler(
+  '/api/icon/user/:account',
+  'get'
+)(async (req) => {
   const account = popParam(req.params.account)
   if (!account) {
     throw new BadRequest(`no account`)
@@ -61,9 +65,12 @@ export const getUserIcon = async (req: Request): StreamWrapResponse => {
   }
 
   return await fromIdenticon(account)
-}
+})
 
-export const getRoomIcon = async (req: Request): StreamWrapResponse => {
+export const getRoomIcon = createStreamHandler(
+  '/api/icon/rooms/:roomname/:version',
+  'get'
+)(async (req) => {
   const roomName = popParam(req.params.roomname)
   if (!roomName) {
     throw new BadRequest(`no room id`)
@@ -84,11 +91,14 @@ export const getRoomIcon = async (req: Request): StreamWrapResponse => {
     }
     throw e
   }
-}
+})
 
-export const uploadUserIcon = async (
+export const uploadUserIcon = createHandler(
+  '/api/icon/user',
+  'post'
+)(async (
   req: Request & { file?: MulterFile }
-): Promise<RESPONSE['/api/icon/user']['POST']> => {
+): Promise<API['/api/icon/user']['POST']['RESPONSE'][200]> => {
   const userId = getRequestUserId(req)
   if (!userId) {
     throw new NotFound('not found')
@@ -143,11 +153,14 @@ export const uploadUserIcon = async (
   return {
     version: version
   }
-}
+})
 
-export const uploadRoomIcon = async (
+export const uploadRoomIcon = createHandler(
+  '/api/icon/rooms/:roomname',
+  'post'
+)(async (
   req: Request & { file?: MulterFile }
-): Promise<RESPONSE['/api/icon/rooms/:roomname']['POST']> => {
+): Promise<API['/api/icon/rooms/:roomname']['POST']['RESPONSE'][200]> => {
   const roomName = popParam(req.params.roomname)
   if (!roomName) {
     throw new BadRequest(`no room id`)
@@ -208,4 +221,4 @@ export const uploadRoomIcon = async (
     id: room._id.toHexString(),
     version: version
   }
-}
+})

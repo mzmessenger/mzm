@@ -1,12 +1,14 @@
-import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/type/api'
 import { atom, useRecoilState } from 'recoil'
+
+type SearchAPI = API['/api/rooms/search']['GET']
 
 type SearchState = {
   showModal: boolean
   query: string
   scroll: string
   total: number
-  results: RESPONSE['/api/rooms/search']['GET']['hits']
+  results: SearchAPI['RESPONSE'][200]['hits']
 }
 
 const searchState = atom<SearchState>({
@@ -45,8 +47,7 @@ export const useSearch = () => {
       ...current,
       query: q
     }))
-    const init: [keyof REQUEST['/api/rooms/search']['GET']['query'], string][] =
-      [['query', q]]
+    const init: [keyof SearchAPI['REQUEST']['query'], string][] = [['query', q]]
     const params = new URLSearchParams(init)
 
     // @todo
@@ -63,7 +64,7 @@ export const useSearch = () => {
     }
 
     const { hits, scroll, total } =
-      (await res.json()) as RESPONSE['/api/rooms/search']['GET']
+      (await res.json()) as SearchAPI['RESPONSE'][200]
 
     setSearch((current) => ({
       ...current,
@@ -80,11 +81,10 @@ export const useSearch = () => {
       return
     }
 
-    const init: [keyof REQUEST['/api/rooms/search']['GET']['query'], string][] =
-      [
-        ['query', search.query],
-        ['scroll', search.scroll]
-      ]
+    const init: [keyof SearchAPI['REQUEST']['query'], string][] = [
+      ['query', search.query],
+      ['scroll', search.scroll]
+    ]
 
     const params = new URLSearchParams(init)
 
@@ -98,7 +98,7 @@ export const useSearch = () => {
 
     if (res.ok) {
       const { hits, scroll, total } =
-        (await res.json()) as RESPONSE['/api/rooms/search']['GET']
+        (await res.json()) as SearchAPI['RESPONSE'][200]
 
       setSearch((current) => ({
         ...current,
