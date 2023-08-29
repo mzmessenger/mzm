@@ -1,8 +1,8 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi, test, expect } from 'vitest'
 
-import { createErrorHandler } from './middleware'
-import * as HttpErrors from '../lib/errors'
+import { createErrorHandler } from './middleware.js'
+import * as HttpErrors from '../lib/errors.js'
 
 test('errorHandler (Internal Server Error)', async () => {
   expect.assertions(4)

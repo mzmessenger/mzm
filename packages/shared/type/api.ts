@@ -1,3 +1,12 @@
+/* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/no-unused-vars, no-unused-vars */
+
+export type RouteParams<T extends string> =
+  T extends `${infer _}:${infer IParam}/${infer IRest}`
+    ? { [k in IParam | keyof RouteParams<IRest>]: string }
+    : T extends `${infer _}:${infer IParam}`
+    ? { [k in IParam]: string }
+    : {}
+
 export type API = {
   '/api/rooms': {
     POST: {
@@ -46,9 +55,7 @@ export type API = {
   '/api/rooms/:roomid/users': {
     GET: {
       REQUEST: {
-        params: {
-          roomid: string
-        }
+        params: RouteParams<'/api/rooms/:roomid/users'>
         query: {
           threshold: string
         }
@@ -69,9 +76,7 @@ export type API = {
   '/api/icon/rooms/:roomname': {
     POST: {
       REQUEST: {
-        params: {
-          roomname: string
-        }
+        params: RouteParams<'/api/icon/rooms/:roomname'>
       }
       RESPONSE: {
         200: {
@@ -84,10 +89,7 @@ export type API = {
   '/api/icon/rooms/:roomname/:version': {
     GET: {
       REQUEST: {
-        params: {
-          roomname: string
-          version: string
-        }
+        params: RouteParams<'/api/icon/rooms/:roomname/:version'>
       }
       RESPONSE: {
         200: ReadableStream
@@ -97,10 +99,17 @@ export type API = {
   '/api/icon/user/:account/:version': {
     GET: {
       REQUEST: {
-        params: {
-          account: string
-          version: string
-        }
+        params: RouteParams<'/api/icon/user/:account/:version'>
+      }
+      RESPONSE: {
+        200: ReadableStream
+      }
+    }
+  }
+  '/api/icon/user/:account': {
+    GET: {
+      REQUEST: {
+        params: RouteParams<'/api/icon/user/:account'>
       }
       RESPONSE: {
         200: ReadableStream

@@ -27,7 +27,18 @@ export function createHandler<
   TPath extends string,
   TMethod extends 'get' | 'post' | 'put' | 'delete'
 >(path: TPath, method: TMethod) {
-  return <TReq, TRes>(handler: WrapFn<TReq, TRes>) => {
+  return createHandlerWithContext(path, method, undefined)
+}
+
+export function createHandlerWithContext<
+  TPath extends string,
+  TMethod extends 'get' | 'post' | 'put' | 'delete',
+  TContext
+>(path: TPath, method: TMethod, context: TContext) {
+  return <TReq, TRes>(fn: (req: TReq, context: TContext) => Promise<TRes>) => {
+    const handler: WrapFn<TReq, TRes> = (req: TReq) => {
+      return fn(req, context)
+    }
     return {
       path,
       handler,
@@ -40,7 +51,19 @@ export function createStreamHandler<
   TPath extends string,
   TMethod extends 'get' | 'post' | 'put' | 'delete'
 >(path: TPath, method: TMethod) {
-  return (handler: StreamWrapFn) => {
+  return createStreamHandlerWithContext(path, method, undefined)
+}
+
+export function createStreamHandlerWithContext<
+  TPath extends string,
+  TMethod extends 'get' | 'post' | 'put' | 'delete',
+  TContext
+>(path: TPath, method: TMethod, context: TContext) {
+  return (fn: (req: Request, context: TContext) => StreamWrapResponse) => {
+    const handler: StreamWrapFn = (req) => {
+      return fn(req, context)
+    }
+
     return {
       path,
       handler,

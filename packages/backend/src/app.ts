@@ -40,14 +40,8 @@ export const createApp = () => {
     jsonParser,
     wrap(rooms.createRoom.handler)
   )
-  app[rooms.enterRoom.method](
-    rooms.enterRoom.path,
-    checkAccessToken,
-    jsonParser,
-    wrap(rooms.enterRoom.handler)
-  )
-  app[rooms.enterRoom.method](
-    rooms.enterRoom.path,
+  app[rooms.exitRoom.method](
+    rooms.exitRoom.path,
     checkAccessToken,
     jsonParser,
     wrap(rooms.exitRoom.handler)
@@ -69,13 +63,6 @@ export const createApp = () => {
     jsonParser,
     wrap(user.update.handler)
   )
-  app[user.updateAccount.method](
-    user.updateAccount.path,
-    checkAccessToken,
-    jsonParser,
-    wrap(user.updateAccount.handler)
-  )
-
   app[icon.getUserIcon.method](
     icon.getUserIcon.path,
     streamWrap(icon.getUserIcon.handler)

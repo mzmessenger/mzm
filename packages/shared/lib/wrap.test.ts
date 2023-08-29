@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { vi, test, expect } from 'vitest'
-import { wrap } from './wrap'
+import { wrap } from './wrap.js'
 
 test('wrap (return object)', async () => {
   expect.assertions(4)

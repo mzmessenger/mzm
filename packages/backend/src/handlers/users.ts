@@ -1,31 +1,49 @@
 import type { Request } from 'express'
 import type { API } from 'mzm-shared/type/api'
+import type { Result } from 'mzm-shared/type'
 import { z } from 'zod'
 import { ObjectId } from 'mongodb'
 import { isValidAccount } from 'mzm-shared/validator'
-import { createHandler } from '../lib/wrap.js'
-import { getRequestUserId, createUserIconPath, popParam } from '../lib/utils.js'
+import { createHandler, createHandlerWithContext } from '../lib/wrap.js'
+import {
+  getRequestUserId,
+  createUserIconPath,
+  createContextParser
+} from '../lib/utils.js'
 import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
-import { collections, mongoClient, User } from '../lib/db.js'
+import { collections, mongoClient } from '../lib/db.js'
 
-const UpdateParser = z.object({
-  account: z.string().min(1)
-})
+const updateContext = () => {
+  const body = createContextParser(
+    z.object({
+      account: z.string().min(1).trim()
+    }),
+    (parsed): Result<API['/api/user/@me']['PUT']['REQUEST']['body']> => {
+      return {
+        success: true,
+        data: {
+          account: parsed.data.account
+        }
+      }
+    }
+  )
 
-export const update = createHandler(
+  return {
+    parser: { body }
+  }
+}
+
+export const update = createHandlerWithContext(
   '/api/user/@me',
-  'put'
-)(async (req: Request) => {
+  'put',
+  updateContext()
+)(async (req: Request, context) => {
   type ResType = API['/api/user/@me']['PUT']['RESPONSE']
-  const parsed = UpdateParser.safeParse(req.body)
+  const parsed = context.parser.body(req.body)
   if (parsed.success === false) {
     throw new BadRequest<ResType[400]>('bad request')
   }
-  const body = parsed.data
-  const account = popParam(body.account)
-  if (!account) {
-    throw new BadRequest<ResType[400]>('account is empty')
-  }
+  const account = parsed.data.account.trim()
   if (!isValidAccount(account)) {
     throw new BadRequest<ResType[400]>('account is not valid')
   }
@@ -78,32 +96,4 @@ export const getUserInfo = createHandler(
   }
 
   return response
-})
-
-export const updateAccount = createHandler(
-  '/api/user/@me/account',
-  'post'
-)(async (req: Request) => {
-  const id = getRequestUserId(req)
-  const account = popParam(req.body.account)
-  if (!account) {
-    throw new BadRequest('account is empty')
-  }
-  if (!isValidAccount(account)) {
-    throw new BadRequest('account is not valid')
-  }
-
-  const update: Pick<User, 'account'> = { account }
-  const db = await mongoClient()
-  const updated = await collections(db).users.findOneAndUpdate(
-    { _id: new ObjectId(id) },
-    { $set: update },
-    {
-      upsert: true
-    }
-  )
-
-  return {
-    update: updated.value?._id.toHexString()
-  }
 })

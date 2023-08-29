@@ -15,7 +15,7 @@ import {
   getTestMongoClient
 } from '../../test/testUtil.js'
 import { collections, COLLECTION_NAMES } from '../lib/db.js'
-import { update, getUserInfo, updateAccount } from './users.js'
+import { update, getUserInfo } from './users.js'
 
 beforeAll(async () => {
   const { mongoClient } = await import('../lib/db.js')
@@ -75,6 +75,28 @@ test('update failed: exists account', async () => {
   await expect(update.handler(req)).rejects.toThrow(BadRequest)
 })
 
+test.each([
+  ['null', null],
+  ['undefined', undefined],
+  ['空文字', ''],
+  ['space', ' '],
+  ['space2', '　'],
+  ['space3', '　 　']
+])('update fail (account: %s)', async (_label, account) => {
+  expect.assertions(1)
+
+  const userId = new ObjectId()
+
+  const body = { account }
+  const req = createRequest(userId, { body })
+
+  try {
+    await update.handler(req)
+  } catch (e) {
+    expect(e instanceof BadRequest).toStrictEqual(true)
+  }
+})
+
 test('getUserInfo', async () => {
   const userId = new ObjectId()
   const account = 'aaa'
@@ -112,27 +134,5 @@ test('getUserInfo before signUp', async () => {
     await getUserInfo.handler(req)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
-  }
-})
-
-test.each([
-  ['null', null],
-  ['undefined', undefined],
-  ['空文字', ''],
-  ['space', ' '],
-  ['space2', '　'],
-  ['space3', '　 　']
-])('updateAccount fail (account: %s)', async (_label, account) => {
-  expect.assertions(1)
-
-  const userId = new ObjectId()
-
-  const body = { account }
-  const req = createRequest(userId, { body })
-
-  try {
-    await updateAccount.handler(req)
-  } catch (e) {
-    expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })

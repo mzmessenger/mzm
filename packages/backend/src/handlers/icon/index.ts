@@ -1,11 +1,17 @@
 import type { MulterFile } from '../../types/index.js'
 import type { API } from 'mzm-shared/type/api'
+import type { Result } from 'mzm-shared/type'
 import { Request } from 'express'
 import { request } from 'undici'
 import { ObjectId } from 'mongodb'
+import { z } from 'zod'
 import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
-import { popParam, getRequestUserId } from '../../lib/utils.js'
-import { createStreamHandler, createHandler } from '../../lib/wrap.js'
+import { getRequestUserId, createContextParser } from '../../lib/utils.js'
+import {
+  createHandler,
+  createHandlerWithContext,
+  createStreamHandlerWithContext
+} from '../../lib/wrap.js'
 import * as storage from '../../lib/storage.js'
 import { collections, mongoClient, type User, type Room } from '../../lib/db.js'
 import { logger } from '../../lib/logger.js'
@@ -41,41 +47,118 @@ const fromIdenticon = async (account: string): StreamWrapResponse => {
   return { headers: res.headers, stream: res.body }
 }
 
-export const getUserIcon = createStreamHandler(
+const getUserIconContext = () => {
+  const params = createContextParser(
+    z.object({
+      account: z.string().min(1)
+    }),
+    (
+      parsed
+    ): Result<API['/api/icon/user/:account']['GET']['REQUEST']['params']> => {
+      return {
+        success: true,
+        data: {
+          account: parsed.data.account
+        }
+      }
+    }
+  )
+  return {
+    parser: {
+      params,
+      version: z.object({
+        version: z.string().optional()
+      })
+    }
+  }
+}
+
+export const getUserIcon = createStreamHandlerWithContext(
   '/api/icon/user/:account',
-  'get'
-)(async (req) => {
-  const account = popParam(req.params.account)
-  if (!account) {
+  'get',
+  getUserIconContext()
+)(async (req, context) => {
+  const params = context.parser.params(req.params)
+  if (!params.success) {
     throw new BadRequest(`no account`)
   }
-  const version = popParam(req.params.version)
+  const v = context.parser.version.safeParse(req.params)
+  const version = v.success ? v.data.version : null
   const db = await mongoClient()
-  const user = await collections(db).users.findOne({ account: account })
+  const user = await collections(db).users.findOne({
+    account: params.data.account
+  })
 
-  if (user?.icon?.version === version) {
+  if (!user) {
+    throw new BadRequest(`no account`)
+  }
+
+  if (!user.icon) {
+    return await fromIdenticon(params.data.account)
+  }
+
+  if (version) {
+    if (user?.icon?.version !== version) {
+      return await fromIdenticon(params.data.account)
+    }
     try {
       return await returnIconStream(user.icon.key)
     } catch (e) {
       if ((e as { statusCode: number })?.statusCode === 404) {
-        return await fromIdenticon(account)
+        return await fromIdenticon(params.data.account)
       }
       throw e
     }
   }
 
-  return await fromIdenticon(account)
+  try {
+    return await returnIconStream(user.icon.key)
+  } catch (e) {
+    if ((e as { statusCode: number })?.statusCode === 404) {
+      return await fromIdenticon(params.data.account)
+    }
+    throw e
+  }
 })
 
-export const getRoomIcon = createStreamHandler(
-  '/api/icon/rooms/:roomname/:version',
-  'get'
-)(async (req) => {
-  const roomName = popParam(req.params.roomname)
-  if (!roomName) {
-    throw new BadRequest(`no room id`)
+const getRoomIconContext = () => {
+  const params = createContextParser(
+    z.object({
+      roomname: z.string().min(1),
+      version: z.string().min(1)
+    }),
+    (
+      parsed
+    ): Result<
+      API['/api/icon/rooms/:roomname/:version']['GET']['REQUEST']['params']
+    > => {
+      return {
+        success: true,
+        data: {
+          roomname: parsed.data.roomname,
+          version: parsed.data.version
+        }
+      }
+    }
+  )
+  return {
+    parser: {
+      params
+    }
   }
-  const version = popParam(req.params.version)
+}
+
+export const getRoomIcon = createStreamHandlerWithContext(
+  '/api/icon/rooms/:roomname/:version',
+  'get',
+  getRoomIconContext()
+)(async (req, context) => {
+  const params = context.parser.params(req.params)
+  if (!params.success) {
+    throw new BadRequest(`invalid params`)
+  }
+  const roomName = params.data.roomname
+  const version = params.data.version
   const db = await mongoClient()
   const room = await collections(db).rooms.findOne({ name: roomName })
 
@@ -155,15 +238,41 @@ export const uploadUserIcon = createHandler(
   }
 })
 
-export const uploadRoomIcon = createHandler(
+const uploadRoomIconContext = () => {
+  const params = createContextParser(
+    z.object({
+      roomname: z.string().min(1)
+    }),
+    (
+      parsed
+    ): Result<
+      API['/api/icon/rooms/:roomname']['POST']['REQUEST']['params']
+    > => {
+      return {
+        success: true,
+        data: {
+          roomname: parsed.data.roomname
+        }
+      }
+    }
+  )
+
+  return {
+    parser: { params }
+  }
+}
+
+export const uploadRoomIcon = createHandlerWithContext(
   '/api/icon/rooms/:roomname',
-  'post'
+  'post',
+  uploadRoomIconContext()
 )(async (
-  req: Request & { file?: MulterFile }
+  req: Request & { file?: MulterFile },
+  context
 ): Promise<API['/api/icon/rooms/:roomname']['POST']['RESPONSE'][200]> => {
-  const roomName = popParam(req.params.roomname)
-  if (!roomName) {
-    throw new BadRequest(`no room id`)
+  const params = context.parser.params(req.params)
+  if (params.success === false) {
+    throw new BadRequest(`invalid room name`)
   }
 
   if (!req.file) {
@@ -187,7 +296,9 @@ export const uploadRoomIcon = createHandler(
   }
 
   const db = await mongoClient()
-  const room = await collections(db).rooms.findOne({ name: roomName })
+  const room = await collections(db).rooms.findOne({
+    name: params.data.roomname
+  })
   if (!room) {
     throw new NotFound('not exist')
   }
@@ -215,7 +326,7 @@ export const uploadRoomIcon = createHandler(
     }
   )
 
-  logger.info('[icon:room] upload', roomName, version)
+  logger.info('[icon:room] upload', params.data.roomname, version)
 
   return {
     id: room._id.toHexString(),
