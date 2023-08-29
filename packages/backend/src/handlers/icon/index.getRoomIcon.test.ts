@@ -12,6 +12,7 @@ vi.mock('../../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
+import type { API } from 'mzm-shared/type/api'
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
 import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
@@ -23,6 +24,8 @@ import {
 import { collections, RoomStatusEnum } from '../../lib/db.js'
 import * as storage from '../../lib/storage.js'
 import { getRoomIcon } from './index.js'
+
+type APIType = API['/api/icon/rooms/:roomname/:version']['GET']
 
 beforeAll(async () => {
   const { mongoClient } = await import('../../lib/db.js')
@@ -47,7 +50,9 @@ test('getRoomIcon', async () => {
     status: RoomStatusEnum.CLOSE
   })
 
-  const req = createRequest(null, { params: { roomname: name, version } })
+  const req = createRequest<unknown, APIType['REQUEST']['params']>(null, {
+    params: { roomname: name, version }
+  })
 
   const headObjectMock = vi.mocked(storage.headObject)
   const headers = createHeadObjectMockValue({
@@ -86,7 +91,9 @@ test('getRoomIcon BadRequest: no room name', async () => {
 
   const version = '12345'
 
-  const req = createRequest(null, { params: { roomname: '', version } })
+  const req = createRequest<unknown, APIType['REQUEST']['params']>(null, {
+    params: { roomname: '', version }
+  })
 
   try {
     await getRoomIcon.handler(req)

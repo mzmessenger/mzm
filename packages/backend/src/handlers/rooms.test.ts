@@ -19,6 +19,7 @@ vi.mock('../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
+import type { API } from 'mzm-shared/type/api'
 import { ObjectId, WithId } from 'mongodb'
 import { BadRequest } from 'mzm-shared/lib/errors'
 import { getTestMongoClient, createRequest } from '../../test/testUtil.js'
@@ -54,7 +55,9 @@ test('exitRoom fail (general)', async () => {
   })
 
   const body = { room: general!._id.toHexString() }
-  const req = createRequest(userId, { body })
+  const req = createRequest<
+    API['/api/rooms/enter']['DELETE']['REQUEST']['body']
+  >(userId, { body })
 
   try {
     await exitRoom.handler(req)
@@ -66,7 +69,11 @@ test('exitRoom fail (general)', async () => {
 test.each([[null, '']])('exitRoom BadRequest (%s)', async (arg) => {
   expect.assertions(1)
 
-  const body = { room: arg }
+  const body:
+    | API['/api/rooms/enter']['DELETE']['REQUEST']['body']
+    | { room: null } = {
+    room: arg
+  }
   const req = createRequest(new ObjectId(), { body })
 
   try {
@@ -120,7 +127,10 @@ test('getUsers', async () => {
   }, new Map<string, WithId<User>>())
 
   const params = { roomid: roomId.toHexString() }
-  let req = createRequest(userId, { params })
+  let req = createRequest<
+    unknown,
+    API['/api/rooms/:roomid/users']['GET']['REQUEST']['params']
+  >(userId, { params })
 
   let res = await getUsers.handler(req)
 

@@ -37,7 +37,7 @@ test('update', async () => {
   const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
 
-  const body: Partial<API['/api/user/@me']['PUT']['REQUEST']['body']> = {
+  const body: API['/api/user/@me']['PUT']['REQUEST']['body'] = {
     account: 'changed-account'
   }
   const req = createRequest(userId, { body })

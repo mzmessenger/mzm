@@ -18,11 +18,14 @@ vi.mock('../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
+import type { API } from 'mzm-shared/type/api'
 import { ObjectId } from 'mongodb'
 import { BadRequest } from 'mzm-shared/lib/errors'
 import { createRequest, getTestMongoClient } from '../../test/testUtil.js'
 import { collections } from '../lib/db.js'
 import { createRoom } from './rooms.js'
+
+type APIType = API['/api/rooms']['POST']
 
 beforeAll(async () => {
   const { mongoClient } = await import('../lib/db.js')
@@ -39,7 +42,7 @@ test.each([
 ])('createRoom success (%s, %s)', async (name, createdName) => {
   const userId = new ObjectId()
   const body = { name }
-  const req = createRequest(userId, { body })
+  const req = createRequest<APIType['REQUEST']['body']>(userId, { body })
 
   const { id } = await createRoom.handler(req)
 
@@ -60,7 +63,7 @@ test.each([
 
   const userId = new ObjectId()
   const body = { name }
-  const req = createRequest(userId, { body })
+  const req = createRequest<APIType['REQUEST']['body']>(userId, { body })
 
   try {
     await createRoom.handler(req)

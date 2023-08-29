@@ -46,6 +46,9 @@ export type API = {
   '/api/rooms/:roomid/users': {
     GET: {
       REQUEST: {
+        params: {
+          roomid: string
+        }
         query: {
           threshold: string
         }
@@ -65,11 +68,42 @@ export type API = {
   }
   '/api/icon/rooms/:roomname': {
     POST: {
+      REQUEST: {
+        params: {
+          roomname: string
+        }
+      }
       RESPONSE: {
         200: {
           id: string
           version: string
         }
+      }
+    }
+  }
+  '/api/icon/rooms/:roomname/:version': {
+    GET: {
+      REQUEST: {
+        params: {
+          roomname: string
+          version: string
+        }
+      }
+      RESPONSE: {
+        200: ReadableStream
+      }
+    }
+  }
+  '/api/icon/user/:account/:version': {
+    GET: {
+      REQUEST: {
+        params: {
+          account: string
+          version: string
+        }
+      }
+      RESPONSE: {
+        200: ReadableStream
       }
     }
   }

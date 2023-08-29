@@ -13,6 +13,7 @@ vi.mock('../../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
+import type { API } from 'mzm-shared/type/api'
 import { Readable } from 'stream'
 import { ObjectId, WithId } from 'mongodb'
 import { request } from 'undici'
@@ -26,6 +27,9 @@ import { collections, type User } from '../../lib/db.js'
 import * as storage from '../../lib/storage.js'
 import { getUserIcon } from './index.js'
 
+type APIType = API['/api/icon/user/:account/:version']['GET']
+type ResponseBody = Awaited<ReturnType<typeof request>>['body']
+
 beforeAll(async () => {
   const { mongoClient } = await import('../../lib/db.js')
   const { getTestMongoClient } = await import('../../../test/testUtil.js')
@@ -33,8 +37,6 @@ beforeAll(async () => {
     return getTestMongoClient(globalThis)
   })
 })
-
-type ResponseBody = Awaited<ReturnType<typeof request>>['body']
 
 test('getUserIcon from storage', async () => {
   const userId = new ObjectId()
@@ -49,7 +51,9 @@ test('getUserIcon from storage', async () => {
     icon: { key: 'iconkey', version }
   })
 
-  const req = createRequest(null, { params: { account, version } })
+  const req = createRequest<unknown, APIType['REQUEST']['params']>(null, {
+    params: { account, version }
+  })
 
   const headObjectMock = vi.mocked(storage.headObject).mockClear()
   const headers = createHeadObjectMockValue({
@@ -124,7 +128,7 @@ test.each([
       context: undefined
     })
 
-    const req = createRequest(null, {
+    const req = createRequest<unknown, APIType['REQUEST']['params']>(null, {
       params: { account, version: requestVersion }
     })
 
@@ -197,7 +201,9 @@ test('getUserIcon BadRequest: no account', async () => {
 
   const version = '12345'
 
-  const req = createRequest(null, { params: { account: '', version } })
+  const req = createRequest<unknown, APIType['REQUEST']['params']>(null, {
+    params: { account: '', version }
+  })
 
   try {
     await getUserIcon.handler(req)
