@@ -14,11 +14,18 @@ type ExRedisClient = Redis & {
 }
 
 export const connect = async () => {
-  _client = new Redis(config.redis.options) as ExRedisClient
+  _client = new Redis({
+    ...config.redis.options,
+    reconnectOnError(err) {
+      if (err.message.includes('ECONNRESET')) {
+        return true
+      }
+      return false
+    }
+  }) as ExRedisClient
 
   _client.on('error', function error(e) {
     logger.error('[redis]', 'error', e)
-    process.exit(1)
   })
 
   _client.defineCommand('release', {

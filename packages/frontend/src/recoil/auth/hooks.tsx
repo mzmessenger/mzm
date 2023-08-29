@@ -52,9 +52,11 @@ export const useAuth = () => {
         }))
       }
       setLoginFlag(res.success)
+      return res.success
     } catch (e) {
       logger.warn(e)
       setLoginFlag(false)
+      return false
     }
   }
 

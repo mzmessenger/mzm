@@ -54,22 +54,23 @@ export const useApp = () => {
   useRouter()
   useResize()
 
-  const { loginFlag, init: initAuth } = useAuth()
+  const { init: initAuth } = useAuth()
   const { userAccount } = useUserAccount()
   const location = useLocation()
-  const { init: initSocket } = useSocket({
+  const { init: initSocket, close } = useSocket({
     userAccount,
     pathname: location.pathname
   })
 
   useEffect(() => {
-    if (loginFlag) {
-      initSocket()
+    initAuth().then((success) => {
+      if (success) {
+        initSocket()
+      }
+    })
+    return () => {
+      close()
     }
-  }, [loginFlag, initSocket])
-
-  useEffect(() => {
-    initAuth()
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 }

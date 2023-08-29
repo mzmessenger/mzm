@@ -432,6 +432,7 @@ export const useSocket = ({
   const close = useCallback((socket: WebSocket) => {
     if (
       socket &&
+      socket.readyState !== WebSocket.CONNECTING &&
       socket.readyState !== WebSocket.CLOSING &&
       socket.readyState !== WebSocket.CLOSED
     ) {
@@ -572,6 +573,7 @@ export const useSocket = ({
       ws: socket.ws
     },
     init,
-    connect
+    connect,
+    close: () => close(socket.ws)
   } as const
 }
