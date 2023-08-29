@@ -15,16 +15,30 @@ export const sessionRedis = async () => {
 }
 
 export const connect = async () => {
-  redis = new Redis(REDIS.options)
+  redis = new Redis({
+    ...REDIS.options,
+    reconnectOnError(err) {
+      if (err.message.includes('ECONNRESET')) {
+        return true
+      }
+      return false
+    }
+  })
   redis.on('error', (e) => {
     logger.error('[redis]', 'error', e)
-    process.exit(1)
   })
 
-  _sessionRedis = new Redis(SESSION_REDIS.options)
+  _sessionRedis = new Redis({
+    ...SESSION_REDIS.options,
+    reconnectOnError(err) {
+      if (err.message.includes('ECONNRESET')) {
+        return true
+      }
+      return false
+    }
+  })
   _sessionRedis.on('error', (e) => {
     logger.error('[sessionRedis]', 'error', e)
-    process.exit(1)
   })
 
   await Promise.all([once(redis, 'ready'), once(_sessionRedis, 'ready')])
