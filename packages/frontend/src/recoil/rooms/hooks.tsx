@@ -1,4 +1,4 @@
-import type { API } from 'mzm-shared/src/type/api'
+import { type API } from 'mzm-shared/src/type/api'
 import type { useSocketActions } from '../../recoil/socket/hooks'
 import type { useUiActions } from '../../recoil/ui/hooks'
 import type { Room } from './types'
@@ -367,9 +367,10 @@ export const useRoomUserActions = () => {
     setRooms((current) => ({ ...current, usersLoading: true }))
   }, [setRooms])
 
+  type GetUsersType = API['/api/rooms/:roomId/users']
   const getUsers = useCallback(
-    async (roomId: string) => {
-      if (!roomId) {
+    async (params: GetUsersType['params']) => {
+      if (!params.roomId) {
         return
       }
       if (rooms.usersLoading) {
@@ -379,28 +380,30 @@ export const useRoomUserActions = () => {
       fetchStartRoomUsers()
 
       return await createApiClient(
-        `/api/rooms/${roomId}/users`,
-        {
-          method: 'GET'
+        '/api/rooms/:roomId/users',
+        'GET',
+        ({ toPath }) => {
+          return {
+            path: toPath(params)
+          }
         },
         async (res) => {
           if (res.status !== 200) {
             return res
           }
 
-          const body =
-            res.body as API['/api/rooms/:roomid/users']['GET']['response'][200]['body']
+          const body = res.body as GetUsersType['GET']['response'][200]['body']
           setRooms((current) => {
             const usersById = {
               ...current.usersById,
-              [roomId]: {
+              [params.roomId]: {
                 users: body.users,
                 count: body.count
               }
             }
-            const usersAllIds = current.usersAllIds.includes(roomId)
+            const usersAllIds = current.usersAllIds.includes(params.roomId)
               ? current.usersAllIds
-              : [...current.usersAllIds, roomId]
+              : [...current.usersAllIds, params.roomId]
             return {
               ...current,
               usersById,
@@ -416,9 +419,10 @@ export const useRoomUserActions = () => {
     [fetchStartRoomUsers, rooms.usersLoading, setRooms]
   )
 
+  type GetNextUsersType = API['/api/rooms/:roomId/users']
   const getNextUsers = useCallback(
-    async (roomId: string) => {
-      if (!roomId) {
+    async (params: GetNextUsersType['params']) => {
+      if (!params.roomId) {
         return
       }
 
@@ -426,7 +430,7 @@ export const useRoomUserActions = () => {
         return
       }
 
-      const { users, count } = rooms.usersById[roomId]
+      const { users, count } = rooms.usersById[params.roomId]
       if (users.length >= count) {
         return
       }
@@ -436,16 +440,19 @@ export const useRoomUserActions = () => {
       const lastId = users[users.length - 1].enterId
 
       const init: [
-        keyof API['/api/rooms/:roomid/users']['GET']['request']['query'],
+        keyof GetNextUsersType['GET']['request']['query'],
         string
       ][] = [['threshold', lastId]]
 
       const query = new URLSearchParams(init)
 
       return await createApiClient(
-        `/api/rooms/${roomId}/users?${query.toString()}`,
-        {
-          method: 'GET'
+        '/api/rooms/:roomId/users',
+        'GET',
+        ({ toPath }) => {
+          return {
+            path: toPath(params) + `?${query.toString()}`
+          }
         },
         async (res) => {
           if (res.status !== 200) {
@@ -453,12 +460,12 @@ export const useRoomUserActions = () => {
           }
 
           const body =
-            res.body as API['/api/rooms/:roomid/users']['GET']['response'][200]['body']
+            res.body as GetNextUsersType['GET']['response'][200]['body']
           setRooms((current) => {
-            const users = current.usersById[roomId]
+            const users = current.usersById[params.roomId]
             const usersById = {
               ...current.usersById,
-              [roomId]: {
+              [params.roomId]: {
                 ...users,
                 users: [...users.users, ...body.users]
               }
@@ -492,25 +499,24 @@ export const useRoomActions = ({
   const setRoomsById = useSetRecoilState(roomsByIdState)
   const setOpenRoomSettingState = useSetRecoilState(openRoomSettingState)
 
+  type CreateRoomType = API['/api/rooms']['POST']
   const createRoom = useCallback(
-    async (name: string) => {
-      const body: API['/api/rooms']['POST']['request']['body'] = {
-        name
-      }
-
+    async (body: CreateRoomType['request']['body']) => {
       return await createApiClient(
         '/api/rooms',
-        {
-          method: 'POST',
-          body: JSON.stringify(body)
+        'POST',
+        ({ toPath }) => {
+          return {
+            path: toPath(),
+            body: JSON.stringify(body)
+          }
         },
         async (res) => {
           if (res.status !== 200) {
             return res
           }
 
-          const room =
-            res.body as API['/api/rooms']['POST']['response'][200]['body']
+          const room = res.body as CreateRoomType['response'][200]['body']
           getRooms()
 
           setCurrentRoom({
@@ -527,17 +533,17 @@ export const useRoomActions = ({
     [getRooms, setCurrentRoom]
   )
 
+  type ExitRoomType = API['/api/rooms/enter']['DELETE']
   const exitRoom = useCallback(
-    async (roomId: string) => {
-      const body: API['/api/rooms/enter']['DELETE']['request']['body'] = {
-        room: roomId
-      }
-
+    async (body: ExitRoomType['request']['body']) => {
       return await createApiClient(
         '/api/rooms/enter',
-        {
-          method: 'DELETE',
-          body: JSON.stringify(body)
+        'DELETE',
+        ({ toPath }) => {
+          return {
+            path: toPath(),
+            body: JSON.stringify(body)
+          }
         },
         async (res) => {
           if (res.status === 200) {
@@ -560,10 +566,10 @@ export const useRoomActions = ({
   )
 
   const uploadIcon = useCallback(
-    async (name: string, blob: Blob) => {
+    async (params: Parameters<typeof uploadRoomIcon>[0], blob: Blob) => {
       const formData = new FormData()
       formData.append('icon', blob)
-      const res = await uploadRoomIcon(name, blob)
+      const res = await uploadRoomIcon(params, blob)
       if (res.ok) {
         const { id, version } = res.body
 

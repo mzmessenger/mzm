@@ -41,7 +41,7 @@ export const RoomInfo = () => {
 
   useEffect(() => {
     if (currentRoomId) {
-      getUsers(currentRoomId)
+      getUsers({ roomId: currentRoomId })
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [currentRoomId])

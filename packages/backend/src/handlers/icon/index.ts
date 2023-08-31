@@ -45,7 +45,7 @@ const fromIdenticon = async (account: string): StreamWrapResponse => {
 export const getUserIcon = createStreamHandler(
   '/api/icon/user/:account',
   'GET',
-  () => {
+  ({ checkParams }) => {
     const params = createContextParser(
       z.object({
         account: z.string().min(1)
@@ -53,7 +53,7 @@ export const getUserIcon = createStreamHandler(
       (parsed) => {
         return {
           success: true,
-          data: apis['/api/icon/user/:account'].params({
+          data: checkParams({
             account: parsed.data.account
           })
         }
@@ -113,19 +113,19 @@ export const getUserIcon = createStreamHandler(
 })
 
 export const getRoomIcon = createStreamHandler(
-  '/api/icon/rooms/:roomname/:version',
+  '/api/icon/rooms/:roomName/:version',
   'GET',
-  () => {
+  ({ checkParams }) => {
     const params = createContextParser(
       z.object({
-        roomname: z.string().min(1),
+        roomName: z.string().min(1),
         version: z.string().min(1)
       }),
       (parsed) => {
         return {
           success: true,
-          data: apis['/api/icon/rooms/:roomname/:version'].params({
-            roomname: parsed.data.roomname,
+          data: checkParams({
+            roomName: parsed.data.roomName,
             version: parsed.data.version
           })
         }
@@ -142,7 +142,7 @@ export const getRoomIcon = createStreamHandler(
   if (!params.success) {
     throw new BadRequest(`invalid params`)
   }
-  const roomName = params.data.roomname
+  const roomName = params.data.roomName
   const version = params.data.version
   const db = await mongoClient()
   const room = await collections(db).rooms.findOne({ name: roomName })
@@ -227,19 +227,19 @@ export const uploadUserIcon = createHandler(
 })
 
 export const uploadRoomIcon = createHandler(
-  '/api/icon/rooms/:roomname',
+  '/api/icon/rooms/:roomName',
   'POST',
-  ({ path, method }) => {
+  ({ path, method, checkParams }) => {
     const api = apis[path][method]
     const params = createContextParser(
       z.object({
-        roomname: z.string().min(1)
+        roomName: z.string().min(1)
       }),
       (parsed) => {
         return {
           success: true,
-          data: apis[path].params({
-            roomname: parsed.data.roomname
+          data: checkParams({
+            roomName: parsed.data.roomName
           })
         }
       }
@@ -278,7 +278,7 @@ export const uploadRoomIcon = createHandler(
 
   const db = await mongoClient()
   const room = await collections(db).rooms.findOne({
-    name: params.data.roomname
+    name: params.data.roomName
   })
   if (!room) {
     throw new NotFound('not exist')
@@ -307,7 +307,7 @@ export const uploadRoomIcon = createHandler(
     }
   )
 
-  logger.info('[icon:room] upload', params.data.roomname, version)
+  logger.info('[icon:room] upload', params.data.roomName, version)
 
   return context.api.response[200].body({
     id: room._id.toHexString(),

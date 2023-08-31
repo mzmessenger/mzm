@@ -1,5 +1,10 @@
 /* eslint-disable @typescript-eslint/ban-types, no-unused-vars, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
-import { RouteType, RouteParams, ApiType } from '../type/api.js'
+import type {
+  RouteType,
+  RouteParams,
+  ApiType,
+  HasParamsInPath
+} from '../type/api.js'
 
 function define<T>() {
   return (args: T) => args
@@ -64,7 +69,7 @@ const routes = {
       }
     }
   },
-  '/api/rooms/:roomid/users': {
+  '/api/rooms/:roomId/users': {
     GET: {
       request: {
         query: define<{ threshold?: string }>()
@@ -84,7 +89,7 @@ const routes = {
       }
     }
   },
-  '/api/icon/rooms/:roomname': {
+  '/api/icon/rooms/:roomName': {
     POST: {
       request: {},
       response: {
@@ -97,7 +102,7 @@ const routes = {
       }
     }
   },
-  '/api/icon/rooms/:roomname/:version': {
+  '/api/icon/rooms/:roomName/:version': {
     GET: {
       request: {},
       response: {
@@ -197,27 +202,60 @@ const authRoute = {
         }
       }
     }
+  },
+  '/auth/user': {
+    DELETE: {
+      request: {},
+      response: {
+        200: { body: define<void>() }
+      }
+    }
+  },
+  '/auth/twitter': {
+    DELETE: {
+      request: {},
+      response: {
+        200: { body: define<void>() }
+      }
+    }
+  },
+  '/auth/github': {
+    DELETE: {
+      request: {},
+      response: {
+        200: { body: define<void>() }
+      }
+    }
   }
 } as const satisfies Routes
 
-function proxyedRoute<T extends typeof routes | typeof authRoute>(routes: T) {
-  return new Proxy(routes, {
-    get(target, prop) {
-      return {
-        ...Reflect.get(target, prop),
-        params: define(),
-        path: prop
+function createToPath<T extends Routes>(routes: T) {
+  return Object.keys(routes).reduce(
+    (prev, key) => {
+      return { ...prev, [key]: { params: define() } }
+    },
+    {} as {
+      [key in keyof T]: {
+        params: HasParamsInPath<key> extends true
+          ? (params: RouteParams<key>) => RouteParams<key>
+          : undefined
       }
     }
-  }) as {
-    [key in keyof T]: T[key] & {
-      path: key
-      params: (args: RouteParams<key>) => RouteParams<key>
-    }
-  }
+  )
 }
 
-export const apis = proxyedRoute(routes)
-export const authApi = proxyedRoute(authRoute)
+const keyToPath = createToPath(routes)
+export function convertKeyToPath<T extends keyof typeof keyToPath>(key: T) {
+  return keyToPath[key]
+}
+const authKeyToPath = createToPath(authRoute)
+export function convertAuthKeyToPath<T extends keyof typeof authKeyToPath>(
+  key: T
+) {
+  return authKeyToPath[key]
+}
+
+export const apis = routes
+export const authApi = authRoute
 export type API = ApiType<typeof apis>
 export type AuthAPI = ApiType<typeof authApi>

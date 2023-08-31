@@ -14,6 +14,7 @@
     "test:warth": "vitest --config=./vite.config.ts",
     "clean": "rm -rf dist",
     "build": "vite build",
+    "prebuild-tsc": "npm run clean",
     "build-tsc": "tsc --build tsconfig.json"
   },
   "license": "MIT",
@@ -43,6 +44,7 @@
     "marked": "^5.1.2",
     "marked-mangle": "^1.1.0",
     "normalize.css": "^8.0.1",
+    "path-to-regexp": "^6.2.1",
     "react": "^18.1.0",
     "react-dom": "^18.1.0",
     "react-router-dom": "^6.6.1",

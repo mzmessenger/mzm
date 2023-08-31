@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/no-unused-vars, no-unused-vars, @typescript-eslint/no-explicit-any */
 export type { API, AuthAPI } from '../api/universal.js'
 
+export type HasParamsInPath<T extends string | number | symbol> =
+  T extends `${infer _}/:${infer _}` ? true : false
+
 export type HttpStatus = 200 | 400 | 404
 
 type Response = {
@@ -32,7 +35,7 @@ type DefinedType<T> = T extends infer Q extends (...args: any) => any
   ? ReturnType<Q>
   : undefined
 
-type ParamsType<T, P extends 'query' | 'body' | 'params'> = T extends {
+type ParamsType<T, P extends 'query' | 'body'> = T extends {
   [k in P]: infer Q
 }
   ? { [k in P]: DefinedType<Q> }
@@ -71,8 +74,11 @@ export type ApiType<
     }
   }
 > = {
-  [key in keyof Api]: { path: key } & ParamsType<Api[key], 'params'> &
-    MethodType<Api, key, 'GET'> &
+  [key in keyof Api]: { params: RouteParams<key> } & MethodType<
+    Api,
+    key,
+    'GET'
+  > &
     MethodType<Api, key, 'POST'> &
     MethodType<Api, key, 'PUT'> &
     MethodType<Api, key, 'DELETE'>

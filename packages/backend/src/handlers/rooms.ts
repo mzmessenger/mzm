@@ -139,20 +139,20 @@ export const exitRoom = createHandler(
 })
 
 export const getUsers = createHandler(
-  '/api/rooms/:roomid/users',
+  '/api/rooms/:roomId/users',
   'GET',
-  ({ path, method }) => {
+  ({ path, method, checkParams }) => {
     const api = apis[path][method]
 
     const params = createContextParser(
       z.object({
-        roomid: z.string().min(1)
+        roomId: z.string().min(1)
       }),
       (parsed) => {
         return {
           success: true,
-          data: apis['/api/rooms/:roomid/users'].params({
-            roomid: parsed.data.roomid
+          data: checkParams({
+            roomId: parsed.data.roomId
           })
         }
       }
@@ -191,7 +191,7 @@ export const getUsers = createHandler(
     throw new BadRequest({ reason: q.error.message })
   }
 
-  const roomId = new ObjectId(parsedParams.data.roomid)
+  const roomId = new ObjectId(parsedParams.data.roomId)
 
   const query: Document[] = [
     {

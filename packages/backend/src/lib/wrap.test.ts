@@ -20,7 +20,7 @@ test('createHandler', async () => {
 
 test('createStreamHandler', async () => {
   const route = createStreamHandler(
-    '/api/stream',
+    '/api/icon/user',
     'GET',
     ({ path, method }) => {
       return { path, method }
@@ -32,6 +32,6 @@ test('createStreamHandler', async () => {
     }
   })
 
-  expect(route.path).toStrictEqual('/api/stream')
+  expect(route.path).toStrictEqual('/api/icon/user')
   expect(route.method).toStrictEqual('get')
 })

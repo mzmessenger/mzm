@@ -8,7 +8,11 @@ import {
   selector,
   useRecoilValue
 } from 'recoil'
-import { createApiClient, uploadUserIcon } from '../../lib/client'
+import {
+  createApiClient,
+  createAuthApiClient,
+  uploadUserIcon
+} from '../../lib/client'
 import { API_URL_BASE } from '../../constants'
 
 type UserState = {
@@ -71,20 +75,21 @@ type UseAuthType = ReturnType<typeof useAuth>
 export const useUser = () => {
   const [user, setUser] = useRecoilState(userState)
 
+  type UpdateUserType = API['/api/user/@me']['PUT']
   const updateUser = useCallback(
-    async (account: string) => {
-      const body: API['/api/user/@me']['PUT']['request']['body'] = { account }
-
+    async (body: UpdateUserType['request']['body']) => {
       return await createApiClient(
         '/api/user/@me',
-        {
-          method: 'PUT',
-          body: JSON.stringify(body)
+        'PUT',
+        ({ toPath }) => {
+          return {
+            path: toPath(),
+            body: JSON.stringify(body)
+          }
         },
         async (res) => {
           if (res.status === 200) {
-            const body =
-              res.body as API['/api/user/@me']['PUT']['response'][200]['body']
+            const body = res.body as UpdateUserType['response'][200]['body']
             setUser((current) => ({
               ...current,
               account: body.account,
@@ -137,7 +142,12 @@ export const useMyInfoActions = () => {
   const fetchMyInfo = useCallback(async () => {
     return await createApiClient(
       '/api/user/@me',
-      { method: 'GET' },
+      'GET',
+      ({ toPath }) => {
+        return {
+          path: toPath()
+        }
+      },
       async (res) => {
         type ResponseType = API['/api/user/@me']['GET']['response']
 
@@ -179,10 +189,14 @@ export const useRemoveUserActions = ({
   logout: UseAuthType['logout']
 }) => {
   const removeUser = useCallback(async () => {
-    return await createApiClient(
+    return await createAuthApiClient(
       '/auth/user',
-      {
-        method: 'DELETE'
+      'DELETE',
+      ({ toPath }) => {
+        return {
+          path: toPath(),
+          method: 'DELETE'
+        }
       },
       async (res) => {
         if (res.status === 200) {
@@ -206,10 +220,13 @@ export const useRemoveAccountActions = () => {
       if (!user.twitterUserName || !user.githubUserName) {
         return
       }
-      return await createApiClient(
+      return await createAuthApiClient(
         '/auth/twitter',
-        {
-          method: 'DELETE'
+        'DELETE',
+        ({ toPath }) => {
+          return {
+            path: toPath()
+          }
         },
         async (res) => {
           if (res.status === 200) {
@@ -227,10 +244,13 @@ export const useRemoveAccountActions = () => {
       if (!user.twitterUserName || !user.githubUserName) {
         return
       }
-      return await createApiClient(
+      return await createAuthApiClient(
         '/auth/github',
-        {
-          method: 'DELETE'
+        'DELETE',
+        ({ toPath }) => {
+          return {
+            path: toPath()
+          }
         },
         async (res) => {
           if (res.status === 200) {

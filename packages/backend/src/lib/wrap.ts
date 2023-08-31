@@ -1,5 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import type { WrapFn } from 'mzm-shared/src/lib/wrap'
+import { type API, convertKeyToPath } from 'mzm-shared/src/api/universal'
 import { StreamWrapResponse } from '../types.js'
 
 interface StreamWrapFn {
@@ -24,19 +25,24 @@ export const streamWrap = (fn: StreamWrapFn) => {
 }
 
 export function createHandler<
-  TPath extends string,
+  TPath extends keyof API,
   TMethod extends 'GET' | 'POST' | 'PUT' | 'DELETE',
   TContext
 >(
   path: TPath,
   method: TMethod,
-  context: (arg: { path: TPath; method: TMethod }) => TContext
+  context: (arg: {
+    path: TPath
+    method: TMethod
+    checkParams: ReturnType<typeof convertKeyToPath<TPath>>['params']
+  }) => TContext
 ) {
   return <TReq extends Request, TRes>(
     fn: (req: TReq, context: TContext) => Promise<TRes>
   ) => {
     const handler: WrapFn<TReq, TRes> = (req: TReq) => {
-      return fn(req, context({ path, method }))
+      const keyToPath = convertKeyToPath(path)
+      return fn(req, context({ path, method, checkParams: keyToPath.params }))
     }
     return {
       path,
@@ -47,17 +53,22 @@ export function createHandler<
 }
 
 export function createStreamHandler<
-  TPath extends string,
+  TPath extends keyof API,
   TMethod extends 'GET' | 'POST' | 'PUT' | 'DELETE',
   TContext
 >(
   path: TPath,
   method: TMethod,
-  context: (arg: { path: TPath; method: TMethod }) => TContext
+  context: (arg: {
+    path: TPath
+    method: TMethod
+    checkParams: ReturnType<typeof convertKeyToPath<TPath>>['params']
+  }) => TContext
 ) {
   return (fn: (req: Request, context: TContext) => StreamWrapResponse) => {
     const handler: StreamWrapFn = (req) => {
-      return fn(req, context({ path, method }))
+      const keyToPath = convertKeyToPath(path)
+      return fn(req, context({ path, method, checkParams: keyToPath.params }))
     }
 
     return {

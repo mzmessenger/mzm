@@ -19,7 +19,7 @@ vi.mock('../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
-import type { API } from 'mzm-shared/src/type/api'
+import type { API, RouteParams } from 'mzm-shared/src/type/api'
 import { ObjectId, WithId } from 'mongodb'
 import { BadRequest } from 'mzm-shared/src/lib/errors'
 import { getTestMongoClient, createRequest } from '../../test/testUtil.js'
@@ -126,8 +126,8 @@ test('getUsers', async () => {
     return map
   }, new Map<string, WithId<User>>())
 
-  const params = { roomid: roomId.toHexString() }
-  let req = createRequest<unknown, API['/api/rooms/:roomid/users']['params']>(
+  const params = { roomId: roomId.toHexString() }
+  let req = createRequest<unknown, RouteParams<'/api/rooms/:roomId/users'>>(
     userId,
     { params }
   )

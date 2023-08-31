@@ -27,7 +27,7 @@ import * as config from '../../config.js'
 import { uploadRoomIcon } from './index.js'
 import { sizeOf } from '../../lib/image.js'
 
-type ParamsType = API['/api/icon/rooms/:roomname']['params']
+type ParamsType = API['/api/icon/rooms/:roomName']['params']
 
 beforeAll(async () => {
   const { mongoClient } = await import('../../lib/db.js')
@@ -74,7 +74,7 @@ test('uploadRoomIcon', async () => {
 
   const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
     file,
-    params: { roomname: name }
+    params: { roomName: name }
   })
 
   const res = await uploadRoomIcon.handler(req)
@@ -103,7 +103,7 @@ test.each([['image/gif'], ['image/svg+xml']])(
 
     const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
       file,
-      params: { roomname: name }
+      params: { roomName: name }
     })
 
     try {
@@ -121,7 +121,7 @@ test('uploadRoomIcon: empty file', async () => {
 
   const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
     file: undefined,
-    params: { roomname: name }
+    params: { roomName: name }
   })
 
   try {
@@ -154,7 +154,7 @@ test('uploadRoomIcon: validation: size over ', async () => {
 
   const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
     file,
-    params: { roomname: name }
+    params: { roomName: name }
   })
 
   try {
@@ -188,7 +188,7 @@ test('uploadUserIcon validation: not square', async () => {
 
   const req = createFileRequest<unknown, ParamsType>(userId, {
     file,
-    params: { roomname: name }
+    params: { roomName: name }
   })
 
   try {
