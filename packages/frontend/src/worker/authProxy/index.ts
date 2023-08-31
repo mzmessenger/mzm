@@ -1,4 +1,4 @@
-import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
+import type { AuthAPI } from 'mzm-shared/type/api'
 import type { AccessToken } from 'mzm-shared/type/auth'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
 import { expose } from 'comlink'
@@ -7,7 +7,7 @@ import { pkceChallenge, verifyCodeChallenge } from './pkce'
 import { AUTH_URL_BASE, SOCKET_URL } from '../../constants'
 import { logger } from '../../lib/logger'
 
-type TokenResponse = AUTH_API_RESPONSE['/auth/token']['POST']['RESPONSE'][200]
+type TokenResponse = AuthAPI['/auth/token']['POST']['response'][200]['body']
 
 export type Cache = {
   code_challenge?: string

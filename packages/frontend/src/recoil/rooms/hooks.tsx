@@ -389,7 +389,7 @@ export const useRoomUserActions = () => {
           }
 
           const body =
-            res.body as API['/api/rooms/:roomid/users']['GET']['RESPONSE'][200]
+            res.body as API['/api/rooms/:roomid/users']['GET']['response'][200]['body']
           setRooms((current) => {
             const usersById = {
               ...current.usersById,
@@ -436,7 +436,7 @@ export const useRoomUserActions = () => {
       const lastId = users[users.length - 1].enterId
 
       const init: [
-        keyof API['/api/rooms/:roomid/users']['GET']['REQUEST']['query'],
+        keyof API['/api/rooms/:roomid/users']['GET']['request']['query'],
         string
       ][] = [['threshold', lastId]]
 
@@ -453,7 +453,7 @@ export const useRoomUserActions = () => {
           }
 
           const body =
-            res.body as API['/api/rooms/:roomid/users']['GET']['RESPONSE'][200]
+            res.body as API['/api/rooms/:roomid/users']['GET']['response'][200]['body']
           setRooms((current) => {
             const users = current.usersById[roomId]
             const usersById = {
@@ -494,7 +494,7 @@ export const useRoomActions = ({
 
   const createRoom = useCallback(
     async (name: string) => {
-      const body: API['/api/rooms']['POST']['REQUEST']['body'] = {
+      const body: API['/api/rooms']['POST']['request']['body'] = {
         name
       }
 
@@ -509,7 +509,7 @@ export const useRoomActions = ({
             return res
           }
 
-          const room = res.body as API['/api/rooms']['POST']['RESPONSE'][200]
+          const room = res.body as API['/api/rooms']['POST']['response'][200]['body']
           getRooms()
 
           setCurrentRoom({
@@ -528,7 +528,7 @@ export const useRoomActions = ({
 
   const exitRoom = useCallback(
     async (roomId: string) => {
-      const body: API['/api/rooms/enter']['DELETE']['REQUEST']['body'] = {
+      const body: API['/api/rooms/enter']['DELETE']['request']['body'] = {
         room: roomId
       }
 

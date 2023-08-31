@@ -27,7 +27,7 @@ import { collections, type User } from '../../lib/db.js'
 import * as storage from '../../lib/storage.js'
 import { getUserIcon } from './index.js'
 
-type APIType = API['/api/icon/user/:account/:version']['GET']
+type ParamsType = API['/api/icon/user/:account/:version']['params']
 type ResponseBody = Awaited<ReturnType<typeof request>>['body']
 
 beforeAll(async () => {
@@ -51,7 +51,7 @@ test('getUserIcon from storage', async () => {
     icon: { key: 'iconkey', version }
   })
 
-  const req = createRequest<unknown, APIType['REQUEST']['params']>(null, {
+  const req = createRequest<unknown, ParamsType>(null, {
     params: { account, version }
   })
 
@@ -128,7 +128,7 @@ test.each([
       context: undefined
     })
 
-    const req = createRequest<unknown, APIType['REQUEST']['params']>(null, {
+    const req = createRequest<unknown, ParamsType>(null, {
       params: { account, version: requestVersion }
     })
 
@@ -201,7 +201,7 @@ test('getUserIcon BadRequest: no account', async () => {
 
   const version = '12345'
 
-  const req = createRequest<unknown, APIType['REQUEST']['params']>(null, {
+  const req = createRequest<unknown, ParamsType>(null, {
     params: { account: '', version }
   })
 

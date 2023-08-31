@@ -1,5 +1,5 @@
 import type { Request } from 'express'
-import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
+import type { AuthAPI } from 'mzm-shared/type/api'
 import type { WrapFn } from 'mzm-shared/lib/wrap'
 import type { PassportRequest } from '../types.js'
 import type { NonceResponse } from '../middleware/index.js'
@@ -41,7 +41,7 @@ const TokenBody = z.union([
 
 export const token: WrapFn<
   Request,
-  AUTH_API_RESPONSE['/auth/token']['POST']['RESPONSE'][200]
+  AuthAPI['/auth/token']['POST']['response'][200]['body']
 > = async (req) => {
   logger.info({
     label: 'accessToken',

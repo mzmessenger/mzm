@@ -1,186 +1,79 @@
-/* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/no-unused-vars, no-unused-vars */
+/* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/no-unused-vars, no-unused-vars, @typescript-eslint/no-explicit-any */
+export type { API, AuthAPI } from '../api/universal.js'
 
-export type RouteParams<T extends string> =
+export type HttpStatus = 200 | 400 | 404
+
+type Response = {
+  200: {
+    body: (args: any) => any
+  }
+} & {
+  [key in Exclude<HttpStatus, 200>]?: {
+    body: (args: any) => any
+  }
+}
+
+export type RouteType = {
+  request: {
+    query?: (args: any) => any
+    body?: (args: any) => any
+  }
+  response: Response
+}
+
+export type RouteParams<T> =
   T extends `${infer _}:${infer IParam}/${infer IRest}`
     ? { [k in IParam | keyof RouteParams<IRest>]: string }
     : T extends `${infer _}:${infer IParam}`
     ? { [k in IParam]: string }
     : {}
 
-export type API = {
-  '/api/rooms': {
-    POST: {
-      REQUEST: {
-        body: {
-          name: string
-        }
-      }
-      RESPONSE: {
-        200: { id: string; name: string }
-      }
-    }
-  }
-  '/api/rooms/enter': {
-    DELETE: {
-      REQUEST: {
-        body: {
-          room: string
-        }
-      }
-    }
-  }
-  '/api/rooms/search': {
-    GET: {
-      REQUEST: {
-        query: {
-          query?: string
-          scroll?: string
-        }
-      }
-      RESPONSE: {
-        200: {
-          query: string | null
-          hits: {
-            id: string
-            name: string
-            iconUrl: string | null
-            description?: string
-          }[]
-          total: number
-          scroll: string | null
-        }
-      }
-    }
-  }
-  '/api/rooms/:roomid/users': {
-    GET: {
-      REQUEST: {
-        params: RouteParams<'/api/rooms/:roomid/users'>
-        query: {
-          threshold: string
-        }
-      }
-      RESPONSE: {
-        200: {
-          count: number
-          users: {
-            userId: string
-            account: string
-            icon: string | null
-            enterId: string
-          }[]
-        }
-      }
-    }
-  }
-  '/api/icon/rooms/:roomname': {
-    POST: {
-      REQUEST: {
-        params: RouteParams<'/api/icon/rooms/:roomname'>
-      }
-      RESPONSE: {
-        200: {
-          id: string
-          version: string
-        }
-      }
-    }
-  }
-  '/api/icon/rooms/:roomname/:version': {
-    GET: {
-      REQUEST: {
-        params: RouteParams<'/api/icon/rooms/:roomname/:version'>
-      }
-      RESPONSE: {
-        200: ReadableStream
-      }
-    }
-  }
-  '/api/icon/user/:account/:version': {
-    GET: {
-      REQUEST: {
-        params: RouteParams<'/api/icon/user/:account/:version'>
-      }
-      RESPONSE: {
-        200: ReadableStream
-      }
-    }
-  }
-  '/api/icon/user/:account': {
-    GET: {
-      REQUEST: {
-        params: RouteParams<'/api/icon/user/:account'>
-      }
-      RESPONSE: {
-        200: ReadableStream
-      }
-    }
-  }
-  '/api/icon/user': {
-    POST: {
-      RESPONSE: {
-        200: {
-          version: string
-        }
-      }
-    }
-  }
-  '/api/user/@me': {
-    GET: {
-      RESPONSE: {
-        200: {
-          id: string
-          account: string
-          icon: string | null
-        }
-        404: {
-          reason: string
-          id: string
-        }
-      }
-    }
-    PUT: {
-      REQUEST: {
-        body: {
-          account: string
-        }
-      }
-      RESPONSE: {
-        200: {
-          id: string
-          account: string
-        }
-        400: string
-      }
-    }
-  }
-  '/api/user/signup': {
-    POST: {
-      REQUEST: {
-        body: {
-          account: string
-        }
-      }
-    }
-  }
+type DefinedType<T> = T extends infer Q extends (...args: any) => any
+  ? ReturnType<Q>
+  : undefined
+
+type ParamsType<T, P extends 'query' | 'body' | 'params'> = T extends {
+  [k in P]: infer Q
+}
+  ? { [k in P]: DefinedType<Q> }
+  : {}
+
+type ResponseStatusType<
+  T extends RouteType['response'],
+  S extends HttpStatus
+> = T extends { [k in S]: infer U } ? { [k in S]: ParamsType<U, 'body'> } : {}
+
+type DefinedRoute<T extends RouteType> = {
+  request: ParamsType<T['request'], 'query'> & ParamsType<T['request'], 'body'>
+  response: ResponseStatusType<T['response'], 200> &
+    ResponseStatusType<T['response'], 400> &
+    ResponseStatusType<T['response'], 404>
 }
 
-export type AUTH_API_RESPONSE = {
-  '/auth/token': {
-    POST: {
-      RESPONSE: {
-        200: {
-          accessToken: string
-          refreshToken: string
-          user: {
-            _id: string
-            twitterId: string | null
-            twitterUserName: string | null
-            githubId: string | null
-            githubUserName: string | null
-          }
-        }
-      }
+export type MethodType<
+  Api extends {
+    [key: string]: { [k in 'GET' | 'POST' | 'PUT' | 'DELETE']?: RouteType }
+  },
+  Key extends keyof Api,
+  M extends 'GET' | 'POST' | 'PUT' | 'DELETE'
+> = Api[Key] extends {
+  [k in M]: infer U extends RouteType
+}
+  ? {
+      [k in M]: DefinedRoute<U>
+    }
+  : {}
+
+export type ApiType<
+  Api extends {
+    [key in string]: {
+      [k in 'GET' | 'POST' | 'PUT' | 'DELETE']?: RouteType
     }
   }
+> = {
+  [key in keyof Api]: { path: key } & ParamsType<Api[key], 'params'> &
+    MethodType<Api, key, 'GET'> &
+    MethodType<Api, key, 'POST'> &
+    MethodType<Api, key, 'PUT'> &
+    MethodType<Api, key, 'DELETE'>
 }

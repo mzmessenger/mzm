@@ -58,7 +58,7 @@ export const uploadRoomIcon = async (name: string, blob: Blob) => {
 
   if (res.ok) {
     const body =
-      res.body as API['/api/icon/rooms/:roomname']['POST']['RESPONSE'][200]
+      res.body as API['/api/icon/rooms/:roomname']['POST']['response'][200]['body']
     return {
       ...res,
       ok: true,
@@ -75,7 +75,7 @@ export const uploadUserIcon = async (blob: Blob) => {
   })
 
   if (res.ok) {
-    const body = res.body as API['/api/icon/user']['POST']['RESPONSE'][200]
+    const body = res.body as API['/api/icon/user']['POST']['response'][200]['body']
     return {
       ...res,
       body

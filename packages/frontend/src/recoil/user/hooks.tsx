@@ -73,7 +73,7 @@ export const useUser = () => {
 
   const updateUser = useCallback(
     async (account: string) => {
-      const body: API['/api/user/@me']['PUT']['REQUEST']['body'] = { account }
+      const body: API['/api/user/@me']['PUT']['request']['body'] = { account }
 
       return await createApiClient(
         '/api/user/@me',
@@ -84,7 +84,7 @@ export const useUser = () => {
         async (res) => {
           if (res.status === 200) {
             const body =
-              res.body as API['/api/user/@me']['PUT']['RESPONSE'][200]
+              res.body as API['/api/user/@me']['PUT']['response'][200]['body']
             setUser((current) => ({
               ...current,
               account: body.account,
@@ -139,10 +139,10 @@ export const useMyInfoActions = () => {
       '/api/user/@me',
       { method: 'GET' },
       async (res) => {
-        type ResponseType = API['/api/user/@me']['GET']['RESPONSE']
+        type ResponseType = API['/api/user/@me']['GET']['response']
 
         if (res.status === 200) {
-          const payload = res.body as ResponseType[200]
+          const payload = res.body as ResponseType[200]['body']
 
           setUser((current) => ({
             ...current,
@@ -151,7 +151,7 @@ export const useMyInfoActions = () => {
             iconUrl: payload.icon
           }))
         } else if (res.status === 404) {
-          const payload = res.body as ResponseType[404]
+          const payload = res.body as ResponseType[404]['body']
 
           setUser((current) => ({
             ...current,

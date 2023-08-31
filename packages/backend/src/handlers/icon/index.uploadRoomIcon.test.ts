@@ -27,7 +27,7 @@ import * as config from '../../config.js'
 import { uploadRoomIcon } from './index.js'
 import { sizeOf } from '../../lib/image.js'
 
-type APIType = API['/api/icon/rooms/:roomname']['POST']
+type ParamsType = API['/api/icon/rooms/:roomname']['params']
 
 beforeAll(async () => {
   const { mongoClient } = await import('../../lib/db.js')
@@ -72,13 +72,10 @@ test('uploadRoomIcon', async () => {
     path: '/path/to/file'
   }
 
-  const req = createFileRequest<unknown, APIType['REQUEST']['params']>(
-    new ObjectId(),
-    {
-      file,
-      params: { roomname: name }
-    }
-  )
+  const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
+    file,
+    params: { roomname: name }
+  })
 
   const res = await uploadRoomIcon.handler(req)
 
@@ -104,13 +101,10 @@ test.each([['image/gif'], ['image/svg+xml']])(
       path: '/path/to/file'
     }
 
-    const req = createFileRequest<unknown, APIType['REQUEST']['params']>(
-      new ObjectId(),
-      {
-        file,
-        params: { roomname: name }
-      }
-    )
+    const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
+      file,
+      params: { roomname: name }
+    })
 
     try {
       await uploadRoomIcon.handler(req)
@@ -125,13 +119,10 @@ test('uploadRoomIcon: empty file', async () => {
 
   const name = new ObjectId().toHexString()
 
-  const req = createFileRequest<unknown, APIType['REQUEST']['params']>(
-    new ObjectId(),
-    {
-      file: undefined,
-      params: { roomname: name }
-    }
-  )
+  const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
+    file: undefined,
+    params: { roomname: name }
+  })
 
   try {
     await uploadRoomIcon.handler(req)
@@ -161,10 +152,10 @@ test('uploadRoomIcon: validation: size over ', async () => {
     })
   })
 
-  const req = createFileRequest<unknown, APIType['REQUEST']['params']>(
-    new ObjectId(),
-    { file, params: { roomname: name } }
-  )
+  const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
+    file,
+    params: { roomname: name }
+  })
 
   try {
     await uploadRoomIcon.handler(req)
@@ -195,7 +186,7 @@ test('uploadUserIcon validation: not square', async () => {
     })
   })
 
-  const req = createFileRequest<unknown, APIType['REQUEST']['params']>(userId, {
+  const req = createFileRequest<unknown, ParamsType>(userId, {
     file,
     params: { roomname: name }
   })

@@ -56,7 +56,7 @@ test('exitRoom fail (general)', async () => {
 
   const body = { room: general!._id.toHexString() }
   const req = createRequest<
-    API['/api/rooms/enter']['DELETE']['REQUEST']['body']
+    API['/api/rooms/enter']['DELETE']['request']['body']
   >(userId, { body })
 
   try {
@@ -70,7 +70,7 @@ test.each([[null, '']])('exitRoom BadRequest (%s)', async (arg) => {
   expect.assertions(1)
 
   const body:
-    | API['/api/rooms/enter']['DELETE']['REQUEST']['body']
+    | API['/api/rooms/enter']['DELETE']['request']['body']
     | { room: null } = {
     room: arg
   }
@@ -127,10 +127,10 @@ test('getUsers', async () => {
   }, new Map<string, WithId<User>>())
 
   const params = { roomid: roomId.toHexString() }
-  let req = createRequest<
-    unknown,
-    API['/api/rooms/:roomid/users']['GET']['REQUEST']['params']
-  >(userId, { params })
+  let req = createRequest<unknown, API['/api/rooms/:roomid/users']['params']>(
+    userId,
+    { params }
+  )
 
   let res = await getUsers.handler(req)
 

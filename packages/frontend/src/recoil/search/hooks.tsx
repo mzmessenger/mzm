@@ -8,7 +8,7 @@ type SearchState = {
   query: string
   scroll: string
   total: number
-  results: SearchAPI['RESPONSE'][200]['hits']
+  results: SearchAPI['response'][200]['body']['hits']
 }
 
 const searchState = atom<SearchState>({
@@ -47,7 +47,7 @@ export const useSearch = () => {
       ...current,
       query: q
     }))
-    const init: [keyof SearchAPI['REQUEST']['query'], string][] = [['query', q]]
+    const init: [keyof SearchAPI['request']['query'], string][] = [['query', q]]
     const params = new URLSearchParams(init)
 
     // @todo
@@ -64,7 +64,7 @@ export const useSearch = () => {
     }
 
     const { hits, scroll, total } =
-      (await res.json()) as SearchAPI['RESPONSE'][200]
+      (await res.json()) as SearchAPI['response'][200]['body']
 
     setSearch((current) => ({
       ...current,
@@ -81,7 +81,7 @@ export const useSearch = () => {
       return
     }
 
-    const init: [keyof SearchAPI['REQUEST']['query'], string][] = [
+    const init: [keyof SearchAPI['request']['query'], string][] = [
       ['query', search.query],
       ['scroll', search.scroll]
     ]
@@ -98,7 +98,7 @@ export const useSearch = () => {
 
     if (res.ok) {
       const { hits, scroll, total } =
-        (await res.json()) as SearchAPI['RESPONSE'][200]
+        (await res.json()) as SearchAPI['response'][200]['body']
 
       setSearch((current) => ({
         ...current,

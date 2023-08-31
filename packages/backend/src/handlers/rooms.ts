@@ -1,6 +1,5 @@
-import type { API } from 'mzm-shared/type/api'
-import type { Result } from 'mzm-shared/type'
 import type { Request } from 'express'
+import { apis } from 'mzm-shared/api/universal'
 import { ObjectId, type WithId, type Document } from 'mongodb'
 import { z } from 'zod'
 import { BadRequest } from 'mzm-shared/lib/errors'
@@ -23,21 +22,24 @@ import {
 } from '../logic/rooms.js'
 
 const createRoomContext = () => {
+  const api = apis['/api/rooms'].POST
+
   const body = createContextParser(
     z.object({
       name: z.string().min(1)
     }),
-    (parsed): Result<API['/api/rooms']['POST']['REQUEST']['body']> => {
+    (parsed) => {
       return {
         success: true,
-        data: {
+        data: api.request.body({
           name: parsed.data.name
-        }
+        })
       }
     }
   )
 
   return {
+    api,
     parser: {
       body
     }
@@ -48,10 +50,7 @@ export const createRoom = createHandlerWithContext(
   '/api/rooms',
   'post',
   createRoomContext()
-)(async function (
-  req: Request,
-  context
-): Promise<API['/api/rooms']['POST']['RESPONSE'][200]> {
+)(async function (req: Request, context) {
   const user = getRequestUserId(req)
   const body = context.parser.body(req.body)
   if (body.success === false) {
@@ -76,28 +75,34 @@ export const createRoom = createHandlerWithContext(
 
   // @todo
   if (!created) {
-    return { id: '', name: '' }
+    return context.api.response[200].body({ id: '', name: '' })
   }
 
-  return { id: created._id.toHexString(), name }
+  return context.api.response[200].body({
+    id: created._id.toHexString(),
+    name
+  })
 })
 
 const exitRoomContext = () => {
+  const api = apis['/api/rooms/enter'].DELETE
+
   const body = createContextParser(
     z.object({
       room: z.string().min(1)
     }),
-    (parsed): Result<API['/api/rooms/enter']['DELETE']['REQUEST']['body']> => {
+    (parsed) => {
       return {
         success: true,
-        data: {
+        data: api.request.body({
           room: parsed.data.room
-        }
+        })
       }
     }
   )
 
   return {
+    api,
     parser: {
       body
     }
@@ -138,25 +143,41 @@ export const exitRoom = createHandlerWithContext(
 })
 
 const getUserContext = () => {
+  const api = apis['/api/rooms/:roomid/users'].GET
+
   const params = createContextParser(
     z.object({
       roomid: z.string().min(1)
     }),
-    (
-      parsed
-    ): Result<API['/api/rooms/:roomid/users']['GET']['REQUEST']['params']> => {
+    (parsed) => {
       return {
         success: true,
-        data: {
+        data: apis['/api/rooms/:roomid/users'].params({
           roomid: parsed.data.roomid
-        }
+        })
+      }
+    }
+  )
+
+  const query = createContextParser(
+    z.object({
+      threshold: z.string().optional()
+    }),
+    (parsed) => {
+      return {
+        success: true,
+        data: api.request.query({
+          threshold: parsed.data.threshold
+        })
       }
     }
   )
 
   return {
+    api,
     parser: {
-      params
+      params,
+      query
     }
   }
 }
@@ -165,13 +186,15 @@ export const getUsers = createHandlerWithContext(
   '/api/rooms/:roomid/users',
   'get',
   getUserContext()
-)(async function (
-  req: Request,
-  context
-): Promise<API['/api/rooms/:roomid/users']['GET']['RESPONSE'][200]> {
+)(async function (req: Request, context) {
   const parsedParams = context.parser.params(req.params)
   if (parsedParams.success === false) {
     throw new BadRequest({ reason: parsedParams.error.message })
+  }
+
+  const q = context.parser.query(req.query)
+  if (q.success === false) {
+    throw new BadRequest({ reason: q.error.message })
   }
 
   const roomId = new ObjectId(parsedParams.data.roomid)
@@ -190,13 +213,7 @@ export const getUsers = createHandlerWithContext(
     }
   ]
 
-  const reqQuery = req.query as Partial<
-    API['/api/rooms/:roomid/users']['GET']['REQUEST']['query']
-  >
-
-  const threshold = popParam(
-    typeof reqQuery.threshold === 'string' ? reqQuery.threshold : undefined
-  )
+  const threshold = q.data.threshold
   if (threshold) {
     query.push({
       $match: { _id: { $lt: new ObjectId(threshold) } }
@@ -215,8 +232,9 @@ export const getUsers = createHandlerWithContext(
 
   const [count, cursor] = await Promise.all([countQuery, enterQuery])
 
-  type EnterUser =
-    API['/api/rooms/:roomid/users']['GET']['RESPONSE'][200]['users'][number]
+  type EnterUser = ReturnType<
+    (typeof context.api.response)[200]['body']
+  >['users'][number]
 
   const users: EnterUser[] = []
   for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
@@ -233,27 +251,29 @@ export const getUsers = createHandlerWithContext(
     }
     users.push(user)
   }
-  return { count, users }
+  return context.api.response[200].body({ count, users })
 })
 
 const searchContext = () => {
+  const api = apis['/api/rooms/search'].GET
   const query = createContextParser(
     z.object({
       query: z.string().optional(),
       scroll: z.string().optional()
     }),
-    (parsed): Result<API['/api/rooms/search']['GET']['REQUEST']['query']> => {
+    (parsed) => {
       return {
         success: true,
-        data: {
+        data: api.request.query({
           query: parsed.data.query,
           scroll: parsed.data.scroll
-        }
+        })
       }
     }
   )
 
   return {
+    api,
     parser: { query }
   }
 }
@@ -262,14 +282,12 @@ export const search = createHandlerWithContext(
   '/api/rooms/search',
   'get',
   searchContext()
-)(async function (
-  req: Request,
-  context
-): Promise<API['/api/rooms/search']['GET']['RESPONSE'][200]> {
+)(async function (req: Request, context) {
   const q = context.parser.query(req.query)
   if (q.success === false) {
     throw new BadRequest({ reason: q.error.message })
   }
 
-  return await searchRoom(q.data.query ?? null, q.data.scroll ?? null)
+  const res = await searchRoom(q.data.query ?? null, q.data.scroll ?? null)
+  return context.api.response[200].body(res)
 })

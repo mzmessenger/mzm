@@ -42,7 +42,7 @@ test.each([
 ])('createRoom success (%s, %s)', async (name, createdName) => {
   const userId = new ObjectId()
   const body = { name }
-  const req = createRequest<APIType['REQUEST']['body']>(userId, { body })
+  const req = createRequest<APIType['request']['body']>(userId, { body })
 
   const { id } = await createRoom.handler(req)
 
@@ -63,7 +63,7 @@ test.each([
 
   const userId = new ObjectId()
   const body = { name }
-  const req = createRequest<APIType['REQUEST']['body']>(userId, { body })
+  const req = createRequest<APIType['request']['body']>(userId, { body })
 
   try {
     await createRoom.handler(req)

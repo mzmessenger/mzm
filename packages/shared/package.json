@@ -6,6 +6,7 @@
   "type": "module",
   "exports": {
     ".": "./dist/index.js",
+    "./api/*": "./dist/api/*.js",
     "./lib/*": "./dist/lib/*.js",
     "./auth/*": "./dist/auth/*.js",
     "./type/db": "./dist/type/db.js",
@@ -16,9 +17,9 @@
     "./validator": "./dist/validator/index.js"
   },
   "scripts": {
-    "format": "prettier --write auth type ./*.{js,json}",
+    "format": "prettier --write auth type lib api ./*.{js,json}",
     "build": "tsc --build tsconfig.json",
-    "lint": "eslint --ext .ts,.js auth type validator",
+    "lint": "eslint --ext .ts,.js auth type lib api",
     "build:test": "tsc --build tsconfig.test.json",
     "pretest": "concurrently \"npm run lint\" \"npm run build:test\"",
     "test": "vitest run --config ./vitest.config.ts",

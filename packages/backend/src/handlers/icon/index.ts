@@ -1,6 +1,5 @@
 import type { MulterFile } from '../../types/index.js'
-import type { API } from 'mzm-shared/type/api'
-import type { Result } from 'mzm-shared/type'
+import { apis } from 'mzm-shared/api/universal'
 import { Request } from 'express'
 import { request } from 'undici'
 import { ObjectId } from 'mongodb'
@@ -8,7 +7,6 @@ import { z } from 'zod'
 import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
 import { getRequestUserId, createContextParser } from '../../lib/utils.js'
 import {
-  createHandler,
   createHandlerWithContext,
   createStreamHandlerWithContext
 } from '../../lib/wrap.js'
@@ -52,14 +50,12 @@ const getUserIconContext = () => {
     z.object({
       account: z.string().min(1)
     }),
-    (
-      parsed
-    ): Result<API['/api/icon/user/:account']['GET']['REQUEST']['params']> => {
+    (parsed) => {
       return {
         success: true,
-        data: {
+        data: apis['/api/icon/user/:account'].params({
           account: parsed.data.account
-        }
+        })
       }
     }
   )
@@ -127,17 +123,13 @@ const getRoomIconContext = () => {
       roomname: z.string().min(1),
       version: z.string().min(1)
     }),
-    (
-      parsed
-    ): Result<
-      API['/api/icon/rooms/:roomname/:version']['GET']['REQUEST']['params']
-    > => {
+    (parsed) => {
       return {
         success: true,
-        data: {
+        data: apis['/api/icon/rooms/:roomname/:version'].params({
           roomname: parsed.data.roomname,
           version: parsed.data.version
-        }
+        })
       }
     }
   )
@@ -176,12 +168,13 @@ export const getRoomIcon = createStreamHandlerWithContext(
   }
 })
 
-export const uploadUserIcon = createHandler(
+export const uploadUserIcon = createHandlerWithContext(
   '/api/icon/user',
-  'post'
-)(async (
-  req: Request & { file?: MulterFile }
-): Promise<API['/api/icon/user']['POST']['RESPONSE'][200]> => {
+  'post',
+  {
+    api: apis['/api/icon/user'].POST
+  }
+)(async (req: Request & { file?: MulterFile }, context) => {
   const userId = getRequestUserId(req)
   if (!userId) {
     throw new NotFound('not found')
@@ -233,31 +226,29 @@ export const uploadUserIcon = createHandler(
 
   logger.info('[icon:user] upload', userId, version)
 
-  return {
+  return context.api.response[200].body({
     version: version
-  }
+  })
 })
 
 const uploadRoomIconContext = () => {
+  const api = apis['/api/icon/rooms/:roomname'].POST
   const params = createContextParser(
     z.object({
       roomname: z.string().min(1)
     }),
-    (
-      parsed
-    ): Result<
-      API['/api/icon/rooms/:roomname']['POST']['REQUEST']['params']
-    > => {
+    (parsed) => {
       return {
         success: true,
-        data: {
+        data: apis['/api/icon/rooms/:roomname'].params({
           roomname: parsed.data.roomname
-        }
+        })
       }
     }
   )
 
   return {
+    api,
     parser: { params }
   }
 }
@@ -266,10 +257,7 @@ export const uploadRoomIcon = createHandlerWithContext(
   '/api/icon/rooms/:roomname',
   'post',
   uploadRoomIconContext()
-)(async (
-  req: Request & { file?: MulterFile },
-  context
-): Promise<API['/api/icon/rooms/:roomname']['POST']['RESPONSE'][200]> => {
+)(async (req: Request & { file?: MulterFile }, context) => {
   const params = context.parser.params(req.params)
   if (params.success === false) {
     throw new BadRequest(`invalid room name`)
@@ -328,8 +316,8 @@ export const uploadRoomIcon = createHandlerWithContext(
 
   logger.info('[icon:room] upload', params.data.roomname, version)
 
-  return {
+  return context.api.response[200].body({
     id: room._id.toHexString(),
     version: version
-  }
+  })
 })

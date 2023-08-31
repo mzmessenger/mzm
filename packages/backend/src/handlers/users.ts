@@ -1,10 +1,9 @@
 import type { Request } from 'express'
-import type { API } from 'mzm-shared/type/api'
-import type { Result } from 'mzm-shared/type'
+import { apis } from 'mzm-shared/api/universal'
 import { z } from 'zod'
 import { ObjectId } from 'mongodb'
 import { isValidAccount } from 'mzm-shared/validator'
-import { createHandler, createHandlerWithContext } from '../lib/wrap.js'
+import { createHandlerWithContext } from '../lib/wrap.js'
 import {
   getRequestUserId,
   createUserIconPath,
@@ -14,21 +13,23 @@ import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
 import { collections, mongoClient } from '../lib/db.js'
 
 const updateContext = () => {
+  const api = apis['/api/user/@me'].PUT
   const body = createContextParser(
     z.object({
       account: z.string().min(1).trim()
     }),
-    (parsed): Result<API['/api/user/@me']['PUT']['REQUEST']['body']> => {
+    (parsed) => {
       return {
         success: true,
-        data: {
+        data: api.request.body({
           account: parsed.data.account
-        }
+        })
       }
     }
   )
 
   return {
+    api,
     parser: { body }
   }
 }
@@ -38,14 +39,13 @@ export const update = createHandlerWithContext(
   'put',
   updateContext()
 )(async (req: Request, context) => {
-  type ResType = API['/api/user/@me']['PUT']['RESPONSE']
   const parsed = context.parser.body(req.body)
   if (parsed.success === false) {
-    throw new BadRequest<ResType[400]>('bad request')
+    throw new BadRequest(context.api.response[400].body('bad request'))
   }
   const account = parsed.data.account.trim()
   if (!isValidAccount(account)) {
-    throw new BadRequest<ResType[400]>('account is not valid')
+    throw new BadRequest(context.api.response[400].body('account is not valid'))
   }
 
   const id = getRequestUserId(req)
@@ -54,7 +54,9 @@ export const update = createHandlerWithContext(
     account: account
   })
   if (user && user._id.toHexString() !== id) {
-    throw new BadRequest<ResType[400]>(`${account} is already exists`)
+    throw new BadRequest(
+      context.api.response[400].body(`${account} is already exists`)
+    )
   }
 
   const userId = new ObjectId(id)
@@ -64,16 +66,12 @@ export const update = createHandlerWithContext(
     { upsert: true }
   )
 
-  const response: ResType[200] = { id: id, account: account }
-  return response
+  return context.api.response[200].body({ id: id, account: account })
 })
 
-export const getUserInfo = createHandler(
-  '/api/user/@me',
-  'get'
-)(async (req: Request) => {
-  type ResType = API['/api/user/@me']['GET']['RESPONSE']
-
+export const getUserInfo = createHandlerWithContext('/api/user/@me', 'get', {
+  api: apis['/api/user/@me'].GET
+})(async (req: Request, context) => {
   const id = getRequestUserId(req)
 
   const db = await mongoClient()
@@ -83,17 +81,17 @@ export const getUserInfo = createHandler(
   )
 
   if (!user || !user.account) {
-    throw new NotFound<ResType[404]>({
-      reason: 'account is not found',
-      id
-    })
+    throw new NotFound(
+      context.api.response[404].body({
+        reason: 'account is not found',
+        id
+      })
+    )
   }
 
-  const response: ResType[200] = {
+  return context.api.response[200].body({
     id: user._id.toHexString(),
     account: user.account,
     icon: createUserIconPath(user.account, user.icon?.version)
-  }
-
-  return response
+  })
 })

@@ -37,7 +37,7 @@ test('update', async () => {
   const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
 
-  const body: API['/api/user/@me']['PUT']['REQUEST']['body'] = {
+  const body: API['/api/user/@me']['PUT']['request']['body'] = {
     account: 'changed-account'
   }
   const req = createRequest(userId, { body })
@@ -63,7 +63,7 @@ test('update failed: exists account', async () => {
     roomOrder: []
   })
 
-  const req = createRequest<API['/api/user/@me']['PUT']['REQUEST']['body']>(
+  const req = createRequest<API['/api/user/@me']['PUT']['request']['body']>(
     userId,
     {
       body: {
