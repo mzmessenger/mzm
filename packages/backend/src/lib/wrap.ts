@@ -25,49 +25,45 @@ export const streamWrap = (fn: StreamWrapFn) => {
 
 export function createHandler<
   TPath extends string,
-  TMethod extends 'get' | 'post' | 'put' | 'delete'
->(path: TPath, method: TMethod) {
-  return createHandlerWithContext(path, method, undefined)
-}
-
-export function createHandlerWithContext<
-  TPath extends string,
-  TMethod extends 'get' | 'post' | 'put' | 'delete',
+  TMethod extends 'GET' | 'POST' | 'PUT' | 'DELETE',
   TContext
->(path: TPath, method: TMethod, context: TContext) {
-  return <TReq, TRes>(fn: (req: TReq, context: TContext) => Promise<TRes>) => {
+>(
+  path: TPath,
+  method: TMethod,
+  context: (arg: { path: TPath; method: TMethod }) => TContext
+) {
+  return <TReq extends Request, TRes>(
+    fn: (req: TReq, context: TContext) => Promise<TRes>
+  ) => {
     const handler: WrapFn<TReq, TRes> = (req: TReq) => {
-      return fn(req, context)
+      return fn(req, context({ path, method }))
     }
     return {
       path,
       handler,
-      method
+      method: method.toLowerCase() as Lowercase<TMethod>
     } as const
   }
 }
 
 export function createStreamHandler<
   TPath extends string,
-  TMethod extends 'get' | 'post' | 'put' | 'delete'
->(path: TPath, method: TMethod) {
-  return createStreamHandlerWithContext(path, method, undefined)
-}
-
-export function createStreamHandlerWithContext<
-  TPath extends string,
-  TMethod extends 'get' | 'post' | 'put' | 'delete',
+  TMethod extends 'GET' | 'POST' | 'PUT' | 'DELETE',
   TContext
->(path: TPath, method: TMethod, context: TContext) {
+>(
+  path: TPath,
+  method: TMethod,
+  context: (arg: { path: TPath; method: TMethod }) => TContext
+) {
   return (fn: (req: Request, context: TContext) => StreamWrapResponse) => {
     const handler: StreamWrapFn = (req) => {
-      return fn(req, context)
+      return fn(req, context({ path, method }))
     }
 
     return {
       path,
       handler,
-      method
+      method: method.toLowerCase() as Lowercase<TMethod>
     } as const
   }
 }

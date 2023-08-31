@@ -1,9 +1,8 @@
-import type { Request } from 'express'
 import { apis } from 'mzm-shared/src/api/universal'
 import { z } from 'zod'
 import { ObjectId } from 'mongodb'
 import { isValidAccount } from 'mzm-shared/src/validator'
-import { createHandlerWithContext } from '../lib/wrap.js'
+import { createHandler } from '../lib/wrap.js'
 import {
   getRequestUserId,
   createUserIconPath,
@@ -12,33 +11,31 @@ import {
 import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import { collections, mongoClient } from '../lib/db.js'
 
-const updateContext = () => {
-  const api = apis['/api/user/@me'].PUT
-  const body = createContextParser(
-    z.object({
-      account: z.string().min(1).trim()
-    }),
-    (parsed) => {
-      return {
-        success: true,
-        data: api.request.body({
-          account: parsed.data.account
-        })
-      }
-    }
-  )
-
-  return {
-    api,
-    parser: { body }
-  }
-}
-
-export const update = createHandlerWithContext(
+export const update = createHandler(
   '/api/user/@me',
-  'put',
-  updateContext()
-)(async (req: Request, context) => {
+  'PUT',
+  ({ path, method }) => {
+    const api = apis[path][method]
+    const body = createContextParser(
+      z.object({
+        account: z.string().min(1).trim()
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: api.request.body({
+            account: parsed.data.account
+          })
+        }
+      }
+    )
+
+    return {
+      api,
+      parser: { body }
+    }
+  }
+)(async (req, context) => {
   const parsed = context.parser.body(req.body)
   if (parsed.success === false) {
     throw new BadRequest(context.api.response[400].body('bad request'))
@@ -69,9 +66,15 @@ export const update = createHandlerWithContext(
   return context.api.response[200].body({ id: id, account: account })
 })
 
-export const getUserInfo = createHandlerWithContext('/api/user/@me', 'get', {
-  api: apis['/api/user/@me'].GET
-})(async (req: Request, context) => {
+export const getUserInfo = createHandler(
+  '/api/user/@me',
+  'GET',
+  ({ path, method }) => {
+    return {
+      api: apis[path][method]
+    }
+  }
+)(async (req, context) => {
   const id = getRequestUserId(req)
 
   const db = await mongoClient()

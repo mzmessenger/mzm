@@ -6,10 +6,7 @@ import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import { getRequestUserId, createContextParser } from '../../lib/utils.js'
-import {
-  createHandlerWithContext,
-  createStreamHandlerWithContext
-} from '../../lib/wrap.js'
+import { createHandler, createStreamHandler } from '../../lib/wrap.js'
 import * as storage from '../../lib/storage.js'
 import { collections, mongoClient, type User, type Room } from '../../lib/db.js'
 import { logger } from '../../lib/logger.js'
@@ -45,34 +42,32 @@ const fromIdenticon = async (account: string): StreamWrapResponse => {
   return { headers: res.headers, stream: res.body }
 }
 
-const getUserIconContext = () => {
-  const params = createContextParser(
-    z.object({
-      account: z.string().min(1)
-    }),
-    (parsed) => {
-      return {
-        success: true,
-        data: apis['/api/icon/user/:account'].params({
-          account: parsed.data.account
+export const getUserIcon = createStreamHandler(
+  '/api/icon/user/:account',
+  'GET',
+  () => {
+    const params = createContextParser(
+      z.object({
+        account: z.string().min(1)
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: apis['/api/icon/user/:account'].params({
+            account: parsed.data.account
+          })
+        }
+      }
+    )
+    return {
+      parser: {
+        params,
+        version: z.object({
+          version: z.string().optional()
         })
       }
     }
-  )
-  return {
-    parser: {
-      params,
-      version: z.object({
-        version: z.string().optional()
-      })
-    }
   }
-}
-
-export const getUserIcon = createStreamHandlerWithContext(
-  '/api/icon/user/:account',
-  'get',
-  getUserIconContext()
 )(async (req, context) => {
   const params = context.parser.params(req.params)
   if (!params.success) {
@@ -117,33 +112,31 @@ export const getUserIcon = createStreamHandlerWithContext(
   }
 })
 
-const getRoomIconContext = () => {
-  const params = createContextParser(
-    z.object({
-      roomname: z.string().min(1),
-      version: z.string().min(1)
-    }),
-    (parsed) => {
-      return {
-        success: true,
-        data: apis['/api/icon/rooms/:roomname/:version'].params({
-          roomname: parsed.data.roomname,
-          version: parsed.data.version
-        })
+export const getRoomIcon = createStreamHandler(
+  '/api/icon/rooms/:roomname/:version',
+  'GET',
+  () => {
+    const params = createContextParser(
+      z.object({
+        roomname: z.string().min(1),
+        version: z.string().min(1)
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: apis['/api/icon/rooms/:roomname/:version'].params({
+            roomname: parsed.data.roomname,
+            version: parsed.data.version
+          })
+        }
+      }
+    )
+    return {
+      parser: {
+        params
       }
     }
-  )
-  return {
-    parser: {
-      params
-    }
   }
-}
-
-export const getRoomIcon = createStreamHandlerWithContext(
-  '/api/icon/rooms/:roomname/:version',
-  'get',
-  getRoomIconContext()
 )(async (req, context) => {
   const params = context.parser.params(req.params)
   if (!params.success) {
@@ -168,11 +161,13 @@ export const getRoomIcon = createStreamHandlerWithContext(
   }
 })
 
-export const uploadUserIcon = createHandlerWithContext(
+export const uploadUserIcon = createHandler(
   '/api/icon/user',
-  'post',
-  {
-    api: apis['/api/icon/user'].POST
+  'POST',
+  ({ path, method }) => {
+    return {
+      api: apis[path][method]
+    }
   }
 )(async (req: Request & { file?: MulterFile }, context) => {
   const userId = getRequestUserId(req)
@@ -231,32 +226,30 @@ export const uploadUserIcon = createHandlerWithContext(
   })
 })
 
-const uploadRoomIconContext = () => {
-  const api = apis['/api/icon/rooms/:roomname'].POST
-  const params = createContextParser(
-    z.object({
-      roomname: z.string().min(1)
-    }),
-    (parsed) => {
-      return {
-        success: true,
-        data: apis['/api/icon/rooms/:roomname'].params({
-          roomname: parsed.data.roomname
-        })
-      }
-    }
-  )
-
-  return {
-    api,
-    parser: { params }
-  }
-}
-
-export const uploadRoomIcon = createHandlerWithContext(
+export const uploadRoomIcon = createHandler(
   '/api/icon/rooms/:roomname',
-  'post',
-  uploadRoomIconContext()
+  'POST',
+  ({ path, method }) => {
+    const api = apis[path][method]
+    const params = createContextParser(
+      z.object({
+        roomname: z.string().min(1)
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: apis[path].params({
+            roomname: parsed.data.roomname
+          })
+        }
+      }
+    )
+
+    return {
+      api,
+      parser: { params }
+    }
+  }
 )(async (req: Request & { file?: MulterFile }, context) => {
   const params = context.parser.params(req.params)
   if (params.success === false) {
