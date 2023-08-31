@@ -7,7 +7,7 @@ import {
   TO_SERVER_CMD,
   ToClientType,
   FilterToClientType
-} from 'mzm-shared/type/socket'
+} from 'mzm-shared/src/type/socket'
 import { useRoomActionsForSocket } from '../rooms/hooks'
 import { useMessagesForSocket } from '../messages/hooks'
 import { useMyInfoActions } from '../user/hooks'

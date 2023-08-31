@@ -1,5 +1,5 @@
 import { Request } from 'express'
-import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/type/socket'
+import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/src/type/socket'
 import { getRequestUserId } from '../lib/utils.js'
 import { logger } from '../lib/logger.js'
 import * as _socket from './internal/socket.js'

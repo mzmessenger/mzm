@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import styled from '@emotion/styled'
-import { isValidAccount } from 'mzm-shared/validator'
+import { isValidAccount } from 'mzm-shared/src/validator'
 import { WIDTH_MOBILE } from '../../constants'
 import { useUser, useUserIdAndAccount } from '../../recoil/user/hooks'
 import { Button } from '../atoms/Button'

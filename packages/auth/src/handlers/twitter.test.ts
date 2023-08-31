@@ -1,10 +1,10 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import assert from 'node:assert'
 import { test, expect, vi, beforeAll } from 'vitest'
-import { BadRequest } from 'mzm-shared/lib/errors'
+import { BadRequest } from 'mzm-shared/src/lib/errors'
 import { getTestMongoClient } from '../../test/testUtil.js'
 import { collections } from '../lib/db.js'
-import { verifyAccessToken } from 'mzm-shared/auth/index'
+import { verifyAccessToken } from 'mzm-shared/src/auth/index'
 
 vi.mock('../lib/redis.js', async () => {
   return { sessionRedis: vi.fn() }
@@ -17,10 +17,10 @@ vi.mock('../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
-vi.mock('mzm-shared/auth/index', async () => {
-  const actual = await vi.importActual<typeof import('mzm-shared/auth/index')>(
-    'mzm-shared/auth/index'
-  )
+vi.mock('mzm-shared/src/auth/index', async () => {
+  const actual = await vi.importActual<
+    typeof import('mzm-shared/src/auth/index')
+  >('mzm-shared/src/auth/index')
   return {
     ...actual,
     verifyAccessToken: vi.fn()

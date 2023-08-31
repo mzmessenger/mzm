@@ -1,5 +1,5 @@
 import { ObjectId, WithId } from 'mongodb'
-import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/type/socket'
+import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/src/type/socket'
 import * as config from '../config.js'
 import { logger } from '../lib/logger.js'
 import {

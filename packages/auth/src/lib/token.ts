@@ -1,4 +1,4 @@
-import type { AccessToken } from 'mzm-shared/type/auth'
+import type { AccessToken } from 'mzm-shared/src/type/auth'
 import jwt from 'jsonwebtoken'
 import { JWT } from '../config.js'
 

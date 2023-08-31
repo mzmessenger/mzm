@@ -1,4 +1,4 @@
-import type { API } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/src/type/api'
 import type { useAuth } from '../../recoil/auth/hooks'
 import { useCallback } from 'react'
 import {

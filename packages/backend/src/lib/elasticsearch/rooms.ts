@@ -1,4 +1,4 @@
-import { apis } from 'mzm-shared/api/universal'
+import { apis } from 'mzm-shared/src/api/universal'
 import { ObjectId } from 'mongodb'
 import { logger } from '../logger.js'
 import { lock, release } from '../redis.js'

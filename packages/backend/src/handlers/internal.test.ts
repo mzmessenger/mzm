@@ -3,7 +3,7 @@ vi.mock('../lib/logger.js')
 vi.mock('./internal/socket.js')
 
 import { ObjectId } from 'mongodb'
-import { TO_SERVER_CMD } from 'mzm-shared/type/socket'
+import { TO_SERVER_CMD } from 'mzm-shared/src/type/socket'
 import { createRequest } from '../../test/testUtil.js'
 import { socket } from './internal.js'
 import {

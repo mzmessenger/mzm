@@ -1,4 +1,4 @@
-import type { API } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/src/type/api'
 import { atom, useRecoilState } from 'recoil'
 
 type SearchAPI = API['/api/rooms/search']['GET']

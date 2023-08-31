@@ -1,5 +1,5 @@
-import type { AuthAPI } from 'mzm-shared/type/api'
-import type { AccessToken } from 'mzm-shared/type/auth'
+import type { AuthAPI } from 'mzm-shared/src/type/api'
+import type { AccessToken } from 'mzm-shared/src/type/auth'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
 import { expose } from 'comlink'
 import dayjs from 'dayjs'

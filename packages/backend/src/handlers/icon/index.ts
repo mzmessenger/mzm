@@ -1,10 +1,10 @@
 import type { MulterFile } from '../../types/index.js'
-import { apis } from 'mzm-shared/api/universal'
+import { apis } from 'mzm-shared/src/api/universal'
 import { Request } from 'express'
 import { request } from 'undici'
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
-import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
+import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import { getRequestUserId, createContextParser } from '../../lib/utils.js'
 import {
   createHandlerWithContext,

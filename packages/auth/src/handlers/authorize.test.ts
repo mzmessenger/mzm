@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import assert from 'node:assert'
 import { test, expect, vi, beforeAll } from 'vitest'
-import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
+import { BadRequest, Unauthorized } from 'mzm-shared/src/lib/errors'
 import {
   getTestSessionRedisClient,
   getTestMongoClient

@@ -1,13 +1,13 @@
 import type { Request } from 'express'
 import type { VerifyCallback } from 'passport-oauth2'
-import type { WrapFn } from 'mzm-shared/lib/wrap'
+import type { WrapFn } from 'mzm-shared/src/lib/wrap'
 import type { PassportRequest } from '../types.js'
-import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
+import { BadRequest, Unauthorized } from 'mzm-shared/src/lib/errors'
 import { ObjectId } from 'mongodb'
 import {
   parseAuthorizationHeader,
   verifyAccessToken
-} from 'mzm-shared/auth/index'
+} from 'mzm-shared/src/auth/index'
 import { logger } from '../lib/logger.js'
 import { collections, mongoClient, type User } from '../lib/db.js'
 import { JWT } from '../config.js'

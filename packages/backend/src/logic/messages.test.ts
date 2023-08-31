@@ -8,7 +8,7 @@ vi.mock('../lib/db.js', async () => {
 })
 
 import { ObjectId } from 'mongodb'
-import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
+import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/src/type/db'
 import { getTestMongoClient, dropCollection } from '../../test/testUtil.js'
 import { collections, COLLECTION_NAMES, type Message } from '../lib/db.js'
 import { saveMessage, getMessages } from './messages.js'

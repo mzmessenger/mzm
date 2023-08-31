@@ -1,5 +1,5 @@
 import { request } from 'undici'
-import { HEADERS } from 'mzm-shared/auth/constants'
+import { HEADERS } from 'mzm-shared/src/auth/constants'
 import { INTERNAL_API_URL } from '../config.js'
 import { logger } from './logger.js'
 import { createInternalAccessToken } from '../lib/token.js'

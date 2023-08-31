@@ -1,4 +1,4 @@
-import type { Result } from 'mzm-shared/type'
+import type { Result } from 'mzm-shared/src/type'
 import { createHash, randomUUID, getRandomValues } from 'node:crypto'
 
 const urlsafeBase64Encode = (str: string) => {

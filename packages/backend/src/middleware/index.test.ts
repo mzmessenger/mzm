@@ -1,9 +1,9 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import { vi, test, expect } from 'vitest'
-vi.mock('mzm-shared/auth/index', async () => {
-  const module = await vi.importActual<typeof import('mzm-shared/auth/index')>(
-    'mzm-shared/auth/index'
-  )
+vi.mock('mzm-shared/src/auth/index', async () => {
+  const module = await vi.importActual<
+    typeof import('mzm-shared/src/auth/index')
+  >('mzm-shared/src/auth/index')
   return {
     ...module,
     verifyAccessToken: vi.fn()
@@ -13,8 +13,8 @@ vi.mock('../lib/logger')
 
 import { default as jsonwebtoken } from 'jsonwebtoken'
 import { NextFunction, Request, Response } from 'express'
-import { HEADERS } from 'mzm-shared/auth/constants'
-import { verifyAccessToken } from 'mzm-shared/auth/index'
+import { HEADERS } from 'mzm-shared/src/auth/constants'
+import { verifyAccessToken } from 'mzm-shared/src/auth/index'
 import { checkAccessToken } from './index.js'
 
 test('checkAccessToken (success)', async () => {

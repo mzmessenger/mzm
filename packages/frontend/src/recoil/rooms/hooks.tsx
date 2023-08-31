@@ -1,4 +1,4 @@
-import type { API } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/src/type/api'
 import type { useSocketActions } from '../../recoil/socket/hooks'
 import type { useUiActions } from '../../recoil/ui/hooks'
 import type { Room } from './types'
@@ -11,7 +11,7 @@ import {
   selectorFamily,
   type SetterOrUpdater
 } from 'recoil'
-import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
+import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
 import { createApiClient, uploadRoomIcon } from '../../lib/client'
 import { isReplied } from '../../lib/util'
 
@@ -509,7 +509,8 @@ export const useRoomActions = ({
             return res
           }
 
-          const room = res.body as API['/api/rooms']['POST']['response'][200]['body']
+          const room =
+            res.body as API['/api/rooms']['POST']['response'][200]['body']
           getRooms()
 
           setCurrentRoom({

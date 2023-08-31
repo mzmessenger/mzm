@@ -1,9 +1,9 @@
 import type { IncomingMessage } from 'http'
 import type { Request } from 'express'
-import type { Result } from 'mzm-shared/type'
+import type { Result } from 'mzm-shared/src/type'
 import type { Room } from './db.js'
 import { type ZodType, z } from 'zod'
-import { HEADERS } from 'mzm-shared/auth/constants'
+import { HEADERS } from 'mzm-shared/src/auth/constants'
 import { API_URL_BASE } from '../config.js'
 
 export const getRequestUserId = (req: IncomingMessage | Request): string => {

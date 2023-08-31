@@ -1,5 +1,5 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
-import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
+import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/src/type/db'
 import { MONGODB_URI } from '../config.js'
 import { logger } from './logger.js'
 

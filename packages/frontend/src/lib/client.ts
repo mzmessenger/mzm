@@ -1,4 +1,4 @@
-import type { API } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/src/type/api'
 import { API_URL_BASE } from '../constants'
 import { proxyRequest, proxyRequestWithFormData } from '../lib/auth'
 
@@ -75,7 +75,8 @@ export const uploadUserIcon = async (blob: Blob) => {
   })
 
   if (res.ok) {
-    const body = res.body as API['/api/icon/user']['POST']['response'][200]['body']
+    const body =
+      res.body as API['/api/icon/user']['POST']['response'][200]['body']
     return {
       ...res,
       body

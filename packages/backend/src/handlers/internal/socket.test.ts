@@ -11,11 +11,11 @@ vi.mock('../../lib/db.js', async () => {
 })
 
 import { ObjectId } from 'mongodb'
-import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
+import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/src/type/db'
 import {
   TO_SERVER_CMD,
   FilterSocketToBackendType
-} from 'mzm-shared/type/socket'
+} from 'mzm-shared/src/type/socket'
 import { getTestMongoClient } from '../../../test/testUtil.js'
 import {
   collections,

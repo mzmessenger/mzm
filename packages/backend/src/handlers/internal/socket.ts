@@ -1,12 +1,12 @@
 import { randomUUID } from 'node:crypto'
 import { ObjectId, WithId } from 'mongodb'
-import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/type/db'
+import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/src/type/db'
 import {
   TO_SERVER_CMD,
   FilterSocketToBackendType,
   TO_CLIENT_CMD,
   ToClientType
-} from 'mzm-shared/type/socket'
+} from 'mzm-shared/src/type/socket'
 import { z } from 'zod'
 import { logger } from '../../lib/logger.js'
 import {

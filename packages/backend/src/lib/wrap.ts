@@ -1,5 +1,5 @@
 import type { Request, Response, NextFunction } from 'express'
-import type { WrapFn } from 'mzm-shared/lib/wrap'
+import type { WrapFn } from 'mzm-shared/src/lib/wrap'
 import { StreamWrapResponse } from '../types.js'
 
 interface StreamWrapFn {

@@ -1,15 +1,15 @@
 import type { Request } from 'express'
-import { apis } from 'mzm-shared/api/universal'
+import { apis } from 'mzm-shared/src/api/universal'
 import { z } from 'zod'
 import { ObjectId } from 'mongodb'
-import { isValidAccount } from 'mzm-shared/validator'
+import { isValidAccount } from 'mzm-shared/src/validator'
 import { createHandlerWithContext } from '../lib/wrap.js'
 import {
   getRequestUserId,
   createUserIconPath,
   createContextParser
 } from '../lib/utils.js'
-import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
+import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import { collections, mongoClient } from '../lib/db.js'
 
 const updateContext = () => {

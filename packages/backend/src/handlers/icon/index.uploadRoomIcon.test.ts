@@ -13,10 +13,10 @@ vi.mock('../../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
-import type { API } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/src/type/api'
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
-import { BadRequest } from 'mzm-shared/lib/errors'
+import { BadRequest } from 'mzm-shared/src/lib/errors'
 import {
   createFileRequest,
   getTestMongoClient

@@ -1,6 +1,6 @@
 import type { Redis } from 'ioredis'
 import type { Request } from 'express'
-import type { Result } from 'mzm-shared/type'
+import type { Result } from 'mzm-shared/src/type'
 import { z } from 'zod'
 import { verifyAuthorizationCode, generateAuthorizationCode } from './util.js'
 import { logger } from '../logger.js'

@@ -8,7 +8,7 @@ vi.mock('../redis.js', () => {
   }
 })
 import { ObjectId } from 'mongodb'
-import { ToClientType } from 'mzm-shared/type/socket'
+import { ToClientType } from 'mzm-shared/src/type/socket'
 import { createXaddMock } from '../../../test/testUtil.js'
 import { client } from '../redis.js'
 import * as config from '../../config.js'
