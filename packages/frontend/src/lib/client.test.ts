@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
 import { beforeAll, vi, test, expect } from 'vitest'
-import { createApiClient, createAuthApiClient } from './client.js'
+import { clients, authClients } from './client.js'
 
 vi.mock('../lib/auth', async () => {
   return {
@@ -15,50 +15,27 @@ beforeAll(() => {
   global.fetch = vi.fn()
 })
 
-test('createApiClient', async () => {
+test('clients', async () => {
   vi.mocked(proxyRequest).mockReset()
 
-  const res = await createApiClient(
-    '/api/icon/rooms/:roomName',
-    'DELETE',
-    ({ toPath }) => {
-      return {
-        path: toPath({ roomName: 'room-name' })
-      }
-    },
-    async (res) => {
-      return { foo: 'bar' }
-    }
-  )
+  const res = await clients['/api/rooms/:roomId/users']['GET']({
+    params: { roomId: 'room-id' },
+    query: {}
+  })
 
-  expect(res.foo).toStrictEqual('bar')
   expect(proxyRequest).toBeCalledTimes(1)
-  expect(proxyRequest).toBeCalledWith('/api/icon/rooms/room-name', {
-    method: 'DELETE',
-    headers: {}
+  expect(proxyRequest).toBeCalledWith('/api/rooms/room-id/users', {
+    method: 'GET'
   })
 })
 
-test('createAuthApiClient', async () => {
+test('authClients', async () => {
   vi.mocked(proxyRequest).mockReset()
 
-  const res = await createAuthApiClient(
-    '/auth/token',
-    'POST',
-    ({ toPath }) => {
-      return {
-        path: toPath()
-      }
-    },
-    async (res) => {
-      return { foo: 'bar' }
-    }
-  )
+  const res = await authClients['/auth/token']['POST']({})
 
-  expect(res.foo).toStrictEqual('bar')
   expect(proxyRequest).toBeCalledTimes(1)
   expect(proxyRequest).toBeCalledWith('/auth/token', {
-    method: 'POST',
-    headers: {}
+    method: 'POST'
   })
 })

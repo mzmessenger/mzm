@@ -24,6 +24,17 @@ export type RouteType = {
   response: Response
 }
 
+export type RouteMethodType = {
+  GET?: RouteType
+  POST?: RouteType
+  PUT?: RouteType
+  DELETE?: RouteType
+}
+
+export type Routes = {
+  [key: string]: RouteMethodType
+}
+
 export type RouteParams<T> =
   T extends `${infer _}:${infer IParam}/${infer IRest}`
     ? { [k in IParam | keyof RouteParams<IRest>]: string }

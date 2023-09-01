@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/ban-types, no-unused-vars, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import type {
-  RouteType,
+  Routes,
   RouteParams,
   ApiType,
   HasParamsInPath
@@ -8,15 +8,6 @@ import type {
 
 function define<T>() {
   return (args: T) => args
-}
-
-type Routes = {
-  [key: string]: {
-    GET?: RouteType
-    POST?: RouteType
-    PUT?: RouteType
-    DELETE?: RouteType
-  }
 }
 
 const routes = {
@@ -182,7 +173,7 @@ const routes = {
   }
 } as const satisfies Routes
 
-const authRoute = {
+const authRoutes = {
   '/auth/token': {
     POST: {
       request: {},
@@ -248,7 +239,7 @@ const keyToPath = createToPath(routes)
 export function convertKeyToPath<T extends keyof typeof keyToPath>(key: T) {
   return keyToPath[key]
 }
-const authKeyToPath = createToPath(authRoute)
+const authKeyToPath = createToPath(authRoutes)
 export function convertAuthKeyToPath<T extends keyof typeof authKeyToPath>(
   key: T
 ) {
@@ -256,6 +247,6 @@ export function convertAuthKeyToPath<T extends keyof typeof authKeyToPath>(
 }
 
 export const apis = routes
-export const authApi = authRoute
+export const authApis = authRoutes
 export type API = ApiType<typeof apis>
-export type AuthAPI = ApiType<typeof authApi>
+export type AuthAPI = ApiType<typeof authApis>

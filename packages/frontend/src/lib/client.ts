@@ -1,109 +1,125 @@
+/* eslint-disable @typescript-eslint/ban-types */
 import type {
   API,
-  AuthAPI,
   HasParamsInPath,
-  RouteParams
+  RouteParams,
+  RouteType,
+  RouteMethodType
 } from 'mzm-shared/src/type/api'
 import { compile } from 'path-to-regexp'
-import { apis } from 'mzm-shared/src/api/universal'
+import { apis, authApis } from 'mzm-shared/src/api/universal'
 import { API_URL_BASE, AUTH_URL_BASE } from '../constants'
 import { proxyRequest, proxyRequestWithFormData } from '../lib/auth'
 
-function createKeyData<T extends typeof apis>(routes: T) {
-  return Object.keys(routes).reduce(
-    (prev, key) => {
-      const toPath = compile(key)
-      return { ...prev, [key]: { toPath } }
-    },
-    {} as {
-      [key in keyof T]: {
-        toPath: HasParamsInPath<key> extends true
-          ? (params: RouteParams<key>) => string
-          : () => string
-      }
+type QueryOption<T extends RouteType> = T extends {
+  request: { query: unknown }
+}
+  ? { query: ReturnType<T['request']['query']> }
+  : {}
+type BodyOption<T extends RouteType> = T extends {
+  request: { body: unknown }
+}
+  ? { body: ReturnType<T['request']['body']> }
+  : {}
+
+type ClinetOptions<
+  T extends string,
+  U extends RouteType
+> = (HasParamsInPath<T> extends true ? { params: RouteParams<T> } : {}) &
+  QueryOption<U> &
+  BodyOption<U>
+
+function createClient<T extends string, U extends RouteType>(
+  urlBase: string,
+  toPath: (params: RouteParams<T>) => string,
+  method: 'GET' | 'POST' | 'PUT' | 'DELETE'
+) {
+  return async (options: ClinetOptions<T, U>) => {
+    let path = toPath((options as { params: RouteParams<T> }).params)
+    const query =
+      (options as unknown as { query: Record<string, string> }).query ?? {}
+    if (Object.keys(query).length > 0) {
+      const init = Object.entries(query).reduce((prev, [key, value]) => {
+        return [...prev, [key, value]]
+      }, [])
+
+      const q = new URLSearchParams(init)
+      path += `?${q.toString()}`
     }
-  )
-}
-const apisKeyData = createKeyData(apis)
 
-type Init = Parameters<typeof proxyRequest>[1]
-
-type Options = {
-  headers?: Record<string, string>
-  body?: Init['body']
-}
-
-type Parser<T> = (res: Awaited<ReturnType<typeof proxyRequest>>) => Promise<T>
-
-const apiClient = async <T>(
-  url: string,
-  method: 'GET' | 'POST' | 'PUT' | 'DELETE',
-  options: Options,
-  parser: Parser<T>
-) => {
-  const headers = {
-    ...options.headers
-  }
-
-  const init: Init = {
-    method,
-    headers
-  }
-
-  if (options.headers) {
-    init.headers = options.headers
-  }
-
-  if (options.body) {
-    init.body = options.body
-  }
-  const res = await proxyRequest(url, init)
-
-  return await parser(res)
-}
-
-export const createAuthApiClient = async <
-  P extends keyof AuthAPI,
-  M extends 'GET' | 'POST' | 'PUT' | 'DELETE',
-  T
->(
-  path: P,
-  method: M,
-  createOptions: (arg: {
-    path: P
-    method: M
-    toPath: () => P
-  }) => { path: string } & Options,
-  parser: Parser<T>
-) => {
-  const options = createOptions({
-    path,
-    method,
-    toPath: () => {
-      return path
+    const init: Parameters<typeof proxyRequest>[1] = {
+      method
     }
-  })
-  return apiClient<T>(AUTH_URL_BASE + options.path, method, options, parser)
+    const body = (options as { body: unknown }).body
+    if (body) {
+      init.body = typeof body === 'string' ? body : JSON.stringify(body)
+    }
+    return await proxyRequest(urlBase + path, init)
+  }
 }
 
-export const createApiClient = async <
-  P extends keyof API,
-  M extends 'GET' | 'POST' | 'PUT' | 'DELETE',
-  T
->(
-  path: P,
-  method: M,
-  createOptions: (arg: {
-    path: P
-    method: M
-    toPath: (typeof apisKeyData)[P]['toPath']
-  }) => { path: string } & Options,
-  parser: Parser<T>
-) => {
-  const keyData = apisKeyData[path]
-  const options = createOptions({ path, method, toPath: keyData.toPath })
-  return apiClient<T>(API_URL_BASE + options.path, method, options, parser)
+function createRouteClients<T extends string, U extends RouteMethodType>(
+  urlBase: string,
+  path: T,
+  routes: U
+) {
+  const toPath = compile(path)
+  const clients: {
+    [key in keyof RouteMethodType]: ReturnType<typeof createClient<T, U[key]>>
+  } = {}
+
+  for (const method of ['GET', 'POST', 'PUT', 'DELETE'] as const) {
+    if (routes[method]) {
+      clients[method] = createClient(urlBase, toPath, method)
+    }
+  }
+
+  return clients as (U extends { GET: unknown }
+    ? { GET: Exclude<(typeof clients)['GET'], undefined> }
+    : {}) &
+    (U extends { POST: unknown }
+      ? { POST: Exclude<(typeof clients)['POST'], undefined> }
+      : {}) &
+    (U extends { PUT: unknown }
+      ? { PUT: Exclude<(typeof clients)['PUT'], undefined> }
+      : {}) &
+    (U extends { DELETE: unknown }
+      ? { DELETE: Exclude<(typeof clients)['DELETE'], undefined> }
+      : {})
 }
+
+function createAllClients(
+  base: typeof authApis,
+  urlBase: string
+): {
+  [key in keyof typeof authApis]: ReturnType<
+    typeof createRouteClients<key, (typeof authApis)[key]>
+  >
+}
+function createAllClients(
+  base: typeof apis,
+  urlBase: string
+): {
+  [key in keyof typeof apis]: ReturnType<
+    typeof createRouteClients<key, (typeof apis)[key]>
+  >
+}
+function createAllClients(
+  base: typeof apis | typeof authApis,
+  urlBase: string
+) {
+  const clients: { [key: string]: ReturnType<typeof createRouteClients> } = {}
+
+  for (const path of Object.keys(base)) {
+    const routes = base[path as keyof typeof base]
+    clients[path] = createRouteClients(urlBase, path, routes)
+  }
+
+  return clients
+}
+
+export const clients = createAllClients(apis, API_URL_BASE)
+export const authClients = createAllClients(authApis, AUTH_URL_BASE)
 
 type UploadRoomIcon = API['/api/icon/rooms/:roomName']
 export const uploadRoomIcon = async (

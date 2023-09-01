@@ -8,11 +8,7 @@ import {
   selector,
   useRecoilValue
 } from 'recoil'
-import {
-  createApiClient,
-  createAuthApiClient,
-  uploadUserIcon
-} from '../../lib/client'
+import { uploadUserIcon, clients, authClients } from '../../lib/client'
 import { API_URL_BASE } from '../../constants'
 
 type UserState = {
@@ -78,32 +74,20 @@ export const useUser = () => {
   type UpdateUserType = API['/api/user/@me']['PUT']
   const updateUser = useCallback(
     async (body: UpdateUserType['request']['body']) => {
-      return await createApiClient(
-        '/api/user/@me',
-        'PUT',
-        ({ toPath }) => {
-          return {
-            path: toPath(),
-            body: JSON.stringify(body)
-          }
-        },
-        async (res) => {
-          if (res.status === 200) {
-            const body = res.body as UpdateUserType['response'][200]['body']
-            setUser((current) => ({
-              ...current,
-              account: body.account,
-              iconUrl: `/api/icon/user/${body.account}`
-            }))
-            return {
-              ...res,
-              body
-            }
-          }
-
-          return res
+      const res = await clients['/api/user/@me']['PUT']({ body })
+      if (res.status === 200) {
+        const body = res.body as UpdateUserType['response'][200]['body']
+        setUser((current) => ({
+          ...current,
+          account: body.account,
+          iconUrl: `/api/icon/user/${body.account}`
+        }))
+        return {
+          ...res,
+          body
         }
-      )
+      }
+      return res
     },
     [setUser]
   )
@@ -140,42 +124,32 @@ export const useMyInfoActions = () => {
   const setUser = useSetRecoilState(userState)
 
   const fetchMyInfo = useCallback(async () => {
-    return await createApiClient(
-      '/api/user/@me',
-      'GET',
-      ({ toPath }) => {
-        return {
-          path: toPath()
-        }
-      },
-      async (res) => {
-        type ResponseType = API['/api/user/@me']['GET']['response']
+    const res = await clients['/api/user/@me']['GET']({})
+    type ResponseType = API['/api/user/@me']['GET']['response']
 
-        if (res.status === 200) {
-          const payload = res.body as ResponseType[200]['body']
+    if (res.status === 200) {
+      const payload = res.body as ResponseType[200]['body']
 
-          setUser((current) => ({
-            ...current,
-            id: payload.id,
-            account: payload.account,
-            iconUrl: payload.icon
-          }))
-        } else if (res.status === 404) {
-          const payload = res.body as ResponseType[404]['body']
+      setUser((current) => ({
+        ...current,
+        id: payload.id,
+        account: payload.account,
+        iconUrl: payload.icon
+      }))
+    } else if (res.status === 404) {
+      const payload = res.body as ResponseType[404]['body']
 
-          setUser((current) => ({
-            ...current,
-            id: payload.id,
-            account: '',
-            iconUrl: ''
-          }))
-        } else if (res.status === 403) {
-          // @todo
-          alert('認証情報が切れてるかもしれません')
-        }
-        return res
-      }
-    )
+      setUser((current) => ({
+        ...current,
+        id: payload.id,
+        account: '',
+        iconUrl: ''
+      }))
+    } else if (res.status === 403) {
+      // @todo
+      alert('認証情報が切れてるかもしれません')
+    }
+    return res
   }, [setUser])
 
   return {
@@ -189,22 +163,11 @@ export const useRemoveUserActions = ({
   logout: UseAuthType['logout']
 }) => {
   const removeUser = useCallback(async () => {
-    return await createAuthApiClient(
-      '/auth/user',
-      'DELETE',
-      ({ toPath }) => {
-        return {
-          path: toPath(),
-          method: 'DELETE'
-        }
-      },
-      async (res) => {
-        if (res.status === 200) {
-          logout()
-        }
-        return res
-      }
-    )
+    const res = await authClients['/auth/user']['DELETE']({})
+    if (res.status === 200) {
+      logout()
+    }
+    return res
   }, [logout])
 
   return {
@@ -220,21 +183,11 @@ export const useRemoveAccountActions = () => {
       if (!user.twitterUserName || !user.githubUserName) {
         return
       }
-      return await createAuthApiClient(
-        '/auth/twitter',
-        'DELETE',
-        ({ toPath }) => {
-          return {
-            path: toPath()
-          }
-        },
-        async (res) => {
-          if (res.status === 200) {
-            handleSuccessRemove()
-          }
-          return res
-        }
-      )
+      const res = await authClients['/auth/twitter']['DELETE']({})
+      if (res.status === 200) {
+        handleSuccessRemove()
+      }
+      return res
     },
     [user.githubUserName, user.twitterUserName]
   )
@@ -244,21 +197,11 @@ export const useRemoveAccountActions = () => {
       if (!user.twitterUserName || !user.githubUserName) {
         return
       }
-      return await createAuthApiClient(
-        '/auth/github',
-        'DELETE',
-        ({ toPath }) => {
-          return {
-            path: toPath()
-          }
-        },
-        async (res) => {
-          if (res.status === 200) {
-            handleSuccessRemove()
-          }
-          return res
-        }
-      )
+      const res = await authClients['/auth/github']['DELETE']({})
+      if (res.status === 200) {
+        handleSuccessRemove()
+      }
+      return res
     },
     [user.githubUserName, user.twitterUserName]
   )
