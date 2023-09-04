@@ -10,6 +10,11 @@ function define<T>() {
   return (args: T) => args
 }
 
+type TypedFormDataValue = FormDataEntryValue | Blob
+export class TypedFormData<
+  T extends [string, TypedFormDataValue][]
+> extends FormData {}
+
 const routes = {
   '/api/rooms': {
     POST: {
@@ -82,7 +87,9 @@ const routes = {
   },
   '/api/icon/rooms/:roomName': {
     POST: {
-      request: {},
+      request: {
+        form: define<{ icon: Blob }>()
+      },
       response: {
         200: {
           body: define<{
@@ -123,7 +130,9 @@ const routes = {
   },
   '/api/icon/user': {
     POST: {
-      request: {},
+      request: {
+        form: define<{ icon: Blob }>()
+      },
       response: {
         200: {
           body: define<{

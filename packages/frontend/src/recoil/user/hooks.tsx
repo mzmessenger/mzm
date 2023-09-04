@@ -74,7 +74,7 @@ export const useUser = () => {
   type UpdateUserType = API['/api/user/@me']['PUT']
   const updateUser = useCallback(
     async (body: UpdateUserType['request']['body']) => {
-      const res = await clients['/api/user/@me']['PUT']({ body })
+      const res = await clients['/api/user/@me']['PUT'].client({ body })
       if (res.status === 200) {
         const body = res.body as UpdateUserType['response'][200]['body']
         setUser((current) => ({
@@ -124,7 +124,7 @@ export const useMyInfoActions = () => {
   const setUser = useSetRecoilState(userState)
 
   const fetchMyInfo = useCallback(async () => {
-    const res = await clients['/api/user/@me']['GET']({})
+    const res = await clients['/api/user/@me']['GET'].client({})
     type ResponseType = API['/api/user/@me']['GET']['response']
 
     if (res.status === 200) {
@@ -163,7 +163,7 @@ export const useRemoveUserActions = ({
   logout: UseAuthType['logout']
 }) => {
   const removeUser = useCallback(async () => {
-    const res = await authClients['/auth/user']['DELETE']({})
+    const res = await authClients['/auth/user']['DELETE'].client({})
     if (res.status === 200) {
       logout()
     }
@@ -183,7 +183,7 @@ export const useRemoveAccountActions = () => {
       if (!user.twitterUserName || !user.githubUserName) {
         return
       }
-      const res = await authClients['/auth/twitter']['DELETE']({})
+      const res = await authClients['/auth/twitter']['DELETE'].client({})
       if (res.status === 200) {
         handleSuccessRemove()
       }
@@ -197,7 +197,7 @@ export const useRemoveAccountActions = () => {
       if (!user.twitterUserName || !user.githubUserName) {
         return
       }
-      const res = await authClients['/auth/github']['DELETE']({})
+      const res = await authClients['/auth/github']['DELETE'].client({})
       if (res.status === 200) {
         handleSuccessRemove()
       }

@@ -379,7 +379,7 @@ export const useRoomUserActions = () => {
 
       fetchStartRoomUsers()
 
-      const res = await clients['/api/rooms/:roomId/users']['GET']({
+      const res = await clients['/api/rooms/:roomId/users']['GET'].client({
         params,
         query: {}
       })
@@ -433,7 +433,7 @@ export const useRoomUserActions = () => {
 
       const lastId = users[users.length - 1].enterId
 
-      const res = await clients['/api/rooms/:roomId/users']['GET']({
+      const res = await clients['/api/rooms/:roomId/users']['GET'].client({
         params,
         query: { threshold: lastId }
       })
@@ -483,7 +483,7 @@ export const useRoomActions = ({
   type CreateRoomType = API['/api/rooms']['POST']
   const createRoom = useCallback(
     async (body: CreateRoomType['request']['body']) => {
-      const res = await clients['/api/rooms']['POST']({ body })
+      const res = await clients['/api/rooms']['POST'].client({ body })
       if (res.status !== 200) {
         return res
       }
@@ -506,7 +506,7 @@ export const useRoomActions = ({
   type ExitRoomType = API['/api/rooms/enter']['DELETE']
   const exitRoom = useCallback(
     async (body: ExitRoomType['request']['body']) => {
-      const res = await clients['/api/rooms/enter']['DELETE']({ body })
+      const res = await clients['/api/rooms/enter']['DELETE'].client({ body })
       if (res.status === 200) {
         setOpenRoomSettingState({ openRoomSetting: false })
 
@@ -526,8 +526,6 @@ export const useRoomActions = ({
 
   const uploadIcon = useCallback(
     async (params: Parameters<typeof uploadRoomIcon>[0], blob: Blob) => {
-      const formData = new FormData()
-      formData.append('icon', blob)
       const res = await uploadRoomIcon(params, blob)
       if (res.ok) {
         const { id, version } = res.body

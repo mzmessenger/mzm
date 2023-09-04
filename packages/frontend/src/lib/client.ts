@@ -1,3 +1,4 @@
+/// <reference lib="dom" />
 /* eslint-disable @typescript-eslint/ban-types */
 import type {
   API,
@@ -7,7 +8,7 @@ import type {
   RouteMethodType
 } from 'mzm-shared/src/type/api'
 import { compile } from 'path-to-regexp'
-import { apis, authApis } from 'mzm-shared/src/api/universal'
+import { apis, authApis, TypedFormData } from 'mzm-shared/src/api/universal'
 import { API_URL_BASE, AUTH_URL_BASE } from '../constants'
 import { proxyRequest, proxyRequestWithFormData } from '../lib/auth'
 
@@ -16,10 +17,17 @@ type QueryOption<T extends RouteType> = T extends {
 }
   ? { query: ReturnType<T['request']['query']> }
   : {}
+
 type BodyOption<T extends RouteType> = T extends {
   request: { body: unknown }
 }
   ? { body: ReturnType<T['request']['body']> }
+  : {}
+
+type FormOption<T extends RouteType> = T extends {
+  request: { form: unknown }
+}
+  ? { form: ReturnType<T['request']['form']> }
   : {}
 
 type ClinetOptions<
@@ -27,14 +35,15 @@ type ClinetOptions<
   U extends RouteType
 > = (HasParamsInPath<T> extends true ? { params: RouteParams<T> } : {}) &
   QueryOption<U> &
-  BodyOption<U>
+  BodyOption<U> &
+  FormOption<U>
 
 function createClient<T extends string, U extends RouteType>(
   urlBase: string,
   toPath: (params: RouteParams<T>) => string,
   method: 'GET' | 'POST' | 'PUT' | 'DELETE'
 ) {
-  return async (options: ClinetOptions<T, U>) => {
+  const client = async (options: ClinetOptions<T, U>) => {
     let path = toPath((options as { params: RouteParams<T> }).params)
     const query =
       (options as unknown as { query: Record<string, string> }).query ?? {}
@@ -47,15 +56,27 @@ function createClient<T extends string, U extends RouteType>(
       path += `?${q.toString()}`
     }
 
+    const url = urlBase + path
+
+    const form = (options as { form?: { [key: string]: string | Blob } }).form
+    if (form) {
+      const init: Parameters<typeof proxyRequestWithFormData>[1] = {
+        body: Object.entries(form).map(([key, value]) => [key, value])
+      }
+      return await proxyRequestWithFormData(url, init)
+    }
+
     const init: Parameters<typeof proxyRequest>[1] = {
       method
     }
-    const body = (options as { body: unknown }).body
+
+    const body = (options as { body?: unknown }).body
     if (body) {
       init.body = typeof body === 'string' ? body : JSON.stringify(body)
     }
-    return await proxyRequest(urlBase + path, init)
+    return await proxyRequest(url, init)
   }
+  return { client }
 }
 
 function createRouteClients<T extends string, U extends RouteMethodType>(
@@ -126,12 +147,10 @@ export const uploadRoomIcon = async (
   params: UploadRoomIcon['params'],
   blob: Blob
 ) => {
-  const res = await proxyRequestWithFormData(
-    API_URL_BASE + `/api/icon/rooms/${params.roomName}`,
-    {
-      body: [['icon', blob]]
-    }
-  )
+  const res = await clients['/api/icon/rooms/:roomName']['POST'].client({
+    params,
+    form: { icon: blob }
+  })
 
   if (res.ok) {
     const body = res.body as UploadRoomIcon['POST']['response'][200]['body']
@@ -148,8 +167,8 @@ export const uploadRoomIcon = async (
 type UploadUserIcon = API['/api/icon/user']
 
 export const uploadUserIcon = async (blob: Blob) => {
-  const res = await proxyRequestWithFormData(API_URL_BASE + '/api/icon/user', {
-    body: [['icon', blob]]
+  const res = await clients['/api/icon/user']['POST'].client({
+    form: { icon: blob }
   })
 
   if (res.ok) {

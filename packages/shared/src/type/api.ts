@@ -20,6 +20,7 @@ export type RouteType = {
   request: {
     query?: (args: any) => any
     body?: (args: any) => any
+    form?: (args: any) => any
   }
   response: Response
 }

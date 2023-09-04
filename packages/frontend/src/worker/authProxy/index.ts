@@ -112,7 +112,7 @@ export class AuthProxy {
   async proxyRequestWithFormData(
     url: string,
     init: {
-      body: [string, Blob][]
+      body: [string, Blob | string][]
     }
   ) {
     const formData = new FormData()
