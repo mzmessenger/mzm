@@ -1,4 +1,3 @@
-import { type API } from 'mzm-shared/src/type/api'
 import type { useSocketActions } from '../../recoil/socket/hooks'
 import type { useUiActions } from '../../recoil/ui/hooks'
 import type { Room } from './types'
@@ -12,7 +11,7 @@ import {
   type SetterOrUpdater
 } from 'recoil'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
-import { clients, uploadRoomIcon } from '../../lib/client'
+import { clients } from '../../lib/client'
 import { isReplied } from '../../lib/util'
 
 type RoomUser = {
@@ -367,9 +366,9 @@ export const useRoomUserActions = () => {
     setRooms((current) => ({ ...current, usersLoading: true }))
   }, [setRooms])
 
-  type GetUsersType = API['/api/rooms/:roomId/users']
+  const client = clients['/api/rooms/:roomId/users']['GET'].client
   const getUsers = useCallback(
-    async (params: GetUsersType['params']) => {
+    async (params: Parameters<typeof client>[0]['params']) => {
       if (!params.roomId) {
         return
       }
@@ -379,7 +378,7 @@ export const useRoomUserActions = () => {
 
       fetchStartRoomUsers()
 
-      const res = await clients['/api/rooms/:roomId/users']['GET'].client({
+      const res = await client({
         params,
         query: {}
       })
@@ -388,13 +387,12 @@ export const useRoomUserActions = () => {
         return res
       }
 
-      const body = res.body as GetUsersType['GET']['response'][200]['body']
       setRooms((current) => {
         const usersById = {
           ...current.usersById,
           [params.roomId]: {
-            users: body.users,
-            count: body.count
+            users: res.body.users,
+            count: res.body.count
           }
         }
         const usersAllIds = current.usersAllIds.includes(params.roomId)
@@ -410,12 +408,11 @@ export const useRoomUserActions = () => {
 
       return res
     },
-    [fetchStartRoomUsers, rooms.usersLoading, setRooms]
+    [client, fetchStartRoomUsers, rooms.usersLoading, setRooms]
   )
 
-  type GetNextUsersType = API['/api/rooms/:roomId/users']
   const getNextUsers = useCallback(
-    async (params: GetNextUsersType['params']) => {
+    async (params: Parameters<typeof client>[0]['params']) => {
       if (!params.roomId) {
         return
       }
@@ -433,7 +430,7 @@ export const useRoomUserActions = () => {
 
       const lastId = users[users.length - 1].enterId
 
-      const res = await clients['/api/rooms/:roomId/users']['GET'].client({
+      const res = await client({
         params,
         query: { threshold: lastId }
       })
@@ -442,15 +439,13 @@ export const useRoomUserActions = () => {
         return res
       }
 
-      const body = res.body as GetNextUsersType['GET']['response'][200]['body']
-
       setRooms((current) => {
         const users = current.usersById[params.roomId]
         const usersById = {
           ...current.usersById,
           [params.roomId]: {
             ...users,
-            users: [...users.users, ...body.users]
+            users: [...users.users, ...res.body.users]
           }
         }
         return {
@@ -462,7 +457,7 @@ export const useRoomUserActions = () => {
 
       return res
     },
-    [fetchStartRoomUsers, rooms.usersById, rooms.usersLoading, setRooms]
+    [client, fetchStartRoomUsers, rooms.usersById, rooms.usersLoading, setRooms]
   )
 
   return {
@@ -480,15 +475,15 @@ export const useRoomActions = ({
   const setRoomsById = useSetRecoilState(roomsByIdState)
   const setOpenRoomSettingState = useSetRecoilState(openRoomSettingState)
 
-  type CreateRoomType = API['/api/rooms']['POST']
+  const enterClient = clients['/api/rooms']['POST'].client
   const createRoom = useCallback(
-    async (body: CreateRoomType['request']['body']) => {
-      const res = await clients['/api/rooms']['POST'].client({ body })
+    async (params: Parameters<typeof enterClient>[0]) => {
+      const res = await enterClient(params)
       if (res.status !== 200) {
         return res
       }
 
-      const room = res.body as CreateRoomType['response'][200]['body']
+      const room = res.body
       getRooms()
 
       setCurrentRoom({
@@ -500,13 +495,13 @@ export const useRoomActions = ({
 
       return res
     },
-    [getRooms, setCurrentRoom]
+    [enterClient, getRooms, setCurrentRoom]
   )
 
-  type ExitRoomType = API['/api/rooms/enter']['DELETE']
+  const exitClient = clients['/api/rooms/enter']['DELETE'].client
   const exitRoom = useCallback(
-    async (body: ExitRoomType['request']['body']) => {
-      const res = await clients['/api/rooms/enter']['DELETE'].client({ body })
+    async (params: Parameters<typeof exitClient>[0]) => {
+      const res = await exitClient(params)
       if (res.status === 200) {
         setOpenRoomSettingState({ openRoomSetting: false })
 
@@ -521,12 +516,14 @@ export const useRoomActions = ({
       }
       return res
     },
-    [getRooms, setCurrentRoom, setOpenRoomSettingState]
+    [exitClient, getRooms, setCurrentRoom, setOpenRoomSettingState]
   )
 
+  const uploadIconClient = clients['/api/icon/rooms/:roomName']['POST'].client
+
   const uploadIcon = useCallback(
-    async (params: Parameters<typeof uploadRoomIcon>[0], blob: Blob) => {
-      const res = await uploadRoomIcon(params, blob)
+    async (params: Parameters<typeof uploadIconClient>[0]) => {
+      const res = await uploadIconClient(params)
       if (res.ok) {
         const { id, version } = res.body
 
@@ -546,7 +543,7 @@ export const useRoomActions = ({
       }
       return res
     },
-    [setRoomsById]
+    [setRoomsById, uploadIconClient]
   )
 
   return {

@@ -1,20 +1,10 @@
 /* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/no-unused-vars, no-unused-vars, @typescript-eslint/no-explicit-any */
-export type { API, AuthAPI } from '../api/universal.js'
+export { API, AuthAPI } from '../api/universal.js'
 
 export type HasParamsInPath<T extends string | number | symbol> =
   T extends `${infer _}/:${infer _}` ? true : false
 
-export type HttpStatus = 200 | 400 | 404
-
-type Response = {
-  200: {
-    body: (args: any) => any
-  }
-} & {
-  [key in Exclude<HttpStatus, 200>]?: {
-    body: (args: any) => any
-  }
-}
+export type HttpStatus = 200 | 400 | 403 | 404
 
 export type RouteType = {
   request: {
@@ -22,7 +12,15 @@ export type RouteType = {
     body?: (args: any) => any
     form?: (args: any) => any
   }
-  response: Response
+  response: {
+    200: {
+      body: (args: any) => any
+    }
+  } & {
+    [key in Exclude<HttpStatus, 200>]?: {
+      body: (args: any) => any
+    }
+  }
 }
 
 export type RouteMethodType = {
@@ -43,55 +41,33 @@ export type RouteParams<T> =
     ? { [k in IParam]: string }
     : {}
 
-type DefinedType<T> = T extends infer Q extends (...args: any) => any
+export type DefinedType<T> = T extends infer Q extends (...args: any) => any
   ? ReturnType<Q>
-  : undefined
-
-type ParamsType<T, P extends 'query' | 'body'> = T extends {
-  [k in P]: infer Q
-}
-  ? { [k in P]: DefinedType<Q> }
-  : {}
-
-type ResponseStatusType<
-  T extends RouteType['response'],
-  S extends HttpStatus
-> = T extends { [k in S]: infer U } ? { [k in S]: ParamsType<U, 'body'> } : {}
+  : unknown
 
 type DefinedRoute<T extends RouteType> = {
-  request: ParamsType<T['request'], 'query'> & ParamsType<T['request'], 'body'>
-  response: ResponseStatusType<T['response'], 200> &
-    ResponseStatusType<T['response'], 400> &
-    ResponseStatusType<T['response'], 404>
-}
-
-export type MethodType<
-  Api extends {
-    [key: string]: { [k in 'GET' | 'POST' | 'PUT' | 'DELETE']?: RouteType }
-  },
-  Key extends keyof Api,
-  M extends 'GET' | 'POST' | 'PUT' | 'DELETE'
-> = Api[Key] extends {
-  [k in M]: infer U extends RouteType
-}
-  ? {
-      [k in M]: DefinedRoute<U>
+  request: {
+    [key in keyof T['request']]: DefinedType<T['request'][key]>
+  }
+  response: {
+    [key in keyof T['response']]: {
+      [paramsKey in keyof T['response'][key]]: DefinedType<
+        T['response'][key][paramsKey]
+      >
     }
-  : {}
+  }
+}
 
 export type ApiType<
   Api extends {
     [key in string]: {
-      [k in 'GET' | 'POST' | 'PUT' | 'DELETE']?: RouteType
+      [methodKey in 'GET' | 'POST' | 'PUT' | 'DELETE']?: RouteType
     }
   }
 > = {
-  [key in keyof Api]: { params: RouteParams<key> } & MethodType<
-    Api,
-    key,
-    'GET'
-  > &
-    MethodType<Api, key, 'POST'> &
-    MethodType<Api, key, 'PUT'> &
-    MethodType<Api, key, 'DELETE'>
+  [key in keyof Api & string]: { params: RouteParams<key> } & {
+    [methodKey in keyof Api[key]]: Api[key][methodKey] extends RouteType
+      ? DefinedRoute<Api[key][methodKey]>
+      : never
+  }
 }

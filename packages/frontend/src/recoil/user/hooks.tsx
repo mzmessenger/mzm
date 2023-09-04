@@ -1,4 +1,3 @@
-import type { API } from 'mzm-shared/src/type/api'
 import type { useAuth } from '../../recoil/auth/hooks'
 import { useCallback } from 'react'
 import {
@@ -8,7 +7,7 @@ import {
   selector,
   useRecoilValue
 } from 'recoil'
-import { uploadUserIcon, clients, authClients } from '../../lib/client'
+import { clients, authClients } from '../../lib/client'
 import { API_URL_BASE } from '../../constants'
 
 type UserState = {
@@ -71,32 +70,30 @@ type UseAuthType = ReturnType<typeof useAuth>
 export const useUser = () => {
   const [user, setUser] = useRecoilState(userState)
 
-  type UpdateUserType = API['/api/user/@me']['PUT']
+  const client = clients['/api/user/@me']['PUT'].client
   const updateUser = useCallback(
-    async (body: UpdateUserType['request']['body']) => {
-      const res = await clients['/api/user/@me']['PUT'].client({ body })
+    async (params: Parameters<typeof client>[0]) => {
+      const res = await client(params)
       if (res.status === 200) {
-        const body = res.body as UpdateUserType['response'][200]['body']
         setUser((current) => ({
           ...current,
-          account: body.account,
-          iconUrl: `/api/icon/user/${body.account}`
+          account: res.body.account,
+          iconUrl: `/api/icon/user/${res.body.account}`
         }))
         return {
           ...res,
-          body
+          body: res.body
         }
       }
       return res
     },
-    [setUser]
+    [client, setUser]
   )
 
+  const uploadIconClient = clients['/api/icon/user']['POST'].client
   const uploadIcon = useCallback(
     async (blob: Blob) => {
-      const formData = new FormData()
-      formData.append('icon', blob)
-      const res = await uploadUserIcon(blob)
+      const res = await uploadIconClient({ form: { icon: blob } })
 
       if (!res.ok) {
         return res
@@ -111,7 +108,7 @@ export const useUser = () => {
 
       return res
     },
-    [setUser, user.account]
+    [setUser, uploadIconClient, user.account]
   )
 
   return {
@@ -125,23 +122,18 @@ export const useMyInfoActions = () => {
 
   const fetchMyInfo = useCallback(async () => {
     const res = await clients['/api/user/@me']['GET'].client({})
-    type ResponseType = API['/api/user/@me']['GET']['response']
 
     if (res.status === 200) {
-      const payload = res.body as ResponseType[200]['body']
-
       setUser((current) => ({
         ...current,
-        id: payload.id,
-        account: payload.account,
-        iconUrl: payload.icon
+        id: res.body.id,
+        account: res.body.account,
+        iconUrl: res.body.icon
       }))
     } else if (res.status === 404) {
-      const payload = res.body as ResponseType[404]['body']
-
       setUser((current) => ({
         ...current,
-        id: payload.id,
+        id: res.body.id,
         account: '',
         iconUrl: ''
       }))

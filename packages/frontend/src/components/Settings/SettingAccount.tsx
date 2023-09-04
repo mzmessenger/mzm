@@ -23,7 +23,7 @@ export const SettingAccount = () => {
   const onSave = useCallback(() => {
     setEdit(false)
     if (userAccount !== accountText) {
-      updateUser({ account: accountText }).then((res) => {
+      updateUser({ body: { account: accountText } }).then((res) => {
         if (res.status === 400) {
           setAccountErrorText(ERROR_TXT)
         }

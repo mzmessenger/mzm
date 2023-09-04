@@ -20,7 +20,7 @@ export const ModalCraeteRoom = ({ open, onClose }: Props) => {
   const handleSubmit: FormEventHandler<HTMLFormElement> = (e) => {
     e.preventDefault()
     // @todo エラー時の処理
-    createRoom({ name: txt })
+    createRoom({ body: { name: txt } })
       .then((data) => {
         if (data.status === 200) {
           onClose()

@@ -10,11 +10,6 @@ function define<T>() {
   return (args: T) => args
 }
 
-type TypedFormDataValue = FormDataEntryValue | Blob
-export class TypedFormData<
-  T extends [string, TypedFormDataValue][]
-> extends FormData {}
-
 const routes = {
   '/api/rooms': {
     POST: {

@@ -1,14 +1,13 @@
 import type { API } from 'mzm-shared/src/type/api'
+import { clients } from '../../lib/client'
 import { atom, useRecoilState } from 'recoil'
-
-type SearchAPI = API['/api/rooms/search']['GET']
 
 type SearchState = {
   showModal: boolean
   query: string
   scroll: string
   total: number
-  results: SearchAPI['response'][200]['body']['hits']
+  results: API['/api/rooms/search']['GET']['response'][200]['body']['hits']
 }
 
 const searchState = atom<SearchState>({
@@ -47,15 +46,10 @@ export const useSearch = () => {
       ...current,
       query: q
     }))
-    const init: [keyof SearchAPI['request']['query'], string][] = [['query', q]]
-    const params = new URLSearchParams(init)
 
-    // @todo
-    const res = await fetch(`/api/rooms/search?${params.toString()}`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const res = await clients['/api/rooms/search']['GET'].client({
+      query: {
+        query: q
       }
     })
 
@@ -63,8 +57,7 @@ export const useSearch = () => {
       return res
     }
 
-    const { hits, scroll, total } =
-      (await res.json()) as SearchAPI['response'][200]['body']
+    const { hits, scroll, total } = res.body
 
     setSearch((current) => ({
       ...current,
@@ -77,38 +70,29 @@ export const useSearch = () => {
   }
 
   const execSearchNext = async () => {
-    if (!search.query || !scroll) {
+    if (!search.query || !search.scroll) {
       return
     }
 
-    const init: [keyof SearchAPI['request']['query'], string][] = [
-      ['query', search.query],
-      ['scroll', search.scroll]
-    ]
-
-    const params = new URLSearchParams(init)
-
-    const res = await fetch(`/api/rooms/search?${params.toString()}`, {
-      method: 'GET',
-      mode: 'cors',
-      headers: {
-        'Content-Type': 'application/json; charset=utf-8'
+    const res = await clients['/api/rooms/search']['GET'].client({
+      query: {
+        query: search.query,
+        scroll: search.scroll
       }
     })
 
-    if (res.ok) {
-      const { hits, scroll, total } =
-        (await res.json()) as SearchAPI['response'][200]['body']
-
-      setSearch((current) => ({
-        ...current,
-        results: [...current.results, ...hits],
-        scroll,
-        total
-      }))
+    if (!res.ok) {
+      return res
     }
 
-    return res
+    const { hits, scroll, total } = res.body
+
+    setSearch((current) => ({
+      ...current,
+      results: [...current.results, ...hits],
+      scroll,
+      total
+    }))
   }
 
   return {

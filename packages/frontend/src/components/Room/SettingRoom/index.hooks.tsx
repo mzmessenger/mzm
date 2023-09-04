@@ -30,7 +30,7 @@ export const useSettiongRooms = () => {
   }, [room])
 
   const onExit = useCallback(() => {
-    exitRoom({ room: currentRoomId })
+    exitRoom({ body: { room: currentRoomId } })
     navigate('/')
   }, [exitRoom, currentRoomId, navigate])
 
@@ -41,13 +41,15 @@ export const useSettiongRooms = () => {
 
   const onModalSave = useCallback(
     (image: Blob) => {
-      uploadIcon({ roomName: name }, image).then((res) => {
-        if (res.ok) {
-          setOpen(false)
-        } else {
-          alert(`アップロードでエラーが発生しました`)
+      uploadIcon({ params: { roomName: name }, form: { icon: image } }).then(
+        (res) => {
+          if (res.ok) {
+            setOpen(false)
+          } else {
+            alert(`アップロードでエラーが発生しました`)
+          }
         }
-      })
+      )
     },
     [name, uploadIcon]
   )
