@@ -2,19 +2,19 @@
 import { apis, authApis } from 'mzm-shared/src/api/universal'
 import { createClients, type Fetcher } from 'mzm-shared/src/api/client'
 import { API_URL_BASE, AUTH_URL_BASE } from '../constants'
-import { proxyRequest, proxyRequestWithFormData } from '../lib/auth'
+import { proxyRequest } from '../lib/auth'
 
 export const fetcher: Fetcher = async <T>(options: Parameters<Fetcher>[0]) => {
-  if (options.form) {
-    const body = Array.from(options.form.entries()).map(([key, value]) => [
-      key,
-      value
-    ]) as [string, string | Blob][]
-    return (await proxyRequestWithFormData(options.url, { body })) as T
-  }
-
   const init: Parameters<typeof proxyRequest>[1] = {
     method: options.method
+  }
+
+  if (options.form) {
+    const form = {} as { [key: string]: string | Blob }
+    for (const [key, value] of options.form.entries()) {
+      form[key] = value
+    }
+    init.form = form
   }
 
   if (options.body) {

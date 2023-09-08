@@ -1,5 +1,5 @@
 import type { Request } from 'express'
-import type { AuthAPI } from 'mzm-shared/src/type/api'
+import type { AuthAPI } from 'mzm-shared/src/api/universal'
 import type { WrapFn } from 'mzm-shared/src/lib/wrap'
 import type { PassportRequest } from '../types.js'
 import type { NonceResponse } from '../middleware/index.js'

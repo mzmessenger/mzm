@@ -9,7 +9,7 @@ vi.mock('../lib/auth', async () => {
   }
 })
 
-import { proxyRequest, proxyRequestWithFormData } from '../lib/auth'
+import { proxyRequest } from '../lib/auth'
 
 beforeAll(() => {
   global.fetch = vi.fn()
@@ -39,7 +39,7 @@ test('clients', async () => {
 })
 
 test('clients: FormData', async () => {
-  const requestMock = vi.mocked(proxyRequestWithFormData).mockReset()
+  const requestMock = vi.mocked(proxyRequest).mockReset()
 
   requestMock.mockResolvedValue({
     ok: true,
@@ -60,7 +60,8 @@ test('clients: FormData', async () => {
   expect(requestMock.mock.calls[0][0]).toStrictEqual(
     '/api/icon/rooms/room-name'
   )
-  expect(requestMock.mock.calls[0][1].body[0][0]).toStrictEqual('icon')
+  const form = requestMock.mock.calls[0][1]?.form
+  expect(Object.prototype.hasOwnProperty.call(form, 'icon')).toStrictEqual(true)
 })
 
 test('authClients', async () => {

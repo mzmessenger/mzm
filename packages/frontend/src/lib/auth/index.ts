@@ -35,12 +35,6 @@ export async function proxyRequest(
   return worker.proxyRequest(...args)
 }
 
-export async function proxyRequestWithFormData(
-  ...args: Parameters<AuthProxy['proxyRequestWithFormData']>
-) {
-  return worker.proxyRequestWithFormData(...args)
-}
-
 export async function generateSocketUrl() {
   return worker.generateSocketUrl()
 }

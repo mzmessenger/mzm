@@ -56,12 +56,13 @@ export class AuthProxy {
     return `${SOCKET_URL}?token=${this.#accessToken}`
   }
 
-  async #proxyRequestBase(
+  async proxyRequest(
     url: string,
     options?: {
       method?: RequestInit['method']
       headers?: Record<string, string>
       body?: string | FormData
+      form?: { [key: string]: string | Blob }
       bodyParser?: 'json' | 'text'
     }
   ) {
@@ -76,6 +77,15 @@ export class AuthProxy {
         Authorization: `Bearer ${this.#accessToken}`
       }
     }
+
+    if (options.form) {
+      const formData = new FormData()
+      for (const [key, data] of Object.entries(options.form)) {
+        formData.append(key, data)
+      }
+      init.body = formData
+    }
+
     try {
       const res = await fetch(url, init)
       if (res.status === 500) {
@@ -95,40 +105,6 @@ export class AuthProxy {
       logger.error(e)
       return { ok: false, status: 500, body: null }
     }
-  }
-
-  async proxyRequest(
-    url: string,
-    init?: {
-      method?: RequestInit['method']
-      headers?: Record<string, string>
-      body?: string
-    }
-  ) {
-    return await this.#proxyRequestBase(url, {
-      ...init,
-      headers: {
-        ...init.headers,
-        'Content-Type': 'application/json; charset=utf-8'
-      }
-    })
-  }
-
-  async proxyRequestWithFormData(
-    url: string,
-    init: {
-      body: [string, Blob | string][]
-    }
-  ) {
-    const formData = new FormData()
-    for (const [key, data] of init.body) {
-      formData.append(key, data)
-    }
-    const res = await this.#proxyRequestBase(url, {
-      method: 'POST',
-      body: formData
-    })
-    return res
   }
 
   async #authTokenBase(
