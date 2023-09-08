@@ -45,7 +45,8 @@ const fromIdenticon = async (account: string): StreamWrapResponse => {
 export const getUserIcon = createStreamHandler(
   '/api/icon/user/:account',
   'GET',
-  ({ checkParams }) => {
+  ({ path, method }) => {
+    const api = apis[path][method]
     const params = createContextParser(
       z.object({
         account: z.string().min(1)
@@ -53,7 +54,7 @@ export const getUserIcon = createStreamHandler(
       (parsed) => {
         return {
           success: true,
-          data: checkParams({
+          data: api.request.params({
             account: parsed.data.account
           })
         }
@@ -115,7 +116,8 @@ export const getUserIcon = createStreamHandler(
 export const getRoomIcon = createStreamHandler(
   '/api/icon/rooms/:roomName/:version',
   'GET',
-  ({ checkParams }) => {
+  ({ path, method }) => {
+    const api = apis[path][method]
     const params = createContextParser(
       z.object({
         roomName: z.string().min(1),
@@ -124,7 +126,7 @@ export const getRoomIcon = createStreamHandler(
       (parsed) => {
         return {
           success: true,
-          data: checkParams({
+          data: api.request.params({
             roomName: parsed.data.roomName,
             version: parsed.data.version
           })
@@ -229,7 +231,7 @@ export const uploadUserIcon = createHandler(
 export const uploadRoomIcon = createHandler(
   '/api/icon/rooms/:roomName',
   'POST',
-  ({ path, method, checkParams }) => {
+  ({ path, method }) => {
     const api = apis[path][method]
     const params = createContextParser(
       z.object({
@@ -238,7 +240,7 @@ export const uploadRoomIcon = createHandler(
       (parsed) => {
         return {
           success: true,
-          data: checkParams({
+          data: api.request.params({
             roomName: parsed.data.roomName
           })
         }

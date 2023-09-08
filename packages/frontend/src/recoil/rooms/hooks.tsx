@@ -11,7 +11,7 @@ import {
   type SetterOrUpdater
 } from 'recoil'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
-import { clients } from '../../lib/client'
+import { clients, fetcher } from '../../lib/client'
 import { isReplied } from '../../lib/util'
 
 type RoomUser = {
@@ -379,6 +379,7 @@ export const useRoomUserActions = () => {
       fetchStartRoomUsers()
 
       const res = await client({
+        fetcher,
         params,
         query: {}
       })
@@ -431,6 +432,7 @@ export const useRoomUserActions = () => {
       const lastId = users[users.length - 1].enterId
 
       const res = await client({
+        fetcher,
         params,
         query: { threshold: lastId }
       })
@@ -477,8 +479,8 @@ export const useRoomActions = ({
 
   const enterClient = clients['/api/rooms']['POST'].client
   const createRoom = useCallback(
-    async (params: Parameters<typeof enterClient>[0]) => {
-      const res = await enterClient(params)
+    async (params: Omit<Parameters<typeof enterClient>[0], 'fetcher'>) => {
+      const res = await enterClient({ ...params, fetcher })
       if (res.status !== 200) {
         return res
       }
@@ -500,8 +502,8 @@ export const useRoomActions = ({
 
   const exitClient = clients['/api/rooms/enter']['DELETE'].client
   const exitRoom = useCallback(
-    async (params: Parameters<typeof exitClient>[0]) => {
-      const res = await exitClient(params)
+    async (params: Omit<Parameters<typeof exitClient>[0], 'fetcher'>) => {
+      const res = await exitClient({ ...params, fetcher })
       if (res.status === 200) {
         setOpenRoomSettingState({ openRoomSetting: false })
 
@@ -522,8 +524,8 @@ export const useRoomActions = ({
   const uploadIconClient = clients['/api/icon/rooms/:roomName']['POST'].client
 
   const uploadIcon = useCallback(
-    async (params: Parameters<typeof uploadIconClient>[0]) => {
-      const res = await uploadIconClient(params)
+    async (params: Omit<Parameters<typeof uploadIconClient>[0], 'fetcher'>) => {
+      const res = await uploadIconClient({ ...params, fetcher })
       if (res.ok) {
         const { id, version } = res.body
 

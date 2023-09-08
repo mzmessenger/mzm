@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
 import { beforeAll, vi, test, expect } from 'vitest'
-import { clients, authClients } from './client.js'
+import { clients, authClients, fetcher } from './client.js'
 
 vi.mock('../lib/auth', async () => {
   return {
@@ -25,6 +25,7 @@ test('clients', async () => {
   })
 
   const res = await clients['/api/rooms/:roomId/users']['GET'].client({
+    fetcher,
     params: { roomId: 'room-id' },
     query: {}
   })
@@ -46,18 +47,20 @@ test('clients: FormData', async () => {
     body: undefined
   })
 
-  const iconData = new Blob()
+  const iconData = new Blob(['image'])
   const res = await clients['/api/icon/rooms/:roomName']['POST'].client({
+    fetcher,
     params: { roomName: 'room-name' },
     form: { icon: iconData }
   })
 
   expect(res.ok).toStrictEqual(true)
   expect(res.status).toStrictEqual(200)
-  expect(proxyRequestWithFormData).toBeCalledTimes(1)
-  expect(proxyRequestWithFormData).toBeCalledWith('/api/icon/rooms/room-name', {
-    body: [['icon', iconData]]
-  })
+  expect(requestMock).toBeCalledTimes(1)
+  expect(requestMock.mock.calls[0][0]).toStrictEqual(
+    '/api/icon/rooms/room-name'
+  )
+  expect(requestMock.mock.calls[0][1].body[0][0]).toStrictEqual('icon')
 })
 
 test('authClients', async () => {
@@ -69,7 +72,9 @@ test('authClients', async () => {
     body: undefined
   })
 
-  const res = await authClients['/auth/token']['POST'].client({})
+  const res = await authClients['/auth/token']['POST'].client({
+    fetcher
+  })
 
   expect(res.ok).toStrictEqual(true)
   expect(res.status).toStrictEqual(200)

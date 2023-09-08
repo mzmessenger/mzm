@@ -1,16 +1,16 @@
-/* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/no-unused-vars, no-unused-vars, @typescript-eslint/no-explicit-any */
-export { API, AuthAPI } from '../api/universal.js'
+/* eslint-disable no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, @typescript-eslint/ban-types */
+export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
+export type HttpStatus = number
 
-export type HasParamsInPath<T extends string | number | symbol> =
+export type HasParamsInPath<T extends string> =
   T extends `${infer _}/:${infer _}` ? true : false
-
-export type HttpStatus = 200 | 400 | 403 | 404
 
 export type RouteType = {
   request: {
     query?: (args: any) => any
     body?: (args: any) => any
     form?: (args: any) => any
+    headers?: (args: any) => any
   }
   response: {
     200: {
@@ -24,14 +24,11 @@ export type RouteType = {
 }
 
 export type RouteMethodType = {
-  GET?: RouteType
-  POST?: RouteType
-  PUT?: RouteType
-  DELETE?: RouteType
+  [k in Method]?: RouteType
 }
 
-export type Routes = {
-  [key: string]: RouteMethodType
+export type Routes<T extends string> = {
+  [key in T]: RouteMethodType
 }
 
 export type RouteParams<T> =
@@ -45,7 +42,7 @@ export type DefinedType<T> = T extends infer Q extends (...args: any) => any
   ? ReturnType<Q>
   : unknown
 
-type DefinedRoute<T extends RouteType> = {
+export type DefinedRoute<T extends RouteType> = {
   request: {
     [key in keyof T['request']]: DefinedType<T['request'][key]>
   }
@@ -55,19 +52,5 @@ type DefinedRoute<T extends RouteType> = {
         T['response'][key][paramsKey]
       >
     }
-  }
-}
-
-export type ApiType<
-  Api extends {
-    [key in string]: {
-      [methodKey in 'GET' | 'POST' | 'PUT' | 'DELETE']?: RouteType
-    }
-  }
-> = {
-  [key in keyof Api & string]: { params: RouteParams<key> } & {
-    [methodKey in keyof Api[key]]: Api[key][methodKey] extends RouteType
-      ? DefinedRoute<Api[key][methodKey]>
-      : never
   }
 }

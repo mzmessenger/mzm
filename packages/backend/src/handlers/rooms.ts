@@ -141,7 +141,7 @@ export const exitRoom = createHandler(
 export const getUsers = createHandler(
   '/api/rooms/:roomId/users',
   'GET',
-  ({ path, method, checkParams }) => {
+  ({ path, method }) => {
     const api = apis[path][method]
 
     const params = createContextParser(
@@ -151,7 +151,7 @@ export const getUsers = createHandler(
       (parsed) => {
         return {
           success: true,
-          data: checkParams({
+          data: api.request.params({
             roomId: parsed.data.roomId
           })
         }

@@ -1,5 +1,5 @@
-import type { API } from 'mzm-shared/src/type/api'
-import { clients } from '../../lib/client'
+import type { API } from 'mzm-shared/src/api/universal'
+import { clients, fetcher } from '../../lib/client'
 import { atom, useRecoilState } from 'recoil'
 
 type SearchState = {
@@ -48,6 +48,7 @@ export const useSearch = () => {
     }))
 
     const res = await clients['/api/rooms/search']['GET'].client({
+      fetcher,
       query: {
         query: q
       }
@@ -75,6 +76,7 @@ export const useSearch = () => {
     }
 
     const res = await clients['/api/rooms/search']['GET'].client({
+      fetcher,
       query: {
         query: search.query,
         scroll: search.scroll

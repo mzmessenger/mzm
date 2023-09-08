@@ -1,16 +1,48 @@
-/* eslint-disable @typescript-eslint/ban-types, no-unused-vars, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/ban-ts-comment, no-unused-vars, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import type {
   Routes,
   RouteParams,
-  ApiType,
-  HasParamsInPath
-} from '../type/api.js'
+  HasParamsInPath,
+  RouteType,
+  Method,
+  DefinedRoute
+} from './type.js'
 
 function define<T>() {
   return (args: T) => args
 }
 
-const routes = {
+function addParams<T extends Routes<string>>(apis: T) {
+  for (const [key, api] of Object.entries(apis)) {
+    if (key.includes('/:')) {
+      for (const method of Object.keys(api)) {
+        // @ts-expect-error
+        api[method].request.params = define<typeof key>()
+      }
+    }
+  }
+  return apis as {
+    [key in keyof T & string]: {
+      [methodKey in keyof T[key]]: (HasParamsInPath<key> extends true
+        ? {
+            request: {
+              params: (params: RouteParams<key>) => RouteParams<key>
+            }
+          }
+        : {}) &
+        T[key][methodKey]
+    }
+  }
+}
+
+export function defineApis<T extends Routes<TKeys>, TKeys extends string>(
+  apis: T
+) {
+  const paramsApi = addParams(apis)
+  return { apis: paramsApi }
+}
+
+export const { apis } = defineApis({
   '/api/rooms': {
     POST: {
       request: {
@@ -148,6 +180,9 @@ const routes = {
             icon: string | null
           }>()
         },
+        403: {
+          body: define<unknown>()
+        },
         404: {
           body: define<{
             reason: string
@@ -175,9 +210,9 @@ const routes = {
       }
     }
   }
-} as const satisfies Routes
+})
 
-const authRoutes = {
+export const { apis: authApis } = defineApis({
   '/auth/token': {
     POST: {
       request: {},
@@ -222,35 +257,21 @@ const authRoutes = {
       }
     }
   }
-} as const satisfies Routes
+})
 
-function createToPath<T extends Routes>(routes: T) {
-  return Object.keys(routes).reduce(
-    (prev, key) => {
-      return { ...prev, [key]: { params: define() } }
-    },
-    {} as {
-      [key in keyof T]: {
-        params: HasParamsInPath<key> extends true
-          ? (params: RouteParams<key>) => RouteParams<key>
-          : undefined
-      }
+type ApiType<
+  Api extends {
+    [key in string]: {
+      [methodKey in Method]?: RouteType
     }
-  )
+  }
+> = {
+  [key in keyof Api & string]: { params: RouteParams<key> } & {
+    [methodKey in keyof Api[key]]: Api[key][methodKey] extends RouteType
+      ? DefinedRoute<Api[key][methodKey]>
+      : never
+  }
 }
 
-const keyToPath = createToPath(routes)
-export function convertKeyToPath<T extends keyof typeof keyToPath>(key: T) {
-  return keyToPath[key]
-}
-const authKeyToPath = createToPath(authRoutes)
-export function convertAuthKeyToPath<T extends keyof typeof authKeyToPath>(
-  key: T
-) {
-  return authKeyToPath[key]
-}
-
-export const apis = routes
-export const authApis = authRoutes
 export type API = ApiType<typeof apis>
 export type AuthAPI = ApiType<typeof authApis>

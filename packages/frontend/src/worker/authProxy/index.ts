@@ -1,4 +1,4 @@
-import type { AuthAPI } from 'mzm-shared/src/type/api'
+import type { AuthAPI } from 'mzm-shared/src/api/universal'
 import type { AccessToken } from 'mzm-shared/src/type/auth'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
 import { expose } from 'comlink'
@@ -76,20 +76,25 @@ export class AuthProxy {
         Authorization: `Bearer ${this.#accessToken}`
       }
     }
-    const res = await fetch(url, init)
-    if (res.status === 500) {
-      return { ok: res.ok, status: res.status, body: await res.text() }
-    }
-    const body =
-      options.bodyParser === 'text' ? await res.text() : await res.json()
-    if (res.ok) {
-      return {
-        ok: true,
-        status: res.status,
-        body: body
+    try {
+      const res = await fetch(url, init)
+      if (res.status === 500) {
+        return { ok: res.ok, status: res.status, body: await res.text() }
       }
+      const body =
+        options.bodyParser === 'text' ? await res.text() : await res.json()
+      if (res.ok) {
+        return {
+          ok: true,
+          status: res.status,
+          body: body
+        }
+      }
+      return { ok: res.ok, status: res.status, body: body }
+    } catch (e) {
+      logger.error(e)
+      return { ok: false, status: 500, body: null }
     }
-    return { ok: res.ok, status: res.status, body: body }
   }
 
   async proxyRequest(

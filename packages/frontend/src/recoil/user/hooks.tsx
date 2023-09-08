@@ -7,7 +7,7 @@ import {
   selector,
   useRecoilValue
 } from 'recoil'
-import { clients, authClients } from '../../lib/client'
+import { clients, authClients, fetcher } from '../../lib/client'
 import { API_URL_BASE } from '../../constants'
 
 type UserState = {
@@ -72,8 +72,8 @@ export const useUser = () => {
 
   const client = clients['/api/user/@me']['PUT'].client
   const updateUser = useCallback(
-    async (params: Parameters<typeof client>[0]) => {
-      const res = await client(params)
+    async (params: Omit<Parameters<typeof client>[0], 'fetcher'>) => {
+      const res = await client({ ...params, fetcher })
       if (res.status === 200) {
         setUser((current) => ({
           ...current,
@@ -93,7 +93,7 @@ export const useUser = () => {
   const uploadIconClient = clients['/api/icon/user']['POST'].client
   const uploadIcon = useCallback(
     async (blob: Blob) => {
-      const res = await uploadIconClient({ form: { icon: blob } })
+      const res = await uploadIconClient({ fetcher, form: { icon: blob } })
 
       if (!res.ok) {
         return res
@@ -121,7 +121,7 @@ export const useMyInfoActions = () => {
   const setUser = useSetRecoilState(userState)
 
   const fetchMyInfo = useCallback(async () => {
-    const res = await clients['/api/user/@me']['GET'].client({})
+    const res = await clients['/api/user/@me']['GET'].client({ fetcher })
 
     if (res.status === 200) {
       setUser((current) => ({
@@ -155,7 +155,7 @@ export const useRemoveUserActions = ({
   logout: UseAuthType['logout']
 }) => {
   const removeUser = useCallback(async () => {
-    const res = await authClients['/auth/user']['DELETE'].client({})
+    const res = await authClients['/auth/user']['DELETE'].client({ fetcher })
     if (res.status === 200) {
       logout()
     }
@@ -175,7 +175,9 @@ export const useRemoveAccountActions = () => {
       if (!user.twitterUserName || !user.githubUserName) {
         return
       }
-      const res = await authClients['/auth/twitter']['DELETE'].client({})
+      const res = await authClients['/auth/twitter']['DELETE'].client({
+        fetcher
+      })
       if (res.status === 200) {
         handleSuccessRemove()
       }
@@ -189,7 +191,9 @@ export const useRemoveAccountActions = () => {
       if (!user.twitterUserName || !user.githubUserName) {
         return
       }
-      const res = await authClients['/auth/github']['DELETE'].client({})
+      const res = await authClients['/auth/github']['DELETE'].client({
+        fetcher
+      })
       if (res.status === 200) {
         handleSuccessRemove()
       }
