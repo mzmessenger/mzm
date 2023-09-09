@@ -2,7 +2,7 @@ import { test, expect } from 'vitest'
 
 import type { Request } from 'express'
 
-import { parseAuthorizationHeader } from './index'
+import { parseAuthorizationHeader } from './index.js'
 
 test('parseAuthorizationHeader', async () => {
   const req = {

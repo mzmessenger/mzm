@@ -1,4 +1,4 @@
-import { ClientToSocketType } from 'mzm-shared/type/socket'
+import { ClientToSocketType } from 'mzm-shared/src/type/socket'
 import { logger } from './logger'
 
 export const sendSocket = (socket: WebSocket, message: ClientToSocketType) => {

@@ -1,10 +1,11 @@
-import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { Request } from 'express'
+import { apis } from 'mzm-shared/src/api/universal'
 import { ObjectId, type WithId, type Document } from 'mongodb'
 import { z } from 'zod'
+import { BadRequest } from 'mzm-shared/src/lib/errors'
 import * as config from '../config.js'
-import { BadRequest } from 'mzm-shared/lib/errors'
-import { getRequestUserId } from '../lib/utils.js'
+import { createHandler } from '../lib/wrap.js'
+import { getRequestUserId, createContextParser } from '../lib/utils.js'
 import {
   collections,
   mongoClient,
@@ -20,15 +21,36 @@ import {
   createRoom as createRoomLogic
 } from '../logic/rooms.js'
 
-const createRoomParser = z.object({
-  name: z.string().min(1)
-})
+export const createRoom = createHandler(
+  '/api/rooms',
+  'POST',
+  ({ path, method }) => {
+    const api = apis[path][method]
 
-export const createRoom = async (
-  req: Request
-): Promise<RESPONSE['/api/rooms']['POST']> => {
+    const body = createContextParser(
+      z.object({
+        name: z.string().min(1)
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: api.request.body({
+            name: parsed.data.name
+          })
+        }
+      }
+    )
+
+    return {
+      api,
+      parser: {
+        body
+      }
+    }
+  }
+)(async (req: Request, context) => {
   const user = getRequestUserId(req)
-  const body = createRoomParser.safeParse(req.body)
+  const body = context.parser.body(req.body)
   if (body.success === false) {
     throw new BadRequest({ reason: body.error.message })
   }
@@ -51,28 +73,44 @@ export const createRoom = async (
 
   // @todo
   if (!created) {
-    return { id: '', name: '' }
+    return context.api.response[200].body({ id: '', name: '' })
   }
 
-  return { id: created._id.toHexString(), name }
-}
-
-export const enterRoom = async (req: Request) => {
-  const user = getRequestUserId(req)
-  const room = popParam(req.body.room)
-  if (!room) {
-    throw new BadRequest({ reason: 'room is empty' })
-  }
-
-  await enterRoomLogic(new ObjectId(user), new ObjectId(room))
-}
-
-const exitRoomParser = z.object({
-  room: z.string().min(1)
+  return context.api.response[200].body({
+    id: created._id.toHexString(),
+    name
+  })
 })
 
-export const exitRoom = async (req: Request) => {
-  const body = exitRoomParser.safeParse(req.body)
+export const exitRoom = createHandler(
+  '/api/rooms/enter',
+  'DELETE',
+  ({ path, method }) => {
+    const api = apis[path][method]
+
+    const body = createContextParser(
+      z.object({
+        room: z.string().min(1)
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: api.request.body({
+            room: parsed.data.room
+          })
+        }
+      }
+    )
+
+    return {
+      api,
+      parser: {
+        body
+      }
+    }
+  }
+)(async (req: Request, context) => {
+  const body = context.parser.body(req.body)
   if (body.success === false) {
     throw new BadRequest({ reason: body.error.message })
   }
@@ -98,24 +136,62 @@ export const exitRoom = async (req: Request) => {
     userId: new ObjectId(user),
     roomId
   })
-}
-
-type EnterUser = RESPONSE['/api/rooms/:roomid/users']['GET']['users'][number]
-
-const getUsersParser = z.object({
-  roomid: z.string().min(1)
 })
 
-export const getUsers = async (
-  req: Request
-): Promise<RESPONSE['/api/rooms/:roomid/users']['GET']> => {
-  const room = popParam(req.params.roomid)
-  const params = getUsersParser.safeParse(req.params)
-  if (params.success === false) {
-    throw new BadRequest({ reason: params.error.message })
+export const getUsers = createHandler(
+  '/api/rooms/:roomId/users',
+  'GET',
+  ({ path, method }) => {
+    const api = apis[path][method]
+
+    const params = createContextParser(
+      z.object({
+        roomId: z.string().min(1)
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: api.request.params({
+            roomId: parsed.data.roomId
+          })
+        }
+      }
+    )
+
+    const query = createContextParser(
+      z.object({
+        threshold: z.string().optional()
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: api.request.query({
+            threshold: parsed.data.threshold
+          })
+        }
+      }
+    )
+
+    return {
+      api,
+      parser: {
+        params,
+        query
+      }
+    }
+  }
+)(async (req: Request, context) => {
+  const parsedParams = context.parser.params(req.params)
+  if (parsedParams.success === false) {
+    throw new BadRequest({ reason: parsedParams.error.message })
   }
 
-  const roomId = new ObjectId(room)
+  const q = context.parser.query(req.query)
+  if (q.success === false) {
+    throw new BadRequest({ reason: q.error.message })
+  }
+
+  const roomId = new ObjectId(parsedParams.data.roomId)
 
   const query: Document[] = [
     {
@@ -131,13 +207,7 @@ export const getUsers = async (
     }
   ]
 
-  const reqQuery = req.query as Partial<
-    REQUEST['/api/rooms/:roomid/users']['GET']['query']
-  >
-
-  const threshold = popParam(
-    typeof reqQuery.threshold === 'string' ? reqQuery.threshold : undefined
-  )
+  const threshold = q.data.threshold
   if (threshold) {
     query.push({
       $match: { _id: { $lt: new ObjectId(threshold) } }
@@ -156,6 +226,10 @@ export const getUsers = async (
 
   const [count, cursor] = await Promise.all([countQuery, enterQuery])
 
+  type EnterUser = ReturnType<
+    (typeof context.api.response)[200]['body']
+  >['users'][number]
+
   const users: EnterUser[] = []
   for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
     const user: EnterUser = {
@@ -171,24 +245,41 @@ export const getUsers = async (
     }
     users.push(user)
   }
-  return { count, users }
-}
+  return context.api.response[200].body({ count, users })
+})
 
-export const search = async (
-  req: Request
-): Promise<RESPONSE['/api/rooms/search']['GET']> => {
-  const query = req.query as Partial<
-    REQUEST['/api/rooms/search']['GET']['query']
-  >
-  const _query = popParam(
-    typeof query.query === 'string'
-      ? decodeURIComponent(query.query)
-      : undefined
-  )
+export const search = createHandler(
+  '/api/rooms/search',
+  'GET',
+  ({ path, method }) => {
+    const api = apis[path][method]
+    const query = createContextParser(
+      z.object({
+        query: z.string().optional(),
+        scroll: z.string().optional()
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: api.request.query({
+            query: parsed.data.query,
+            scroll: parsed.data.scroll
+          })
+        }
+      }
+    )
 
-  const scroll = popParam(
-    typeof query.scroll === 'string' ? query.scroll : undefined
-  )
+    return {
+      api,
+      parser: { query }
+    }
+  }
+)(async (req, context) => {
+  const q = context.parser.query(req.query)
+  if (q.success === false) {
+    throw new BadRequest({ reason: q.error.message })
+  }
 
-  return await searchRoom(_query, scroll)
-}
+  const res = await searchRoom(q.data.query ?? null, q.data.scroll ?? null)
+  return context.api.response[200].body(res)
+})

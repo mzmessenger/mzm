@@ -1,6 +1,6 @@
 import type { Request, Response, NextFunction } from 'express'
 import type { PassportStatic } from 'passport'
-import type { Result } from 'mzm-shared/type'
+import type { Result } from 'mzm-shared/src/type'
 import type { SerializeUser } from '../types.js'
 import { sessionRedis } from '../lib/redis.js'
 import {

@@ -2,8 +2,8 @@ import { Request, Response, NextFunction } from 'express'
 import {
   verifyAccessToken,
   parseAuthorizationHeader
-} from 'mzm-shared/auth/index'
-import { HEADERS } from 'mzm-shared/auth/constants'
+} from 'mzm-shared/src/auth/index'
+import { HEADERS } from 'mzm-shared/src/auth/constants'
 import { JWT } from '../config.js'
 import { verifyInternalAccessToken } from '../lib/token.js'
 

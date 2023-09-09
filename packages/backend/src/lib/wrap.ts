@@ -1,4 +1,6 @@
-import { Request, Response, NextFunction } from 'express'
+import type { Request, Response, NextFunction } from 'express'
+import type { WrapFn } from 'mzm-shared/src/lib/wrap'
+import { type API } from 'mzm-shared/src/api/universal'
 import { StreamWrapResponse } from '../types.js'
 
 interface StreamWrapFn {
@@ -19,5 +21,50 @@ export const streamWrap = (fn: StreamWrapFn) => {
     } catch (e) {
       next(e)
     }
+  }
+}
+
+export function createHandler<
+  TPath extends keyof API,
+  TMethod extends 'GET' | 'POST' | 'PUT' | 'DELETE',
+  TContext
+>(
+  path: TPath,
+  method: TMethod,
+  context: (arg: { path: TPath; method: TMethod }) => TContext
+) {
+  return <TReq extends Request, TRes>(
+    fn: (req: TReq, context: TContext) => Promise<TRes>
+  ) => {
+    const handler: WrapFn<TReq, TRes> = (req: TReq) => {
+      return fn(req, context({ path, method }))
+    }
+    return {
+      path,
+      handler,
+      method: method.toLowerCase() as Lowercase<TMethod>
+    } as const
+  }
+}
+
+export function createStreamHandler<
+  TPath extends keyof API,
+  TMethod extends 'GET' | 'POST' | 'PUT' | 'DELETE',
+  TContext
+>(
+  path: TPath,
+  method: TMethod,
+  context: (arg: { path: TPath; method: TMethod }) => TContext
+) {
+  return (fn: (req: Request, context: TContext) => StreamWrapResponse) => {
+    const handler: StreamWrapFn = (req) => {
+      return fn(req, context({ path, method }))
+    }
+
+    return {
+      path,
+      handler,
+      method: method.toLowerCase() as Lowercase<TMethod>
+    } as const
   }
 }

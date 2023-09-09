@@ -18,11 +18,14 @@ vi.mock('../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
+import type { API } from 'mzm-shared/src/api/universal'
 import { ObjectId } from 'mongodb'
-import { BadRequest } from 'mzm-shared/lib/errors'
+import { BadRequest } from 'mzm-shared/src/lib/errors'
 import { createRequest, getTestMongoClient } from '../../test/testUtil.js'
 import { collections } from '../lib/db.js'
 import { createRoom } from './rooms.js'
+
+type APIType = API['/api/rooms']['POST']
 
 beforeAll(async () => {
   const { mongoClient } = await import('../lib/db.js')
@@ -39,9 +42,9 @@ test.each([
 ])('createRoom success (%s, %s)', async (name, createdName) => {
   const userId = new ObjectId()
   const body = { name }
-  const req = createRequest(userId, { body })
+  const req = createRequest<APIType['request']['body']>(userId, { body })
 
-  const { id } = await createRoom(req)
+  const { id } = await createRoom.handler(req)
 
   const db = await getTestMongoClient(globalThis)
   const created = await collections(db).rooms.findOne({
@@ -60,10 +63,10 @@ test.each([
 
   const userId = new ObjectId()
   const body = { name }
-  const req = createRequest(userId, { body })
+  const req = createRequest<APIType['request']['body']>(userId, { body })
 
   try {
-    await createRoom(req)
+    await createRoom.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

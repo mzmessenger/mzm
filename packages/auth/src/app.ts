@@ -1,6 +1,6 @@
 import type { Redis } from 'ioredis'
 import type { PassportRequest, SerializeUser } from './types.js'
-import express, { type Request, type Response } from 'express'
+import express, { type Request } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import passport from 'passport'
@@ -8,14 +8,13 @@ import RedisStore from 'connect-redis'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import { Strategy as TwitterStrategy } from 'passport-twitter'
 import session from 'express-session'
-import { createErrorHandler } from 'mzm-shared/lib/middleware'
-import { wrap } from 'mzm-shared/lib/wrap'
+import { createErrorHandler } from 'mzm-shared/src/lib/middleware'
+import { wrap } from 'mzm-shared/src/lib/wrap'
 import {
   TWITTER_STRATEGY_OPTIONS,
   GITHUB_STRATEGY_OPTIONS,
   TRUST_PROXY,
   SESSION_PARSER,
-  ALLOW_REDIRECT_URIS,
   ALLOW_REDIRECT_ORIGINS,
   CORS_ORIGIN
 } from './config.js'

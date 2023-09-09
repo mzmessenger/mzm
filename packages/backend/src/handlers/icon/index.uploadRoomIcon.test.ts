@@ -13,9 +13,10 @@ vi.mock('../../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
+import type { API } from 'mzm-shared/src/api/universal'
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
-import { BadRequest } from 'mzm-shared/lib/errors'
+import { BadRequest } from 'mzm-shared/src/lib/errors'
 import {
   createFileRequest,
   getTestMongoClient
@@ -25,6 +26,8 @@ import * as storage from '../../lib/storage.js'
 import * as config from '../../config.js'
 import { uploadRoomIcon } from './index.js'
 import { sizeOf } from '../../lib/image.js'
+
+type ParamsType = API['/api/icon/rooms/:roomName']['params']
 
 beforeAll(async () => {
   const { mongoClient } = await import('../../lib/db.js')
@@ -69,12 +72,12 @@ test('uploadRoomIcon', async () => {
     path: '/path/to/file'
   }
 
-  const req = createFileRequest(new ObjectId(), {
+  const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
     file,
-    params: { roomname: name }
+    params: { roomName: name }
   })
 
-  const res = await uploadRoomIcon(req)
+  const res = await uploadRoomIcon.handler(req)
 
   const room = await collections(db).rooms.findOne({ _id: roomId })
 
@@ -98,13 +101,13 @@ test.each([['image/gif'], ['image/svg+xml']])(
       path: '/path/to/file'
     }
 
-    const req = createFileRequest(new ObjectId(), {
+    const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
       file,
-      params: { roomname: name }
+      params: { roomName: name }
     })
 
     try {
-      await uploadRoomIcon(req)
+      await uploadRoomIcon.handler(req)
     } catch (e) {
       expect(e instanceof BadRequest).toStrictEqual(true)
     }
@@ -116,13 +119,13 @@ test('uploadRoomIcon: empty file', async () => {
 
   const name = new ObjectId().toHexString()
 
-  const req = createFileRequest(new ObjectId(), {
+  const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
     file: undefined,
-    params: { roomname: name }
+    params: { roomName: name }
   })
 
   try {
-    await uploadRoomIcon(req)
+    await uploadRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -130,6 +133,8 @@ test('uploadRoomIcon: empty file', async () => {
 
 test('uploadRoomIcon: validation: size over ', async () => {
   expect.assertions(1)
+
+  const name = new ObjectId().toHexString()
 
   const file = {
     key: 'filekey',
@@ -147,10 +152,47 @@ test('uploadRoomIcon: validation: size over ', async () => {
     })
   })
 
-  const req = createFileRequest(new ObjectId(), { file })
+  const req = createFileRequest<unknown, ParamsType>(new ObjectId(), {
+    file,
+    params: { roomName: name }
+  })
 
   try {
-    await uploadRoomIcon(req)
+    await uploadRoomIcon.handler(req)
+  } catch (e) {
+    expect(e instanceof BadRequest).toStrictEqual(true)
+  }
+})
+
+test('uploadUserIcon validation: not square', async () => {
+  expect.assertions(1)
+
+  const userId = new ObjectId()
+  const name = new ObjectId().toHexString()
+
+  const file = {
+    key: 'filekey',
+    mimetype: 'image/png',
+    originalname: 'fileoriginalname.png',
+    size: 1,
+    filename: 'filename.png',
+    path: '/path/to/file'
+  }
+
+  vi.mocked(sizeOf).mockImplementation(() => {
+    return Promise.resolve({
+      width: config.icon.MAX_ROOM_ICON_SIZE - 1,
+      height: config.icon.MAX_ROOM_ICON_SIZE - 2
+    })
+  })
+
+  const req = createFileRequest<unknown, ParamsType>(userId, {
+    file,
+    params: { roomName: name }
+  })
+
+  try {
+    await uploadRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

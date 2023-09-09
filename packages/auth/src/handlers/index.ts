@@ -1,13 +1,13 @@
 import type { Request, Response } from 'express'
 import type { SerializeUser, RequestUser } from '../types.js'
-import type { WrapFn } from 'mzm-shared/lib/wrap'
-import { BadRequest, Unauthorized } from 'mzm-shared/lib/errors'
+import type { WrapFn } from 'mzm-shared/src/lib/wrap'
+import { BadRequest, Unauthorized } from 'mzm-shared/src/lib/errors'
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 import {
   parseAuthorizationHeader,
   verifyAccessToken
-} from 'mzm-shared/auth/index'
+} from 'mzm-shared/src/auth/index'
 import { collections, mongoClient } from '../lib/db.js'
 import { logger } from '../lib/logger.js'
 import { redis } from '../lib/redis.js'

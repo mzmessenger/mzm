@@ -1,3 +1,3 @@
-export * as auth from './auth/index.js'
-export * as type from './type/index.js'
-export * as validator from './validator/index.js'
+export * as auth from './src/auth/index.js'
+export * as type from './src/type/index.js'
+export * as validator from './src/validator/index.js'

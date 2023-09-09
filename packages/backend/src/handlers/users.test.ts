@@ -6,16 +6,16 @@ vi.mock('../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
-import type { REQUEST } from 'mzm-shared/type/api'
+import type { API } from 'mzm-shared/src/api/universal'
 import { ObjectId } from 'mongodb'
-import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
+import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import {
   dropCollection,
   createRequest,
   getTestMongoClient
 } from '../../test/testUtil.js'
 import { collections, COLLECTION_NAMES } from '../lib/db.js'
-import { update, getUserInfo, updateAccount } from './users.js'
+import { update, getUserInfo } from './users.js'
 
 beforeAll(async () => {
   const { mongoClient } = await import('../lib/db.js')
@@ -37,12 +37,12 @@ test('update', async () => {
   const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
 
-  const body: Partial<REQUEST['/api/user/@me']['PUT']['body']> = {
+  const body: API['/api/user/@me']['PUT']['request']['body'] = {
     account: 'changed-account'
   }
   const req = createRequest(userId, { body })
 
-  const user = await update(req)
+  const user = await update.handler(req)
 
   const found = await collections(db).users.findOne({ _id: userId })
 
@@ -63,13 +63,38 @@ test('update failed: exists account', async () => {
     roomOrder: []
   })
 
-  const req = createRequest<REQUEST['/api/user/@me']['PUT']['body']>(userId, {
-    body: {
-      account: 'exists'
+  const req = createRequest<API['/api/user/@me']['PUT']['request']['body']>(
+    userId,
+    {
+      body: {
+        account: 'exists'
+      }
     }
-  })
+  )
 
-  await expect(update(req)).rejects.toThrow(BadRequest)
+  await expect(update.handler(req)).rejects.toThrow(BadRequest)
+})
+
+test.each([
+  ['null', null],
+  ['undefined', undefined],
+  ['空文字', ''],
+  ['space', ' '],
+  ['space2', '　'],
+  ['space3', '　 　']
+])('update fail (account: %s)', async (_label, account) => {
+  expect.assertions(1)
+
+  const userId = new ObjectId()
+
+  const body = { account }
+  const req = createRequest(userId, { body })
+
+  try {
+    await update.handler(req)
+  } catch (e) {
+    expect(e instanceof BadRequest).toStrictEqual(true)
+  }
 })
 
 test('getUserInfo', async () => {
@@ -82,7 +107,7 @@ test('getUserInfo', async () => {
   const body = { account }
   const req = createRequest(userId, { body })
 
-  const user = await getUserInfo(req)
+  const user = await getUserInfo.handler(req)
 
   const found = await collections(db).users.findOne({ _id: userId })
 
@@ -106,30 +131,8 @@ test('getUserInfo before signUp', async () => {
   const req = createRequest(userId, {})
 
   try {
-    await getUserInfo(req)
+    await getUserInfo.handler(req)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
-  }
-})
-
-test.each([
-  ['null', null],
-  ['undefined', undefined],
-  ['空文字', ''],
-  ['space', ' '],
-  ['space2', '　'],
-  ['space3', '　 　']
-])('updateAccount fail (account: %s)', async (_label, account) => {
-  expect.assertions(1)
-
-  const userId = new ObjectId()
-
-  const body = { account }
-  const req = createRequest(userId, { body })
-
-  try {
-    await updateAccount(req)
-  } catch (e) {
-    expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })

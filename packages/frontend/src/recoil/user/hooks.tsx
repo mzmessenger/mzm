@@ -1,4 +1,3 @@
-import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { useAuth } from '../../recoil/auth/hooks'
 import { useCallback } from 'react'
 import {
@@ -8,7 +7,7 @@ import {
   selector,
   useRecoilValue
 } from 'recoil'
-import { createApiClient, uploadUserIcon } from '../../lib/client'
+import { clients, authClients, fetcher } from '../../lib/client'
 import { API_URL_BASE } from '../../constants'
 
 type UserState = {
@@ -71,43 +70,30 @@ type UseAuthType = ReturnType<typeof useAuth>
 export const useUser = () => {
   const [user, setUser] = useRecoilState(userState)
 
+  const client = clients['/api/user/@me']['PUT'].client
   const updateUser = useCallback(
-    async (account: string) => {
-      const body: REQUEST['/api/user/@me']['PUT']['body'] = { account }
-
-      return await createApiClient(
-        '/api/user/@me',
-        {
-          method: 'PUT',
-          body: JSON.stringify(body)
-        },
-        async (res) => {
-          if (res.status === 200) {
-            const body =
-              res.body as RESPONSE['/api/user/@me']['PUT']['body'][200]
-            setUser((current) => ({
-              ...current,
-              account: body.account,
-              iconUrl: `/api/icon/user/${body.account}`
-            }))
-            return {
-              ...res,
-              body
-            }
-          }
-
-          return res
+    async (params: Omit<Parameters<typeof client>[0], 'fetcher'>) => {
+      const res = await client({ ...params, fetcher })
+      if (res.status === 200) {
+        setUser((current) => ({
+          ...current,
+          account: res.body.account,
+          iconUrl: `/api/icon/user/${res.body.account}`
+        }))
+        return {
+          ...res,
+          body: res.body
         }
-      )
+      }
+      return res
     },
-    [setUser]
+    [client, setUser]
   )
 
+  const uploadIconClient = clients['/api/icon/user']['POST'].client
   const uploadIcon = useCallback(
     async (blob: Blob) => {
-      const formData = new FormData()
-      formData.append('icon', blob)
-      const res = await uploadUserIcon(blob)
+      const res = await uploadIconClient({ fetcher, form: { icon: blob } })
 
       if (!res.ok) {
         return res
@@ -122,7 +108,7 @@ export const useUser = () => {
 
       return res
     },
-    [setUser, user.account]
+    [setUser, uploadIconClient, user.account]
   )
 
   return {
@@ -135,37 +121,27 @@ export const useMyInfoActions = () => {
   const setUser = useSetRecoilState(userState)
 
   const fetchMyInfo = useCallback(async () => {
-    return await createApiClient(
-      '/api/user/@me',
-      { method: 'GET' },
-      async (res) => {
-        type ResponseType = RESPONSE['/api/user/@me']['GET']['body']
+    const res = await clients['/api/user/@me']['GET'].client({ fetcher })
 
-        if (res.status === 200) {
-          const payload = res.body as ResponseType[200]
-
-          setUser((current) => ({
-            ...current,
-            id: payload.id,
-            account: payload.account,
-            iconUrl: payload.icon
-          }))
-        } else if (res.status === 404) {
-          const payload = res.body as ResponseType[404]
-
-          setUser((current) => ({
-            ...current,
-            id: payload.id,
-            account: '',
-            iconUrl: ''
-          }))
-        } else if (res.status === 403) {
-          // @todo
-          alert('認証情報が切れてるかもしれません')
-        }
-        return res
-      }
-    )
+    if (res.status === 200) {
+      setUser((current) => ({
+        ...current,
+        id: res.body.id,
+        account: res.body.account,
+        iconUrl: res.body.icon
+      }))
+    } else if (res.status === 404) {
+      setUser((current) => ({
+        ...current,
+        id: res.body.id,
+        account: '',
+        iconUrl: ''
+      }))
+    } else if (res.status === 403) {
+      // @todo
+      alert('認証情報が切れてるかもしれません')
+    }
+    return res
   }, [setUser])
 
   return {
@@ -179,18 +155,11 @@ export const useRemoveUserActions = ({
   logout: UseAuthType['logout']
 }) => {
   const removeUser = useCallback(async () => {
-    return await createApiClient(
-      '/auth/user',
-      {
-        method: 'DELETE'
-      },
-      async (res) => {
-        if (res.status === 200) {
-          logout()
-        }
-        return res
-      }
-    )
+    const res = await authClients['/auth/user']['DELETE'].client({ fetcher })
+    if (res.status === 200) {
+      logout()
+    }
+    return res
   }, [logout])
 
   return {
@@ -206,18 +175,13 @@ export const useRemoveAccountActions = () => {
       if (!user.twitterUserName || !user.githubUserName) {
         return
       }
-      return await createApiClient(
-        '/auth/twitter',
-        {
-          method: 'DELETE'
-        },
-        async (res) => {
-          if (res.status === 200) {
-            handleSuccessRemove()
-          }
-          return res
-        }
-      )
+      const res = await authClients['/auth/twitter']['DELETE'].client({
+        fetcher
+      })
+      if (res.status === 200) {
+        handleSuccessRemove()
+      }
+      return res
     },
     [user.githubUserName, user.twitterUserName]
   )
@@ -227,18 +191,13 @@ export const useRemoveAccountActions = () => {
       if (!user.twitterUserName || !user.githubUserName) {
         return
       }
-      return await createApiClient(
-        '/auth/github',
-        {
-          method: 'DELETE'
-        },
-        async (res) => {
-          if (res.status === 200) {
-            handleSuccessRemove()
-          }
-          return res
-        }
-      )
+      const res = await authClients['/auth/github']['DELETE'].client({
+        fetcher
+      })
+      if (res.status === 200) {
+        handleSuccessRemove()
+      }
+      return res
     },
     [user.githubUserName, user.twitterUserName]
   )

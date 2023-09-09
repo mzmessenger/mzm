@@ -1,4 +1,3 @@
-import type { RESPONSE, REQUEST } from 'mzm-shared/type/api'
 import type { useSocketActions } from '../../recoil/socket/hooks'
 import type { useUiActions } from '../../recoil/ui/hooks'
 import type { Room } from './types'
@@ -11,8 +10,8 @@ import {
   selectorFamily,
   type SetterOrUpdater
 } from 'recoil'
-import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/type/socket'
-import { createApiClient, uploadRoomIcon } from '../../lib/client'
+import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
+import { clients, fetcher } from '../../lib/client'
 import { isReplied } from '../../lib/util'
 
 type RoomUser = {
@@ -367,9 +366,10 @@ export const useRoomUserActions = () => {
     setRooms((current) => ({ ...current, usersLoading: true }))
   }, [setRooms])
 
+  const client = clients['/api/rooms/:roomId/users']['GET'].client
   const getUsers = useCallback(
-    async (roomId: string) => {
-      if (!roomId) {
+    async (params: Parameters<typeof client>[0]['params']) => {
+      if (!params.roomId) {
         return
       }
       if (rooms.usersLoading) {
@@ -378,46 +378,43 @@ export const useRoomUserActions = () => {
 
       fetchStartRoomUsers()
 
-      return await createApiClient(
-        `/api/rooms/${roomId}/users`,
-        {
-          method: 'GET'
-        },
-        async (res) => {
-          if (res.status !== 200) {
-            return res
+      const res = await client({
+        fetcher,
+        params,
+        query: {}
+      })
+
+      if (res.status !== 200) {
+        return res
+      }
+
+      setRooms((current) => {
+        const usersById = {
+          ...current.usersById,
+          [params.roomId]: {
+            users: res.body.users,
+            count: res.body.count
           }
-
-          const body = res.body as RESPONSE['/api/rooms/:roomid/users']['GET']
-          setRooms((current) => {
-            const usersById = {
-              ...current.usersById,
-              [roomId]: {
-                users: body.users,
-                count: body.count
-              }
-            }
-            const usersAllIds = current.usersAllIds.includes(roomId)
-              ? current.usersAllIds
-              : [...current.usersAllIds, roomId]
-            return {
-              ...current,
-              usersById,
-              usersAllIds,
-              usersLoading: false
-            }
-          })
-
-          return res
         }
-      )
+        const usersAllIds = current.usersAllIds.includes(params.roomId)
+          ? current.usersAllIds
+          : [...current.usersAllIds, params.roomId]
+        return {
+          ...current,
+          usersById,
+          usersAllIds,
+          usersLoading: false
+        }
+      })
+
+      return res
     },
-    [fetchStartRoomUsers, rooms.usersLoading, setRooms]
+    [client, fetchStartRoomUsers, rooms.usersLoading, setRooms]
   )
 
   const getNextUsers = useCallback(
-    async (roomId: string) => {
-      if (!roomId) {
+    async (params: Parameters<typeof client>[0]['params']) => {
+      if (!params.roomId) {
         return
       }
 
@@ -425,7 +422,7 @@ export const useRoomUserActions = () => {
         return
       }
 
-      const { users, count } = rooms.usersById[roomId]
+      const { users, count } = rooms.usersById[params.roomId]
       if (users.length >= count) {
         return
       }
@@ -434,45 +431,35 @@ export const useRoomUserActions = () => {
 
       const lastId = users[users.length - 1].enterId
 
-      const init: [
-        keyof REQUEST['/api/rooms/:roomid/users']['GET']['query'],
-        string
-      ][] = [['threshold', lastId]]
+      const res = await client({
+        fetcher,
+        params,
+        query: { threshold: lastId }
+      })
 
-      const query = new URLSearchParams(init)
+      if (res.status !== 200) {
+        return res
+      }
 
-      return await createApiClient(
-        `/api/rooms/${roomId}/users?${query.toString()}`,
-        {
-          method: 'GET'
-        },
-        async (res) => {
-          if (res.status !== 200) {
-            return res
+      setRooms((current) => {
+        const users = current.usersById[params.roomId]
+        const usersById = {
+          ...current.usersById,
+          [params.roomId]: {
+            ...users,
+            users: [...users.users, ...res.body.users]
           }
-
-          const body = res.body as RESPONSE['/api/rooms/:roomid/users']['GET']
-          setRooms((current) => {
-            const users = current.usersById[roomId]
-            const usersById = {
-              ...current.usersById,
-              [roomId]: {
-                ...users,
-                users: [...users.users, ...body.users]
-              }
-            }
-            return {
-              ...current,
-              usersById,
-              usersLoading: false
-            }
-          })
-
-          return res
         }
-      )
+        return {
+          ...current,
+          usersById,
+          usersLoading: false
+        }
+      })
+
+      return res
     },
-    [fetchStartRoomUsers, rooms.usersById, rooms.usersLoading, setRooms]
+    [client, fetchStartRoomUsers, rooms.usersById, rooms.usersLoading, setRooms]
   )
 
   return {
@@ -490,77 +477,55 @@ export const useRoomActions = ({
   const setRoomsById = useSetRecoilState(roomsByIdState)
   const setOpenRoomSettingState = useSetRecoilState(openRoomSettingState)
 
+  const enterClient = clients['/api/rooms']['POST'].client
   const createRoom = useCallback(
-    async (name: string) => {
-      const body: REQUEST['/api/rooms']['POST']['body'] = {
-        name
+    async (params: Omit<Parameters<typeof enterClient>[0], 'fetcher'>) => {
+      const res = await enterClient({ ...params, fetcher })
+      if (res.status !== 200) {
+        return res
       }
 
-      return await createApiClient(
-        '/api/rooms',
-        {
-          method: 'POST',
-          body: JSON.stringify(body)
-        },
-        async (res) => {
-          if (res.status !== 200) {
-            return res
-          }
+      const room = res.body
+      getRooms()
 
-          const room = res.body as RESPONSE['/api/rooms']['POST']
-          getRooms()
+      setCurrentRoom({
+        currentRoomId: room.id,
+        currentRoomName: room.name,
+        currentRoomIcon: '',
+        currentRoomDescription: ''
+      })
 
-          setCurrentRoom({
-            currentRoomId: room.id,
-            currentRoomName: room.name,
-            currentRoomIcon: '',
-            currentRoomDescription: ''
-          })
-
-          return res
-        }
-      )
+      return res
     },
-    [getRooms, setCurrentRoom]
+    [enterClient, getRooms, setCurrentRoom]
   )
 
+  const exitClient = clients['/api/rooms/enter']['DELETE'].client
   const exitRoom = useCallback(
-    async (roomId: string) => {
-      const body: REQUEST['/api/rooms/enter']['DELETE']['body'] = {
-        room: roomId
+    async (params: Omit<Parameters<typeof exitClient>[0], 'fetcher'>) => {
+      const res = await exitClient({ ...params, fetcher })
+      if (res.status === 200) {
+        setOpenRoomSettingState({ openRoomSetting: false })
+
+        getRooms()
+
+        setCurrentRoom({
+          currentRoomId: '',
+          currentRoomName: '',
+          currentRoomIcon: '',
+          currentRoomDescription: ''
+        })
       }
-
-      return await createApiClient(
-        '/api/rooms/enter',
-        {
-          method: 'DELETE',
-          body: JSON.stringify(body)
-        },
-        async (res) => {
-          if (res.status === 200) {
-            setOpenRoomSettingState({ openRoomSetting: false })
-
-            getRooms()
-
-            setCurrentRoom({
-              currentRoomId: '',
-              currentRoomName: '',
-              currentRoomIcon: '',
-              currentRoomDescription: ''
-            })
-          }
-          return res
-        }
-      )
+      return res
     },
-    [getRooms, setCurrentRoom, setOpenRoomSettingState]
+    [exitClient, getRooms, setCurrentRoom, setOpenRoomSettingState]
   )
+
+  const uploadIconClient = clients['/api/icon/rooms/:roomName']['POST'].client
 
   const uploadIcon = useCallback(
-    async (name: string, blob: Blob) => {
-      const formData = new FormData()
-      formData.append('icon', blob)
-      const res = await uploadRoomIcon(name, blob)
+    async (params: Omit<Parameters<typeof uploadIconClient>[0], 'fetcher'>) => {
+      const res = await uploadIconClient({ ...params, fetcher })
       if (res.ok) {
         const { id, version } = res.body
 
@@ -580,7 +545,7 @@ export const useRoomActions = ({
       }
       return res
     },
-    [setRoomsById]
+    [setRoomsById, uploadIconClient]
   )
 
   return {

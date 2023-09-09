@@ -1,6 +1,6 @@
 import React, { useState, useCallback } from 'react'
 import styled from '@emotion/styled'
-import { isValidAccount } from 'mzm-shared/validator'
+import { isValidAccount } from 'mzm-shared/src/validator'
 import { WIDTH_MOBILE } from '../../constants'
 import { useUser, useUserIdAndAccount } from '../../recoil/user/hooks'
 import { Button } from '../atoms/Button'
@@ -23,7 +23,7 @@ export const SettingAccount = () => {
   const onSave = useCallback(() => {
     setEdit(false)
     if (userAccount !== accountText) {
-      updateUser(accountText).then((res) => {
+      updateUser({ body: { account: accountText } }).then((res) => {
         if (res.status === 400) {
           setAccountErrorText(ERROR_TXT)
         }

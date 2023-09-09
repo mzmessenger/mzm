@@ -1,5 +1,5 @@
 import { ObjectId, type WithId, type Document } from 'mongodb'
-import { MessageType } from 'mzm-shared/type/socket'
+import { MessageType } from 'mzm-shared/src/type/socket'
 import * as config from '../config.js'
 import {
   collections,

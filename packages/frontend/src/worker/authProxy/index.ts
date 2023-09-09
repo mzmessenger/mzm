@@ -1,5 +1,5 @@
-import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
-import type { AccessToken } from 'mzm-shared/type/auth'
+import type { AuthAPI } from 'mzm-shared/src/api/universal'
+import type { AccessToken } from 'mzm-shared/src/type/auth'
 import jwt_decode, { type JwtPayload } from 'jwt-decode'
 import { expose } from 'comlink'
 import dayjs from 'dayjs'
@@ -7,7 +7,7 @@ import { pkceChallenge, verifyCodeChallenge } from './pkce'
 import { AUTH_URL_BASE, SOCKET_URL } from '../../constants'
 import { logger } from '../../lib/logger'
 
-type TokenResponse = AUTH_API_RESPONSE['/auth/token']['POST']['body'][200]
+type TokenResponse = AuthAPI['/auth/token']['POST']['response'][200]['body']
 
 export type Cache = {
   code_challenge?: string
@@ -56,14 +56,15 @@ export class AuthProxy {
     return `${SOCKET_URL}?token=${this.#accessToken}`
   }
 
-  async #proxyRequestBase(
+  async proxyRequest(
     url: string,
     options?: {
       method?: RequestInit['method']
       headers?: Record<string, string>
       body?: string | FormData
-    },
-    bodyParser: 'json' | 'text' = 'json'
+      form?: { [key: string]: string | Blob }
+      bodyParser?: 'json' | 'text'
+    }
   ) {
     if (!this.#accessToken) {
       return { ok: false, status: 401, body: null }
@@ -76,53 +77,34 @@ export class AuthProxy {
         Authorization: `Bearer ${this.#accessToken}`
       }
     }
-    const res = await fetch(url, init)
-    if (res.status === 500) {
-      return { ok: res.ok, status: res.status, body: await res.text() }
-    }
-    const body = bodyParser === 'json' ? await res.json() : await res.text()
-    if (res.ok) {
-      return {
-        ok: true,
-        status: res.status,
-        body: body
-      }
-    }
-    return { ok: res.ok, status: res.status, body: body }
-  }
 
-  async proxyRequest(
-    url: string,
-    init?: {
-      method?: RequestInit['method']
-      headers?: Record<string, string>
-      body?: string
-    }
-  ) {
-    return await this.#proxyRequestBase(url, {
-      ...init,
-      headers: {
-        ...init.headers,
-        'Content-Type': 'application/json; charset=utf-8'
+    if (options.form) {
+      const formData = new FormData()
+      for (const [key, data] of Object.entries(options.form)) {
+        formData.append(key, data)
       }
-    })
-  }
+      init.body = formData
+    }
 
-  async proxyRequestWithFormData(
-    url: string,
-    init: {
-      body: [string, Blob][]
+    try {
+      const res = await fetch(url, init)
+      if (res.status === 500) {
+        return { ok: res.ok, status: res.status, body: await res.text() }
+      }
+      const body =
+        options.bodyParser === 'text' ? await res.text() : await res.json()
+      if (res.ok) {
+        return {
+          ok: true,
+          status: res.status,
+          body: body
+        }
+      }
+      return { ok: res.ok, status: res.status, body: body }
+    } catch (e) {
+      logger.error(e)
+      return { ok: false, status: 500, body: null }
     }
-  ) {
-    const formData = new FormData()
-    for (const [key, data] of init.body) {
-      formData.append(key, data)
-    }
-    const res = await this.#proxyRequestBase(url, {
-      method: 'POST',
-      body: formData
-    })
-    return res
   }
 
   async #authTokenBase(

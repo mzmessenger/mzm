@@ -44,15 +44,15 @@ export const dropCollection = async (client: MongoClient, name: string) => {
   await client.db().collection(name).drop()
 }
 
-type TestRequest = Request & { file?: MulterFile }
-
-export const createFileRequest = (
-  ...args: Parameters<typeof createRequest>
+export const createFileRequest = <TBody, TParams = { [key: string]: string }>(
+  ...args: Parameters<typeof createRequest<TBody, TParams>>
 ) => {
-  return createRequest(...args) as Request & { file?: MulterFile }
+  return createRequest<TBody, TParams>(...args) as Request & {
+    file?: MulterFile
+  }
 }
 
-export const createRequest = <T>(
+export const createRequest = <TBody, TParams = { [key: string]: string }>(
   userId: ObjectId | null,
   {
     params,
@@ -60,12 +60,12 @@ export const createRequest = <T>(
     body,
     file
   }: {
-    params?: { [key: string]: string }
+    params?: TParams
     query?: { [key: string]: string }
-    body?: Partial<T>
+    body?: TBody
     file?: { [key: string]: string | number }
   }
-): TestRequest => {
+) => {
   const req = {
     headers: {
       'x-user-id': userId?.toHexString()
@@ -92,5 +92,5 @@ export const createRequest = <T>(
     req.file = file
   }
 
-  return req as TestRequest
+  return req as Request
 }

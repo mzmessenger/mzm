@@ -22,7 +22,7 @@ export const ModalUsersList: React.FC<Props> = ({ open, onClose, roomId }) => {
     }
     if (isIntersecting) {
       setLoading(true)
-      getNextUsers(roomId).then(() => setLoading(false))
+      getNextUsers({ roomId }).then(() => setLoading(false))
     }
   }, [getNextUsers, isIntersecting, loading, roomId])
 

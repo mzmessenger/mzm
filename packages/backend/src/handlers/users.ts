@@ -1,30 +1,48 @@
-import type { Request } from 'express'
-import type { RESPONSE } from 'mzm-shared/type/api'
+import { apis } from 'mzm-shared/src/api/universal'
 import { z } from 'zod'
 import { ObjectId } from 'mongodb'
-import { isValidAccount } from 'mzm-shared/validator'
-import { getRequestUserId, createUserIconPath, popParam } from '../lib/utils.js'
-import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
-import { collections, mongoClient, User } from '../lib/db.js'
+import { isValidAccount } from 'mzm-shared/src/validator'
+import { createHandler } from '../lib/wrap.js'
+import {
+  getRequestUserId,
+  createUserIconPath,
+  createContextParser
+} from '../lib/utils.js'
+import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
+import { collections, mongoClient } from '../lib/db.js'
 
-const UpdateParser = z.object({
-  account: z.string().min(1)
-})
+export const update = createHandler(
+  '/api/user/@me',
+  'PUT',
+  ({ path, method }) => {
+    const api = apis[path][method]
+    const body = createContextParser(
+      z.object({
+        account: z.string().min(1).trim()
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: api.request.body({
+            account: parsed.data.account
+          })
+        }
+      }
+    )
 
-export const update = async (req: Request) => {
-  type ResponseType = RESPONSE['/api/user/@me']['PUT']['body']
-
-  const parsed = UpdateParser.safeParse(req.body)
+    return {
+      api,
+      parser: { body }
+    }
+  }
+)(async (req, context) => {
+  const parsed = context.parser.body(req.body)
   if (parsed.success === false) {
-    throw new BadRequest<ResponseType[400]>('bad request')
+    throw new BadRequest(context.api.response[400].body('bad request'))
   }
-  const body = parsed.data
-  const account = popParam(body.account)
-  if (!account) {
-    throw new BadRequest<ResponseType[400]>('account is empty')
-  }
+  const account = parsed.data.account.trim()
   if (!isValidAccount(account)) {
-    throw new BadRequest<ResponseType[400]>('account is not valid')
+    throw new BadRequest(context.api.response[400].body('account is not valid'))
   }
 
   const id = getRequestUserId(req)
@@ -33,7 +51,9 @@ export const update = async (req: Request) => {
     account: account
   })
   if (user && user._id.toHexString() !== id) {
-    throw new BadRequest<ResponseType[400]>(`${account} is already exists`)
+    throw new BadRequest(
+      context.api.response[400].body(`${account} is already exists`)
+    )
   }
 
   const userId = new ObjectId(id)
@@ -43,13 +63,18 @@ export const update = async (req: Request) => {
     { upsert: true }
   )
 
-  const response: ResponseType[200] = { id: id, account: account }
-  return response
-}
+  return context.api.response[200].body({ id: id, account: account })
+})
 
-export const getUserInfo = async (req: Request) => {
-  type ResponseType = RESPONSE['/api/user/@me']['GET']['body']
-
+export const getUserInfo = createHandler(
+  '/api/user/@me',
+  'GET',
+  ({ path, method }) => {
+    return {
+      api: apis[path][method]
+    }
+  }
+)(async (req, context) => {
   const id = getRequestUserId(req)
 
   const db = await mongoClient()
@@ -59,68 +84,17 @@ export const getUserInfo = async (req: Request) => {
   )
 
   if (!user || !user.account) {
-    throw new NotFound<ResponseType[404]>({
-      reason: 'account is not found',
-      id
-    })
+    throw new NotFound(
+      context.api.response[404].body({
+        reason: 'account is not found',
+        id
+      })
+    )
   }
 
-  const response: ResponseType[200] = {
+  return context.api.response[200].body({
     id: user._id.toHexString(),
     account: user.account,
     icon: createUserIconPath(user.account, user.icon?.version)
-  }
-
-  return response
-}
-
-export const updateAccount = async (req: Request) => {
-  const id = getRequestUserId(req)
-  const account = popParam(req.body.account)
-  if (!account) {
-    throw new BadRequest('account is empty')
-  }
-  if (!isValidAccount(account)) {
-    throw new BadRequest('account is not valid')
-  }
-
-  const update: Pick<User, 'account'> = { account }
-  const db = await mongoClient()
-  const updated = await collections(db).users.findOneAndUpdate(
-    { _id: new ObjectId(id) },
-    { $set: update },
-    {
-      upsert: true
-    }
-  )
-
-  return {
-    update: updated.value?._id.toHexString()
-  }
-}
-
-const sortRoomsParser = z.object({
-  rooms: z.array(z.string())
+  })
 })
-
-export const sortRooms = async (req: Request) => {
-  const body = sortRoomsParser.safeParse(req.body)
-  if (body.success === false) {
-    throw new BadRequest({ reason: body.error.message })
-  }
-  const id = getRequestUserId(req)
-  const rooms = body.data.rooms
-  const roomOrder: string[] = []
-  for (const room of rooms) {
-    if (typeof room !== 'string') {
-      throw new BadRequest({ reason: `${room} is not string` })
-    }
-    roomOrder.push(room)
-  }
-
-  const db = await mongoClient()
-  await collections(db).users.updateOne(
-    { _id: new ObjectId(id) },
-    { $set: { roomOrder } }
-  )
-}

@@ -1,6 +1,6 @@
 import type { Request } from 'express'
-import type { AUTH_API_RESPONSE } from 'mzm-shared/type/api'
-import type { WrapFn } from 'mzm-shared/lib/wrap'
+import type { AuthAPI } from 'mzm-shared/src/api/universal'
+import type { WrapFn } from 'mzm-shared/src/lib/wrap'
 import type { PassportRequest } from '../types.js'
 import type { NonceResponse } from '../middleware/index.js'
 import type { Redis } from 'ioredis'
@@ -9,7 +9,7 @@ import {
   Unauthorized,
   InternalServerError,
   isHttpError
-} from 'mzm-shared/lib/errors'
+} from 'mzm-shared/src/lib/errors'
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 import { logger } from '../lib/logger.js'
@@ -41,7 +41,7 @@ const TokenBody = z.union([
 
 export const token: WrapFn<
   Request,
-  AUTH_API_RESPONSE['/auth/token']['POST']['body'][200]
+  AuthAPI['/auth/token']['POST']['response'][200]['body']
 > = async (req) => {
   logger.info({
     label: 'accessToken',

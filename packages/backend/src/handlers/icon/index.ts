@@ -1,10 +1,12 @@
 import type { MulterFile } from '../../types/index.js'
+import { apis } from 'mzm-shared/src/api/universal'
 import { Request } from 'express'
 import { request } from 'undici'
 import { ObjectId } from 'mongodb'
-import { RESPONSE } from 'mzm-shared/type/api'
-import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
-import { popParam, getRequestUserId } from '../../lib/utils.js'
+import { z } from 'zod'
+import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
+import { getRequestUserId, createContextParser } from '../../lib/utils.js'
+import { createHandler, createStreamHandler } from '../../lib/wrap.js'
 import * as storage from '../../lib/storage.js'
 import { collections, mongoClient, type User, type Room } from '../../lib/db.js'
 import { logger } from '../../lib/logger.js'
@@ -40,35 +42,110 @@ const fromIdenticon = async (account: string): StreamWrapResponse => {
   return { headers: res.headers, stream: res.body }
 }
 
-export const getUserIcon = async (req: Request): StreamWrapResponse => {
-  const account = popParam(req.params.account)
-  if (!account) {
+export const getUserIcon = createStreamHandler(
+  '/api/icon/user/:account',
+  'GET',
+  ({ path, method }) => {
+    const api = apis[path][method]
+    const params = createContextParser(
+      z.object({
+        account: z.string().min(1)
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: api.request.params({
+            account: parsed.data.account
+          })
+        }
+      }
+    )
+    return {
+      parser: {
+        params,
+        version: z.object({
+          version: z.string().optional()
+        })
+      }
+    }
+  }
+)(async (req, context) => {
+  const params = context.parser.params(req.params)
+  if (!params.success) {
     throw new BadRequest(`no account`)
   }
-  const version = popParam(req.params.version)
+  const v = context.parser.version.safeParse(req.params)
+  const version = v.success ? v.data.version : null
   const db = await mongoClient()
-  const user = await collections(db).users.findOne({ account: account })
+  const user = await collections(db).users.findOne({
+    account: params.data.account
+  })
 
-  if (user?.icon?.version === version) {
+  if (!user) {
+    throw new BadRequest(`no account`)
+  }
+
+  if (!user.icon) {
+    return await fromIdenticon(params.data.account)
+  }
+
+  if (version) {
+    if (user?.icon?.version !== version) {
+      return await fromIdenticon(params.data.account)
+    }
     try {
       return await returnIconStream(user.icon.key)
     } catch (e) {
       if ((e as { statusCode: number })?.statusCode === 404) {
-        return await fromIdenticon(account)
+        return await fromIdenticon(params.data.account)
       }
       throw e
     }
   }
 
-  return await fromIdenticon(account)
-}
-
-export const getRoomIcon = async (req: Request): StreamWrapResponse => {
-  const roomName = popParam(req.params.roomname)
-  if (!roomName) {
-    throw new BadRequest(`no room id`)
+  try {
+    return await returnIconStream(user.icon.key)
+  } catch (e) {
+    if ((e as { statusCode: number })?.statusCode === 404) {
+      return await fromIdenticon(params.data.account)
+    }
+    throw e
   }
-  const version = popParam(req.params.version)
+})
+
+export const getRoomIcon = createStreamHandler(
+  '/api/icon/rooms/:roomName/:version',
+  'GET',
+  ({ path, method }) => {
+    const api = apis[path][method]
+    const params = createContextParser(
+      z.object({
+        roomName: z.string().min(1),
+        version: z.string().min(1)
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: api.request.params({
+            roomName: parsed.data.roomName,
+            version: parsed.data.version
+          })
+        }
+      }
+    )
+    return {
+      parser: {
+        params
+      }
+    }
+  }
+)(async (req, context) => {
+  const params = context.parser.params(req.params)
+  if (!params.success) {
+    throw new BadRequest(`invalid params`)
+  }
+  const roomName = params.data.roomName
+  const version = params.data.version
   const db = await mongoClient()
   const room = await collections(db).rooms.findOne({ name: roomName })
 
@@ -84,11 +161,17 @@ export const getRoomIcon = async (req: Request): StreamWrapResponse => {
     }
     throw e
   }
-}
+})
 
-export const uploadUserIcon = async (
-  req: Request & { file?: MulterFile }
-): Promise<RESPONSE['/api/icon/user']['POST']> => {
+export const uploadUserIcon = createHandler(
+  '/api/icon/user',
+  'POST',
+  ({ path, method }) => {
+    return {
+      api: apis[path][method]
+    }
+  }
+)(async (req: Request & { file?: MulterFile }, context) => {
   const userId = getRequestUserId(req)
   if (!userId) {
     throw new NotFound('not found')
@@ -140,17 +223,39 @@ export const uploadUserIcon = async (
 
   logger.info('[icon:user] upload', userId, version)
 
-  return {
+  return context.api.response[200].body({
     version: version
-  }
-}
+  })
+})
 
-export const uploadRoomIcon = async (
-  req: Request & { file?: MulterFile }
-): Promise<RESPONSE['/api/icon/rooms/:roomname']['POST']> => {
-  const roomName = popParam(req.params.roomname)
-  if (!roomName) {
-    throw new BadRequest(`no room id`)
+export const uploadRoomIcon = createHandler(
+  '/api/icon/rooms/:roomName',
+  'POST',
+  ({ path, method }) => {
+    const api = apis[path][method]
+    const params = createContextParser(
+      z.object({
+        roomName: z.string().min(1)
+      }),
+      (parsed) => {
+        return {
+          success: true,
+          data: api.request.params({
+            roomName: parsed.data.roomName
+          })
+        }
+      }
+    )
+
+    return {
+      api,
+      parser: { params }
+    }
+  }
+)(async (req: Request & { file?: MulterFile }, context) => {
+  const params = context.parser.params(req.params)
+  if (params.success === false) {
+    throw new BadRequest(`invalid room name`)
   }
 
   if (!req.file) {
@@ -174,7 +279,9 @@ export const uploadRoomIcon = async (
   }
 
   const db = await mongoClient()
-  const room = await collections(db).rooms.findOne({ name: roomName })
+  const room = await collections(db).rooms.findOne({
+    name: params.data.roomName
+  })
   if (!room) {
     throw new NotFound('not exist')
   }
@@ -202,10 +309,10 @@ export const uploadRoomIcon = async (
     }
   )
 
-  logger.info('[icon:room] upload', roomName, version)
+  logger.info('[icon:room] upload', params.data.roomName, version)
 
-  return {
+  return context.api.response[200].body({
     id: room._id.toHexString(),
     version: version
-  }
-}
+  })
+})

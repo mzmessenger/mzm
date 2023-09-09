@@ -19,8 +19,10 @@ vi.mock('../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
+import type { API } from 'mzm-shared/src/api/universal'
+import type { RouteParams } from 'mzm-shared/src/api/type'
 import { ObjectId, WithId } from 'mongodb'
-import { BadRequest } from 'mzm-shared/lib/errors'
+import { BadRequest } from 'mzm-shared/src/lib/errors'
 import { getTestMongoClient, createRequest } from '../../test/testUtil.js'
 import * as config from '../config.js'
 import { collections, type User, type Enter } from '../lib/db.js'
@@ -54,10 +56,12 @@ test('exitRoom fail (general)', async () => {
   })
 
   const body = { room: general!._id.toHexString() }
-  const req = createRequest(userId, { body })
+  const req = createRequest<
+    API['/api/rooms/enter']['DELETE']['request']['body']
+  >(userId, { body })
 
   try {
-    await exitRoom(req)
+    await exitRoom.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -66,11 +70,15 @@ test('exitRoom fail (general)', async () => {
 test.each([[null, '']])('exitRoom BadRequest (%s)', async (arg) => {
   expect.assertions(1)
 
-  const body = { room: arg }
+  const body:
+    | API['/api/rooms/enter']['DELETE']['request']['body']
+    | { room: null } = {
+    room: arg
+  }
   const req = createRequest(new ObjectId(), { body })
 
   try {
-    await exitRoom(req)
+    await exitRoom.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -119,10 +127,13 @@ test('getUsers', async () => {
     return map
   }, new Map<string, WithId<User>>())
 
-  const params = { roomid: roomId.toHexString() }
-  let req = createRequest(userId, { params })
+  const params = { roomId: roomId.toHexString() }
+  let req = createRequest<unknown, RouteParams<'/api/rooms/:roomId/users'>>(
+    userId,
+    { params }
+  )
 
-  let res = await getUsers(req)
+  let res = await getUsers.handler(req)
 
   expect(res.count).toStrictEqual(config.room.USER_LIMIT + overNum)
   expect(res.users.length).toStrictEqual(config.room.USER_LIMIT)
@@ -140,7 +151,7 @@ test('getUsers', async () => {
   // threshold
   const query = { threshold: res.users[res.users.length - 1].enterId }
   req = createRequest(userId, { params, query })
-  res = await getUsers(req)
+  res = await getUsers.handler(req)
 
   expect(res.count).toStrictEqual(config.room.USER_LIMIT + overNum)
   expect(res.users.length).toStrictEqual(overNum)

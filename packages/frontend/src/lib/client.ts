@@ -1,85 +1,32 @@
-import type { RESPONSE } from 'mzm-shared/type/api'
-import { API_URL_BASE } from '../constants'
-import { proxyRequest, proxyRequestWithFormData } from '../lib/auth'
+/* eslint-disable @typescript-eslint/ban-types */
+import { apis, authApis } from 'mzm-shared/src/api/universal'
+import { createClients, type Fetcher } from 'mzm-shared/src/api/client'
+import { API_URL_BASE, AUTH_URL_BASE } from '../constants'
+import { proxyRequest } from '../lib/auth'
 
-type Init = Parameters<typeof proxyRequest>[1]
+export const fetcher: Fetcher = async <T>(options: Parameters<Fetcher>[0]) => {
+  const init: Parameters<typeof proxyRequest>[1] = {
+    method: options.method
+  }
 
-type Options = {
-  headers?: Record<string, string>
-} & (
-  | {
-      method?: 'GET'
+  if (options.form) {
+    const form = {} as { [key: string]: string | Blob }
+    for (const [key, value] of options.form.entries()) {
+      form[key] = value
     }
-  | {
-      method: 'POST' | 'PUT' | 'DELETE'
-      body?: Init['body']
-    }
-)
-
-type Parser<T> = (res: Awaited<ReturnType<typeof proxyRequest>>) => Promise<T>
-
-export const createApiClient = async <T>(
-  path: string,
-  options: Options,
-  parser: Parser<T>
-) => {
-  const headers = {
-    ...options.headers
+    init.form = form
   }
 
-  const method = options.method ?? 'GET'
-
-  const init: Init = {
-    method,
-    headers,
-    ...options
+  if (options.body) {
+    init.body =
+      typeof options.body === 'string'
+        ? options.body
+        : JSON.stringify(options.body)
   }
 
-  if (
-    (options.method === 'POST' ||
-      options.method === 'PUT' ||
-      options.method === 'DELETE') &&
-    options.body
-  ) {
-    init.body = options.body
-  }
-  const res = await proxyRequest(API_URL_BASE + path, init)
-
-  return await parser(res)
+  const res = await proxyRequest(options.url, init)
+  return res as T
 }
 
-export const uploadRoomIcon = async (name: string, blob: Blob) => {
-  const res = await proxyRequestWithFormData(
-    API_URL_BASE + `/api/icon/rooms/${name}`,
-    {
-      body: [['icon', blob]]
-    }
-  )
-
-  if (res.ok) {
-    const body = res.body as RESPONSE['/api/icon/rooms/:roomname']['POST']
-    return {
-      ...res,
-      ok: true,
-      body: body
-    }
-  }
-
-  return res
-}
-
-export const uploadUserIcon = async (blob: Blob) => {
-  const res = await proxyRequestWithFormData(API_URL_BASE + '/api/icon/user', {
-    body: [['icon', blob]]
-  })
-
-  if (res.ok) {
-    const body = res.body as RESPONSE['/api/icon/user']['POST']
-    return {
-      ...res,
-      body
-    }
-  }
-
-  return res
-}
+export const clients = createClients(apis, API_URL_BASE)
+export const authClients = createClients(authApis, AUTH_URL_BASE)

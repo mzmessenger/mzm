@@ -12,9 +12,10 @@ vi.mock('../../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
+import type { API } from 'mzm-shared/src/api/universal'
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
-import { BadRequest, NotFound } from 'mzm-shared/lib/errors'
+import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import { createRequest, getTestMongoClient } from '../../../test/testUtil.js'
 import {
   createHeadObjectMockValue,
@@ -23,6 +24,8 @@ import {
 import { collections, RoomStatusEnum } from '../../lib/db.js'
 import * as storage from '../../lib/storage.js'
 import { getRoomIcon } from './index.js'
+
+type ParamsType = API['/api/icon/rooms/:roomName/:version']['params']
 
 beforeAll(async () => {
   const { mongoClient } = await import('../../lib/db.js')
@@ -47,7 +50,9 @@ test('getRoomIcon', async () => {
     status: RoomStatusEnum.CLOSE
   })
 
-  const req = createRequest(null, { params: { roomname: name, version } })
+  const req = createRequest<unknown, ParamsType>(null, {
+    params: { roomName: name, version }
+  })
 
   const headObjectMock = vi.mocked(storage.headObject)
   const headers = createHeadObjectMockValue({
@@ -65,7 +70,7 @@ test('getRoomIcon', async () => {
   })
   getObjectMock.mockReturnValueOnce(getObject)
 
-  const res = await getRoomIcon(req)
+  const res = await getRoomIcon.handler(req)
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
@@ -86,10 +91,12 @@ test('getRoomIcon BadRequest: no room name', async () => {
 
   const version = '12345'
 
-  const req = createRequest(null, { params: { roomname: '', version } })
+  const req = createRequest<unknown, ParamsType>(null, {
+    params: { roomName: '', version }
+  })
 
   try {
-    await getRoomIcon(req)
+    await getRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -111,12 +118,12 @@ test('getRoomIcon NotFound: different version', async () => {
     status: RoomStatusEnum.CLOSE
   })
 
-  const req = createRequest(null, {
-    params: { roomname: name, version: '54321' }
+  const req = createRequest<unknown, ParamsType>(null, {
+    params: { roomName: name, version: '54321' }
   })
 
   try {
-    await getRoomIcon(req)
+    await getRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }
@@ -141,12 +148,12 @@ test('getRoomIcon NotFound: not found on storage', async () => {
   const headObjectMock = vi.mocked(storage.headObject)
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
 
-  const req = createRequest(null, {
-    params: { roomname: name, version: version }
+  const req = createRequest<unknown, ParamsType>(null, {
+    params: { roomName: name, version: version }
   })
 
   try {
-    await getRoomIcon(req)
+    await getRoomIcon.handler(req)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }

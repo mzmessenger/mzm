@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb'
-import { MessageType } from 'mzm-shared/type/socket'
+import { MessageType } from 'mzm-shared/src/type/socket'
 import {
   collections,
   mongoClient,

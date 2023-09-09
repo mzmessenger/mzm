@@ -1,5 +1,5 @@
 import { ObjectId } from 'mongodb'
-import { TO_CLIENT_CMD } from 'mzm-shared/type/socket'
+import { TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
 import * as config from '../../config.js'
 import { VoteQueue } from '../../types.js'
 import { collections, mongoClient } from '../db.js'

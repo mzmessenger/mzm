@@ -1,4 +1,4 @@
-import type { MessageType } from 'mzm-shared/type/socket'
+import type { MessageType } from 'mzm-shared/src/type/socket'
 import type { useSocketActions } from '../../recoil/socket/hooks'
 import { useCallback } from 'react'
 import {
@@ -10,7 +10,7 @@ import {
 } from 'recoil'
 import { convertToHtml } from '../../lib/message'
 
-import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/type/socket'
+import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/src/type/socket'
 
 type SocketMessageType = FilterToClientType<
   typeof TO_CLIENT_CMD.MESSAGE_RECEIVE
