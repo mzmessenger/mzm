@@ -129,20 +129,18 @@ export const sendMessage = async (
   // アンケート
   let vote: Message['vote'] | undefined = undefined
   if (parsed.data.vote) {
-    let length = 0
     const v = parsed.data.vote
+    if (v.questions.length > config.vote.MAX_QUESTION_NUM) {
+      // todo: send bad request
+      return
+    }
     const questions: { text: string }[] = []
     for (const q of v.questions) {
-      if (
-        !!q.text ||
-        q.text.length > config.vote.MAX_QUESTION_LENGTH ||
-        length > config.vote.MAX_QUESTION_NUM
-      ) {
+      if (!q.text || q.text.length > config.vote.MAX_QUESTION_LENGTH) {
         // todo: send bad request
         return
       }
       questions.push({ text: q.text })
-      length += 1
     }
     vote = {
       questions,
@@ -206,7 +204,8 @@ export const sendMessage = async (
 
   const users = await getAllUserIdsInRoom(room)
   addQueueToUsers(users, send)
-  return
+
+  return send
 }
 
 export const iine = async (
@@ -235,7 +234,7 @@ export const iine = async (
   }
   addQueueToUsers(users, send)
 
-  return
+  return send
 }
 
 const ModifyMessageParser = z.object({
@@ -302,6 +301,8 @@ export const modifyMessage = async (
 
   const users = await getAllUserIdsInRoom(from.roomId.toHexString())
   addQueueToUsers(users, send)
+
+  return send
 }
 
 export const removeMessage = async (
@@ -357,6 +358,8 @@ export const removeMessage = async (
 
   const users = await getAllUserIdsInRoom(from.roomId.toHexString())
   addQueueToUsers(users, send)
+
+  return send
 }
 
 const GetMessagesFromRoomParser = z.object({
@@ -471,11 +474,14 @@ export const readMessage = async (
     { $set: { unreadCounter: 0, replied: 0 } }
   )
 
-  await addMessageQueue({
+  const send = {
     user,
     cmd: TO_CLIENT_CMD.ROOMS_READ,
     room: data.room
-  })
+  }
+  await addMessageQueue(send)
+
+  return send
 }
 
 export const sortRooms = async (
@@ -502,11 +508,13 @@ export const sortRooms = async (
     { $set: { roomOrder } }
   )
 
-  await addMessageQueue({
+  const send = {
     user,
     cmd: TO_CLIENT_CMD.ROOMS_SORT_SUCCESS,
     roomOrder
-  })
+  }
+  await addMessageQueue(send)
+  return send
 }
 
 export const openRoom = async (

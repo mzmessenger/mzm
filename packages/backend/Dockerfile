@@ -1,5 +1,5 @@
 # https://hub.docker.com/_/node
-FROM node:18 as builder
+FROM node:20 as builder
 
 WORKDIR /usr/app
 
@@ -12,7 +12,7 @@ COPY ./packages/backend/src/ ./packages/backend/src/
 
 RUN npm install -w mzm-backend -w mzm-shared && npm run -w mzm-backend cleanbuild
 
-FROM node:18-alpine
+FROM node:20-alpine
 
 WORKDIR /usr/app
 

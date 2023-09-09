@@ -1,10 +1,12 @@
 # mzm
 
+[mzm](https://mzm.dev)
+
 ## how to develop
 
-Node.js >= v18
+Node.js >= v20
 
-Docker >= 20.10.8 (`--add-host=host.docker.internal:host-gateway`)
+Docker
 
 ### init
 
