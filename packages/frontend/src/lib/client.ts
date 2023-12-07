@@ -9,6 +9,10 @@ export const fetcher: Fetcher = async <T>(options: Parameters<Fetcher>[0]) => {
     method: options.method
   }
 
+  if (options.headers) {
+    init.headers = options.headers
+  }
+
   if (options.form) {
     const form = {} as { [key: string]: string | Blob }
     for (const [key, value] of options.form.entries()) {

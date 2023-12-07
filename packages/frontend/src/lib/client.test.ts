@@ -34,7 +34,10 @@ test('clients', async () => {
   expect(res.status).toStrictEqual(200)
   expect(proxyRequest).toBeCalledTimes(1)
   expect(proxyRequest).toBeCalledWith('/api/rooms/room-id/users', {
-    method: 'GET'
+    method: 'GET',
+    headers: {
+      'Content-Type': 'application/json'
+    }
   })
 })
 
@@ -81,6 +84,9 @@ test('authClients', async () => {
   expect(res.status).toStrictEqual(200)
   expect(proxyRequest).toBeCalledTimes(1)
   expect(proxyRequest).toBeCalledWith('/auth/token', {
-    method: 'POST'
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json'
+    }
   })
 })
