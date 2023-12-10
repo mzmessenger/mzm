@@ -1,4 +1,5 @@
 import type { MulterFile } from '../../types/index.js'
+import type { Readable } from 'stream'
 import { apis } from 'mzm-shared/src/api/universal'
 import { Request } from 'express'
 import { request } from 'undici'
@@ -20,6 +21,11 @@ const returnIconStream = async (key: string): StreamWrapResponse => {
 
   logger.info('[icon:returnIconStream]', key, JSON.stringify(head))
 
+  const res = await storage.getObject({ Key: key })
+  if (!res.Body) {
+    throw new NotFound('')
+  }
+
   return {
     headers: {
       ETag: head.ETag,
@@ -28,7 +34,7 @@ const returnIconStream = async (key: string): StreamWrapResponse => {
       'last-modified': head.LastModified?.toUTCString(),
       'cache-control': head.CacheControl || 'max-age=604800'
     },
-    stream: storage.getObject({ Key: key }).createReadStream()
+    stream: res.Body as Readable
   }
 }
 

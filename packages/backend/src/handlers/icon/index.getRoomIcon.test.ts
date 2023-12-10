@@ -66,7 +66,7 @@ test('getRoomIcon', async () => {
   const getObjectMock = vi.mocked(storage.getObject)
   const readableStream = new Readable()
   const getObject = createGetObjectMockValue({
-    createReadStream: readableStream
+    Body: readableStream
   })
   getObjectMock.mockReturnValueOnce(getObject)
 
