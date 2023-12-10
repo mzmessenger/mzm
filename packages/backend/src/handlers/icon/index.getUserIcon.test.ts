@@ -7,9 +7,8 @@ vi.mock('undici', () => {
 vi.mock('../../lib/logger.js')
 vi.mock('../../lib/storage.js')
 vi.mock('../../lib/db.js', async () => {
-  const actual = await vi.importActual<typeof import('../../lib/db.js')>(
-    '../../lib/db.js'
-  )
+  const actual =
+    await vi.importActual<typeof import('../../lib/db.js')>('../../lib/db.js')
   return { ...actual, mongoClient: vi.fn() }
 })
 

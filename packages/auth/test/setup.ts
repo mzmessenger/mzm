@@ -36,7 +36,9 @@ async function createMongoUser(
     }
   }
 
-  await client.db(dbname).addUser(user, password, {
+  await client.db(dbname).command({
+    createUser: user,
+    pwd: password,
     roles: ['readWrite', 'dbAdmin']
   })
   if (VERBOSE) {

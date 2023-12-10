@@ -25,17 +25,16 @@
     "@typescript-eslint/eslint-plugin": "^6.2.0",
     "@typescript-eslint/parser": "^6.2.0",
     "concurrently": "^8.2.0",
-    "esbuild": "^0.18.16",
+    "esbuild": "^0.19.9",
     "esbuild-register": "^3.4.2",
     "eslint": "^8.45.0",
-    "eslint-config-prettier": "^8.8.0",
+    "eslint-config-prettier": "^9.1.0",
     "eslint-plugin-prettier": "^5.0.0",
     "prettier": "^3.0.0",
-    "vitest": "^0.33.0"
+    "vitest": "^1.0.4"
   },
   "dependencies": {
     "@vitejs/plugin-react": "^4.0.3",
-    "jsdom": "^22.1.0",
     "mzm-frontend": "^0.0.0"
   }
 }

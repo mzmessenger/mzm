@@ -79,7 +79,6 @@ export const Rooms = () => {
 
 const Wrap = styled.div`
   padding: 5px 0;
-  cursor: pointer;
   overflow-y: scroll;
   flex: 1;
 

@@ -35,8 +35,8 @@ export type RouteParams<T> =
   T extends `${infer _}:${infer IParam}/${infer IRest}`
     ? { [k in IParam | keyof RouteParams<IRest>]: string }
     : T extends `${infer _}:${infer IParam}`
-    ? { [k in IParam]: string }
-    : {}
+      ? { [k in IParam]: string }
+      : {}
 
 export type DefinedType<T> = T extends infer Q extends (...args: any) => any
   ? ReturnType<Q>

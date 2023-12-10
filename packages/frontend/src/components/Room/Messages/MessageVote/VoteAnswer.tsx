@@ -14,10 +14,10 @@ export const VoteAnswer: React.FC<Props> = ({ className, type, answers }) => {
     type === VoteAnswerTypeEnum.ok
       ? 'ok'
       : type === VoteAnswerTypeEnum.ng
-      ? 'ng'
-      : type === VoteAnswerTypeEnum.na
-      ? 'na'
-      : ''
+        ? 'ng'
+        : type === VoteAnswerTypeEnum.na
+          ? 'na'
+          : ''
 
   return (
     <Wrap className={className}>
