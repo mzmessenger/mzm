@@ -8,6 +8,8 @@ Node.js >= v20
 
 Docker
 
+Cloudflare R2
+
 ### init
 
 setup DB

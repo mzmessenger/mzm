@@ -22,29 +22,12 @@ export const createHeadObjectMockValue = (options: {
   return headers
 }
 
-export const createGetObjectMockValue = (options: {
-  createReadStream: Readable
-}) => {
-  const mock: Awaited<ReturnType<typeof getObject>> = {
-    createReadStream: () => options.createReadStream,
-    // @ts-expect-error
-    abort: undefined,
-    // @ts-expect-error
-    eachPage: undefined,
-    // @ts-expect-error
-    isPageable: undefined,
-    // @ts-expect-error
-    send: undefined,
-    // @ts-expect-error
-    on: undefined,
-    // @ts-expect-error
-    onAsync: undefined,
-    // @ts-expect-error
-    promise: undefined,
-    // @ts-expect-error
-    startTime: undefined,
-    // @ts-expect-error
-    httpRequest: undefined
+type GetObject = Awaited<ReturnType<typeof getObject>>
+
+export const createGetObjectMockValue = async (options: { Body: Readable }) => {
+  const mock: GetObject = {
+    Body: options.Body as GetObject['Body'],
+    $metadata: {}
   }
 
   return mock

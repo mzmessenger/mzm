@@ -18,7 +18,7 @@ const methods: readonly Method[] = [
 ] as const
 
 type ClinetOptions<TPath extends string, TRoute extends RouteType> = {
-  fetcher: Fetcher
+  fetcher?: typeof defaultFetcher
 } & (HasParamsInPath<TPath> extends true
   ? {
       params: RouteParams<TPath>
@@ -54,7 +54,7 @@ function createClient<TPath extends string, TRoute extends RouteType>(
   method: Method
 ) {
   const client = async (options: ClinetOptions<TPath, TRoute>) => {
-    // @ts-expect-error
+    // @ts-ignore
     let path = toPath(options.params ?? {})
     const query = options.query ?? {}
     if (Object.keys(query).length > 0) {
@@ -67,12 +67,22 @@ function createClient<TPath extends string, TRoute extends RouteType>(
       url: url + path,
       method,
       headers: {
-        ...options.headers,
-        ['Content-Type']:
-          options.headers && options.headers['Content-Type']
-            ? options?.headers['Content-Type']
-            : 'application/json'
+        ...options.headers
       }
+    }
+
+    const contentType = (() => {
+      if (options.headers && options.headers['Content-Type']) {
+        return options.headers['Content-Type']
+      }
+      if (options.form) {
+        return undefined
+      }
+      return 'application/json'
+    })()
+
+    if (contentType) {
+      fetcherOptions.headers['Content-Type'] = contentType
     }
 
     if (options.form) {
@@ -132,7 +142,7 @@ async function defaultFetcher<T>(options: {
     init.body = options.form
   }
   const res = await fetch(options.url, init)
-  const body = options.headers['Content-Type'].includes('application/json')
+  const body = options.headers['Content-Type']?.includes('application/json')
     ? await res.json()
     : await res.text()
   return {

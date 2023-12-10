@@ -1,18 +1,21 @@
 import fs from 'fs'
 import { Readable } from 'stream'
-import AWS from 'aws-sdk'
+import {
+  S3Client,
+  PutObjectCommand,
+  HeadObjectCommand,
+  GetObjectCommand
+} from '@aws-sdk/client-s3'
 import * as config from '../config.js'
 
-const credentials = new AWS.Credentials({
-  accessKeyId: config.aws.AWS_ACCESS_KEY_ID,
-  secretAccessKey: config.aws.AWS_SECRET_ACCESS_KEY
+const s3 = new S3Client({
+  region: config.aws.AWS_REGION,
+  endpoint: config.aws.AWS_ENDPOINT,
+  credentials: {
+    accessKeyId: config.aws.AWS_ACCESS_KEY_ID,
+    secretAccessKey: config.aws.AWS_SECRET_ACCESS_KEY
+  }
 })
-
-AWS.config.update({
-  credentials,
-  region: config.aws.AWS_REGION
-})
-const s3 = new AWS.S3({ apiVersion: '2006-03-01' })
 
 export const createBodyFromFilePath = (filepath: string) => {
   return fs.createReadStream(filepath)
@@ -24,23 +27,26 @@ export const putObject = async (params: {
   ContentType?: string
   CacheControl?: string
 }) => {
-  const p = { ...params, Bucket: config.aws.AWS_BUCKET }
-  const data = await s3.putObject(p).promise()
+  const command = new PutObjectCommand({
+    ...params,
+    Bucket: config.aws.AWS_BUCKET
+  })
+  const data = await s3.send(command)
   return data
 }
 
 export const headObject = async ({ Key }: { Key: string }) => {
-  const params = {
+  const command = new HeadObjectCommand({
     Bucket: config.aws.AWS_BUCKET,
     Key: Key
-  }
-  return await s3.headObject(params).promise()
+  })
+  return await s3.send(command)
 }
 
-export const getObject = ({ Key }: { Key: string }) => {
-  const params = {
+export const getObject = async ({ Key }: { Key: string }) => {
+  const params = new GetObjectCommand({
     Bucket: config.aws.AWS_BUCKET,
     Key: Key
-  }
-  return s3.getObject(params)
+  })
+  return await s3.send(params)
 }
