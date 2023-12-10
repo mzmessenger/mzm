@@ -53,6 +53,9 @@ export class AuthProxy {
   }
 
   generateSocketUrl() {
+    if (!this.#accessToken) {
+      return ''
+    }
     return `${SOCKET_URL}?token=${this.#accessToken}`
   }
 

@@ -1,15 +1,21 @@
+/// <reference types='vite/client' />
 import type { AuthProxy, Cache } from '../../worker/authProxy/index'
-import { wrap } from 'comlink'
+import { wrap, type Remote } from 'comlink'
 import { set, get, remove } from '../cookie'
 import { AUTH_URL_BASE, REDIRECT_URI } from '../../constants'
 import { logger } from '../logger'
 
 const cacheKey = 'mzm:transaction'
-const worker = await init()
+let _worker: Remote<AuthProxy> | null = null
+
+async function getWorker(): Promise<Remote<AuthProxy>> {
+  if (!_worker) {
+    _worker = await init()
+  }
+  return _worker
+}
 
 async function init() {
-  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
-  // @ts-expect-error
   const ProxyedWorker = await import('../../worker/authProxy/index?worker')
   const Worker = wrap<typeof AuthProxy>(new ProxyedWorker.default())
 
@@ -32,15 +38,17 @@ async function init() {
 export async function proxyRequest(
   ...args: Parameters<AuthProxy['proxyRequest']>
 ) {
-  return worker.proxyRequest(...args)
+  return (await getWorker()).proxyRequest(...args)
 }
 
 export async function generateSocketUrl() {
-  return worker.generateSocketUrl()
+  return (await getWorker()).generateSocketUrl()
 }
 
 export async function pkceChallenge() {
-  const { code_verifier, code_challenge } = await worker.pkceChallenge()
+  const { code_verifier, code_challenge } = await (
+    await getWorker()
+  ).pkceChallenge()
   return { code_verifier, code_challenge }
 }
 
@@ -54,7 +62,7 @@ export function savePkceChallenge(options: {
 }
 
 export async function authTokenAfterRedirect(code: string) {
-  const res = await worker.authToken(code)
+  const res = await (await getWorker()).authToken(code)
   if (res.success) {
     remove(cacheKey)
   }
@@ -131,6 +139,7 @@ const runIframe = async (
 
 async function _getAccessTokenFromIframe() {
   const state = generateState()
+  const worker = await getWorker()
   const { code_challenge, code_verifier } = await worker.pkceChallenge()
   const { code } = await runIframe(code_challenge, state, REDIRECT_URI)
   const res = await worker.authToken(code, code_verifier)

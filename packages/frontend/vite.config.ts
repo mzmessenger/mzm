@@ -1,6 +1,7 @@
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig } from 'vite'
+import { configDefaults } from 'vitest/config'
 import path from 'path'
 
 const dirname = path.dirname(new URL(import.meta.url).pathname)
@@ -17,13 +18,13 @@ export default defineConfig(({ mode }) => {
 
   return {
     define: {
-      process: {
-        env: {
-          SOCKET_URL: process.env.SOCKET_URL ?? SOCKET_URL,
-          API_URL_BASE: process.env.API_DOMAIN_BASE ?? API_URL_BASE,
-          AUTH_URL_BASE: process.env.AUTH_URL_BASE ?? AUTH_URL_BASE
-        }
-      }
+      __SOCKET_URL__: JSON.stringify(process.env.SOCKET_URL ?? SOCKET_URL),
+      __API_URL_BASE__: JSON.stringify(
+        process.env.API_DOMAIN_BASE ?? API_URL_BASE
+      ),
+      __AUTH_URL_BASE__: JSON.stringify(
+        process.env.AUTH_URL_BASE ?? AUTH_URL_BASE
+      )
     },
     resolve: {
       alias: [
@@ -78,6 +79,10 @@ export default defineConfig(({ mode }) => {
     server: {
       port: 8080,
       host: '0.0.0.0'
+    },
+    test: {
+      environment: 'jsdom',
+      exclude: [...configDefaults.exclude, '**/dist/**']
     }
   }
 })
