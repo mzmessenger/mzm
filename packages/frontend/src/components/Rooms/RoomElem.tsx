@@ -45,6 +45,7 @@ const RoomWrap = styled.div`
     padding-bottom: 4px;
   }
   display: flex;
+  cursor: pointer;
   align-items: center;
   color: var(--color-on-surface);
   height: 34px;
