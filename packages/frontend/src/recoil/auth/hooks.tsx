@@ -24,7 +24,7 @@ export const useAuth = () => {
     setLoginFlag(false)
   }, [setLoginFlag])
 
-  const authTokenAfterRedirect = async (code: string) => {
+  const authTokenAfterRedirect = useCallback(async (code: string) => {
     try {
       const res = await authTokenAfterRedirectBase(code)
       if (res.success) {
@@ -39,9 +39,10 @@ export const useAuth = () => {
     } catch (e) {
       setLoginFlag(false)
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
-  const init = async () => {
+  const init = useCallback(async () => {
     try {
       const res = await getAccessTokenFromIframe()
       if (res.success) {
@@ -58,7 +59,8 @@ export const useAuth = () => {
       setLoginFlag(false)
       return false
     }
-  }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [])
 
   return {
     loginFlag,

@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, PropsWithChildren, useEffect } from 'react'
+import React, { Suspense, lazy, PropsWithChildren } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useApp } from './App.hooks'
 import { Loading } from './components/Loading'
@@ -10,17 +10,15 @@ const WithSuspense: React.FC<PropsWithChildren<unknown>> = ({ children }) => {
 }
 
 // reduce rerender app
-const NoRenderApp = () => {
+const NoRenderApp = React.memo(() => {
   useApp()
   return <></>
-}
+})
 
 const App = () => {
   const PageTos = lazy(() => import('./pages/Tos'))
   const PagePrivacyPolicy = lazy(() => import('./pages/PrivacyPolicy'))
   const LoginSuccess = lazy(() => import('./pages/LoginSuccess'))
-
-  useEffect(() => {}, [])
 
   return (
     <>
