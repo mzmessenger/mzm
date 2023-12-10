@@ -1,6 +1,6 @@
 import type { AuthAPI } from 'mzm-shared/src/api/universal'
 import type { AccessToken } from 'mzm-shared/src/type/auth'
-import jwt_decode, { type JwtPayload } from 'jwt-decode'
+import { jwtDecode, type JwtPayload } from 'jwt-decode'
 import { expose } from 'comlink'
 import dayjs from 'dayjs'
 import { pkceChallenge, verifyCodeChallenge } from './pkce'
@@ -20,7 +20,7 @@ type DecodeAccessToken =
 
 const decodeAccessToken = (accessToken: string): DecodeAccessToken => {
   try {
-    const decoded = jwt_decode<JwtPayload & AccessToken>(accessToken)
+    const decoded = jwtDecode<JwtPayload & AccessToken>(accessToken)
     const exp = dayjs(new Date(decoded.exp * 1000))
       .subtract(20, 'minute')
       .valueOf()

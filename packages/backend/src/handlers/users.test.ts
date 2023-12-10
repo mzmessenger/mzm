@@ -1,8 +1,7 @@
 import { vi, test, expect, beforeEach, beforeAll } from 'vitest'
 vi.mock('../lib/db.js', async () => {
-  const actual = await vi.importActual<typeof import('../lib/db.js')>(
-    '../lib/db.js'
-  )
+  const actual =
+    await vi.importActual<typeof import('../lib/db.js')>('../lib/db.js')
   return { ...actual, mongoClient: vi.fn() }
 })
 

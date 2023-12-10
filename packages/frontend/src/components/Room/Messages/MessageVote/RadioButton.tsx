@@ -20,10 +20,10 @@ export const RadioButton: React.FC<Props> = ({
     value === 0
       ? VoteAnswerTypeEnum.ok
       : value === 1
-      ? VoteAnswerTypeEnum.ng
-      : value === 2
-      ? VoteAnswerTypeEnum.na
-      : ''
+        ? VoteAnswerTypeEnum.ng
+        : value === 2
+          ? VoteAnswerTypeEnum.na
+          : ''
 
   return (
     <Wrap>

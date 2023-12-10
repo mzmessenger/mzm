@@ -24,16 +24,14 @@ vi.mock('../lib/redis.js', async () => {
 })
 
 vi.mock('../lib/db.js', async () => {
-  const actual = await vi.importActual<typeof import('../lib/db.js')>(
-    '../lib/db.js'
-  )
+  const actual =
+    await vi.importActual<typeof import('../lib/db.js')>('../lib/db.js')
   return { ...actual, mongoClient: vi.fn() }
 })
 
 vi.mock('../lib/token.js', async () => {
-  const actual = await vi.importActual<typeof import('../lib/token.js')>(
-    '../lib/token.js'
-  )
+  const actual =
+    await vi.importActual<typeof import('../lib/token.js')>('../lib/token.js')
   return {
     ...actual,
     createTokens: vi.fn(),
@@ -190,9 +188,8 @@ test('fail token (invalid code)', async () => {
 test('fail token (invalid refresh_token)', async () => {
   expect.assertions(2)
 
-  const actual = await vi.importActual<typeof import('../lib/token.js')>(
-    '../lib/token.js'
-  )
+  const actual =
+    await vi.importActual<typeof import('../lib/token.js')>('../lib/token.js')
   const verifyRefreshTokenMock = vi
     .mocked(verifyRefreshToken)
     .mockClear()
