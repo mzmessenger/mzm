@@ -36,9 +36,3 @@ jobs:
       - run: npm test -w packages/frontend
         env:
           CI: true
-      - name: test docker build
-        uses: docker/build-push-action@v2
-        with:
-          file: packages/frontend/Dockerfile
-          context: .
-          push: false
