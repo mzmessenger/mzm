@@ -42,9 +42,7 @@ export const loginTwitter = async (
       username: twitterUserName
     })
 
-    const user = updated.value
-      ? updated.value
-      : await collections(db).users.findOne(filter)
+    const user = updated ? updated : await collections(db).users.findOne(filter)
 
     cb(null, user ?? undefined)
   } catch (e) {

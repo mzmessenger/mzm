@@ -41,9 +41,7 @@ export const loginGithub = async (
       username: githubUserName
     })
 
-    const user = updated.value
-      ? updated.value
-      : await collections(db).users.findOne(filter)
+    const user = updated ? updated : await collections(db).users.findOne(filter)
 
     cb(null, user ?? undefined)
   } catch (e) {
