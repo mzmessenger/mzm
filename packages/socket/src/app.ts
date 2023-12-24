@@ -14,8 +14,6 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
 
   wss.on('connection', async function connection(ws: ExtWebSocket, req) {
     let userId: string | null = null
-    let twitterUserName: string | null = null
-    let githubUserName: string | null = null
 
     if (!req.url) {
       return
@@ -38,8 +36,6 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
       })
       if (!err && decoded) {
         userId = decoded.user._id
-        twitterUserName = decoded.user.twitterUserName
-        githubUserName = decoded.user.githubUserName
       }
     }
     logger.info({
@@ -105,8 +101,7 @@ export const createApp = ({ wss }: { wss: WebSocket.Server }) => {
     })
 
     const data: SocketToBackendType = {
-      cmd: TO_SERVER_CMD.CONNECTION,
-      payload: { user: userId, twitterUserName, githubUserName }
+      cmd: TO_SERVER_CMD.CONNECTION
     }
 
     requestSocketAPI(JSON.stringify(data), userId, id)
