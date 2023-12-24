@@ -7,7 +7,6 @@ import { TO_SERVER_CMD } from 'mzm-shared/src/type/socket'
 import { createRequest } from '../../test/testUtil.js'
 import { socket } from './internal.js'
 import {
-  connection,
   sendMessage,
   modifyMessage,
   getMessagesFromRoom,
@@ -24,7 +23,6 @@ import {
 } from './internal/socket.js'
 
 test.each([
-  [TO_SERVER_CMD.CONNECTION, connection],
   [TO_SERVER_CMD.MESSAGE_SEND, sendMessage],
   [TO_SERVER_CMD.MESSAGE_MODIFY, modifyMessage],
   [TO_SERVER_CMD.MESSAGES_ROOM, getMessagesFromRoom],

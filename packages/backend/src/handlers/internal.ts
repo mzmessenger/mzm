@@ -4,11 +4,7 @@ import {
   type SocketToBackendType,
   type ToClientType
 } from 'mzm-shared/src/type/socket'
-import {
-  getRequestUserId,
-  getRequestGithubUserName,
-  getRequestTwitterUserName
-} from '../lib/utils.js'
+import { getRequestUserId } from '../lib/utils.js'
 import { logger } from '../lib/logger.js'
 import * as _socket from './internal/socket.js'
 import { sendToUser } from '../lib/fetchStreaming.js'
@@ -20,14 +16,7 @@ export const socket = async (req: Request): Promise<Res> => {
   const data = req.body as SocketToBackendType
   logger.info('socket', user, data)
   let res: Res = undefined
-  if (data.cmd === TO_SERVER_CMD.CONNECTION) {
-    const twitterUserName = getRequestTwitterUserName(req)
-    const githubUserName = getRequestGithubUserName(req)
-    res = await _socket.connection(user, data, {
-      twitterUserName,
-      githubUserName
-    })
-  } else if (data.cmd === TO_SERVER_CMD.MESSAGE_SEND) {
+  if (data.cmd === TO_SERVER_CMD.MESSAGE_SEND) {
     res = await _socket.sendMessage(user, data)
   } else if (data.cmd === TO_SERVER_CMD.MESSAGE_IINE) {
     res = await _socket.iine(user, data)

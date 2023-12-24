@@ -36,15 +36,6 @@ async function _consumeSocket(options: Options) {
   }
   initRecconect()
 
-  fetch(`${API_URL_BASE}/api/socket`, {
-    method: 'POST',
-    headers: {
-      Authorization: `Bearer ${token}`,
-      'Content-Type': 'application/json'
-    },
-    body: JSON.stringify({ cmd: 'socket:connection' })
-  })
-
   const res = await fetch(`${API_URL_BASE}/api/socket`, {
     headers: {
       Authorization: `Bearer ${token}`
