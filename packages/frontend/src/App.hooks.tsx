@@ -6,7 +6,7 @@ import { useAuth, useLoginFlag } from './recoil/auth/hooks'
 import { getRoomName } from './lib/util'
 import { useUiActions } from './recoil/ui/hooks'
 import { logger } from './lib/logger'
-import { receiveStreamData } from './lib/stream'
+import { comsumeSocket } from './lib/auth'
 import { events, type MessageEvent } from './lib/events'
 
 const useRouter = () => {
@@ -65,7 +65,7 @@ export const useApp = () => {
 
     function authoriaedListener(e: Event) {
       logger.info(events.authorized)
-      receiveStreamData()
+      comsumeSocket()
     }
     function messageListener(e: MessageEvent) {
       logger.info(events.message, e.detail)

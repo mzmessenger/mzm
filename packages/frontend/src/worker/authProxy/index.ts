@@ -4,8 +4,9 @@ import { jwtDecode, type JwtPayload } from 'jwt-decode'
 import { expose } from 'comlink'
 import dayjs from 'dayjs'
 import { pkceChallenge, verifyCodeChallenge } from './pkce'
-import { AUTH_URL_BASE, SOCKET_URL } from '../../constants'
+import { AUTH_URL_BASE } from '../../constants'
 import { logger } from '../../lib/logger'
+import { consumeSocket } from './stream/index'
 
 type TokenResponse = AuthAPI['/auth/token']['POST']['response'][200]['body']
 
@@ -35,7 +36,8 @@ const decodeAccessToken = (accessToken: string): DecodeAccessToken => {
 }
 
 export const messages = {
-  authorized: 'mzm:worker:authorized'
+  authorized: 'mzm:worker:authorized',
+  message: 'mzm:worker:message'
 } as const
 
 export class AuthProxy {
@@ -118,6 +120,12 @@ export class AuthProxy {
       logger.error(e)
       return { ok: false, status: 500, body: null }
     }
+  }
+
+  async comsumeSocket() {
+    await consumeSocket({
+      getAccessToken: () => this.#accessToken
+    })
   }
 
   async #authTokenBase(

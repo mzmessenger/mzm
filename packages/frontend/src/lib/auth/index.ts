@@ -3,7 +3,7 @@ import { wrap, type Remote } from 'comlink'
 import { set, get, remove } from '../cookie'
 import { AUTH_URL_BASE, REDIRECT_URI } from '../../constants'
 import { logger } from '../logger'
-import { dispatchAuthorizedEvent } from '../events'
+import { dispatchAuthorizedEvent, dispatchMessageEvent } from '../events'
 import {
   type AuthProxy,
   type Cache,
@@ -24,8 +24,13 @@ async function init() {
   const ProxyedWorker = await import('../../worker/authProxy/index?worker')
   const worker = new ProxyedWorker.default()
   worker.addEventListener('message', (e) => {
-    if (e.data.type === messages.authorized) {
-      dispatchAuthorizedEvent()
+    switch (e.data.type) {
+      case messages.authorized: {
+        return dispatchAuthorizedEvent()
+      }
+      case messages.message: {
+        return dispatchMessageEvent(e.data.payload)
+      }
     }
   })
   const Worker = wrap<typeof AuthProxy>(worker)
@@ -50,6 +55,10 @@ export async function proxyRequest(
   ...args: Parameters<AuthProxy['proxyRequest']>
 ) {
   return (await getInstance()).proxyRequest(...args)
+}
+
+export async function comsumeSocket() {
+  return (await getInstance()).comsumeSocket()
 }
 
 // @todo remove

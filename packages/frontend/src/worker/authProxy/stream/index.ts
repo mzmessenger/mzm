@@ -1,24 +1,25 @@
-// @todo move service worker
-import { API_URL_BASE } from '../../constants'
-import { getAccessToken } from '../auth'
-import { sleep } from '../util'
-import { logger } from '../logger'
+import { API_URL_BASE } from '../../../constants'
+import { sleep } from '../../../lib/util'
+import { logger } from '../../../lib/logger'
 import { incrementRecconectAttenmpts, initRecconect, isMax } from './reconnect'
-import { dispatchMessageEvent } from '../events'
-import { sendSocket } from '../client'
+import { messages } from '../index'
 
 const recconect = initRecconect()
 
 let isConnected = false
 
-export async function receiveStreamData() {
+type Options = {
+  getAccessToken: () => string
+}
+
+export async function consumeSocket(options: Options) {
   if (isConnected) {
     return
   }
   isConnected = true
   // eslint-disable-next-line no-constant-condition
   while (true) {
-    await _receiveStreamData().catch((e) => logger.warn(e))
+    await _consumeSocket(options).catch((e) => logger.warn(e))
     if (isMax(recconect)) {
       logger.error('over max recconect', recconect.attempts)
       break
@@ -27,19 +28,23 @@ export async function receiveStreamData() {
   }
 }
 
-async function _receiveStreamData() {
-  const token = await getAccessToken().then((token) => {
-    if (!token) {
-      incrementRecconectAttenmpts(recconect)
-      return Promise.reject('no token')
-    }
-    initRecconect()
-    return token
+async function _consumeSocket(options: Options) {
+  const token = options.getAccessToken()
+  if (!token) {
+    incrementRecconectAttenmpts(recconect)
+    return Promise.reject('no token')
+  }
+  initRecconect()
+
+  fetch(`${API_URL_BASE}/api/socket`, {
+    method: 'POST',
+    headers: {
+      Authorization: `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify({ cmd: 'socket:connection' })
   })
 
-  sendSocket({ cmd: 'socket:connection' })
-
-  // @todo worker
   const res = await fetch(`${API_URL_BASE}/api/socket`, {
     headers: {
       Authorization: `Bearer ${token}`
@@ -63,7 +68,10 @@ async function _receiveStreamData() {
     }
     try {
       const message = JSON.parse(value)
-      dispatchMessageEvent(message)
+      self.postMessage({
+        type: messages.message,
+        payload: message
+      })
     } catch (e) {
       logger.warn(e)
     }
