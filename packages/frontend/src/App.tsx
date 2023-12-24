@@ -1,4 +1,4 @@
-import React, { Suspense, lazy, PropsWithChildren } from 'react'
+import React, { Suspense, lazy, type PropsWithChildren } from 'react'
 import { Routes, Route } from 'react-router-dom'
 import { useApp } from './App.hooks'
 import { Loading } from './components/Loading'

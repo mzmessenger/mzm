@@ -29,6 +29,9 @@ export const checkAccessToken = (
         return res.status(401).send('not login')
       }
       req.headers[HEADERS.USER_ID] = decoded.user._id
+      req.headers[HEADERS.GITHUB_USER_NAME] = decoded.user.githubUserName ?? ''
+      req.headers[HEADERS.TWITTER_USER_NAME] =
+        decoded.user.twitterUserName ?? ''
       next()
     })
     .catch(() => {

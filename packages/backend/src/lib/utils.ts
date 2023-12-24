@@ -11,6 +11,20 @@ export const getRequestUserId = (req: IncomingMessage | Request): string => {
   return user
 }
 
+export const getRequestTwitterUserName = (
+  req: IncomingMessage | Request
+): string | null => {
+  const name = req.headers[HEADERS.TWITTER_USER_NAME] ?? null
+  return Array.isArray(name) ? name[0] : name
+}
+
+export const getRequestGithubUserName = (
+  req: IncomingMessage | Request
+): string | null => {
+  const name = req.headers[HEADERS.GITHUB_USER_NAME] ?? null
+  return Array.isArray(name) ? name[0] : name
+}
+
 export const escape = (str: string) => {
   return str
     .replace(/&/g, '&amp;')

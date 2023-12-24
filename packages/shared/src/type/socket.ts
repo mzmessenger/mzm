@@ -161,6 +161,7 @@ export type FilterSocketToBackendType<P extends SocketToBackendType['cmd']> =
   Extract<SocketToBackendType, { cmd: P }>
 
 export type ClientToSocketType =
+  | Connection
   | GetRooms
   | SendMessage
   | ModifyMessage
@@ -176,16 +177,11 @@ export type ClientToSocketType =
   | SendVoteAnswer
   | RemoveVoteAnswer
 
-export type SocketToBackendType =
-  | {
-      cmd: typeof TO_SERVER_CMD.CONNECTION
-      payload: {
-        user: string
-        twitterUserName: string | null
-        githubUserName: string | null
-      }
-    }
-  | ClientToSocketType
+type Connection = {
+  cmd: 'socket:connection'
+}
+
+export type SocketToBackendType = ClientToSocketType
 
 type GetRooms = {
   cmd: typeof TO_SERVER_CMD.ROOMS_GET

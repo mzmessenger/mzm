@@ -142,9 +142,12 @@ async function defaultFetcher<T>(options: {
     init.body = options.form
   }
   const res = await fetch(options.url, init)
-  const body = options.headers['Content-Type']?.includes('application/json')
-    ? await res.json()
-    : await res.text()
+  let body = undefined
+  if ((Number(res.headers.get('content-length')) ?? 0) > 0) {
+    body = options.headers['Content-Type']?.includes('application/json')
+      ? await res.json()
+      : await res.text()
+  }
   return {
     ok: res.ok,
     status: res.status,

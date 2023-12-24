@@ -1,23 +1,34 @@
 /// <reference types='vite/client' />
-import type { AuthProxy, Cache } from '../../worker/authProxy/index'
 import { wrap, type Remote } from 'comlink'
 import { set, get, remove } from '../cookie'
 import { AUTH_URL_BASE, REDIRECT_URI } from '../../constants'
 import { logger } from '../logger'
+import { dispatchAuthorizedEvent } from '../events'
+import {
+  type AuthProxy,
+  type Cache,
+  messages
+} from '../../worker/authProxy/index'
 
 const cacheKey = 'mzm:transaction'
-let _worker: Remote<AuthProxy> | null = null
+let instance: Remote<AuthProxy> | null = await init()
 
-async function getWorker(): Promise<Remote<AuthProxy>> {
-  if (!_worker) {
-    _worker = await init()
+async function getInstance(): Promise<Remote<AuthProxy>> {
+  if (!instance) {
+    instance = await init()
   }
-  return _worker
+  return instance
 }
 
 async function init() {
   const ProxyedWorker = await import('../../worker/authProxy/index?worker')
-  const Worker = wrap<typeof AuthProxy>(new ProxyedWorker.default())
+  const worker = new ProxyedWorker.default()
+  worker.addEventListener('message', (e) => {
+    if (e.data.type === messages.authorized) {
+      dispatchAuthorizedEvent()
+    }
+  })
+  const Worker = wrap<typeof AuthProxy>(worker)
 
   const cacheStr = get(cacheKey)
   let cache: Cache = undefined
@@ -38,16 +49,17 @@ async function init() {
 export async function proxyRequest(
   ...args: Parameters<AuthProxy['proxyRequest']>
 ) {
-  return (await getWorker()).proxyRequest(...args)
+  return (await getInstance()).proxyRequest(...args)
 }
 
-export async function generateSocketUrl() {
-  return (await getWorker()).generateSocketUrl()
+// @todo remove
+export async function getAccessToken() {
+  return (await getInstance()).getAccessToken()
 }
 
 export async function pkceChallenge() {
   const { code_verifier, code_challenge } = await (
-    await getWorker()
+    await getInstance()
   ).pkceChallenge()
   return { code_verifier, code_challenge }
 }
@@ -62,7 +74,7 @@ export function savePkceChallenge(options: {
 }
 
 export async function authTokenAfterRedirect(code: string) {
-  const res = await (await getWorker()).authToken(code)
+  const res = await (await getInstance()).authToken(code)
   if (res.success) {
     remove(cacheKey)
   }
@@ -139,10 +151,10 @@ const runIframe = async (
 
 async function _getAccessTokenFromIframe() {
   const state = generateState()
-  const worker = await getWorker()
-  const { code_challenge, code_verifier } = await worker.pkceChallenge()
+  const instance = await getInstance()
+  const { code_challenge, code_verifier } = await instance.pkceChallenge()
   const { code } = await runIframe(code_challenge, state, REDIRECT_URI)
-  const res = await worker.authToken(code, code_verifier)
+  const res = await instance.authToken(code, code_verifier)
   return res
 }
 

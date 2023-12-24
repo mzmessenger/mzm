@@ -20,9 +20,10 @@ import {
   type User,
   type VoteAnswer
 } from '../../lib/db.js'
-import { escape, unescape } from '../../lib/utils.js'
 import * as config from '../../config.js'
 import {
+  escape,
+  unescape,
   popParam,
   createUserIconPath,
   createRoomIconPath,
@@ -50,7 +51,11 @@ import {
 
 export const connection = async (
   userId: string,
-  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.CONNECTION>
+  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.CONNECTION>,
+  payload: {
+    twitterUserName: string | null
+    githubUserName: string | null
+  }
 ): Promise<ToClientType> => {
   const id = new ObjectId(userId)
   const user = await collections(await mongoClient()).users.findOne({
@@ -61,9 +66,7 @@ export const connection = async (
 
   if (!user || !user.account || user.account === '') {
     const account =
-      data.payload.twitterUserName ??
-      data.payload.githubUserName ??
-      randomUUID()
+      payload.twitterUserName ?? payload.githubUserName ?? randomUUID()
     await initUser(id, account)
     signup = true
   }

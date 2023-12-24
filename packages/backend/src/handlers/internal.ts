@@ -1,43 +1,63 @@
-import { Request } from 'express'
-import { SocketToBackendType, TO_SERVER_CMD } from 'mzm-shared/src/type/socket'
-import { getRequestUserId } from '../lib/utils.js'
+import type { Request } from 'express'
+import {
+  TO_SERVER_CMD,
+  type SocketToBackendType,
+  type ToClientType
+} from 'mzm-shared/src/type/socket'
+import {
+  getRequestUserId,
+  getRequestGithubUserName,
+  getRequestTwitterUserName
+} from '../lib/utils.js'
 import { logger } from '../lib/logger.js'
 import * as _socket from './internal/socket.js'
+import { sendToUser } from '../lib/fetchStreaming.js'
 
-export const socket = async (req: Request) => {
+type Res = void | undefined | ToClientType
+
+export const socket = async (req: Request): Promise<Res> => {
   const user = getRequestUserId(req)
   const data = req.body as SocketToBackendType
   logger.info('socket', user, data)
+  let res: Res = undefined
   if (data.cmd === TO_SERVER_CMD.CONNECTION) {
-    return await _socket.connection(user, data)
+    const twitterUserName = getRequestTwitterUserName(req)
+    const githubUserName = getRequestGithubUserName(req)
+    res = await _socket.connection(user, data, {
+      twitterUserName,
+      githubUserName
+    })
   } else if (data.cmd === TO_SERVER_CMD.MESSAGE_SEND) {
-    return await _socket.sendMessage(user, data)
+    res = await _socket.sendMessage(user, data)
   } else if (data.cmd === TO_SERVER_CMD.MESSAGE_IINE) {
-    return await _socket.iine(user, data)
+    res = await _socket.iine(user, data)
   } else if (data.cmd === TO_SERVER_CMD.MESSAGE_MODIFY) {
-    return _socket.modifyMessage(user, data)
+    res = await _socket.modifyMessage(user, data)
   } else if (data.cmd === TO_SERVER_CMD.MESSAGE_REMOVE) {
-    return _socket.removeMessage(user, data)
+    res = await _socket.removeMessage(user, data)
   } else if (data.cmd === TO_SERVER_CMD.MESSAGES_ROOM) {
-    return _socket.getMessagesFromRoom(user, data)
+    res = await _socket.getMessagesFromRoom(user, data)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_GET) {
-    return _socket.getRooms(user)
+    res = await _socket.getRooms(user)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_ENTER) {
-    return _socket.enterRoom(user, data)
+    res = await _socket.enterRoom(user, data)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION) {
-    return _socket.updateRoomDescription(user, data)
+    res = await _socket.updateRoomDescription(user, data)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_READ) {
-    return _socket.readMessage(user, data)
+    res = await _socket.readMessage(user, data)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_SORT) {
-    return _socket.sortRooms(user, data)
+    res = await _socket.sortRooms(user, data)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_OPEN) {
-    return await _socket.openRoom(user, data)
+    res = await _socket.openRoom(user, data)
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_CLOSE) {
-    return await _socket.closeRoom(user, data)
+    res = await _socket.closeRoom(user, data)
   } else if (data.cmd === TO_SERVER_CMD.VOTE_ANSWER_SEND) {
-    return await _socket.sendVoteAnswer(user, data)
+    res = await _socket.sendVoteAnswer(user, data)
   } else if (data.cmd === TO_SERVER_CMD.VOTE_ANSWER_REMOVE) {
-    return await _socket.removeVoteAnswer(user, data)
+    res = await _socket.removeVoteAnswer(user, data)
   }
-  return
+  if (res) {
+    sendToUser(user, Buffer.from(JSON.stringify(res)))
+  }
+  return res
 }

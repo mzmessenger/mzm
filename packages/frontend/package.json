@@ -15,8 +15,8 @@
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
     "build": "vite build",
-    "prebuild-tsc": "npm run clean",
-    "build-tsc": "tsc --build tsconfig.json"
+    "prebuild:tsc": "npm run clean",
+    "build:tsc": "tsc --build tsconfig.json"
   },
   "license": "MIT",
   "devDependencies": {
