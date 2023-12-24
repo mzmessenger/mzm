@@ -4,19 +4,19 @@
   "version": "0.0.0",
   "main": "index.js",
   "scripts": {
-    "prestart": "npm run build-tsc",
+    "prestart": "npm run build:tsc",
     "start": "vite",
     "serve": "vite preview --port 8080",
     "format": "prettier --write src ./*.{js,json}",
     "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
-    "pretest": "npm run build-tsc",
+    "pretest": "npm run build:tsc",
     "test": "vitest run --config=./vite.config.ts",
     "test:warth": "vitest --config=./vite.config.ts",
     "clean": "rm -rf dist",
     "prebuild": "npm run clean",
     "build": "vite build",
-    "prebuild-tsc": "npm run clean",
-    "build-tsc": "tsc --build tsconfig.json"
+    "prebuild:tsc": "npm run clean",
+    "build:tsc": "tsc --build tsconfig.json"
   },
   "license": "MIT",
   "devDependencies": {

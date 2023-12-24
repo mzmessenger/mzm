@@ -1,4 +1,5 @@
 /* eslint-disable @typescript-eslint/ban-types */
+import type { ClientToSocketType } from 'mzm-shared/src/type/socket'
 import { apis, authApis } from 'mzm-shared/src/api/universal'
 import { createClients, type Fetcher } from 'mzm-shared/src/api/client'
 import { API_URL_BASE, AUTH_URL_BASE } from '../constants'
@@ -34,3 +35,10 @@ export const fetcher: Fetcher = async <T>(options: Parameters<Fetcher>[0]) => {
 
 export const clients = createClients(apis, API_URL_BASE)
 export const authClients = createClients(authApis, AUTH_URL_BASE)
+
+export async function sendSocket(message: ClientToSocketType) {
+  return await clients['/api/socket']['POST'].client({
+    fetcher,
+    body: message
+  })
+}

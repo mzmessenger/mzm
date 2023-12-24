@@ -1,14 +1,3 @@
-import { ClientToSocketType } from 'mzm-shared/src/type/socket'
-import { logger } from './logger'
-
-export const sendSocket = (socket: WebSocket, message: ClientToSocketType) => {
-  if (!socket || socket.readyState !== WebSocket.OPEN) {
-    logger.warn('socket is not ready:', socket, message)
-    return
-  }
-  socket.send(JSON.stringify(message))
-}
-
 export const isReplied = (account: string, message: string) => {
   return new RegExp(`([\\s]+|^)@${account}(?:[^a-z]|$)`).test(message)
 }

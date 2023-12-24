@@ -20,6 +20,7 @@ export const remove = async (ackid: string, messages: string[]) => {
   if (!target) {
     return
   }
+  // @todo atomic
   const enter = await collections(db).enter.find({ userId: userId }).toArray()
   const ids = enter.map((e) => e.roomId)
   const remove: Pick<Removed, 'account' | 'originId' | 'enter'> = {

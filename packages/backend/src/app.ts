@@ -8,6 +8,8 @@ import { createErrorHandler } from 'mzm-shared/src/lib/middleware'
 import { MULTER_PATH, CORS_ORIGIN } from './config.js'
 import { streamWrap } from './lib/wrap.js'
 import { logger } from './lib/logger.js'
+import { getRequestUserId } from './lib/utils.js'
+import { addUserResponse, closeUserResponse } from './lib/fetchStreaming.js'
 import { wrap } from 'mzm-shared/src/lib/wrap'
 import * as rooms from './handlers/rooms.js'
 import * as user from './handlers/users.js'
@@ -87,6 +89,26 @@ export const createApp = () => {
     iconUpload.single('icon'),
     wrap(icon.uploadRoomIcon.handler)
   )
+
+  app.get('/api/socket', checkAccessToken, (req, res) => {
+    const user = getRequestUserId(req)
+
+    addUserResponse(user, res)
+
+    res.on('close', () => {
+      closeUserResponse(user, res)
+    })
+
+    res.status(200)
+    res.set('Content-Type', 'text/plain')
+
+    setInterval(() => {
+      res.write('ping')
+      res.write(Buffer.from('\0'))
+    }, 5000)
+  })
+
+  app.post('/api/socket', checkAccessToken, jsonParser, wrap(internal.socket))
 
   app.post(
     '/api/internal/socket',

@@ -7,6 +7,7 @@ import type {
   Method,
   DefinedRoute
 } from './type.js'
+import { ClientToSocketType } from '../type/socket.js'
 
 function define<T>() {
   return (args: T) => args
@@ -206,6 +207,18 @@ export const { apis } = defineApis({
         },
         400: {
           body: define<string>()
+        }
+      }
+    }
+  },
+  '/api/socket': {
+    POST: {
+      request: {
+        body: define<ClientToSocketType>()
+      },
+      response: {
+        200: {
+          body: define<void>()
         }
       }
     }

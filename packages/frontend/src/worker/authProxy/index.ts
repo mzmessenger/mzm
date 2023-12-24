@@ -4,8 +4,9 @@ import { jwtDecode, type JwtPayload } from 'jwt-decode'
 import { expose } from 'comlink'
 import dayjs from 'dayjs'
 import { pkceChallenge, verifyCodeChallenge } from './pkce'
-import { AUTH_URL_BASE, SOCKET_URL } from '../../constants'
+import { AUTH_URL_BASE } from '../../constants'
 import { logger } from '../../lib/logger'
+import { consumeSocket } from './stream/index'
 
 type TokenResponse = AuthAPI['/auth/token']['POST']['response'][200]['body']
 
@@ -19,6 +20,9 @@ type DecodeAccessToken =
   | { expired: true; user: null }
 
 const decodeAccessToken = (accessToken: string): DecodeAccessToken => {
+  if (!accessToken) {
+    return { expired: true, user: null }
+  }
   try {
     const decoded = jwtDecode<JwtPayload & AccessToken>(accessToken)
     const exp = dayjs(new Date(decoded.exp * 1000))
@@ -30,6 +34,11 @@ const decodeAccessToken = (accessToken: string): DecodeAccessToken => {
     return { expired: true, user: null }
   }
 }
+
+export const messages = {
+  authorized: 'mzm:worker:authorized',
+  message: 'mzm:worker:message'
+} as const
 
 export class AuthProxy {
   code_verifier: string | null = null
@@ -43,6 +52,9 @@ export class AuthProxy {
     this.code_verifier = cache?.code_verifier ?? null
     setInterval(
       () => {
+        if (!this.#accessToken) {
+          return
+        }
         const decode = decodeAccessToken(this.#accessToken)
         if (decode.expired) {
           this.#authTokenWithRefresh()
@@ -52,11 +64,11 @@ export class AuthProxy {
     )
   }
 
-  generateSocketUrl() {
+  getAccessToken() {
     if (!this.#accessToken) {
       return ''
     }
-    return `${SOCKET_URL}?token=${this.#accessToken}`
+    return this.#accessToken
   }
 
   async proxyRequest(
@@ -110,6 +122,12 @@ export class AuthProxy {
     }
   }
 
+  async comsumeSocket() {
+    await consumeSocket({
+      getAccessToken: () => this.#accessToken
+    })
+  }
+
   async #authTokenBase(
     body:
       | {
@@ -141,6 +159,9 @@ export class AuthProxy {
       this.#accessToken = body.accessToken
       this.#refreshToken = body.refreshToken
       this.#user = body.user
+      self.postMessage({
+        type: messages.authorized
+      })
       return { success: true, data: body }
     }
     return { success: false, status: res.status }
