@@ -25,6 +25,7 @@
   --color-border-clipper: #39f;
   --color-replied: #ffc;
   --color-on-replied: hsl(0, 0%, 0%);
+  --color-checked: #4fbb00;
   --color-vote-ok: #4fbb00;
   --color-vote-ng: #e10101;
   --color-vote-na: #f89406;

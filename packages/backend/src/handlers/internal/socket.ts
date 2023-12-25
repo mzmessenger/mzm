@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto'
 import { ObjectId, WithId } from 'mongodb'
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/src/type/db'
 import {
@@ -40,43 +39,13 @@ import {
 import { saveMessage, getMessages } from '../../logic/messages.js'
 import {
   getAllUserIdsInRoom,
-  getRooms as getRoomsLogic,
-  initUser
+  getRooms as getRoomsLogic
 } from '../../logic/users.js'
 import {
   isValidateRoomName,
   createRoom,
   enterRoom as logicEnterRoom
 } from '../../logic/rooms.js'
-
-export const connection = async (
-  userId: string,
-  data: FilterSocketToBackendType<typeof TO_SERVER_CMD.CONNECTION>,
-  payload: {
-    twitterUserName: string | null
-    githubUserName: string | null
-  }
-): Promise<ToClientType> => {
-  const id = new ObjectId(userId)
-  const user = await collections(await mongoClient()).users.findOne({
-    _id: id
-  })
-
-  let signup = false
-
-  if (!user || !user.account || user.account === '') {
-    const account =
-      payload.twitterUserName ?? payload.githubUserName ?? randomUUID()
-    await initUser(id, account)
-    signup = true
-  }
-
-  return {
-    cmd: TO_CLIENT_CMD.SOCKET_CONNECTION,
-    user: userId,
-    signup
-  }
-}
 
 export const getRooms = async (
   userId: string

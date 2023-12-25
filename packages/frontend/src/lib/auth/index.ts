@@ -61,11 +61,6 @@ export async function comsumeSocket() {
   return (await getInstance()).comsumeSocket()
 }
 
-// @todo remove
-export async function getAccessToken() {
-  return (await getInstance()).getAccessToken()
-}
-
 export async function pkceChallenge() {
   const { code_verifier, code_challenge } = await (
     await getInstance()

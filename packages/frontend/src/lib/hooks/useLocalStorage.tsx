@@ -19,3 +19,20 @@ export const useNumberLocalStorage = (key: string, defaultValue: number) => {
 
   return [value, setItem] as const
 }
+
+export function useLocalStorage(key: string, defaultValue: string) {
+  const [value, setValue] = useState(() => {
+    const item = localStorage.getItem(key)
+    if (!item) {
+      return defaultValue
+    }
+    return item
+  })
+
+  const setItem = (val: string) => {
+    localStorage.setItem(key, val)
+    setValue(val)
+  }
+
+  return [value, setItem] as const
+}

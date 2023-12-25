@@ -1,11 +1,15 @@
-import React from 'react'
+import React, { useState } from 'react'
 import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
 import { WIDTH_MOBILE, AUTH_URL_BASE } from '../../constants'
 import { useUiActions } from '../../recoil/ui/hooks'
 import { SettingUser } from './SettingUser'
+import { Config } from './Config'
+
+const menu = ['default', 'setting']
 
 const Settings = () => {
+  const [selectedMenu, setSelectedMenu] = useState(menu[0])
   const { closeSettings } = useUiActions()
   const onClose = () => {
     closeSettings()
@@ -22,19 +26,30 @@ const Settings = () => {
         </header>
         <div className="user">
           <ul className="menu">
-            <li>アカウント</li>
-            <li>
-              <div className="logout">
-                <a
-                  href={`${AUTH_URL_BASE}/auth/logout?redirect_uri=${location.origin}`}
-                >
-                  Logout
-                </a>
-              </div>
+            <li
+              className={selectedMenu === menu[0] ? 'active' : ''}
+              onClick={() => setSelectedMenu(menu[0])}
+            >
+              アカウント
+            </li>
+            <li
+              className={selectedMenu === menu[1] ? 'active' : ''}
+              onClick={() => setSelectedMenu(menu[1])}
+            >
+              設定
+            </li>
+            <div className="divider"></div>
+            <li className="logout">
+              <a
+                href={`${AUTH_URL_BASE}/auth/logout?redirect_uri=${location.origin}`}
+              >
+                ログアウト
+              </a>
             </li>
           </ul>
           <div className="body">
-            <SettingUser />
+            {selectedMenu === menu[0] && <SettingUser />}
+            {selectedMenu === menu[1] && <Config />}
           </div>
         </div>
       </div>
@@ -66,27 +81,33 @@ const Wrap = styled.div`
   }
 
   .user {
-    padding: 32px 0 32px;
     border-top: 1px solid var(--color-border);
     display: flex;
-    .menu {
-      list-style-type: none;
-      padding: 0 0.5em;
-      min-width: 5em;
-      margin: 0;
-      > li {
-        padding: 0.5em 0;
-      }
-    }
+  }
 
-    .menu {
-      padding: 0 1em;
-      border-right: 1px solid var(--color-border);
+  .menu {
+    margin: 0;
+    padding: 1em 0.5em 1em 0;
+    list-style-type: none;
+    cursor: pointer;
+    border-right: 1px solid var(--color-border);
+    min-width: 5em;
+    > li {
+      padding: 0.5em 0.5em;
+      min-width: 192px;
     }
-    .body {
-      padding: 0 16px;
-      flex: 1;
+    .active {
+      background: var(--color-surface);
     }
+    .divider {
+      border-top: 1px solid var(--color-border);
+      margin: 1em 0;
+    }
+  }
+
+  .body {
+    padding: 2em 16px 2em;
+    flex: 1;
   }
 
   .logout {

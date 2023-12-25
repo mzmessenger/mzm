@@ -132,7 +132,7 @@ const Wrap = styled.div`
   .button {
     display: flex;
     flex-direction: column;
-    padding: 1em 1em;
+    padding: 0 1em;
 
     button {
       width: 100px;
@@ -150,11 +150,14 @@ const Wrap = styled.div`
   .info {
     list-style-type: none;
     margin: 0;
-    padding: 1em 0;
+    padding: 0;
     container-name: user-info-container;
     container-type: inline-size;
     > li {
       padding: 1em 1em 0;
+      &:first-child {
+        padding-top: 0;
+      }
     }
     flex: 1;
     span {
@@ -165,7 +168,7 @@ const Wrap = styled.div`
   .icon {
     .drop,
     img {
-      padding: 1em;
+      padding: 0 1em;
       width: 100px;
       height: 100px;
     }
