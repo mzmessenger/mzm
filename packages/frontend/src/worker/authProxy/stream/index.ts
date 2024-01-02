@@ -54,7 +54,7 @@ async function _consumeSocket(options: Options) {
   // eslint-disable-next-line no-constant-condition
   while (true) {
     const { done, value } = await reader.read()
-    if (value === 'ping') {
+    if (!value || value === 'ping') {
       continue
     }
     try {
