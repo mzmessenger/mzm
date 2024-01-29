@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "prestart": "npm run cleanbuild",
-    "start": "node --watch dist/src/server.js | bunyan",
+    "start": "node --env-file=.env --watch dist/src/server.js | bunyan",
     "cleanbuild": "rm -rf dist && npm run build",
     "build": "tsc --build tsconfig.json",
     "build:test": "tsc --build tsconfig.test.json",
@@ -23,7 +23,6 @@
     "connect-redis": "^7.0.0",
     "cookie-parser": "^1.4.6",
     "cors": "^2.8.5",
-    "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "express-session": "^1.17.3",
     "helmet": "^7.0.0",

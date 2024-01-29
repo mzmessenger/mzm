@@ -27,7 +27,6 @@ setup env
 # copy environment file and write your token, secret...
 $ cp ./packages/backend/.env.sample ./packages/backend/.env
 $ cp ./packages/auth/.env.sample ./packages/auth/.env
-$ cp ./packages/socket/.env.sample ./packages/socket/.env
 ```
 
 ### start development
@@ -41,7 +40,9 @@ $ docker-compose up
 # start
 $ npm run start
 
-# reload backend, auth, socket...
+# access http://localhost:8080
+
+# reload backend, auth...
 $ npm run build -w mzm-backend
 ```
 
@@ -52,7 +53,7 @@ $ npm run build -w mzm-backend
 $ npm test --workspaces --if-present
 
 # test "pachages/auth"
-$ npm test --workspace=packages/auth
+$ npm test -w mzm-auth
 ```
 
 ## Docker build
