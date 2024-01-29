@@ -1,13 +1,8 @@
 import type { SessionOptions } from 'express-session'
 import type { RedisOptions } from 'ioredis'
 import type { StrategyOptionsWithRequest as GitHubStrategyOptions } from 'passport-github'
-import { config } from 'dotenv'
 
 const isTest = process.env.NODE_ENV === 'test'
-
-if (!isTest) {
-  config()
-}
 
 export const ALLOW_REDIRECT_URIS = process.env.ALLOW_REDIRECT_URIS?.split(
   ','

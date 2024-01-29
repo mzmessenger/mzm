@@ -1,8 +1,4 @@
 import type { RedisOptions } from 'ioredis'
-import { config } from 'dotenv'
-if (process.env.NODE_ENV !== 'test') {
-  config()
-}
 
 export const API_URL_BASE = process.env.API_URL_BASE ?? 'http://localhost:3001'
 
