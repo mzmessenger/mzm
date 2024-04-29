@@ -10,7 +10,7 @@ COPY ./packages/auth/package.json \
   ./packages/auth/
 COPY ./packages/auth/src/ ./packages/auth/src/
 
-RUN npm install -w mzm-auth -w mzm-shared && npm run -w mzm-auth cleanbuild
+RUN npm install --no-audit --no-progress -w mzm-auth -w mzm-shared && npm run -w mzm-auth cleanbuild
 
 FROM node:20-alpine
 
@@ -21,7 +21,7 @@ COPY --from=builder /usr/app/packages/shared/dist/ packages/shared/dist/
 COPY --from=builder /usr/app/packages/shared/package.json packages/shared/package.json
 COPY --from=builder /usr/app/packages/auth/package.json ./packages/auth/
 COPY --from=builder /usr/app/packages/auth/dist/ packages/auth/dist/
-RUN npm install -w mzm-auth -w mzm-shared --production
+RUN npm install --omit=dev --no-audit --no-progress --silent -w mzm-auth -w mzm-shared
 
 ENV NODE_ENV=production
 CMD [ "node", "packages/auth/dist/server.js" ]
