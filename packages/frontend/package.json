@@ -26,7 +26,7 @@
     "@types/react-dom": "^18.0.10",
     "@types/react-router-dom": "^5.1.5",
     "@types/validator": "^13.7.3",
-    "@vitejs/plugin-react": "^4.0.3",
+    "@vitejs/plugin-react": "^4.2.1",
     "eslint": "^8.57.0",
     "globals": "^15.1.0",
     "typescript": "^5.4.5",
