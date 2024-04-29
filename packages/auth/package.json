@@ -11,7 +11,7 @@
     "build": "tsc --build tsconfig.json",
     "build:test": "tsc --build tsconfig.test.json",
     "format": "prettier --write src test ./*.{js,json}",
-    "lint": "eslint --ext .ts,.js src/",
+    "lint": "eslint -c eslint.config.mjs src test",
     "pretest": "concurrently \"npm run lint\" \"npm run build:test\"",
     "test": "vitest run --config ./vitest.config.ts",
     "test:ci": "vitest run --config ./vitest.config.ts"
@@ -43,6 +43,9 @@
     "@types/passport": "^1.0.11",
     "@types/passport-github": "^1.1.7",
     "@types/passport-twitter": "^1.0.37",
-    "typescript": "^5.1.6"
+    "eslint": "^8.57.0",
+    "globals": "^15.1.0",
+    "typescript": "^5.4.5",
+    "typescript-eslint": "^7.7.1"
   }
 }

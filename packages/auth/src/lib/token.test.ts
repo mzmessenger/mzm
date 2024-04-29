@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
 import { test, expect, vi, beforeEach } from 'vitest'
 import { ObjectId } from 'mongodb'
 

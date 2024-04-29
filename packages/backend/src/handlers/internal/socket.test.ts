@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion, @typescript-eslint/ban-ts-comment */
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { vi, test, expect, describe, beforeEach, beforeAll } from 'vitest'
 vi.mock('../../lib/logger.js')
 vi.mock('../../logic/messages.js')

@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { test, expect } from 'vitest'
 import { popParam, repliedAccounts } from './utils.js'
 
@@ -13,6 +12,7 @@ test.each([
   ['  aaaa', 'aaaa'],
   ['&aa%><', '&amp;aa%&gt;&lt;']
 ])('popParam (%s)', (arg, answer) => {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-expect-error
   const pop = popParam(arg)
   expect(pop).toStrictEqual(answer)

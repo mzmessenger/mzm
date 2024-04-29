@@ -1,4 +1,4 @@
-/* eslint-disable no-unused-vars, @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars, @typescript-eslint/ban-types */
+/* eslint-disable @typescript-eslint/no-explicit-any, @typescript-eslint/no-unused-vars */
 export type Method = 'GET' | 'POST' | 'PUT' | 'DELETE' | 'PATCH'
 export type HttpStatus = number
 
@@ -36,7 +36,8 @@ export type RouteParams<T> =
     ? { [k in IParam | keyof RouteParams<IRest>]: string }
     : T extends `${infer _}:${infer IParam}`
       ? { [k in IParam]: string }
-      : {}
+      : // eslint-disable-next-line @typescript-eslint/ban-types
+        {}
 
 export type DefinedType<T> = T extends infer Q extends (...args: any) => any
   ? ReturnType<Q>

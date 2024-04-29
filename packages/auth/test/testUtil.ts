@@ -1,4 +1,3 @@
-/* eslint-disable no-console */
 import('./types.js')
 
 export const getTestDbName = (suffix: string) => {

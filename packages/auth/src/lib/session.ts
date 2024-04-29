@@ -1,8 +1,8 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { Request } from 'express'
 
 const save = async (req: Request, key: string, data: unknown) => {
   return new Promise((resolve, reject) => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-expect-error
     req.session[key] = data
     req.session.save((err) => {
@@ -34,6 +34,7 @@ export const saveCodeChallenge = async (
 }
 
 export const getCodeChallenge = async (req: Request) => {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-expect-error
   const val = req.session[codeChallengeKey]
   if (val) {
@@ -43,6 +44,7 @@ export const getCodeChallenge = async (req: Request) => {
 }
 
 export const removeCodeChallenge = async (req: Request) => {
+  // eslint-disable-next-line @typescript-eslint/ban-ts-comment
   // @ts-expect-error
   delete req.session[codeChallengeKey]
 }

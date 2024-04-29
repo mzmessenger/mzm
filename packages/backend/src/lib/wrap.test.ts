@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { Request } from 'express'
 import { Readable } from 'node:stream'
 import { test, expect } from 'vitest'

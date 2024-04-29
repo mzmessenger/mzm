@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-non-null-assertion */
 import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/redis.js', () => {

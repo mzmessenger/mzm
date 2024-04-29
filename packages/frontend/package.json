@@ -8,7 +8,7 @@
     "start": "vite",
     "serve": "vite preview --port 8080",
     "format": "prettier --write src ./*.{js,json}",
-    "lint": "eslint --ext .ts,.tsx,.js,.jsx src/",
+    "lint": "eslint -c eslint.config.mjs src/",
     "pretest": "npm run build:tsc",
     "test": "vitest run --config=./vite.config.ts",
     "test:warth": "vitest --config=./vite.config.ts",
@@ -27,10 +27,10 @@
     "@types/react-router-dom": "^5.1.5",
     "@types/validator": "^13.7.3",
     "@vitejs/plugin-react": "^4.0.3",
-    "eslint-plugin-react": "^7.31.11",
-    "eslint-plugin-react-hooks": "^4.6.0",
-    "highlight.js": "^11.7.0",
-    "typescript": "^5.1.6"
+    "eslint": "^8.57.0",
+    "globals": "^15.1.0",
+    "typescript": "^5.4.5",
+    "typescript-eslint": "^7.7.1"
   },
   "dependencies": {
     "@emotion/react": "^11.10.5",
@@ -40,6 +40,9 @@
     "comlink": "^4.3.0",
     "dayjs": "^1.11.7",
     "dompurify": "^3.0.1",
+    "eslint-plugin-react": "^7.34.1",
+    "eslint-plugin-react-hooks": "^4.6.2",
+    "highlight.js": "^11.9.0",
     "jsdom": "^23.0.1",
     "jwt-decode": "^4.0.0",
     "marked": "^11.0.1",
