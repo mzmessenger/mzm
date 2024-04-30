@@ -1,25 +1,10 @@
 import { MongoClient, ObjectId } from 'mongodb'
-import yargs from 'yargs'
 import {
   User,
   Room,
   Enter,
   COLLECTION_NAMES
-} from '../packages/backend/src/lib/db'
-
-/**
- * node -r esbuild-register ./bin/add_test_users.ts --password=example --user=mzm
- */
-
-const { password, user: dbUser } = yargs
-  .option('password', {
-    describe: 'root password',
-    demandOption: true
-  })
-  .option('user', {
-    describe: 'db user',
-    demandOption: true
-  }).argv
+} from '../../backend/src/lib/db.js'
 
 const createEnter = async (userId: ObjectId, client: MongoClient) => {
   const db = client.db('mzm')
@@ -27,6 +12,10 @@ const createEnter = async (userId: ObjectId, client: MongoClient) => {
   const general = await db.collection<Room>(COLLECTION_NAMES.ROOMS).findOne({
     name: 'general'
   })
+
+  if (!general) {
+    throw new Error('empty general')
+  }
 
   const existGeneral = await db
     .collection<Enter>(COLLECTION_NAMES.ENTER)
@@ -90,8 +79,8 @@ const createUser = async (account: string, client: MongoClient) => {
 
 }
 
-const main = async () => {
-  const uri = `mongodb://${dbUser}:${password}@localhost:27017/mzm`
+export async function createSeeds(dbUser: string, userPassword: string) {
+  const uri = `mongodb://${dbUser}:${userPassword}@localhost:27017/mzm`
   const client = await MongoClient.connect(uri)
 
   for (let i = 0; i < 100; i++) {
@@ -100,5 +89,3 @@ const main = async () => {
   }
   client.close()
 }
-
-main().catch(console.error)
