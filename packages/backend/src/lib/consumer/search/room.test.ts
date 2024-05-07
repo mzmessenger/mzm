@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { vi, test, expect } from 'vitest'
 
 vi.mock('../../logger.js')
@@ -23,7 +24,6 @@ vi.mock('../../elasticsearch/rooms.js', () => {
 })
 
 import { ObjectId } from 'mongodb'
-import { createXackMock } from '../../../../test/testUtil.js'
 import * as config from '../../../config.js'
 import { RoomQueueType } from '../../../types.js'
 import { client } from '../../redis.js'
@@ -66,7 +66,9 @@ test.each([
     ]
   ]
 ])(`searchRooms: %s`, async (_type, logic, messages) => {
-  const xack = createXackMock(client)
+  const xack = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xack }))
   xack.mockClear()
   xack.mockResolvedValue(1)
 
@@ -81,7 +83,9 @@ test.each([
 })
 
 test('search no-type', async () => {
-  const xack = createXackMock(client)
+  const xack = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xack }))
   xack.mockClear()
   xack.mockResolvedValue(1)
 

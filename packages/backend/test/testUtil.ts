@@ -1,32 +1,31 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { MulterFile } from '../src/types/index.js'
 import type { MongoClient, ObjectId } from 'mongodb'
+import type { Request } from 'express'
+
 import('./types.js')
-import { vi } from 'vitest'
-import { Request } from 'express'
-import { client as RedisClient } from '../src/lib/redis.js'
 
-export const createXaddMock = (client: typeof RedisClient) => {
-  const xadd = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xadd }))
-  return xadd
+export function getTestDbName(suffix: string) {
+  return `mzm-auth-${suffix}`
 }
 
-export const createXackMock = (client: typeof RedisClient) => {
-  const xack = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xack }))
+export function getTestDbParams() {
+  const TEST_MONGODB_HOST = process.env.TEST_MONGODB_HOST ?? 'localhost'
+  const TEST_MONGODB_PORT = process.env.TEST_MONGODB_PORT ?? '27018'
 
-  return xack
+  const userName = 'mzm-auth-test'
+  const userPassword = 'mzm-auth-test-password'
+
+  return {
+    userName,
+    userPassword,
+    host: TEST_MONGODB_HOST,
+    port: TEST_MONGODB_PORT
+  }
 }
 
-export const getTestDbName = (suffix: string) => {
-  return `mzm-test-${suffix}`
-}
-
-export const getTestMongoClient = async (context: typeof globalThis) => {
-  return context.testMongoClient as MongoClient
+export async function getTestMongoClient(context: typeof globalThis) {
+  return context.testMongoClient
 }
 
 export const getTestRedisClient = async (context: typeof globalThis) => {

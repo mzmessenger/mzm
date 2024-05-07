@@ -1,10 +1,9 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('../logger.js')
-vi.mock('../redis.js', () => {
+vi.mock('../redis.js', async () => {
   return {
-    client: vi.fn(() => ({
-      xack: vi.fn()
-    }))
+    client: vi.fn()
   }
 })
 vi.mock('./common.js', () => {
@@ -21,10 +20,10 @@ vi.mock('../db.js', async () => {
 
 import { ObjectId } from 'mongodb'
 import * as config from '../../config.js'
-import { createXackMock, getTestMongoClient } from '../../../test/testUtil.js'
+import { getTestMongoClient } from '../../../test/testUtil.js'
 import { UnreadQueue } from '../../types.js'
 import { collections, type User } from '../db.js'
-import * as redis from '../redis.js'
+import { client } from '../redis.js'
 import { initConsumerGroup, consumeGroup } from './common.js'
 import { increment, initUnreadConsumerGroup, consumeUnread } from './unread.js'
 
@@ -55,7 +54,9 @@ test('consumeUnread', async () => {
 })
 
 test('increment', async () => {
-  const xack = createXackMock(redis.client)
+  const xack = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xack }))
   xack.mockClear()
   xack.mockResolvedValue(1)
 
