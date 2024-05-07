@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { vi, test, expect, beforeEach } from 'vitest'
 vi.mock('../logger.js')
 vi.mock('../redis.js', () => {
@@ -9,7 +10,6 @@ vi.mock('../redis.js', () => {
     release: vi.fn()
   }
 })
-import { createXaddMock } from '../../../test/testUtil.js'
 import { client, lock, release } from '../redis.js'
 import * as types from '../../types.js'
 import * as config from '../../config.js'
@@ -21,7 +21,10 @@ beforeEach(() => {
 })
 
 test('addInitializeSearchRoomQueue', async () => {
-  const xadd = createXaddMock(client)
+  const xadd = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xadd }))
+
   const lockMock = vi.mocked(lock)
   lockMock.mockResolvedValue(true)
   const releaseMock = vi.mocked(release)
@@ -39,7 +42,9 @@ test('addInitializeSearchRoomQueue', async () => {
 })
 
 test('addInitializeSearchRoomQueue (locked)', async () => {
-  const xadd = createXaddMock(client)
+  const xadd = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xadd }))
   const lockMock = vi.mocked(lock)
   lockMock.mockResolvedValue(false)
   const releaseMock = vi.mocked(release)
@@ -51,7 +56,9 @@ test('addInitializeSearchRoomQueue (locked)', async () => {
 })
 
 test('addSyncSearchRoomQueue', async () => {
-  const xadd = createXaddMock(client)
+  const xadd = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xadd }))
   const lockMock = vi.mocked(lock)
   lockMock.mockResolvedValue(true)
 
@@ -64,7 +71,9 @@ test('addSyncSearchRoomQueue', async () => {
 })
 
 test('addSyncSearchRoomQueue (locked)', async () => {
-  const xadd = createXaddMock(client)
+  const xadd = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xadd }))
   const lockMock = vi.mocked(lock)
   lockMock.mockResolvedValueOnce(false)
   const releaseMock = vi.mocked(release)

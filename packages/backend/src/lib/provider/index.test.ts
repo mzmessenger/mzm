@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { vi, test, expect } from 'vitest'
 vi.mock('../logger.js')
 vi.mock('../redis.js', () => {
@@ -9,13 +10,14 @@ vi.mock('../redis.js', () => {
 })
 import { ObjectId } from 'mongodb'
 import { ToClientType } from 'mzm-shared/src/type/socket'
-import { createXaddMock } from '../../../test/testUtil.js'
 import { client } from '../redis.js'
 import * as config from '../../config.js'
 import { addQueueToUsers, addUnreadQueue, addRepliedQueue } from './index.js'
 
 test('addQueueToUsers', async () => {
-  const xadd = createXaddMock(client)
+  const xadd = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xadd }))
 
   const users = ['5cc9d148139370d11b706624']
 
@@ -36,7 +38,9 @@ test('addQueueToUsers', async () => {
 })
 
 test('addUnreadQueue', async () => {
-  const xadd = createXaddMock(client)
+  const xadd = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xadd }))
   xadd.mockClear()
 
   const roomId = new ObjectId()
@@ -51,7 +55,9 @@ test('addUnreadQueue', async () => {
 })
 
 test('addRepliedQueue', async () => {
-  const xadd = createXaddMock(client)
+  const xadd = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xadd }))
   xadd.mockClear()
 
   const roomId = new ObjectId()

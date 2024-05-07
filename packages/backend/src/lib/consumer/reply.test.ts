@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('../logger.js')
 vi.mock('../redis.js', () => {
@@ -21,7 +22,7 @@ vi.mock('../db.js', async () => {
 
 import { ObjectId } from 'mongodb'
 import * as config from '../../config.js'
-import { createXackMock, getTestMongoClient } from '../../../test/testUtil.js'
+import { getTestMongoClient } from '../../../test/testUtil.js'
 import { ReplyQueue } from '../../types.js'
 import { collections } from '../db.js'
 import { client } from '../redis.js'
@@ -55,7 +56,9 @@ test('consumeReply', async () => {
 })
 
 test('reply', async () => {
-  const xack = createXackMock(client)
+  const xack = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xack }))
   xack.mockClear()
   xack.mockResolvedValue(1)
 

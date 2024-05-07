@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/ban-ts-comment */
 import { vi, test, expect } from 'vitest'
 vi.mock('../logger.js')
 
@@ -17,7 +18,6 @@ vi.mock('./common.js', () => {
   }
 })
 
-import { createXackMock } from '../../../test/testUtil.js'
 import * as config from '../../config.js'
 import { JobType } from '../../types.js'
 import { client } from '../redis.js'
@@ -44,7 +44,9 @@ test('consumeJob', async () => {
 })
 
 test(`job: ${JobType.SEARCH_ROOM}`, async () => {
-  const xack = createXackMock(client)
+  const xack = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xack }))
   xack.mockClear()
   xack.mockResolvedValue(1)
 
@@ -59,7 +61,9 @@ test(`job: ${JobType.SEARCH_ROOM}`, async () => {
 })
 
 test('job no-type', async () => {
-  const xack = createXackMock(client)
+  const xack = vi.fn()
+  // @ts-expect-error
+  vi.mocked(client).mockImplementation(() => ({ xack }))
   xack.mockClear()
   xack.mockResolvedValue(1)
 
