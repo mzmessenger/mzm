@@ -1,4 +1,3 @@
-/* eslint-disable no-irregular-whitespace */
 import { vi, test, expect, beforeAll, beforeEach } from 'vitest'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/redis.js', () => {

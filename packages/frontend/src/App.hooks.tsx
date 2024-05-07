@@ -63,7 +63,7 @@ export const useApp = () => {
   useEffect(() => {
     initAuth()
 
-    function authoriaedListener(e: Event) {
+    function authoriaedListener(_e: Event) {
       logger.info(events.authorized)
       comsumeSocket()
     }

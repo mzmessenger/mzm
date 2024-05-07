@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
+/* eslint-disable @typescript-eslint/no-unused-vars */
 import { test } from 'vitest'
 import type { RouteParams } from './type.js'
 

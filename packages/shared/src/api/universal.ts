@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/ban-ts-comment, no-unused-vars, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
 import type {
   Routes,
   RouteParams,
@@ -17,6 +16,7 @@ function addParams<T extends Routes<string>>(apis: T) {
   for (const [key, api] of Object.entries(apis)) {
     if (key.includes('/:')) {
       for (const method of Object.keys(api)) {
+        // eslint-disable-next-line @typescript-eslint/ban-ts-comment
         // @ts-expect-error
         api[method].request.params = define<typeof key>()
       }
@@ -30,7 +30,8 @@ function addParams<T extends Routes<string>>(apis: T) {
               params: (params: RouteParams<key>) => RouteParams<key>
             }
           }
-        : {}) &
+        : // eslint-disable-next-line @typescript-eslint/ban-types
+          {}) &
         T[key][methodKey]
     }
   }

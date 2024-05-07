@@ -36,7 +36,7 @@ export const CORS_ORIGIN = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((e) => e.trim())
   : ['http://localhost', 'http://localhost:8080']
 
-export const WORKER_NUM = Number(process.env.WORKER_NUM) ?? 1
+export const WORKER_NUM = Number(process.env.WORKER_NUM ?? 1)
 
 export const PORT = process.env.PORT ?? 3002
 
@@ -49,7 +49,7 @@ export const REDIS = {
       ? Number(process.env.SESSION_REDIS_PORT)
       : 6379,
     enableOfflineQueue: false,
-    connectTimeout: Number(process.env.REDIS_TIMEOUT) ?? 30000
+    connectTimeout: Number(process.env.REDIS_TIMEOUT ?? 30000)
   } satisfies RedisOptions
 } as const
 
@@ -60,7 +60,7 @@ export const SESSION_REDIS = {
       ? Number(process.env.SESSION_REDIS_PORT)
       : 6379,
     enableOfflineQueue: false,
-    connectTimeout: Number(process.env.SESSION_REDIS_TIMEOUT) ?? 30000,
+    connectTimeout: Number(process.env.SESSION_REDIS_TIMEOUT ?? 30000),
     db: 1
   } satisfies RedisOptions
 } as const

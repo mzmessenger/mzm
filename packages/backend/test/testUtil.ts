@@ -1,5 +1,4 @@
 /* eslint-disable @typescript-eslint/ban-ts-comment */
-/* eslint-disable no-console */
 import type { MulterFile } from '../src/types/index.js'
 import type { MongoClient, ObjectId } from 'mongodb'
 import('./types.js')

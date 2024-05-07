@@ -45,7 +45,7 @@ const remove = async (client: Redis, id: string, user: string) => {
   if (!target) {
     return
   }
-  // eslint-disable-next-line no-unused-vars,@typescript-eslint/no-unused-vars
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const { _id, ..._target } = target
   const remove = { ..._target, originId: target._id }
   await collections(db).removed.findOneAndUpdate(
