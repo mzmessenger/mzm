@@ -18,15 +18,15 @@ setup DB
 # init
 $ docker-compose up
 # set mongodb user_password
-$ node -r esbuild-register ./bin/init_mongodb.ts --password=example --user=mzm --user_password={{user_password}}
-```
+$ npm run cli -w bin init_mongodb -- --password example --user=mzm --user_password=password
+# create env file
+$ npm run cli -w bin create_env -- --password password --user=mzm
 
-setup env
+# write your client id, secret of GitHub or X, ... packages/auth/.env
+# write your token of AWS S3 (Cloudflare R2) in packages/backend/.env
 
-```bash
-# copy environment file and write your token, secret...
-$ cp ./packages/backend/.env.sample ./packages/backend/.env
-$ cp ./packages/auth/.env.sample ./packages/auth/.env
+# create general room
+$ npm run start -w mzm-backend
 ```
 
 ### start development
@@ -44,6 +44,9 @@ $ npm run start
 
 # reload backend, auth...
 $ npm run build -w mzm-backend
+
+# mongosh
+$ docker exec -it mzm-mongo mongosh -u root -p example
 ```
 
 ### test

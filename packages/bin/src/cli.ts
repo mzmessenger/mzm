@@ -1,54 +1,74 @@
 #!/usr/bin/env node
-import yargs from 'yargs'
-import { hideBin } from 'yargs/helpers'
-import { initMongoDb } from './initMongodb.js'
-import { createSeeds } from './createSeeds.js'
-
 /**
  * npm run cli -w bin init_mongodb -- --password example --user=mzm --user_password=password
- * npm run cli -w bin create_seeds -- --password example --user=mzm
+ * npm run cli -w bin create_env -- --password password --user=mzm
+ * npm run cli -w bin create_seeds -- --password password --user=mzm
  */
 
-yargs(hideBin(process.argv))
-  .command('init_mongodb', 'init mongodb', (yargs) => {
-    return yargs
-      .option('password', {
-        describe: 'root password',
-        type: 'string',
-        demandOption: true
-      })
-      .option('user', {
-        describe: 'db user',
-        type: 'string',
-        demandOption: true
-      })
-      .option('user_password', {
-        describe: 'db user password',
-        type: 'string',
-        demandOption: true
-      })
-      .option('port', {
-        describe: 'db port',
-        type: 'string',
-        demandOption: true,
-        default: '27017'
-      })
-  }, (argv) => {
-    initMongoDb(argv.password, argv.user, argv.user_password, argv.port)
-  })
-  .command('create_seeds', 'create seeds', (yargs) => {
-    return yargs
-      .option('password', {
-        describe: 'root password',
-        type: 'string',
-        demandOption: true
-      })
-      .option('user', {
-        describe: 'user',
-        type: 'string',
-        demandOption: true
-      })
-  }, (argv) => {
-    createSeeds(argv.user, argv.password)
-  })
-  .parse()
+import { parseArgs } from 'node:util'
+import { initMongoDb } from './initMongodb.ts'
+import { createSeeds } from './createSeeds.ts'
+import { createEnv } from './createEnv.ts'
+
+const { values, positionals } = parseArgs({
+  allowPositionals: true,
+  options: {
+    password: {
+      type: 'string',
+      describe: 'root password',
+    },
+    'user': {
+      type: 'string',
+      describe: 'db user',
+    },
+    user_password: {
+      type: 'string',
+      describe: 'db user password',
+    },
+    port: {
+      type: 'string',
+      default: '27017',
+      describe: 'db port'
+    }
+  }
+})
+
+async function main() {
+  if (positionals[0] === 'init_mongodb') {
+    if (!values.password) {
+      throw new Error('password is required')
+    }
+    if (!values.user) {
+      throw new Error('user is required')
+    }
+    if (!values.user_password) {
+      throw new Error('user_password is required')
+    }
+    await initMongoDb(values.password, values.user, values.user_password, values.port)
+    return
+  }
+
+  if (positionals[0] === 'create_env') {
+    if (!values.user) {
+      throw new Error('user is required')
+    }
+    if (!values.password) {
+      throw new Error('password is required')
+    }
+    await createEnv(values.user, values.password)
+    return
+  }
+
+  if (positionals[0] === 'create_seeds') {
+    if (!values.user) {
+      throw new Error('user is required')
+    }
+    if (!values.password) {
+      throw new Error('password is required')
+    }
+    await createSeeds(values.user, values.password)
+    return
+  }
+}
+
+main().catch(console.error)

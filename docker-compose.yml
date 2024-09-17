@@ -11,6 +11,7 @@ services:
       - ./.infra/nginx/logs/:/var/log/nginx/
       - ./.infra/nginx/cache/:/var/cache/nginx/
   mongo:
+    container_name: mzm-mongo
     image: mongo:5
     ports:
       - 27017:27017
