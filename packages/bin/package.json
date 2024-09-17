@@ -6,11 +6,9 @@
     "prebuild": "rm -rf dist",
     "build": "tsc --build tsconfig.json",
     "precli": "npm run build",
-    "cli": "node ./dist/bin/src/cli.js"
+    "cli": "node --experimental-strip-types ./src/cli.ts"
   },
   "devDependencies": {
-    "@types/yargs": "^17.0.32",
-    "mongodb": "^6.5.0",
-    "yargs": "^17.7.2"
+    "mongodb": "^6.5.0"
   }
 }

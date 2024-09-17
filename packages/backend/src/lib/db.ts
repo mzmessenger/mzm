@@ -1,7 +1,22 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
-import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/src/type/db'
+import {
+  VoteStatusEnum,
+  VoteTypeEnum,
+  COLLECTION_NAMES,
+  type User,
+  type Room,
+  type Enter
+} from 'mzm-shared/src/type/db'
 import { MONGODB_URI } from '../config.js'
 import { logger } from './logger.js'
+
+export {
+  COLLECTION_NAMES,
+  RoomStatusEnum,
+  type User,
+  type Room,
+  type Enter
+} from 'mzm-shared/src/type/db'
 
 type CollectionType = {
   rooms: Collection<Room>
@@ -61,15 +76,6 @@ export const collections = (c: MongoClient): CollectionType => {
   return _collections as CollectionType
 }
 
-export const COLLECTION_NAMES = {
-  ROOMS: 'rooms',
-  USERS: 'users',
-  ENTER: 'enter',
-  MESSAGES: 'messages',
-  REMOVED: 'removed',
-  VOTE_ANSWER: 'voteAnswers'
-} as const
-
 let _client: MongoClient | null = null
 
 export const mongoClient = async () => {
@@ -92,39 +98,6 @@ export const connect = async (c: MongoClient) => {
 
 export const close = async (c: MongoClient) => {
   c.close()
-}
-
-export const RoomStatusEnum = {
-  CLOSE: 0,
-  OPEN: 1
-} as const
-
-export type Room = {
-  name: string
-  description?: string
-  createdBy: string
-  updatedBy?: ObjectId
-  icon?: {
-    key: string
-    version: string
-  }
-  status: (typeof RoomStatusEnum)[keyof typeof RoomStatusEnum]
-}
-
-export type Enter = {
-  roomId: ObjectId
-  userId: ObjectId
-  unreadCounter: number
-  replied: number
-}
-
-export type User = {
-  account: string
-  icon?: {
-    key: string
-    version: string
-  }
-  roomOrder: string[]
 }
 
 export type Removed = {

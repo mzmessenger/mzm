@@ -1,41 +1,44 @@
 import { MongoClient, ObjectId } from 'mongodb'
 import {
-  User,
-  Room,
-  Enter,
-  COLLECTION_NAMES
-} from '../../backend/src/lib/db.js'
+  COLLECTION_NAMES,
+  type User,
+  type Room,
+  type Enter
+} from 'mzm-shared/src/type/db'
 
-const createEnter = async (userId: ObjectId, client: MongoClient) => {
-  const db = client.db('mzm')
+export async function createSeeds(dbUser: string, userPassword: string) {
+  const uri = `mongodb://${dbUser}:${userPassword}@localhost:27017/mzm`
+  const client = await MongoClient.connect(uri)
 
-  const general = await db.collection<Room>(COLLECTION_NAMES.ROOMS).findOne({
-    name: 'general'
-  })
-
-  if (!general) {
-    throw new Error('empty general')
+  for (let i = 0; i < 100; i++) {
+    const account = `test_user_${i}`
+    await createUser(account, client)
   }
+  client.close()
+}
+
+async function createEnterGeneral(userId: ObjectId, generalRoomId: ObjectId, client: MongoClient) {
+  const db = client.db('mzm')
 
   const existGeneral = await db
     .collection<Enter>(COLLECTION_NAMES.ENTER)
     .findOne({
       userId: userId,
-      roomId: general._id
+      roomId: generalRoomId
     })
 
-  console.log('exist general')
+  console.log('exists')
   if (!existGeneral) {
     const enter: Enter = {
       userId: userId,
-      roomId: general._id,
+      roomId: generalRoomId,
       unreadCounter: 0,
       replied: 0
     }
 
     console.log('create enter')
     await db.collection<Enter>(COLLECTION_NAMES.ENTER).findOneAndUpdate(
-      { userId: userId, roomId: general._id },
+      { userId: userId, roomId: generalRoomId },
       { $set: enter },
       {
         upsert: true
@@ -49,14 +52,14 @@ const createEnter = async (userId: ObjectId, client: MongoClient) => {
       },
       {
         $addToSet: {
-          roomOrder: general._id.toHexString()
+          roomOrder: generalRoomId.toHexString()
         }
       }
     )
   }
 }
 
-const createUser = async (account: string, client: MongoClient) => {
+async function createUser(account: string, client: MongoClient) {
   const db = client.db('mzm')
 
   console.log('create account:', account)
@@ -64,8 +67,16 @@ const createUser = async (account: string, client: MongoClient) => {
     account: account
   })
 
+  const general = await db.collection<Room>(COLLECTION_NAMES.ROOMS).findOne({
+    name: 'general'
+  })
+
+  if (!general) {
+    return
+  }
+
   if (user) {
-    await createEnter(user._id, client)
+    await createEnterGeneral(user._id, general._id, client)
   } else {
     const createUser = await db
       .collection<User>(COLLECTION_NAMES.USERS)
@@ -74,18 +85,6 @@ const createUser = async (account: string, client: MongoClient) => {
         roomOrder: []
       })
 
-    await createEnter(createUser.insertedId, client)
+    await createEnterGeneral(createUser.insertedId, general._id, client)
   }
-
-}
-
-export async function createSeeds(dbUser: string, userPassword: string) {
-  const uri = `mongodb://${dbUser}:${userPassword}@localhost:27017/mzm`
-  const client = await MongoClient.connect(uri)
-
-  for (let i = 0; i < 100; i++) {
-    const account = `test_user_${i}`
-    await createUser(account, client)
-  }
-  client.close()
 }

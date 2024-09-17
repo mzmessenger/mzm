@@ -8,6 +8,8 @@
     "target": "esnext",
     "module": "nodenext",
     "skipLibCheck": true,
+    "noEmit": true,
+    "allowImportingTsExtensions": true,
     "paths": {
       "mzm-shared": ["../shared"]
     }
