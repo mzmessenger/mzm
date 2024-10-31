@@ -16,10 +16,10 @@ export async function setup({ config }: GlobalSetupContext) {
 
   const rootClient = await MongoClient.connect(TEST_ROOT_MONGODB_URI)
 
-  const maxThreads = config.poolOptions?.threads?.maxThreads ?? 1
+  const maxPool = config.poolOptions?.forks?.maxForks ?? 1
 
   const promises: ReturnType<typeof createMongoUser>[] = []
-  for (let i = 1; i <= maxThreads; i++) {
+  for (let i = 1; i <= maxPool; i++) {
     const dbName = getTestDbName(`${i}`)
     // eslint-disable-next-line no-console
     console.log('[setupTestDB] dbname:', dbName)

@@ -6,10 +6,11 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, '**/dist/**'],
     globalSetup: [path.resolve('./test/globalSetup.ts')],
     setupFiles: [path.resolve('./test/setup.ts')],
+    pool: 'forks',
     poolOptions: {
-      threads: {
-        maxThreads: 16,
-        minThreads: 4
+      forks: {
+        maxForks: 16,
+        minForks: 4
       }
     }
   }
