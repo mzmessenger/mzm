@@ -20,7 +20,7 @@ export function Dialog(props: Props, ref: MutableRefObject<HTMLDialogElement>) {
       e.clientX <= rect.left + rect.width
     if (!inner) {
       ref.current.close()
-      props.onClose && props.onClose()
+      if (props.onClose) props.onClose()
     }
   }
   return (

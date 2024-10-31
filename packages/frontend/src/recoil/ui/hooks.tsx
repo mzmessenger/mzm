@@ -62,7 +62,7 @@ export const useUiActions = () => {
   const setUiState = useSetRecoilState(uiState)
 
   const onResize = useCallback(
-    (innerWidth: number, _innerHeight: number) => {
+    (innerWidth: number) => {
       const device = innerWidth <= WIDTH_MOBILE ? 'mobile' : 'pc'
       setUiState((current) => {
         if (current.device === device) {

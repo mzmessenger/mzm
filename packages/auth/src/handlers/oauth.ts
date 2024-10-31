@@ -73,6 +73,7 @@ export const oauth = (passport: PassportStatic, strategy: string) => {
         keepSessionInfo: true
       })(req, res, next)
     } catch (e) {
+      logger.error('[oauth]', e)
       return res.status(500).send('Internal Server Error')
     }
   }

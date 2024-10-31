@@ -13,11 +13,12 @@ on:
       - 'packages/shared/**'
     branches: [ main ]
 
+env:
+  WORKSPACE_NAME: mzm-backend
+
 jobs:
   build:
-
     runs-on: ubuntu-latest
-
     services:
       mongodb:
         image: mongo:5
@@ -40,11 +41,9 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-
     strategy:
       matrix:
         node-version: [22.x]
-
     steps:
       - uses: actions/checkout@v3
       - name: Use Node.js ${{ matrix.node-version }}
@@ -52,8 +51,8 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
-      - run: npx concurrently "npm run build -w mzm-backend" "npm run lint -w mzm-backend" "npm run build:test -w mzm-backend"
-      - run: npm run test:ci -w mzm-backend
+      - run: npx concurrently "npm run build -w ${{ env.WORKSPACE_NAME }}" "npm run lint -w ${{ env.WORKSPACE_NAME }}" "npm run build:test -w ${{ env.WORKSPACE_NAME }}"
+      - run: npm run test:ci -w ${{ env.WORKSPACE_NAME }}
         env:
           CI: true
           TEST_MONGODB_PORT: 27017

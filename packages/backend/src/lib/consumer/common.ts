@@ -20,12 +20,12 @@ export const initConsumerGroup = async (stream: string, groupName: string) => {
   } catch (e) {
     try {
       await client().xgroup('CREATE', stream, groupName, '$', 'MKSTREAM')
-    } catch (e) {
-      if (`${e}`.includes('already exists')) {
+    } catch (err) {
+      if (`${err}`.includes('already exists')) {
         return
       }
       logger.error(`failed creating xgroup (${stream}, ${groupName}):`, e)
-      throw e
+      throw err
     } finally {
       await release(lockKey, lockVal)
     }

@@ -1,4 +1,4 @@
-/* eslint-disable @typescript-eslint/ban-types, @typescript-eslint/ban-ts-comment, no-unused-vars, @typescript-eslint/no-unused-vars, @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import {
   type RouteType,
   type HasParamsInPath,
@@ -7,15 +7,8 @@ import {
   type RouteMethodType,
   type Method
 } from './type.js'
+import { methods } from './universal.js'
 import { compile } from 'path-to-regexp'
-
-const methods: readonly Method[] = [
-  'GET',
-  'POST',
-  'PUT',
-  'DELETE',
-  'PATCH'
-] as const
 
 type ClinetOptions<TPath extends string, TRoute extends RouteType> = {
   fetcher?: typeof defaultFetcher
@@ -23,7 +16,8 @@ type ClinetOptions<TPath extends string, TRoute extends RouteType> = {
   ? {
       params: RouteParams<TPath>
     }
-  : {}) & {
+  : // eslint-disable-next-line @typescript-eslint/no-empty-object-type
+    {}) & {
     [key in keyof TRoute['request']]: TRoute['request'][key] extends (
       arg: any
     ) => any
@@ -54,6 +48,7 @@ function createClient<TPath extends string, TRoute extends RouteType>(
   method: Method
 ) {
   const client = async (options: ClinetOptions<TPath, TRoute>) => {
+    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
     // @ts-ignore
     let path = toPath(options.params ?? {})
     const query = options.query ?? {}
@@ -72,7 +67,7 @@ function createClient<TPath extends string, TRoute extends RouteType>(
     }
 
     const contentType = (() => {
-      if (options.headers && options.headers['Content-Type']) {
+      if (options.headers?.['Content-Type']) {
         return options.headers['Content-Type']
       }
       if (options.form) {
@@ -132,22 +127,28 @@ async function defaultFetcher<T>(options: {
     method: options.method,
     headers: options.headers
   }
+
   if (options.body) {
     init.body =
       typeof options.body === 'string'
         ? options.body
         : JSON.stringify(options.body)
   }
+
   if (options.form) {
     init.body = options.form
   }
+
   const res = await fetch(options.url, init)
-  let body = undefined
-  if ((Number(res.headers.get('content-length')) ?? 0) > 0) {
-    body = options.headers['Content-Type']?.includes('application/json')
-      ? await res.json()
-      : await res.text()
+
+  let body = await res.text()
+  if (
+    body.length > 0 &&
+    options.headers['Content-Type']?.includes('application/json')
+  ) {
+    body = JSON.parse(body)
   }
+
   return {
     ok: res.ok,
     status: res.status,
@@ -160,7 +161,7 @@ export type fetcherOptions = Parameters<typeof defaultFetcher>[0]
 
 export function createClients<T extends Record<string, RouteMethodType>>(
   apis: T,
-  url: string = ''
+  url = ''
 ) {
   const clients: Record<string, ReturnType<typeof createRouteClients>> = {}
 

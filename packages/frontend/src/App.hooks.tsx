@@ -38,10 +38,10 @@ const useResize = () => {
   const { onResize } = useUiActions()
 
   useEffect(() => {
-    onResize(window.innerWidth, window.innerHeight)
+    onResize(window.innerWidth)
 
     const handleResize = () => {
-      onResize(window.innerWidth, window.innerHeight)
+      onResize(window.innerWidth)
     }
 
     window.addEventListener('resize', handleResize)
@@ -63,7 +63,7 @@ export const useApp = () => {
   useEffect(() => {
     initAuth()
 
-    function authoriaedListener(_e: Event) {
+    function authoriaedListener() {
       logger.info(events.authorized)
       comsumeSocket()
     }

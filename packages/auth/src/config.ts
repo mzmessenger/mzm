@@ -30,7 +30,7 @@ export const GITHUB_STRATEGY_OPTIONS = {
   passReqToCallback: true
 } as const satisfies GitHubStrategyOptions
 
-export const MONGODB_URI = isTest ? '' : process.env.MONGODB_URI ?? ''
+export const MONGODB_URI = isTest ? '' : (process.env.MONGODB_URI ?? '')
 
 export const CORS_ORIGIN = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((e) => e.trim())

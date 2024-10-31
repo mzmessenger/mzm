@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-types */
 import type { ClientToSocketType } from 'mzm-shared/src/type/socket'
 import { apis, authApis } from 'mzm-shared/src/api/universal'
 import { createClients, type Fetcher } from 'mzm-shared/src/api/client'

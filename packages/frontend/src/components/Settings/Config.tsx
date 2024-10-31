@@ -17,7 +17,7 @@ export function Config() {
             <ToggleSwitch
               checked={infoLog === 'true'}
               onChange={(c) => {
-                c ? setInfoLog('true') : setInfoLog('false')
+                setInfoLog(c ? 'true' : 'false')
               }}
             />
           </div>
