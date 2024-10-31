@@ -21,7 +21,7 @@
   },
   "devDependencies": {
     "@types/express": "^5.0.0",
-    "@types/node": "^22.5.4",
+    "@types/node": "^22.8.5",
     "concurrently": "^9.0.1",
     "mzm-auth": "^1.0.1",
     "mzm-frontend": "^0.0.0",
