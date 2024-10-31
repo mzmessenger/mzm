@@ -65,9 +65,13 @@ export const SESSION_REDIS = {
   } satisfies RedisOptions
 } as const
 
+if (!process.env.SESSION_SECRET) {
+  throw new Error('SESSION_SECRET is not defined')
+}
+
 export const SESSION_PARSER: SessionOptions = {
   name: process.env.SESSION_NAME ?? 'mzm',
-  secret: process.env.SESSION_SECRET!,
+  secret: process.env.SESSION_SECRET,
   resave: false,
   rolling: true,
   saveUninitialized: false,
@@ -81,13 +85,17 @@ export const SESSION_PARSER: SessionOptions = {
 
 export const TRUST_PROXY = process.env.TRUST_PROXY ?? 1
 
+if (!process.env.ACCESS_TOKEN_SECRET) {
+  throw new Error('ACCESS_TOKEN_SECRET is not defined')
+}
+
+if (!process.env.REFRESH_TOKEN_SECRET) {
+  throw new Error('REFRESH_TOKEN_SECRET is not defined')
+}
+
 export const JWT = {
-  accessTokenSecret: isTest
-    ? 'mzmTestAccessTokenSecret'
-    : process.env.ACCESS_TOKEN_SECRET!,
-  refreshTokenSecret: isTest
-    ? 'mzmTestRefreshTokenSecret'
-    : process.env.REFRESH_TOKEN_SECRET!,
+  accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
+  refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET,
   issuer: process.env.JWT_ISSURE ?? 'https://mzm.dev',
   audience: process.env.JWT_AUDIENCE
     ? process.env.JWT_AUDIENCE.split(',')

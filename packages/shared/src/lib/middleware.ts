@@ -9,7 +9,8 @@ export const createErrorHandler = (logger: Logger) => {
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   return (err: unknown, _req: Request, res: Response, _next: NextFunction) => {
     if (isHttpError(err)) {
-      return res.status(err.status).send(err.toResponse())
+      res.status(err.status).send(err.toResponse())
+      return
     }
     res.status(500).send('Internal Server Error')
     logger.error('[Internal Server Error]', err)

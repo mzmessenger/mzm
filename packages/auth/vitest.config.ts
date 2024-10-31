@@ -6,6 +6,11 @@ export default defineConfig({
     exclude: [...configDefaults.exclude, '**/dist/**'],
     globalSetup: [path.resolve('./test/globalSetup.ts')],
     setupFiles: [path.resolve('./test/setup.ts')],
+    env: {
+      SESSION_SECRET: 'mzmTestSessionSecret',
+      ACCESS_TOKEN_SECRET: 'mzmTestAccessTokenSecret',
+      REFRESH_TOKEN_SECRET: 'mzmTestRefreshTokenSecret'
+    },
     pool: 'forks',
     poolOptions: {
       forks: {
