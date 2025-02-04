@@ -17,7 +17,6 @@ export async function consumeSocket(options: Options) {
     return
   }
   isConnected = true
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     await _consumeSocket(options).catch((e) => logger.warn(e))
     if (isMax(recconect)) {
@@ -51,7 +50,6 @@ async function _consumeSocket(options: Options) {
   const reader = res.body
     .pipeThrough(new TransformStream(transformContent))
     .getReader()
-  // eslint-disable-next-line no-constant-condition
   while (true) {
     const { done, value } = await reader.read()
     if (!value || value === 'ping') {

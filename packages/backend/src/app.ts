@@ -1,7 +1,6 @@
 import type { MulterFile } from './types/index.js'
 import express, { type Request } from 'express'
 import cors from 'cors'
-import bodyParser from 'body-parser'
 import multer from 'multer'
 import helmet from 'helmet'
 import { createErrorHandler } from 'mzm-shared/src/lib/middleware'
@@ -30,7 +29,7 @@ const iconUpload = multer({
   limits: { fileSize: 1000 * 1000 }
 })
 
-const jsonParser = bodyParser.json({ limit: '1mb' })
+const jsonParser = express.json({ limit: '1mb' })
 
 export const createApp = () => {
   const app = express()

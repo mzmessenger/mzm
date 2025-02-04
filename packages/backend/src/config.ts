@@ -3,14 +3,14 @@ import type { RedisOptions } from 'ioredis'
 export const API_URL_BASE = process.env.API_URL_BASE ?? 'http://localhost:3001'
 
 export const MONGODB_URI =
-  process.env.NODE_ENV === 'test' ? '' : process.env.MONGODB_URI ?? ''
+  process.env.NODE_ENV === 'test' ? '' : (process.env.MONGODB_URI ?? '')
 
 export const PORT = process.env.PORT ?? 3001
 export const CORS_ORIGIN = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((e) => e.trim())
   : ['http://localhost', 'http://localhost:8080']
 
-export const WORKER_NUM = Number(process.env.WORKER_NUM) ?? 1
+export const WORKER_NUM = Number(process.env.WORKER_NUM ?? 1)
 
 export const account = {
   MIN_LENGTH: 2,
@@ -100,7 +100,7 @@ export const icon = {
   ROOM_ICON_PREFIX: 'roomicon/'
 } as const
 
-export const MULTER_PATH = '/tmp' ?? process.env.MULTER_PATH
+export const MULTER_PATH = process.env.MULTER_PATH ?? '/tmp'
 
 export const aws = {
   AWS_BUCKET: process.env.AWS_BUCKET ?? 'mzm-dev',
@@ -114,7 +114,7 @@ export const redis = {
   options: {
     host: process.env.REDIS_HOST,
     enableOfflineQueue: false,
-    connectTimeout: Number(process.env.REDIS_TIMEOUT) ?? 30000
+    connectTimeout: Number(process.env.REDIS_TIMEOUT ?? 30000)
   } satisfies RedisOptions
 } as const
 

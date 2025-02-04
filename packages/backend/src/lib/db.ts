@@ -1,3 +1,4 @@
+import type {} from 'mzm-shared/src/type/db'
 import { MongoClient, Collection, ObjectId } from 'mongodb'
 import {
   VoteStatusEnum,

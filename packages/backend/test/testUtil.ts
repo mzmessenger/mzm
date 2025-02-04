@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
 import type { MulterFile } from '../src/types/index.js'
 import type { MongoClient, ObjectId } from 'mongodb'
 import type { Request } from 'express'

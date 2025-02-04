@@ -45,6 +45,7 @@ export class AuthProxy {
   #code_challenge: string | null = null
   #accessToken: string | null = null
   #refreshToken: string | null = null
+  // eslint-disable-next-line no-unused-private-class-members
   #user: TokenResponse['user'] | null = null
 
   constructor(cache?: Cache) {

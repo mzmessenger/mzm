@@ -1,16 +1,32 @@
 import type {
+  Method,
   Routes,
   RouteParams,
   HasParamsInPath,
   RouteType,
-  Method,
   DefinedRoute
 } from './type.js'
-import { ClientToSocketType } from '../type/socket.js'
 
-function define<T>() {
+export type {
+  RouteType,
+  HasParamsInPath,
+  RouteParams,
+  DefinedType,
+  RouteMethodType,
+  Method
+} from './type.js'
+
+export function define<T>() {
   return (args: T) => args
 }
+
+export const methods: readonly Method[] = [
+  'GET',
+  'POST',
+  'PUT',
+  'DELETE',
+  'PATCH'
+] as const
 
 function addParams<T extends Routes<string>>(apis: T) {
   for (const [key, api] of Object.entries(apis)) {
@@ -30,7 +46,7 @@ function addParams<T extends Routes<string>>(apis: T) {
               params: (params: RouteParams<key>) => RouteParams<key>
             }
           }
-        : // eslint-disable-next-line @typescript-eslint/ban-types
+        : // eslint-disable-next-line @typescript-eslint/no-empty-object-type
           {}) &
         T[key][methodKey]
     }
@@ -215,7 +231,7 @@ export const { apis } = defineApis({
   '/api/socket': {
     POST: {
       request: {
-        body: define<ClientToSocketType>()
+        body: define<import('../type/socket.js').ClientToSocketType>()
       },
       response: {
         200: {

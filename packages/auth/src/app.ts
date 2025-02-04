@@ -124,7 +124,9 @@ export const createApp = ({ client }: Options) => {
   app.get(
     '/auth/twitter',
     defaultHelmet,
-    oauthHandlers.oauth(passport, 'twitter')
+    (req, res, next) => {
+      oauthHandlers.oauth(passport, 'twitter')(req, res, next)
+    }
   )
   app.get(
     '/auth/twitter/callback',
@@ -146,7 +148,9 @@ export const createApp = ({ client }: Options) => {
   app.get(
     '/auth/github',
     defaultHelmet,
-    oauthHandlers.oauth(passport, 'github')
+    (req, res, next) => {
+      oauthHandlers.oauth(passport, 'github')(req, res, next)
+    }
   )
   app.get(
     '/auth/github/callback',

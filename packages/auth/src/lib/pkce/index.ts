@@ -103,6 +103,7 @@ const AuthorizationCode = z.string().transform((str, ctx) => {
   try {
     return parser.parse(JSON.parse(str))
   } catch (e) {
+    logger.info('[AuthorizationCode]', e)
     ctx.addIssue({ code: 'custom', message: 'invalid code json' })
     return z.NEVER
   }
@@ -149,6 +150,7 @@ export const verifyAuthorizationCodeFromRedis = async (
       data: { userId: parsedAuthorizationCode.data.userId }
     }
   } catch (e) {
+    logger.info('[verifyAuthorizationCodeFromRedis]', e)
     return { success: false, error: { message: 'invalid code' } }
   }
 }
@@ -186,6 +188,7 @@ export const saveParameterToSession = async (
     await saveCodeChallenge(req, data)
     return { success: true, data }
   } catch (e) {
+    logger.info('[saveParameterToSession]', e)
     return {
       success: false,
       error: { message: 'fail to save parameter' }

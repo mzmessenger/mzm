@@ -8,11 +8,19 @@ import reactHooks from 'eslint-plugin-react-hooks'
 /** @type {import('@typescript-eslint/utils').TSESLint.FlatConfig.ConfigFile} */
 export default [
   {
+    ignores: ['dist/**']
+  },
+  {
     languageOptions: { globals: globals.browser },
     rules: {
       'no-console': 'warn',
       'prefer-const': 'error',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
+      '@typescript-eslint/no-unused-vars': [
+        'warn', {
+          caughtErrorsIgnorePattern: '^_',
+          caughtErrors: 'none'
+        }
+      ]
     }
   },
   pluginJs.configs.recommended,

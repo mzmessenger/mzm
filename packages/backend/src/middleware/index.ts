@@ -14,7 +14,8 @@ export const checkAccessToken = (
 ) => {
   const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
-    return res.status(401).send('no authorization header')
+    res.status(401).send('no authorization header')
+    return
   }
 
   verifyAccessToken(accessToken, JWT.accessTokenSecret, {
@@ -23,10 +24,12 @@ export const checkAccessToken = (
   })
     .then(({ err, decoded }) => {
       if (err) {
-        return res.status(401).send('not verify token')
+        res.status(401).send('not verify token')
+        return
       }
       if (!decoded) {
-        return res.status(401).send('not login')
+        res.status(401).send('not login')
+        return
       }
       req.headers[HEADERS.USER_ID] = decoded.user._id
       req.headers[HEADERS.GITHUB_USER_NAME] = decoded.user.githubUserName ?? ''
@@ -35,7 +38,8 @@ export const checkAccessToken = (
       next()
     })
     .catch(() => {
-      return res.status(401).send('not login')
+      res.status(401).send('not login')
+      return
     })
 }
 
@@ -46,17 +50,19 @@ export const checkInternalAccessToken = (
 ) => {
   const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
-    return res.status(401).send('no authorization header')
+    res.status(401).send('no authorization header')
+    return
   }
 
   verifyInternalAccessToken(accessToken)
     .then(({ err }) => {
       if (err) {
-        return res.status(401).send('not verify token')
+        res.status(401).send('not verify token')
+        return
       }
       next()
     })
     .catch(() => {
-      return res.status(401).send('not login')
+      res.status(401).send('not login')
     })
 }

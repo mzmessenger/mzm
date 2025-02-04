@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-unused-vars, no-unused-vars */
 import { beforeAll, vi, test, expect } from 'vitest'
 import { clients, authClients, fetcher } from './client.js'
 

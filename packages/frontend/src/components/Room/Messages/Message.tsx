@@ -47,7 +47,7 @@ const MessageElementInner: React.FC<Props> = (props) => {
     }
 
     return () => {
-      timer && clearTimeout(timer)
+      if (timer) clearTimeout(timer)
       setIineAction(false)
     }
   }, [iine])

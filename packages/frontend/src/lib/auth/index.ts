@@ -132,9 +132,11 @@ const runIframe = async (
 
       if (state !== e.data.response.state) return
 
-      e.data.response.error
-        ? reject(new Error('response error'))
-        : resolve(e.data.response as { code: string }) // @todo parse
+      if (e.data.response.error) {
+        reject(new Error('response error'))
+      } else {
+        resolve(e.data.response as { code: string }) // @todo parse
+      }
 
       clearTimeout(timeoutSetTimeoutId)
       window.removeEventListener('message', iframeEventHandler, false)

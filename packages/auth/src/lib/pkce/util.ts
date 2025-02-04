@@ -1,5 +1,6 @@
 import type { Result } from 'mzm-shared/src/type'
 import { createHash, randomUUID, getRandomValues } from 'node:crypto'
+import { logger } from '../logger.js'
 
 const urlsafeBase64Encode = (str: string) => {
   const encoded = str.replace(/\//g, '_').replace(/\+/g, '-').replace(/=/g, '')
@@ -63,6 +64,7 @@ export const verifyAuthorizationCode = async (options: {
 
     return { success: true, data: undefined }
   } catch (e) {
+    logger.info('[verifyAuthorizationCode]', e)
     return { success: false, error: { message: 'invalid code' } }
   }
 }

@@ -9,6 +9,6 @@
     "cli": "node --experimental-strip-types ./src/cli.ts"
   },
   "devDependencies": {
-    "mongodb": "^6.5.0"
+    "mongodb": "^6.10.0"
   }
 }

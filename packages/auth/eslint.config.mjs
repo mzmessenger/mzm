@@ -4,13 +4,21 @@ import tseslint from 'typescript-eslint';
 
 export default [
   {
+    ignores: ['dist/**']
+  },
+  pluginJs.configs.recommended,
+  ...tseslint.configs.recommended,
+  {
     languageOptions: { globals: globals.node },
     rules: {
       'no-console': 'warn',
       'prefer-const': 'error',
-      '@typescript-eslint/no-unused-vars': ['warn', { argsIgnorePattern: '^_' }]
+      '@typescript-eslint/no-unused-vars': [
+        'warn', {
+          caughtErrorsIgnorePattern: '^_',
+          caughtErrors: 'none'
+        }
+      ]
     }
-  },
-  pluginJs.configs.recommended,
-  ...tseslint.configs.recommended
+  }
 ]
