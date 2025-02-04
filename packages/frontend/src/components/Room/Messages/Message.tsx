@@ -85,6 +85,7 @@ const MessageElementInner: React.FC<Props> = (props) => {
         className="body"
         removed={removed}
         message={message}
+        // todo: worker
         html={sanitize(html)}
       />
       {vote && (

@@ -1,4 +1,5 @@
 import { test, expect } from 'vitest'
+import escape from 'validator/lib/escape'
 import { MessageConverter } from './messageConverter'
 
 const worker = new MessageConverter()
@@ -6,33 +7,33 @@ const worker = new MessageConverter()
 test.each([
   [
     'simple link',
-    'http://mzm.dev',
-    '<p><a href="http://mzm.dev">http://mzm.dev</a></p>'
+    'https://mzm.dev',
+    `<p><a href="${escape('https://mzm.dev')}" target="_blank">${escape('https://mzm.dev')}</a></p>`
   ],
   [
     'markdown link',
     '[mzm](https://mzm.dev)',
-    '<p><a href="https://mzm.dev">mzm</a></p>'
+    `<p><a href="${escape('https://mzm.dev')}" target="_blank">mzm</a></p>`
   ],
   [
     'simple link (top)',
     `http://${location.host}`,
-    `<p><a href="http://${location.host}">http://${location.host}</a></p>`
+    `<p><a href="${escape(`http://${location.host}`)}">${escape(`http://${location.host}`)}</a></p>`
   ],
   [
     'simple link (room)',
     `http://${location.host}/rooms/test`,
-    `<p><a class="mzm-room-link" href="http://${location.host}/rooms/test">/rooms/test</a></p>`
+    `<p><a class="mzm-room-link" href="${escape(`http://${location.host}/rooms/test`)}">${escape(`/rooms/test`)}</a></p>`
   ],
   [
     'simple  link (room:日本語)',
     `http://${location.host}/rooms/要望室`,
-    `<p><a class="mzm-room-link" href="http://${location.host}/rooms/%E8%A6%81%E6%9C%9B%E5%AE%A4">/rooms/要望室</a></p>`
+    `<p><a class="mzm-room-link" href="${escape(`http://${location.host}/rooms/要望室`)}">${escape(`/rooms/要望室`)}</a></p>`
   ],
   [
     'markdown link (room)',
     `[makrdownlink](https://${location.host}/rooms/test)`,
-    `<p><a href="https://${location.host}/rooms/test">makrdownlink</a></p>`
+    `<p><a href="${escape(`https://${location.host}/rooms/test`)}">makrdownlink</a></p>`
   ],
   [
     'marquee',
@@ -79,7 +80,8 @@ console.log(1)
     '`:smile: aa :smile: bb :foobar: cc :+1: dd`',
     `<p><span class="codespan">:smile: aa :smile: bb :foobar: cc :+1: dd</span></p>`
   ],
-  ['ipv6', '2001:db8::1', `<p>2001:db8::1</p>`]
+  ['ipv6', '2001:db8::1', `<p>2001:db8::1</p>`],
+  ['image', `![imagename](http://${location.host}/icon/rooms/test/1)`, `<p><img src="${escape(`http://${location.host}/icon/rooms/test/1`)}" alt="imagename" /></p>`],
 ])('convertToHtml (%s)', async (_label, src, converted) => {
   const html = await worker.convertToHtml(src)
   const expected = converted
