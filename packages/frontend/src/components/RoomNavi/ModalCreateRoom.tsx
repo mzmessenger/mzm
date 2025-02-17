@@ -1,5 +1,5 @@
 import React, { useState, type FormEventHandler } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import styled from '@emotion/styled'
 import { useRoomActions } from '../../recoil/rooms/hooks'
 import { useSocketActions } from '../../recoil/socket/hooks'

@@ -1,7 +1,7 @@
 import React, { StrictMode } from 'react'
 import { registerSW } from 'virtual:pwa-register'
 import { createRoot } from 'react-dom/client'
-import { createBrowserRouter, RouterProvider } from 'react-router-dom'
+import { createBrowserRouter, RouterProvider } from 'react-router'
 import { RecoilRoot } from 'recoil'
 import 'normalize.css'
 import 'highlight.js/styles/base16/onedark.css'

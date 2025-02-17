@@ -2,7 +2,7 @@ import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
 import { defineConfig, type UserConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
-import path from 'path'
+import path from 'node:path'
 
 const dirname = path.dirname(new URL(import.meta.url).pathname)
 
@@ -66,7 +66,7 @@ export default defineConfig(({ mode }) => {
       target: 'esnext',
       outDir: path.resolve(dirname, 'dist')
     },
-    root: path.resolve(__dirname, 'src'),
+    root: path.resolve(dirname, 'src'),
     server: {
       port: 8080,
       host: '0.0.0.0'

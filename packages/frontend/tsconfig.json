@@ -10,7 +10,7 @@
     "target": "es2022",
     "moduleResolution": "node",
     "skipLibCheck": true,
-    "jsx": "react",
+    "jsx": "react-jsx",
     "isolatedModules": true,
     "paths": {
       "mzm-shared": ["../shared"]

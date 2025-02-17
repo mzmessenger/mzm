@@ -1,5 +1,5 @@
 import { useEffect } from 'react'
-import { useLocation } from 'react-router-dom'
+import { useLocation } from 'react-router'
 import { useMessageListener } from './recoil/socket/hooks'
 import { useMyInfoActions } from './recoil/user/hooks'
 import { useAuth, useLoginFlag } from './recoil/auth/hooks'

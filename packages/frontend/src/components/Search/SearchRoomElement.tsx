@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import styled from '@emotion/styled'
 import { Home, Forward } from '@mui/icons-material'
 import { useEnterRoomActions } from '../../recoil/rooms/hooks'

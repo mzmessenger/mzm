@@ -1,7 +1,7 @@
 import type { Room } from '../../recoil/rooms/types'
 import React, { useCallback } from 'react'
 import styled from '@emotion/styled'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import {
   useChangeRoomActions,
   useChangeRoomOrderActions,

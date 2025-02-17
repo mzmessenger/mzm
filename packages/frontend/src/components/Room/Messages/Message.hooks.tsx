@@ -88,7 +88,7 @@ export const useMessage = (id: string) => {
     startToEdit(id, message)
   }, [id, message, startToEdit])
 
-  const prevIineRef = useRef<number>()
+  const prevIineRef = useRef<number | undefined>(undefined)
   useEffect(() => {
     prevIineRef.current = messageObj?.iine ?? undefined
   })
