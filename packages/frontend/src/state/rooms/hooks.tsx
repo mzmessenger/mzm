@@ -1,5 +1,5 @@
-import type { useSocketActions } from '../../recoil/socket/hooks'
-import type { useUiActions } from '../../recoil/ui/hooks'
+import type { useSocketActions } from '../../state/socket/hooks'
+import type { useUiActions } from '../../state/ui/hooks'
 import type { Room } from './types'
 import { useCallback } from 'react'
 import {
@@ -114,10 +114,13 @@ const roomsState = atom<RoomsState>({
 export const useGetUsersById = (roomId: string) => {
   const state = useAtomValue(roomsState)
   const users = state.usersById[roomId]
-  return users || {
-    count: 0,
-    users: []
-  } satisfies RoomsState['usersById'][string]
+  return (
+    users ||
+    ({
+      count: 0,
+      users: []
+    } satisfies RoomsState['usersById'][string])
+  )
 }
 
 export const useRooms = () => {
@@ -139,9 +142,23 @@ const sharedActions = {
     roomId: string
     currentRoomId: string
     roomsById: RoomsById
-    setRooms: ReturnType<typeof useSetAtom<RoomsState, [SetStateAction<RoomsState>], void>>
-    setCurrentRoom: ReturnType<typeof useSetAtom<CurrentRoomState, [SetStateAction<CurrentRoomState>], void>>
-    setOpenRoomSetting: ReturnType<typeof useSetAtom<OpenRoomSettingState, [SetStateAction<OpenRoomSettingState>], void>>
+    setRooms: ReturnType<
+      typeof useSetAtom<RoomsState, [SetStateAction<RoomsState>], void>
+    >
+    setCurrentRoom: ReturnType<
+      typeof useSetAtom<
+        CurrentRoomState,
+        [SetStateAction<CurrentRoomState>],
+        void
+      >
+    >
+    setOpenRoomSetting: ReturnType<
+      typeof useSetAtom<
+        OpenRoomSettingState,
+        [SetStateAction<OpenRoomSettingState>],
+        void
+      >
+    >
     handlers: {
       getMessages: (roomId: string) => void
       closeMenu: ReturnType<typeof useUiActions>['closeMenu']

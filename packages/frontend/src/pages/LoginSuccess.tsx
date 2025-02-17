@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react'
 import { useNavigate } from 'react-router'
-import { useAuth } from '../recoil/auth/hooks'
+import { useAuth } from '../state/auth/hooks'
 
 const LoginSuccess = () => {
   const navigate = useNavigate()

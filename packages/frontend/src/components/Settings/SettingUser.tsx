@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useAuth } from '../../recoil/auth/hooks'
-import { useRemoveUserActions } from '../../recoil/user/hooks'
+import { useAuth } from '../../state/auth/hooks'
+import { useRemoveUserActions } from '../../state/user/hooks'
 import { Button } from '../atoms/Button'
 import { SettingAccount } from './SettingAccount'
 

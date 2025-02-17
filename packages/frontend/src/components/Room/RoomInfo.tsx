@@ -1,14 +1,14 @@
 import React, { useEffect, useState } from 'react'
 import styled from '@emotion/styled'
 import { Home, Person, ExpandMore } from '@mui/icons-material'
-import { useUiActions } from '../../recoil/ui/hooks'
+import { useUiActions } from '../../state/ui/hooks'
 import {
   useRoomUserActions,
   useRoomSettingActions,
   useGetUsersById,
   useOpenRoomSettingFlag,
   useCurrentRoom
-} from '../../recoil/rooms/hooks'
+} from '../../state/rooms/hooks'
 import { WIDTH_MOBILE } from '../../constants'
 import { ModalUsersList } from './ModalUsersList'
 

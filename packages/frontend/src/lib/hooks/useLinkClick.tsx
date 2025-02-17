@@ -1,8 +1,8 @@
 import { useEffect, useRef } from 'react'
 import { useNavigate } from 'react-router'
-import { useEnterRoomActions } from '../../recoil/rooms/hooks'
-import { useSocketActions } from '../../recoil/socket/hooks'
-import { useUiActions } from '../../recoil/ui/hooks'
+import { useEnterRoomActions } from '../../state/rooms/hooks'
+import { useSocketActions } from '../../state/socket/hooks'
+import { useUiActions } from '../../state/ui/hooks'
 import { getRoomName } from '../util'
 
 export const useLinkClick = () => {

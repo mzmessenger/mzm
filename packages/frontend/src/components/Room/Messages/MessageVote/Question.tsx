@@ -1,11 +1,11 @@
 import React, { useState, useEffect } from 'react'
 import styled from '@emotion/styled'
-import { useSocketActions } from '../../../../recoil/socket/hooks'
-import { useUserIdAndAccount } from '../../../../recoil/user/hooks'
+import { useSocketActions } from '../../../../state/socket/hooks'
+import { useUserIdAndAccount } from '../../../../state/user/hooks'
 import {
   useVoteSocket,
   useVoteAnswerByIdAndIndex
-} from '../../../../recoil/messages/hooks'
+} from '../../../../state/messages/hooks'
 import { VoteAnswerTypeEnum } from './constants'
 import { VoteAnswer } from './VoteAnswer'
 import { VoteAnswerBar } from './VoteAnswerBar'

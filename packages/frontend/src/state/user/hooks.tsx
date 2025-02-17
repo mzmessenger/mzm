@@ -1,4 +1,4 @@
-import type { useAuth } from '../../recoil/auth/hooks'
+import type { useAuth } from '../../state/auth/hooks'
 import { useCallback } from 'react'
 import { atom, useAtom, useAtomValue } from 'jotai'
 import { clients, authClients, fetcher } from '../../lib/client'

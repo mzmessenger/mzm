@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import SearchIcon from '@mui/icons-material/Search'
-import { useSearch } from '../../recoil/search/hooks'
+import { useSearch } from '../../state/search/hooks'
 import { SearchModal } from './SearchModal'
 
 export const SearchInput = () => {

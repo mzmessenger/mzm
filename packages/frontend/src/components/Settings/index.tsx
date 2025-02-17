@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
 import { WIDTH_MOBILE, AUTH_URL_BASE } from '../../constants'
-import { useUiActions } from '../../recoil/ui/hooks'
+import { useUiActions } from '../../state/ui/hooks'
 import { SettingUser } from './SettingUser'
 import { Config } from './Config'
 

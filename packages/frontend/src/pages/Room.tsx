@@ -1,6 +1,6 @@
 import React, { lazy, Suspense } from 'react'
-import { useSettingsUi } from '../recoil/ui/hooks'
-import { useLoginFlag } from '../recoil/auth/hooks'
+import { useSettingsUi } from '../state/ui/hooks'
+import { useLoginFlag } from '../state/auth/hooks'
 import { Menu, Rooms } from '../components/Menu'
 import { RoomContent } from '../components/Room'
 import { PageWrapper, Header } from '../components/PageWrapper'

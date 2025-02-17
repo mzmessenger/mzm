@@ -1,8 +1,8 @@
 import React, { useCallback } from 'react'
 import styled from '@emotion/styled'
 import Settings from '@mui/icons-material/Settings'
-import { useUiActions } from '../../recoil/ui/hooks'
-import { useUserIdAndAccount } from '../../recoil/user/hooks'
+import { useUiActions } from '../../state/ui/hooks'
+import { useUserIdAndAccount } from '../../state/user/hooks'
 
 export const MyInfo = () => {
   const { userAccount, userIconUrl } = useUserIdAndAccount()

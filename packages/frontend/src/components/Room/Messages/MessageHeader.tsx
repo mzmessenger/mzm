@@ -6,8 +6,8 @@ import {
   Delete as DeleteIcon
 } from '@mui/icons-material'
 import { IconButton } from '../../atoms/Button'
-import { useUiActions } from '../../../recoil/ui/hooks'
-import { useUserAccount } from '../../../recoil/user/hooks'
+import { useUiActions } from '../../../state/ui/hooks'
+import { useUserAccount } from '../../../state/user/hooks'
 
 type Props = {
   id: string

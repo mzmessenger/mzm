@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { type StateMessageType } from '../../../../recoil/messages/hooks'
+import { type StateMessageType } from '../../../../state/messages/hooks'
 import { Question } from './Question'
 
 type Props = {

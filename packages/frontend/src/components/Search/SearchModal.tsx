@@ -1,7 +1,7 @@
 import React from 'react'
 import styled from '@emotion/styled'
 import { Search, Close } from '@mui/icons-material'
-import { useSearch } from '../../recoil/search/hooks'
+import { useSearch } from '../../state/search/hooks'
 import { ModalBase } from '../atoms/Modal'
 import { IconButton } from '../atoms/Button'
 import { SearchResult } from './SearchResults'

@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useSearch } from '../../recoil/search/hooks'
+import { useSearch } from '../../state/search/hooks'
 import { TransparentButton } from '../atoms/Button'
 import { SearchRoomElement } from './SearchRoomElement'
 

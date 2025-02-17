@@ -1,9 +1,9 @@
 import { useRef, useEffect, useMemo, useCallback } from 'react'
 import dayjs from 'dayjs'
-import { useMessageById } from '../../../recoil/messages/hooks'
-import { useUserAccount } from '../../../recoil/user/hooks'
-import { usePostTextArea } from '../../../recoil/postTextArea/hooks'
-import { useSocketActions } from '../../../recoil/socket/hooks'
+import { useMessageById } from '../../../state/messages/hooks'
+import { useUserAccount } from '../../../state/user/hooks'
+import { usePostTextArea } from '../../../state/postTextArea/hooks'
+import { useSocketActions } from '../../../state/socket/hooks'
 import { isReplied } from '../../../lib/util'
 
 export const useMessage = (id: string) => {

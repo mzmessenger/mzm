@@ -1,11 +1,11 @@
 import React, { useRef, useEffect, useMemo } from 'react'
 import styled from '@emotion/styled'
-import { useSocketActions } from '../../../recoil/socket/hooks'
+import { useSocketActions } from '../../../state/socket/hooks'
 import {
   useRooms,
   useCurrentRoom,
   useRoomById
-} from '../../../recoil/rooms/hooks'
+} from '../../../state/rooms/hooks'
 import { useIntersectionObserver } from '../../../lib/hooks/useIntersectionObserver'
 import { MessageElement } from './Message'
 

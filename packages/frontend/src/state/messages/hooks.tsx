@@ -1,12 +1,7 @@
 import type { MessageType } from 'mzm-shared/src/type/socket'
-import type { useSocketActions } from '../../recoil/socket/hooks'
+import type { useSocketActions } from '../../state/socket/hooks'
 import { useCallback } from 'react'
-import {
-  atom,
-  useAtom,
-  useAtomValue,
-  useSetAtom
-} from 'jotai'
+import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { convertToHtml } from '../../lib/message'
 
 import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/src/type/socket'
@@ -26,7 +21,9 @@ type MessageById = {
 const messagesByIdState = atom<MessageById>({})
 
 export const useMessageById = (roomId: string) => {
-  return useAtomValue(messagesByIdState)[roomId] ?? null satisfies StateMessageType
+  return (
+    useAtomValue(messagesByIdState)[roomId] ?? (null satisfies StateMessageType)
+  )
 }
 
 type VoteAnswersById = {

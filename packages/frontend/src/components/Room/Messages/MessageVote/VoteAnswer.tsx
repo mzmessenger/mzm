@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { VoteAnswerType } from '../../../../recoil/messages/hooks'
+import { VoteAnswerType } from '../../../../state/messages/hooks'
 import { VoteAnswerTypeEnum } from './constants'
 
 type Props = {
