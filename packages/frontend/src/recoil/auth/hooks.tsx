@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { atom, useRecoilState, useRecoilValue, useSetRecoilState } from 'recoil'
+import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { logger } from '../../lib/logger'
 import {
   getAccessTokenFromIframe,
@@ -8,16 +8,15 @@ import {
 import { userState } from '../user/hooks'
 import { AUTH_URL_BASE } from '../../constants'
 
-const loginState = atom({
-  key: 'state:auth:loginFlag',
-  default: false
-})
+const loginState = atom(false)
 
-export const useLoginFlag = () => useRecoilValue(loginState)
+export const useLoginFlag = () => {
+  return useAtomValue(loginState)
+}
 
 export const useAuth = () => {
-  const [loginFlag, setLoginFlag] = useRecoilState(loginState)
-  const setUser = useSetRecoilState(userState)
+  const [loginFlag, setLoginFlag] = useAtom(loginState)
+  const setUser = useSetAtom(userState)
 
   const logout = useCallback(() => {
     location.href = AUTH_URL_BASE + '/auth/logout'

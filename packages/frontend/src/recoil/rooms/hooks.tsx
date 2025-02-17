@@ -4,12 +4,11 @@ import type { Room } from './types'
 import { useCallback } from 'react'
 import {
   atom,
-  useRecoilState,
-  useSetRecoilState,
-  useRecoilValue,
-  selectorFamily,
-  type SetterOrUpdater
-} from 'recoil'
+  useAtom,
+  useAtomValue,
+  useSetAtom,
+  type SetStateAction
+} from 'jotai'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
 import { clients, fetcher } from '../../lib/client'
 import { isReplied } from '../../lib/util'
@@ -29,21 +28,19 @@ type OpenRoomSettingState = {
 }
 
 const openRoomSettingState = atom<OpenRoomSettingState>({
-  key: 'state:rooms:openRoomSettingState',
-  default: {
-    openRoomSetting: false
-  }
+  openRoomSetting: false
 })
 export const useOpenRoomSettingFlag = () => {
-  const { openRoomSetting } = useRecoilValue(openRoomSettingState)
+  const { openRoomSetting } = useAtomValue(openRoomSettingState)
   return openRoomSetting
 }
 
 export const useRoomSettingActions = () => {
-  const setOpenRoomSetting = useSetRecoilState(openRoomSettingState)
+  const setOpenRoomSetting = useSetAtom(openRoomSettingState)
 
   const toggleRoomSetting = useCallback(() => {
     setOpenRoomSetting((current) => ({
+      ...current,
       openRoomSetting: !current.openRoomSetting
     }))
   }, [setOpenRoomSetting])
@@ -61,13 +58,10 @@ type CurrentRoomState = {
 }
 
 const currentRoomState = atom<CurrentRoomState>({
-  key: 'state:rooms:currentRoomState',
-  default: {
-    currentRoomId: '',
-    currentRoomName: initCurrentRoomName,
-    currentRoomIcon: null,
-    currentRoomDescription: null
-  }
+  currentRoomId: '',
+  currentRoomName: initCurrentRoomName,
+  currentRoomIcon: null,
+  currentRoomDescription: null
 })
 export const useCurrentRoom = () => {
   const {
@@ -75,7 +69,7 @@ export const useCurrentRoom = () => {
     currentRoomName,
     currentRoomIcon,
     currentRoomDescription
-  } = useRecoilValue(currentRoomState)
+  } = useAtomValue(currentRoomState)
   return {
     currentRoomId,
     currentRoomName,
@@ -86,35 +80,19 @@ export const useCurrentRoom = () => {
 
 type RoomsById = { [key: string]: Room }
 
-const roomsByIdState = atom<RoomsById>({
-  key: 'state:rooms:roomsById',
-  default: {}
-})
+const roomsByIdState = atom<RoomsById>({})
 
-const getRoomById = selectorFamily({
-  key: 'state:rooms:roomsById:id',
-  get:
-    (roomId: string) =>
-    ({ get }) => {
-      const byId = get(roomsByIdState)
-      return byId[roomId]
-    }
-})
-export const useRoomById = (roomId: string) =>
-  useRecoilValue(getRoomById(roomId))
+export const useRoomById = (roomId: string) => {
+  const rooms = useAtomValue(roomsByIdState)
+  return rooms[roomId] ?? null
+}
 
-const roomsAllIdsState = atom<string[]>({
-  key: 'state:rooms:roomsAllIds',
-  default: []
-})
+const roomsAllIdsState = atom<string[]>([])
 
-export const useRoomsAllIds = () => useRecoilValue(roomsAllIdsState)
+export const useRoomsAllIds = () => useAtomValue(roomsAllIdsState)
 
 const roomsOrderState = atom<{ roomsOrder: string[] }>({
-  key: 'state:rooms:roomsOrder',
-  default: {
-    roomsOrder: []
-  }
+  roomsOrder: []
 })
 
 type RoomsState = {
@@ -127,30 +105,23 @@ type RoomsState = {
 }
 
 const roomsState = atom<RoomsState>({
-  key: 'state:rooms',
-  default: {
-    usersById: {},
-    usersAllIds: [],
-    usersLoading: false,
-    scrollTargetIndex: 'bottom'
-  }
+  usersById: {},
+  usersAllIds: [],
+  usersLoading: false,
+  scrollTargetIndex: 'bottom'
 })
 
-const getUsersById = selectorFamily({
-  key: 'state:rooms:usersById:id',
-  get:
-    (roomId: string) =>
-    ({ get }) => {
-      const { usersById } = get(roomsState)
-      return usersById[roomId]
-    }
-})
-
-export const useGetUsersById = (roomId: string) =>
-  useRecoilValue(getUsersById(roomId))
+export const useGetUsersById = (roomId: string) => {
+  const state = useAtomValue(roomsState)
+  const users = state.usersById[roomId]
+  return users || {
+    count: 0,
+    users: []
+  } satisfies RoomsState['usersById'][string]
+}
 
 export const useRooms = () => {
-  const { scrollTargetIndex } = useRecoilValue(roomsState)
+  const { scrollTargetIndex } = useAtomValue(roomsState)
 
   return {
     scrollTargetIndex
@@ -168,9 +139,9 @@ const sharedActions = {
     roomId: string
     currentRoomId: string
     roomsById: RoomsById
-    setRooms: SetterOrUpdater<RoomsState>
-    setCurrentRoom: SetterOrUpdater<CurrentRoomState>
-    setOpenRoomSetting: SetterOrUpdater<OpenRoomSettingState>
+    setRooms: ReturnType<typeof useSetAtom<RoomsState, [SetStateAction<RoomsState>], void>>
+    setCurrentRoom: ReturnType<typeof useSetAtom<CurrentRoomState, [SetStateAction<CurrentRoomState>], void>>
+    setOpenRoomSetting: ReturnType<typeof useSetAtom<OpenRoomSettingState, [SetStateAction<OpenRoomSettingState>], void>>
     handlers: {
       getMessages: (roomId: string) => void
       closeMenu: ReturnType<typeof useUiActions>['closeMenu']
@@ -214,10 +185,10 @@ export const useChangeRoomActions = ({
   getMessages: ReturnType<typeof useSocketActions>['getMessages']
   closeMenu: ReturnType<typeof useUiActions>['closeMenu']
 }) => {
-  const setOpenRoomSetting = useSetRecoilState(openRoomSettingState)
-  const [{ currentRoomId }, setCurrentRoom] = useRecoilState(currentRoomState)
-  const roomsById = useRecoilValue(roomsByIdState)
-  const setRooms = useSetRecoilState(roomsState)
+  const setOpenRoomSetting = useSetAtom(openRoomSettingState)
+  const [{ currentRoomId }, setCurrentRoom] = useAtom(currentRoomState)
+  const roomsById = useAtomValue(roomsByIdState)
+  const setRooms = useSetAtom(roomsState)
 
   const changeRoom = useCallback(
     (roomId: string) => {
@@ -255,8 +226,8 @@ export const useChangeRoomOrderActions = ({
 }: {
   sortRoom: ReturnType<typeof useSocketActions>['sortRoom']
 }) => {
-  const setRoomsOrder = useSetRecoilState(roomsOrderState)
-  const [roomsAllIds, setRoomsAllIds] = useRecoilState(roomsAllIdsState)
+  const [, setRoomsOrder] = useAtom(roomsOrderState)
+  const [roomsAllIds, setRoomsAllIds] = useAtom(roomsAllIdsState)
 
   const changeRoomOrder = useCallback(
     (roomsOrder: string[]) => {
@@ -284,7 +255,7 @@ export const useEnterRoomActions = ({
   closeMenu: ReturnType<typeof useUiActions>['closeMenu']
   enterRoomSocket: ReturnType<typeof useSocketActions>['enterRoom']
 } & Parameters<typeof useChangeRoomActions>[0]) => {
-  const roomsById = useRecoilValue(roomsByIdState)
+  const roomsById = useAtomValue(roomsByIdState)
   const { changeRoom } = useChangeRoomActions({
     getMessages,
     closeMenu
@@ -309,7 +280,7 @@ export const useEnterRoomActions = ({
 }
 
 export const useRoomStatusActions = () => {
-  const setRoomsById = useSetRecoilState(roomsByIdState)
+  const [, setRoomsById] = useAtom(roomsByIdState)
 
   const setRoomStatus = useCallback(
     (roomId: string, status: 'open' | 'close') => {
@@ -337,7 +308,7 @@ export const useRoomMessageActions = ({
 }: {
   getMessages: ReturnType<typeof useSocketActions>['getMessages']
 }) => {
-  const [roomsById, setRoomsById] = useRecoilState(roomsByIdState)
+  const [roomsById, setRoomsById] = useAtom(roomsByIdState)
 
   const getRoomMessages = useCallback(
     (roomId: string) => {
@@ -360,7 +331,7 @@ export const useRoomMessageActions = ({
 }
 
 export const useRoomUserActions = () => {
-  const [rooms, setRooms] = useRecoilState(roomsState)
+  const [rooms, setRooms] = useAtom(roomsState)
 
   const fetchStartRoomUsers = useCallback(() => {
     setRooms((current) => ({ ...current, usersLoading: true }))
@@ -473,9 +444,9 @@ export const useRoomActions = ({
 }: {
   getRooms: ReturnType<typeof useSocketActions>['getRooms']
 }) => {
-  const setCurrentRoom = useSetRecoilState(currentRoomState)
-  const setRoomsById = useSetRecoilState(roomsByIdState)
-  const setOpenRoomSettingState = useSetRecoilState(openRoomSettingState)
+  const setCurrentRoom = useSetAtom(currentRoomState)
+  const setRoomsById = useSetAtom(roomsByIdState)
+  const setOpenRoomSettingState = useSetAtom(openRoomSettingState)
 
   const enterClient = clients['/api/rooms']['POST'].client
   const createRoom = useCallback(
@@ -557,12 +528,12 @@ export const useRoomActions = ({
 
 export const useRoomActionsForSocket = () => {
   const [{ currentRoomId, currentRoomName }, setCurrentRoom] =
-    useRecoilState(currentRoomState)
-  const setRoomsOrder = useSetRecoilState(roomsOrderState)
-  const [roomsById, setRoomsById] = useRecoilState(roomsByIdState)
-  const setRoomsAllIds = useSetRecoilState(roomsAllIdsState)
-  const setRooms = useSetRecoilState(roomsState)
-  const setOpenRoomSetting = useSetRecoilState(openRoomSettingState)
+    useAtom(currentRoomState)
+  const setRoomsOrder = useSetAtom(roomsOrderState)
+  const [roomsById, setRoomsById] = useAtom(roomsByIdState)
+  const setRoomsAllIds = useSetAtom(roomsAllIdsState)
+  const setRooms = useSetAtom(roomsState)
+  const setOpenRoomSetting = useSetAtom(openRoomSettingState)
 
   const receiveMessages = useCallback(
     ({

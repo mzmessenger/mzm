@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { atom, useRecoilState } from 'recoil'
+import { atom, useAtom } from 'jotai'
 
 type PostTextAreaState = {
   inputMode: 'normal' | 'edit'
@@ -9,17 +9,14 @@ type PostTextAreaState = {
 }
 
 const postTextAreaState = atom<PostTextAreaState>({
-  key: 'state:postTextArea',
-  default: {
-    inputMode: 'normal',
-    txt: '',
-    editTxt: '',
-    editId: null
-  }
+  inputMode: 'normal',
+  txt: '',
+  editTxt: '',
+  editId: null
 })
 
 export const usePostTextArea = () => {
-  const [postTextArea, setPostTextArea] = useRecoilState(postTextAreaState)
+  const [postTextArea, setPostTextArea] = useAtom(postTextAreaState)
 
   const startToEdit = useCallback(
     (messageId: string, txt: string) => {
