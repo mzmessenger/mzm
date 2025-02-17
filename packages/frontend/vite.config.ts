@@ -1,16 +1,12 @@
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { defineConfig } from 'vite'
+import { defineConfig, type UserConfig } from 'vite'
 import { configDefaults } from 'vitest/config'
 import path from 'path'
 
 const dirname = path.dirname(new URL(import.meta.url).pathname)
 
 export default defineConfig(({ mode }) => {
-  const SOCKET_URL =
-    mode === 'production'
-      ? 'wss://socket.mzm.dev/socket'
-      : 'ws://localhost:3000/socket'
   const API_URL_BASE =
     mode === 'production' ? 'https://api.mzm.dev' : 'http://localhost:3001'
   const AUTH_URL_BASE =
@@ -18,7 +14,6 @@ export default defineConfig(({ mode }) => {
 
   return {
     define: {
-      __SOCKET_URL__: JSON.stringify(process.env.SOCKET_URL ?? SOCKET_URL),
       __API_URL_BASE__: JSON.stringify(
         process.env.API_DOMAIN_BASE ?? API_URL_BASE
       ),
@@ -51,7 +46,7 @@ export default defineConfig(({ mode }) => {
           ]
         },
         workbox: {
-          navigateFallbackDenylist: [/\/api/, /\/auth/, /\/socket/],
+          navigateFallbackDenylist: [/\/api/, /\/auth/],
           runtimeCaching: [
             {
               urlPattern: /\/api/,
@@ -59,10 +54,6 @@ export default defineConfig(({ mode }) => {
             },
             {
               urlPattern: /\/auth/,
-              handler: 'NetworkOnly'
-            },
-            {
-              urlPattern: /\/socket/,
               handler: 'NetworkOnly'
             }
           ]
@@ -84,5 +75,5 @@ export default defineConfig(({ mode }) => {
       environment: 'jsdom',
       exclude: [...configDefaults.exclude, '**/dist/**']
     }
-  }
+  } satisfies UserConfig
 })
