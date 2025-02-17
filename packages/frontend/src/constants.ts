@@ -1,12 +1,10 @@
 /* eslint-disable no-var */
 declare global {
   var __API_URL_BASE__: string
-  var __SOCKET_URL__: string
   var __AUTH_URL_BASE__: string
 }
 
 export const API_URL_BASE = __API_URL_BASE__
-export const SOCKET_URL = __SOCKET_URL__
 export const AUTH_URL_BASE = __AUTH_URL_BASE__
 
 export const REDIRECT_URI = `${location.origin}/login/success`

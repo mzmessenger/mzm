@@ -1,6 +1,6 @@
-import type { Room } from '../../recoil/rooms/types'
+import type { Room } from '../../state/rooms/types'
 import React, { useState } from 'react'
-import { useRoomById } from '../../recoil/rooms/hooks'
+import { useRoomById } from '../../state/rooms/hooks'
 import { RoomElem } from './RoomElem'
 
 type Props = {

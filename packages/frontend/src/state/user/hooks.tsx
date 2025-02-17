@@ -1,12 +1,6 @@
-import type { useAuth } from '../../recoil/auth/hooks'
+import type { useAuth } from '../../state/auth/hooks'
 import { useCallback } from 'react'
-import {
-  atom,
-  useRecoilState,
-  useSetRecoilState,
-  selector,
-  useRecoilValue
-} from 'recoil'
+import { atom, useAtom, useAtomValue } from 'jotai'
 import { clients, authClients, fetcher } from '../../lib/client'
 import { API_URL_BASE } from '../../constants'
 
@@ -19,56 +13,45 @@ type UserState = {
 }
 
 export const userState = atom<UserState>({
-  key: 'state:user',
-  default: {
-    id: '',
-    account: '',
-    iconUrl: '',
-    twitterUserName: null,
-    githubUserName: null
+  id: '',
+  account: '',
+  iconUrl: '',
+  twitterUserName: null,
+  githubUserName: null
+})
+
+export const userAccountState = atom((get) => {
+  const { account } = get(userState)
+  return { userAccount: account }
+})
+
+export const useUserAccount = () => useAtomValue(userAccountState)
+
+export const userIdAndAccountState = atom((get) => {
+  const { id, account, iconUrl } = get(userState)
+  return {
+    userId: id,
+    userAccount: account,
+    userIconUrl: iconUrl
   }
 })
 
-const userAccountState = selector({
-  key: 'state:user:selector:account',
-  get: ({ get }) => {
-    const { account } = get(userState)
-    return { userAccount: account }
+export const useUserIdAndAccount = () => useAtomValue(userIdAndAccountState)
+
+export const socialAccountState = atom((get) => {
+  const { twitterUserName, githubUserName } = get(userState)
+  return {
+    twitterUserName,
+    githubUserName
   }
 })
 
-export const useUserAccount = () => useRecoilValue(userAccountState)
-
-const userIdAndAccountState = selector({
-  key: 'state:user:selector:id-and-account',
-  get: ({ get }) => {
-    const { id, account, iconUrl } = get(userState)
-    return {
-      userId: id,
-      userAccount: account,
-      userIconUrl: iconUrl
-    }
-  }
-})
-
-export const useUserIdAndAccount = () => useRecoilValue(userIdAndAccountState)
-
-const socialAccountState = selector({
-  key: 'state:user:selector:social-account',
-  get: ({ get }) => {
-    const { twitterUserName, githubUserName } = get(userState)
-    return {
-      twitterUserName,
-      githubUserName
-    }
-  }
-})
-export const useSocialAccount = () => useRecoilValue(socialAccountState)
+export const useSocialAccount = () => useAtomValue(socialAccountState)
 
 type UseAuthType = ReturnType<typeof useAuth>
 
 export const useUser = () => {
-  const [user, setUser] = useRecoilState(userState)
+  const [user, setUser] = useAtom(userState)
 
   const client = clients['/api/user/@me']['PUT'].client
   const updateUser = useCallback(
@@ -118,7 +101,7 @@ export const useUser = () => {
 }
 
 export const useMyInfoActions = () => {
-  const setUser = useSetRecoilState(userState)
+  const setUser = useAtom(userState)[1]
 
   const fetchMyInfo = useCallback(async () => {
     const res = await clients['/api/user/@me']['GET'].client({ fetcher })
@@ -168,7 +151,7 @@ export const useRemoveUserActions = ({
 }
 
 export const useRemoveAccountActions = () => {
-  const [user] = useRecoilState(userState)
+  const [user] = useAtom(userState)
 
   const removeTwitter = useCallback(
     async (handleSuccessRemove: () => void) => {

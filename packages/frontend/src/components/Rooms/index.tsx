@@ -1,15 +1,15 @@
-import type { Room } from '../../recoil/rooms/types'
+import type { Room } from '../../state/rooms/types'
 import React, { useCallback } from 'react'
 import styled from '@emotion/styled'
-import { useNavigate } from 'react-router-dom'
+import { useNavigate } from 'react-router'
 import {
   useChangeRoomActions,
   useChangeRoomOrderActions,
   useCurrentRoom,
   useRoomsAllIds
-} from '../../recoil/rooms/hooks'
-import { useSocketActions } from '../../recoil/socket/hooks'
-import { useUiActions } from '../../recoil/ui/hooks'
+} from '../../state/rooms/hooks'
+import { useSocketActions } from '../../state/socket/hooks'
+import { useUiActions } from '../../state/ui/hooks'
 import { DropZone } from './DropZone'
 
 export const Rooms = () => {

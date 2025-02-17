@@ -1,4 +1,4 @@
-import { marked } from 'marked'
+import { marked, type RendererObject } from 'marked'
 import { mangle } from 'marked-mangle'
 import escape from 'validator/lib/escape'
 import { expose } from 'comlink'
@@ -7,63 +7,70 @@ import { emojis, type EmojisKey } from '../constants'
 // bundle size
 import hljs from 'highlight.js/lib/common'
 
-const escapeTxt = (text: string) => escape(text)
-const r = new marked.Renderer()
-const originalLink = r.link.bind(r)
-
-marked.use(mangle(), {
-  renderer: {
-    text: (text) => {
-      try {
-        return emojiConvert(text)
-      } catch (e) {
-        return text
-      }
-    },
-    heading: escapeTxt,
-    html: escapeTxt,
-    hr: () => '',
-    table: escapeTxt,
-    tablerow: escapeTxt,
-    tablecell: escapeTxt,
-    em: escapeTxt,
-    br: () => '',
-    image: escapeTxt,
-    link: (href, title, text) => {
+const renderer: RendererObject = {
+  text({ text }) {
+    try {
+      return emojiConvert(text)
+    } catch (e) {
+      return escape(text)
+    }
+  },
+  heading({ tokens }) {
+    const text = this.parser.parseInline(tokens)
+    return escape(text)
+  },
+  html({ text }) {
+    return escape(text)
+  },
+  hr: () => '',
+  em({ tokens }) {
+    const text = this.parser.parseInline(tokens)
+    return escape(text)
+  },
+  br: () => '',
+  image({ href, text }) {
+    return `<img src="${escape(href)}" alt="${escape(text)}" />`
+  },
+  link({ href, text }) {
+    try {
       const url = new URL(href)
 
       if (url.host === location.host && url.pathname !== '/' && href === text) {
-        return originalLink(
-          href,
-          title,
-          text.slice(text.indexOf('/rooms'))
-        ).replace('<a ', `<a class="mzm-room-link" `)
+        const t = escape(text.slice(text.indexOf('/rooms')))
+        return `<a class="mzm-room-link" href="${escape(href)}">${t}</a>`
       }
 
-      return originalLink(href, title, text)
-    },
-    // @todo
-    checkbox: (checked) => {
-      return `<span class="check">${checked ? '[x]' : '[ ]'}</span>`
-    },
-    code: (code, lang) => {
-      const language = hljs.getLanguage(lang) ? lang : 'bash'
-      const classAttr = 'hljs language_' + escape(language)
-      const html = [
-        '<pre>',
-        `<code class="${classAttr}">`,
-        hljs.highlight(code, { language }).value,
-        '</code>',
-        '</pre>'
-      ].join('')
-      return html
-    },
-    codespan: (code) => {
-      const html = ['<span class="codespan">', escapeTxt(code), '</span>']
-      return html.join('')
+      if (url.host === location.host) {
+        return `<a href="${escape(href)}">${escape(text)}</a>`
+      }
+
+      return `<a href="${escape(href)}" target="_blank">${escape(text)}</a>`
+    } catch (e) {
+      return escape(text)
     }
+  },
+  // @todo
+  checkbox({ checked }) {
+    return `<span class="check">${checked ? '[x]' : '[ ]'}</span>`
+  },
+  code({ text, lang }) {
+    const language = hljs.getLanguage(lang) ? lang : 'bash'
+    const classAttr = 'hljs language_' + escape(language)
+    const html = [
+      '<pre>',
+      `<code class="${classAttr}">`,
+      hljs.highlight(text, { language }).value,
+      '</code>',
+      '</pre>'
+    ].join('')
+    return html
+  },
+  codespan({ text }) {
+    return `<span class="codespan">${escape(text)}</span>`
   }
-})
+}
+
+marked.use(mangle(), { renderer })
 
 function emojiConvert(text: string): string {
   const regexp = /(^|\s)(:[a-zA-Z0-9_+]+:)(\s|$)/

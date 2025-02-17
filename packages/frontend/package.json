@@ -22,17 +22,19 @@
   "license": "MIT",
   "devDependencies": {
     "@types/dompurify": "^3.0.2",
-    "@types/react": "^18.3.12",
-    "@types/react-dom": "^18.3.1",
-    "@types/react-router-dom": "^5.1.5",
+    "@types/react": "^19.0.9",
+    "@types/react-dom": "^19.0.3",
     "@types/validator": "^13.12.2",
-    "@vitejs/plugin-react": "^4.3.3",
-    "eslint": "^9.13.0",
+    "@vitejs/plugin-react": "^4.3.4",
+    "eslint": "^9.20.1",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.1.0-rc-603e6108-20241029",
     "globals": "^15.11.0",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.12.2"
+    "typescript-eslint": "^8.24.0",
+    "vite": "^6.0.11",
+    "vite-plugin-pwa": "^0.21.1",
+    "vitest": "^3.0.5"
   },
   "dependencies": {
     "@emotion/react": "^11.13.3",
@@ -43,17 +45,15 @@
     "dayjs": "^1.11.13",
     "dompurify": "^3.1.7",
     "highlight.js": "^11.10.0",
-    "jsdom": "^25.0.1",
+    "jotai": "^2.12.0",
+    "jsdom": "^26.0.0",
     "jwt-decode": "^4.0.0",
-    "marked": "^11.0.1",
-    "marked-mangle": "^1.1.0",
+    "marked": "^15.0.6",
+    "marked-mangle": "^1.1.9",
     "normalize.css": "^8.0.1",
-    "react": "^18.3.1",
-    "react-dom": "^18.3.1",
-    "react-router-dom": "^6.27.0",
-    "recoil": "^0.7.6",
-    "validator": "^13.12.0",
-    "vite": "^5.4.10",
-    "vite-plugin-pwa": "^0.20.5"
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-router": "^7.1.5",
+    "validator": "^13.12.0"
   }
 }

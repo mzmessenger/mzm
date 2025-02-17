@@ -4,7 +4,7 @@ import express, { type Request } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import passport from 'passport'
-import RedisStore from 'connect-redis'
+import { RedisStore } from 'connect-redis'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import { Strategy as TwitterStrategy } from 'passport-twitter'
 import session from 'express-session'
@@ -121,13 +121,9 @@ export const createApp = ({ client }: Options) => {
     wrap(authorizeHandlers.token)
   )
 
-  app.get(
-    '/auth/twitter',
-    defaultHelmet,
-    (req, res, next) => {
-      oauthHandlers.oauth(passport, 'twitter')(req, res, next)
-    }
-  )
+  app.get('/auth/twitter', defaultHelmet, (req, res, next) => {
+    oauthHandlers.oauth(passport, 'twitter')(req, res, next)
+  })
   app.get(
     '/auth/twitter/callback',
     defaultHelmet,
@@ -145,13 +141,9 @@ export const createApp = ({ client }: Options) => {
     wrap(twitterHandlers.removeTwitter)
   )
 
-  app.get(
-    '/auth/github',
-    defaultHelmet,
-    (req, res, next) => {
-      oauthHandlers.oauth(passport, 'github')(req, res, next)
-    }
-  )
+  app.get('/auth/github', defaultHelmet, (req, res, next) => {
+    oauthHandlers.oauth(passport, 'github')(req, res, next)
+  })
   app.get(
     '/auth/github/callback',
     defaultHelmet,

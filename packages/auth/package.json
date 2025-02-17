@@ -19,7 +19,7 @@
   "license": "MIT",
   "dependencies": {
     "bunyan": "^1.8.15",
-    "connect-redis": "^7.1.1",
+    "connect-redis": "^8.0.1",
     "cors": "^2.8.5",
     "express": "^4.21.1",
     "express-session": "^1.18.1",
@@ -40,8 +40,10 @@
     "@types/passport": "^1.0.17",
     "@types/passport-github": "^1.1.7",
     "@types/passport-twitter": "^1.0.37",
-    "eslint": "^9.13.0",
+    "eslint": "^9.20.1",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.12.2"
+    "typescript-eslint": "^8.24.0",
+    "vite": "^6.0.11",
+    "vitest": "^3.0.5"
   }
 }

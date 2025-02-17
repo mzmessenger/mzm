@@ -5,8 +5,8 @@ import {
   useCurrentRoom,
   useRoomById,
   useRoomStatusActions
-} from '../../../recoil/rooms/hooks'
-import { useSocketActions } from '../../../recoil/socket/hooks'
+} from '../../../state/rooms/hooks'
+import { useSocketActions } from '../../../state/socket/hooks'
 
 export const SettingRoomStatus = () => {
   const { currentRoomId } = useCurrentRoom()

@@ -5,11 +5,11 @@ import {
   Twitter as TwitterIcon,
   GitHub as GitHubIcon
 } from '@mui/icons-material'
-import { useAuth } from '../../recoil/auth/hooks'
+import { useAuth } from '../../state/auth/hooks'
 import {
   useSocialAccount,
   useRemoveAccountActions
-} from '../../recoil/user/hooks'
+} from '../../state/user/hooks'
 
 export const SocialAccounts = () => {
   const { twitterUserName, githubUserName } = useSocialAccount()

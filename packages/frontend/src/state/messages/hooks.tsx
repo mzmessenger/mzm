@@ -1,13 +1,7 @@
 import type { MessageType } from 'mzm-shared/src/type/socket'
-import type { useSocketActions } from '../../recoil/socket/hooks'
+import type { useSocketActions } from '../../state/socket/hooks'
 import { useCallback } from 'react'
-import {
-  atom,
-  useRecoilState,
-  selectorFamily,
-  useRecoilValue,
-  useSetRecoilState
-} from 'recoil'
+import { atom, useAtom, useAtomValue, useSetAtom } from 'jotai'
 import { convertToHtml } from '../../lib/message'
 
 import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/src/type/socket'
@@ -24,23 +18,12 @@ type MessageById = {
   [key: string]: StateMessageType
 }
 
-const messagesByIdState = atom<MessageById>({
-  key: 'state:messages:messagesByid',
-  default: {}
-})
-
-const getMessageById = selectorFamily({
-  key: 'state:messages:messagesByid:id',
-  get:
-    (messageId: string) =>
-    ({ get }) => {
-      const byId = get(messagesByIdState)
-      return byId[messageId] ?? null
-    }
-})
+const messagesByIdState = atom<MessageById>({})
 
 export const useMessageById = (roomId: string) => {
-  return useRecoilValue(getMessageById(roomId))
+  return (
+    useAtomValue(messagesByIdState)[roomId] ?? (null satisfies StateMessageType)
+  )
 }
 
 type VoteAnswersById = {
@@ -49,27 +32,15 @@ type VoteAnswersById = {
   }
 }
 
-const voteAnswersByIdState = atom<VoteAnswersById>({
-  key: 'state:messages:voteAnswersByid',
-  default: {}
-})
-
-const getVoteAnswerByIdAndIndex = selectorFamily({
-  key: 'state:messages:voteAnswersByid:id',
-  get:
-    (options: { messageId: string; index: number }) =>
-    ({ get }) => {
-      const byId = get(voteAnswersByIdState)
-      if (!byId[options.messageId]) {
-        return []
-      }
-      const answers = byId[options.messageId]
-      return answers[options.index] ?? []
-    }
-})
+const voteAnswersByIdState = atom<VoteAnswersById>({})
 
 export const useVoteAnswerByIdAndIndex = (messageId: string, index: number) => {
-  return useRecoilValue(getVoteAnswerByIdAndIndex({ messageId, index }))
+  const byId = useAtomValue(voteAnswersByIdState)
+  if (!byId[messageId]) {
+    return []
+  }
+  const answers = byId[messageId]
+  return answers[index] ?? []
 }
 
 type MessagesState = {
@@ -77,10 +48,7 @@ type MessagesState = {
 }
 
 const messagesState = atom<MessagesState>({
-  key: 'state:messages',
-  default: {
-    messagesAllIds: []
-  }
+  messagesAllIds: []
 })
 
 type UseSocketActions = ReturnType<typeof useSocketActions>
@@ -92,7 +60,7 @@ export const useVoteSocket = ({
   sendVoteAnswerSocket: UseSocketActions['sendVoteAnswer']
   removeVoteAnswerSocket: UseSocketActions['removeVoteAnswer']
 }) => {
-  const setVoteAnswersById = useSetRecoilState(voteAnswersByIdState)
+  const setVoteAnswersById = useSetAtom(voteAnswersByIdState)
 
   const createVoteAnswers = (
     state: VoteAnswersById,
@@ -203,9 +171,9 @@ const convertMessage = async (
 }
 
 export const useMessagesForSocket = () => {
-  const [messagesById, setMessagesById] = useRecoilState(messagesByIdState)
-  const setVoteAnswersById = useSetRecoilState(voteAnswersByIdState)
-  const [messages, setMessages] = useRecoilState(messagesState)
+  const [messagesById, setMessagesById] = useAtom(messagesByIdState)
+  const setVoteAnswersById = useSetAtom(voteAnswersByIdState)
+  const [messages, setMessages] = useAtom(messagesState)
 
   const addMessages = useCallback(
     async (add: MessageType[]) => {

@@ -2,7 +2,7 @@ import React, { useRef, useState, useEffect } from 'react'
 import styled from '@emotion/styled'
 import CancelIcon from '@mui/icons-material/Cancel'
 import { ModalProps, ModalBase } from '../atoms/Modal'
-import { useRoomUserActions, useGetUsersById } from '../../recoil/rooms/hooks'
+import { useRoomUserActions, useGetUsersById } from '../../state/rooms/hooks'
 import { useIntersectionObserver } from '../../lib/hooks/useIntersectionObserver'
 import { WIDTH_MOBILE } from '../../constants'
 

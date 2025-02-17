@@ -29,7 +29,7 @@ const MessageElementInner: React.FC<Props> = (props) => {
     startEditHandler
   } = useMessage(props.id)
 
-  const firstIineRef = useRef<number>()
+  const firstIineRef = useRef<number | undefined>(undefined)
   useEffect(() => {
     firstIineRef.current = iine ?? undefined
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -85,6 +85,7 @@ const MessageElementInner: React.FC<Props> = (props) => {
         className="body"
         removed={removed}
         message={message}
+        // todo: worker
         html={sanitize(html)}
       />
       {vote && (

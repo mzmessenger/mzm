@@ -1,5 +1,5 @@
 import { useCallback } from 'react'
-import { atom, useSetRecoilState, selector, useRecoilValue } from 'recoil'
+import { atom, useAtom, useAtomValue } from 'jotai'
 
 const WIDTH_MOBILE = 720
 
@@ -13,53 +13,41 @@ type UiState = {
 }
 
 const uiState = atom<UiState>({
-  key: 'state:ui',
-  default: {
-    device: 'pc',
-    menuStatus: 'close',
-    overlay: false,
-    isOpenSettings: false,
-    isOpenUserDetail: false,
-    userDetail: null
+  device: 'pc',
+  menuStatus: 'close',
+  overlay: false,
+  isOpenSettings: false,
+  isOpenUserDetail: false,
+  userDetail: null
+})
+
+export const menuUiState = atom((get) => {
+  const { menuStatus, overlay, device } = get(uiState)
+  return {
+    menuStatus,
+    overlay,
+    device
   }
 })
 
-const menuUiState = selector({
-  key: 'state:ui:selector:menu',
-  get: ({ get }) => {
-    const { menuStatus, overlay, device } = get(uiState)
-    return {
-      menuStatus,
-      overlay,
-      device
-    }
-  }
+export const useMenuUi = () => useAtomValue(menuUiState)
+
+export const settingsUiState = atom((get) => {
+  const { isOpenSettings } = get(uiState)
+  return { isOpenSettings }
 })
 
-export const useMenuUi = () => useRecoilValue(menuUiState)
+export const useSettingsUi = () => useAtomValue(settingsUiState)
 
-const settingsUiState = selector({
-  key: 'state:ui:selector:settings',
-  get: ({ get }) => {
-    const { isOpenSettings } = get(uiState)
-    return { isOpenSettings }
-  }
+export const userDetailUiState = atom((get) => {
+  const { userDetail, isOpenUserDetail } = get(uiState)
+  return { userDetail, isOpenUserDetail }
 })
 
-export const useSettingsUi = () => useRecoilValue(settingsUiState)
-
-const userDetailUiState = selector({
-  key: 'state:ui:selector:userDetail',
-  get: ({ get }) => {
-    const { userDetail, isOpenUserDetail } = get(uiState)
-    return { userDetail, isOpenUserDetail }
-  }
-})
-
-export const useUserDetailUi = () => useRecoilValue(userDetailUiState)
+export const useUserDetailUi = () => useAtomValue(userDetailUiState)
 
 export const useUiActions = () => {
-  const setUiState = useSetRecoilState(uiState)
+  const [, setUiState] = useAtom(uiState)
 
   const onResize = useCallback(
     (innerWidth: number) => {

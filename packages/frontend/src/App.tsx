@@ -1,8 +1,7 @@
-import React from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet } from 'react-router'
 import { useApp } from './App.hooks'
 
-const App = () => {
+export default function App() {
   useApp()
 
   return (
@@ -11,4 +10,3 @@ const App = () => {
     </>
   )
 }
-export default App

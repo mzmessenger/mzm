@@ -1,6 +1,6 @@
 import React from 'react'
 import styled from '@emotion/styled'
-import { useOpenRoomSettingFlag } from '../../recoil/rooms/hooks'
+import { useOpenRoomSettingFlag } from '../../state/rooms/hooks'
 import { InputArea } from './InputArea'
 import { Messages } from './Messages'
 import { RoomInfo } from './RoomInfo'

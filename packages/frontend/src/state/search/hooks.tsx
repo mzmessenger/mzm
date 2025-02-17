@@ -1,6 +1,6 @@
 import type { API } from 'mzm-shared/src/api/universal'
 import { clients, fetcher } from '../../lib/client'
-import { atom, useRecoilState } from 'recoil'
+import { atom, useAtom } from 'jotai'
 
 type SearchState = {
   showModal: boolean
@@ -11,18 +11,15 @@ type SearchState = {
 }
 
 const searchState = atom<SearchState>({
-  key: 'state:search',
-  default: {
-    showModal: false,
-    query: '',
-    scroll: null,
-    total: 0,
-    results: []
-  }
+  showModal: false,
+  query: '',
+  scroll: null,
+  total: 0,
+  results: []
 })
 
 export const useSearch = () => {
-  const [search, setSearch] = useRecoilState(searchState)
+  const [search, setSearch] = useAtom(searchState)
 
   const cancel = () => {
     setSearch({
