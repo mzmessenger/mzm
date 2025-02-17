@@ -81,7 +81,11 @@ console.log(1)
     `<p><span class="codespan">:smile: aa :smile: bb :foobar: cc :+1: dd</span></p>`
   ],
   ['ipv6', '2001:db8::1', `<p>2001:db8::1</p>`],
-  ['image', `![imagename](http://${location.host}/icon/rooms/test/1)`, `<p><img src="${escape(`http://${location.host}/icon/rooms/test/1`)}" alt="imagename" /></p>`],
+  [
+    'image',
+    `![imagename](http://${location.host}/icon/rooms/test/1)`,
+    `<p><img src="${escape(`http://${location.host}/icon/rooms/test/1`)}" alt="imagename" /></p>`
+  ]
 ])('convertToHtml (%s)', async (_label, src, converted) => {
   const html = await worker.convertToHtml(src)
   const expected = converted
