@@ -26,10 +26,9 @@ export const createAccessToken = (user: CreateAccessTokenArgs) => {
       payload,
       JWT.accessTokenSecret,
       {
+        ...JWT.signOptions,
         expiresIn: '30m',
-        issuer: JWT.issuer,
-        subject: 'access token',
-        audience: JWT.audience
+        subject: 'access token'
       },
       (err, token) => {
         if (err) {
@@ -59,10 +58,9 @@ const createRefreshToken = (_id: string) => {
       payload,
       JWT.refreshTokenSecret,
       {
+        ...JWT.signOptions,
         expiresIn: '30d',
-        issuer: JWT.issuer,
-        subject: 'refresh token',
-        audience: JWT.audience
+        subject: 'refresh token'
       },
       (err, token) => {
         if (err) {

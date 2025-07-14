@@ -58,10 +58,7 @@ export const removeGithub: WrapFn<Request, string> = async (req) => {
   const { err, decoded } = await verifyAccessToken(
     accessToken,
     JWT.accessTokenSecret,
-    {
-      issuer: JWT.issuer,
-      audience: JWT.audience
-    }
+    JWT.signOptions
   )
 
   if (err || !decoded.user) {

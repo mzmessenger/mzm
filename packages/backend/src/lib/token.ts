@@ -19,11 +19,7 @@ export const verifyInternalAccessToken = (token: string) => {
     jwt.verify(
       token,
       JWT.internalAccessTokenSecret,
-      {
-        algorithms: ['HS256'],
-        issuer: JWT.issuer,
-        audience: JWT.audience
-      },
+      JWT.verifyOptions,
       (err, decoded) => {
         if (err) {
           return resolve({ err, decoded: null })

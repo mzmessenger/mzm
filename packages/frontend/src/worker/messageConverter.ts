@@ -67,6 +67,9 @@ const renderer: RendererObject = {
   },
   codespan({ text }) {
     return `<span class="codespan">${escape(text)}</span>`
+  },
+  blockquote({ text }) {
+    return `<p class="codespan">${escape(text)}</p>`
   }
 }
 

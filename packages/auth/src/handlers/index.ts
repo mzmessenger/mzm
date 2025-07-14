@@ -43,10 +43,7 @@ export const remove: WrapFn<Request, string> = async (req) => {
   const { err, decoded } = await verifyAccessToken(
     accessToken,
     JWT.accessTokenSecret,
-    {
-      issuer: JWT.issuer,
-      audience: JWT.audience
-    }
+    JWT.signOptions
   )
   if (err || !decoded.user._id) {
     throw new Unauthorized('unauthorized token')
