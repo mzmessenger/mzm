@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from 'express'
 import type { PassportStatic } from 'passport'
 import type { Result } from 'mzm-shared/src/type'
 import type { SerializeUser } from '../types.js'
-import { sessionRedis } from '../lib/redis.js'
+import { mongoClient } from '../lib/db.js'
 import {
   getParametaerFromSession,
   generateUniqAuthorizationCode,
@@ -18,7 +18,7 @@ const _oauthCallback = async (
     return { success: false, error: { status: 400, message: 'invalid user' } }
   }
 
-  const client = await sessionRedis()
+  const client = await mongoClient()
   const params = await getParametaerFromSession(req)
   if (params.success === false) {
     return {

@@ -31,6 +31,9 @@ export const GITHUB_STRATEGY_OPTIONS = {
 } as const satisfies GitHubStrategyOptions
 
 export const MONGODB_URI = isTest ? '' : (process.env.MONGODB_URI ?? '')
+export const MONGO_SESSION_URI = isTest
+  ? ''
+  : (process.env.MONGO_SESSION_URI ?? '')
 
 export const CORS_ORIGIN = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((e) => e.trim())

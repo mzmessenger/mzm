@@ -1,10 +1,10 @@
-import type { Redis } from 'ioredis'
+import type { MongoClient } from 'mongodb'
 import type { PassportRequest, SerializeUser } from './types.js'
 import express, { type Request } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import passport from 'passport'
-import { RedisStore } from 'connect-redis'
+import MongoStore from 'connect-mongo'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import { Strategy as TwitterStrategy } from 'passport-twitter'
 import session from 'express-session'
@@ -32,10 +32,10 @@ import * as authorizeHandlers from './handlers/authorize.js'
 const jsonParser = express.json({ limit: '1mb' })
 
 type Options = {
-  client: Redis
+  sessionClientPromise: Promise<MongoClient>
 }
 
-export const createApp = ({ client }: Options) => {
+export const createApp = ({ sessionClientPromise }: Options) => {
   const app = express()
   const defaultHelmet = helmet()
   app.use(
@@ -46,7 +46,7 @@ export const createApp = ({ client }: Options) => {
   app.set('trust proxy', TRUST_PROXY)
   app.use(
     session({
-      store: new RedisStore({ client: client }),
+      store: MongoStore.create({ clientPromise: sessionClientPromise }),
       ...SESSION_PARSER
     })
   )
@@ -106,7 +106,7 @@ export const createApp = ({ client }: Options) => {
     }),
     (req, res, next) => {
       return wrap(
-        authorizeHandlers.createAuthorize(res as NonceResponse, client)
+        authorizeHandlers.createAuthorize(res as NonceResponse)
       )(req, res, next)
     }
   )
@@ -118,7 +118,7 @@ export const createApp = ({ client }: Options) => {
     '/auth/token',
     defaultHelmet,
     jsonParser,
-    wrap(authorizeHandlers.token)
+    wrap(authorizeHandlers.createTokenHandler())
   )
 
   app.get('/auth/twitter', defaultHelmet, (req, res, next) => {

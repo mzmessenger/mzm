@@ -1,15 +1,17 @@
 import { MongoClient, Collection, ObjectId } from 'mongodb'
-import { MONGODB_URI } from '../config.js'
+import { MONGODB_URI, MONGO_SESSION_URI } from '../config.js'
 import { logger } from './logger.js'
 
 type CollectionType = {
   users: Collection<User>
   removed: Collection<Removed>
+  authorizationCode: Collection<AuthorizationCode>
 }
 
 const _collections: Partial<CollectionType> = {
   users: undefined,
-  removed: undefined
+  removed: undefined,
+  authorizationCode: undefined
 }
 
 let connected = false
@@ -23,11 +25,13 @@ export const collections = (c: MongoClient): CollectionType => {
     const db = c.db()
     _collections.users = db.collection('users')
     _collections.removed = db.collection('removed')
+    _collections.authorizationCode = db.collection('authorizationCode')
   }
 
   return {
     users: _collections.users!,
-    removed: _collections.removed!
+    removed: _collections.removed!,
+    authorizationCode: _collections.authorizationCode!
   }
 }
 
@@ -40,10 +44,15 @@ export const mongoClient = async () => {
   return _client
 }
 
+export async function sessionClient() {
+  return await MongoClient.connect(MONGO_SESSION_URI)
+}
+
 export const connect = async (c: MongoClient) => {
   const db = c.db()
   _collections.users = db.collection('users')
   _collections.removed = db.collection('removed')
+  _collections.authorizationCode = db.collection('authorizationCode')
 
   connected = true
 
@@ -61,4 +70,12 @@ export type User = {
 
 export type Removed = User & {
   originId: ObjectId
+}
+
+export type AuthorizationCode = {
+  code: string
+  code_challenge: string
+  code_challenge_method: string
+  userId: string
+  createdAt: Date
 }

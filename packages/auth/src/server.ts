@@ -1,7 +1,7 @@
 import cluster from 'cluster'
 import http from 'http'
 import { logger } from './lib/logger.js'
-import { connect, mongoClient } from './lib/db.js'
+import { connect, mongoClient, sessionClient } from './lib/db.js'
 import { WORKER_NUM, PORT } from './config.js'
 import { connect as connectRedis } from './lib/redis.js'
 import { initRemoveConsumerGroup, consume } from './lib/consumer.js'
@@ -41,12 +41,14 @@ if (WORKER_NUM > 1 && cluster.isPrimary) {
   })
 
   const main = async () => {
-    const { redis, sessionRedis } = await connectRedis()
+    const { redis } = await connectRedis()
 
     await initRemoveConsumerGroup(redis)
     await connect(await mongoClient())
 
-    server = http.createServer(createApp({ client: sessionRedis }))
+    server = http.createServer(
+      createApp({ sessionClientPromise: sessionClient() })
+    )
     server.listen(PORT, () => {
       logger.info(`(#${process.pid}) Listening on`, server?.address())
     })
