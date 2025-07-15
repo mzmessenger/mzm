@@ -36,7 +36,6 @@ export const generateUniqAuthorizationCode = async (
     }
     return { success: true, data: { code } }
   } catch (e) {
-    console.log('!!!', e)
     logger.error({ label: 'generateUniqAuthorizationCode', error: e })
     return { success: false, error: { message: 'failed to generate code' } }
   }
