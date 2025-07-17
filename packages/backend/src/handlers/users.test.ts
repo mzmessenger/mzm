@@ -1,4 +1,4 @@
-import { vi, test, expect, beforeEach, beforeAll } from 'vitest'
+import { vi, test, expect, beforeAll } from 'vitest'
 vi.mock('../lib/db.js', async () => {
   const actual =
     await vi.importActual<typeof import('../lib/db.js')>('../lib/db.js')
@@ -9,11 +9,9 @@ import type { API } from 'mzm-shared/src/api/universal'
 import { ObjectId } from 'mongodb'
 import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import {
-  dropCollection,
-  createRequest,
   getTestMongoClient
 } from '../../test/testUtil.js'
-import { collections, COLLECTION_NAMES } from '../lib/db.js'
+import { collections } from '../lib/db.js'
 import { update, getUserInfo } from './users.js'
 
 beforeAll(async () => {
@@ -24,24 +22,18 @@ beforeAll(async () => {
   })
 })
 
-beforeEach(async () => {
-  const client = await getTestMongoClient(globalThis)
-  await dropCollection(client, COLLECTION_NAMES.USERS)
-})
-
-test('update', async () => {
+test('update', async ({ task }) => {
   const userId = new ObjectId()
-  const account = `aaa-${userId.toHexString()}`
+  const account = `${task.id}-aaa`
 
   const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
 
   const body: API['/api/user/@me']['PUT']['request']['body'] = {
-    account: 'changed-account'
+    account: `${task.id}-changed-account`
   }
-  const req = createRequest(userId, { body })
 
-  const user = await update.handler(req)
+  const user = await update(userId, body)
 
   const found = await collections(db).users.findOne({ _id: userId })
 
@@ -50,28 +42,24 @@ test('update', async () => {
   expect(found?.account).toStrictEqual(body.account)
 })
 
-test('update failed: exists account', async () => {
+test('update failed: exists account', async ({ task }) => {
   const userId = new ObjectId()
   const account = 'aaa'
 
   const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
+  const existsAccount = `${task.id}-exists`
   await collections(db).users.insertOne({
     _id: new ObjectId(),
-    account: 'exists',
+    account: existsAccount,
     roomOrder: []
   })
 
-  const req = createRequest<API['/api/user/@me']['PUT']['request']['body']>(
-    userId,
-    {
-      body: {
-        account: 'exists'
-      }
-    }
-  )
+  const body = {
+    account: existsAccount
+  }
 
-  await expect(update.handler(req)).rejects.toThrow(BadRequest)
+  await expect(update(userId, body)).rejects.toThrow(BadRequest)
 })
 
 test.each([
@@ -87,10 +75,9 @@ test.each([
   const userId = new ObjectId()
 
   const body = { account }
-  const req = createRequest(userId, { body })
 
   try {
-    await update.handler(req)
+    await update(userId, body)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -103,10 +90,7 @@ test('getUserInfo', async () => {
   const db = await getTestMongoClient(globalThis)
   await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
 
-  const body = { account }
-  const req = createRequest(userId, { body })
-
-  const user = await getUserInfo.handler(req)
+  const user = await getUserInfo(userId)
 
   const found = await collections(db).users.findOne({ _id: userId })
 
@@ -127,10 +111,8 @@ test('getUserInfo before signUp', async () => {
     roomOrder: []
   })
 
-  const req = createRequest(userId, {})
-
   try {
-    await getUserInfo.handler(req)
+    await getUserInfo(userId)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }

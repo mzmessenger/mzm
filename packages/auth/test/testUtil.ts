@@ -22,7 +22,3 @@ export function getTestDbParams() {
 export async function getTestMongoClient(context: typeof globalThis) {
   return context.testMongoClient
 }
-
-export async function getTestSessionRedisClient(context: typeof globalThis) {
-  return context.testSessionRedisClient
-}

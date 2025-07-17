@@ -10,7 +10,7 @@ import {
   type SetStateAction
 } from 'jotai'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
-import { clients, fetcher } from '../../lib/client'
+import { clients, fetcher, textFetcher } from '../../lib/client'
 import { isReplied } from '../../lib/util'
 
 type RoomUser = {
@@ -491,7 +491,7 @@ export const useRoomActions = ({
   const exitClient = clients['/api/rooms/enter']['DELETE'].client
   const exitRoom = useCallback(
     async (params: Omit<Parameters<typeof exitClient>[0], 'fetcher'>) => {
-      const res = await exitClient({ ...params, fetcher })
+      const res = await exitClient({ ...params, fetcher: textFetcher })
       if (res.status === 200) {
         setOpenRoomSettingState({ openRoomSetting: false })
 

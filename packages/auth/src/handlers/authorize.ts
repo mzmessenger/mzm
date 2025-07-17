@@ -1,6 +1,4 @@
 import type { Request } from 'express'
-import type { AuthAPI } from 'mzm-shared/src/api/universal'
-import type { WrapFn } from 'mzm-shared/src/lib/wrap'
 import type { PassportRequest } from '../types.js'
 import type { NonceResponse } from '../middleware/index.js'
 import {
@@ -37,11 +35,8 @@ const TokenBody = z.union([
   })
 ])
 
-export function createTokenHandler(): WrapFn<
-  Request,
-  AuthAPI['/auth/token']['POST']['response'][200]['body']
-> {
-  return async (req) => {
+export function createTokenHandler() {
+  return async (req: Request) => {
     logger.info({
       label: 'accessToken',
       message: 'start'
@@ -117,9 +112,9 @@ const AuthorizationQuery = z.object({
 
 export const createAuthorize = (
   res: NonceResponse
-): WrapFn<Request, string> => {
+) => {
   const nonce = res.locals.nonce
-  return async (req) => {
+  return async (req: Request) => {
     try {
       const { user } = req as PassportRequest
       if (!user) {

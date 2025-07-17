@@ -12,7 +12,6 @@ import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
 import { BadRequest } from 'mzm-shared/src/lib/errors'
 import {
-  createFileRequest,
   getTestMongoClient
 } from '../../../test/testUtil.js'
 import { collections } from '../../lib/db.js'
@@ -60,9 +59,7 @@ test('uploadUserIcon', async () => {
     path: '/path/to/file'
   }
 
-  const req = createFileRequest(userId, { file })
-
-  const res = await uploadUserIcon.handler(req)
+  const res = await uploadUserIcon(userId, file)
 
   const user = await collections(db).users.findOne({ _id: userId })
 
@@ -86,10 +83,8 @@ test.each([['image/gif'], ['image/svg+xml']])(
       path: '/path/to/file'
     }
 
-    const req = createFileRequest(userId, { file })
-
     try {
-      await uploadUserIcon.handler(req)
+      await uploadUserIcon(userId, file)
     } catch (e) {
       expect(e instanceof BadRequest).toStrictEqual(true)
     }
@@ -99,15 +94,8 @@ test.each([['image/gif'], ['image/svg+xml']])(
 test('uploadUserIcon: empty file', async () => {
   expect.assertions(1)
 
-  const name = new ObjectId().toHexString()
-
-  const req = createFileRequest(new ObjectId(), {
-    file: undefined,
-    params: { roomname: name }
-  })
-
   try {
-    await uploadUserIcon.handler(req)
+    await uploadUserIcon(new ObjectId(), undefined)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -134,10 +122,8 @@ test('uploadUserIcon validation: size over', async () => {
     })
   })
 
-  const req = createFileRequest(userId, { file })
-
   try {
-    await uploadUserIcon.handler(req)
+    await uploadUserIcon(userId, file)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -164,10 +150,8 @@ test('uploadUserIcon validation: not square', async () => {
     })
   })
 
-  const req = createFileRequest(userId, { file })
-
   try {
-    await uploadUserIcon.handler(req)
+    await uploadUserIcon(userId, file)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

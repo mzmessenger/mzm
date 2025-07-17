@@ -1,100 +1,105 @@
-import { apis } from 'mzm-shared/src/api/universal'
+import type { Express, json } from 'express'
+import type { checkAccessToken as checkAccessTokenMiddleware } from '../middleware/index.js'
 import { z } from 'zod'
 import { ObjectId } from 'mongodb'
+import { apis, type API } from 'mzm-shared/src/api/universal'
+import { response } from 'mzm-shared/src/lib/wrap'
 import { isValidAccount } from 'mzm-shared/src/validator'
-import { createHandler } from '../lib/wrap.js'
+import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import {
   getRequestUserId,
-  createUserIconPath,
-  createContextParser
+  createUserIconPath
 } from '../lib/utils.js'
-import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import { collections, mongoClient } from '../lib/db.js'
 
-export const update = createHandler(
-  '/api/user/@me',
-  'PUT',
-  ({ path, method }) => {
-    const api = apis[path][method]
-    const body = createContextParser(
-      z.object({
-        account: z.string().min(1).trim()
-      }),
-      (parsed) => {
-        return {
-          success: true,
-          data: api.request.body({
-            account: parsed.data.account
-          })
-        }
-      }
-    )
-
-    return {
-      api,
-      parser: { body }
-    }
+export function createRoute(
+  app: Express,
+  {
+    jsonParser,
+    checkAccessToken
+  }: {
+    jsonParser: ReturnType<typeof json>
+    checkAccessToken: typeof checkAccessTokenMiddleware
   }
-)(async (req, context) => {
-  const parsed = context.parser.body(req.body)
+) {
+  app.put(
+    '/api/user/@me',
+    checkAccessToken,
+    jsonParser,
+    async (req, res) => {
+      const userId = getRequestUserId(req)
+      const data = await update(new ObjectId(userId), req.body)
+      return response<API['/api/user/@me']['PUT']['response'][200]['body']>(data)(req, res)
+    }
+  )
+
+  app.get(
+    '/api/user/@me',
+    checkAccessToken,
+    async (req, res) => {
+      const userId = getRequestUserId(req)
+      const data = await getUserInfo(new ObjectId(userId))
+      return response<API['/api/user/@me']['GET']['response'][200]['body']>(data)(req, res)
+    }
+  )
+
+  return app
+}
+
+export async function update(userId: ObjectId, body: unknown) {
+  const api = apis['/api/user/@me']['PUT']
+  const bodyParser = z.object({
+   account: z.string().min(1).trim()
+  })
+  const parsed = bodyParser.safeParse(body)
   if (parsed.success === false) {
-    throw new BadRequest(context.api.response[400].body('bad request'))
+    throw new BadRequest(api.response[400].body('bad request'))
   }
   const account = parsed.data.account.trim()
   if (!isValidAccount(account)) {
-    throw new BadRequest(context.api.response[400].body('account is not valid'))
+    throw new BadRequest(api.response[400].body('account is not valid'))
   }
 
-  const id = getRequestUserId(req)
+
   const db = await mongoClient()
   const user = await collections(db).users.findOne({
     account: account
   })
-  if (user && user._id.toHexString() !== id) {
+  if (user && user._id.toHexString() !== userId.toHexString()) {
     throw new BadRequest(
-      context.api.response[400].body(`${account} is already exists`)
+      api.response[400].body(`${account} is already exists`)
     )
   }
 
-  const userId = new ObjectId(id)
   await collections(db).users.findOneAndUpdate(
     { _id: userId },
     { $set: { account } },
     { upsert: true }
   )
 
-  return context.api.response[200].body({ id: id, account: account })
-})
+  return api.response[200].body({ id: userId.toHexString(), account: account })
+}
 
-export const getUserInfo = createHandler(
-  '/api/user/@me',
-  'GET',
-  ({ path, method }) => {
-    return {
-      api: apis[path][method]
-    }
-  }
-)(async (req, context) => {
-  const id = getRequestUserId(req)
-
+export async function getUserInfo(userId: ObjectId) {
+  const api = apis['/api/user/@me']['GET']
   const db = await mongoClient()
   const user = await collections(db).users.findOne(
-    { _id: new ObjectId(id) },
+    { _id: userId },
     { projection: { account: 1, icon: 1 } }
   )
 
   if (!user || !user.account) {
     throw new NotFound(
-      context.api.response[404].body({
+      api.response[404].body({
         reason: 'account is not found',
-        id
+        id: userId.toHexString()
       })
     )
   }
 
-  return context.api.response[200].body({
+  return api.response[200].body({
     id: user._id.toHexString(),
     account: user.account,
     icon: createUserIconPath(user.account, user.icon?.version)
   })
-})
+}

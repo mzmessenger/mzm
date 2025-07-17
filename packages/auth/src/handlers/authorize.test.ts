@@ -3,7 +3,6 @@ import assert from 'node:assert'
 import { test, expect, vi, beforeAll } from 'vitest'
 import { BadRequest, Unauthorized } from 'mzm-shared/src/lib/errors'
 import {
-  getTestSessionRedisClient,
   getTestMongoClient
 } from '../../test/testUtil.js'
 import {
@@ -39,25 +38,21 @@ vi.mock('../lib/token.js', async () => {
   }
 })
 
-import { token } from './authorize.js'
+import { createTokenHandler } from './authorize.js'
 
 beforeAll(async () => {
   const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient, getTestSessionRedisClient } = await import(
+  const { getTestMongoClient } = await import(
     '../../test/testUtil.js'
   )
   vi.mocked(mongoClient).mockImplementation(() => {
     return getTestMongoClient(globalThis)
   })
-  const { sessionRedis } = await import('../lib/redis.js')
-  vi.mocked(sessionRedis).mockImplementation(() => {
-    return getTestSessionRedisClient(globalThis)
-  })
 })
 
 test('token (authorization_code)', async () => {
-  const sessionRedis = await getTestSessionRedisClient(globalThis)
-  const genCode = await generateUniqAuthorizationCode(sessionRedis)
+  const mongoClient = await getTestMongoClient(globalThis)
+  const genCode = await generateUniqAuthorizationCode(mongoClient)
   const code_verifier = generateCodeVerifier()
   const code_challenge = generateCodeChallenge(code_verifier)
   const user = await collections(
@@ -70,7 +65,7 @@ test('token (authorization_code)', async () => {
   expect(genCode.success).toStrictEqual(true)
   assert.strictEqual(genCode.success, true)
 
-  await saveAuthorizationCode(sessionRedis, {
+  await saveAuthorizationCode(mongoClient, {
     code: genCode.data.code,
     code_challenge,
     userId: user.insertedId.toHexString()
@@ -87,7 +82,7 @@ test('token (authorization_code)', async () => {
     code_verifier
   }
 
-  const res = await token({ body } as any)
+  const res = await createTokenHandler()({ body } as any)
 
   expect(res.accessToken).toStrictEqual('accessToken')
   expect(res.refreshToken).toStrictEqual('refreshToken')
@@ -125,7 +120,7 @@ test('token (refresh_token)', async () => {
     refresh_token: 'sendRefreshTokenValue'
   }
 
-  const res = await token({ body } as any)
+  const res = await createTokenHandler()({ body } as any)
 
   expect(verifyRefreshTokenMock).toBeCalledTimes(1)
   expect(verifyRefreshTokenMock).toHaveBeenCalledWith('sendRefreshTokenValue')
@@ -144,7 +139,7 @@ test('fail token (invalid grant_type)', async () => {
   }
 
   try {
-    await token({ body } as any)
+    await createTokenHandler()({ body } as any)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
@@ -152,9 +147,9 @@ test('fail token (invalid grant_type)', async () => {
 
 test('fail token (invalid code)', async () => {
   expect.assertions(1)
-  const sessionRedis = await getTestSessionRedisClient(globalThis)
+  const mongoClient = await getTestMongoClient(globalThis)
 
-  const genCode = await generateUniqAuthorizationCode(sessionRedis)
+  const genCode = await generateUniqAuthorizationCode(mongoClient)
   const code_verifier = generateCodeVerifier()
   const code_challenge = generateCodeChallenge(code_verifier)
   const user = await collections(
@@ -166,7 +161,7 @@ test('fail token (invalid code)', async () => {
 
   assert.strictEqual(genCode.success, true)
 
-  await saveAuthorizationCode(sessionRedis, {
+  await saveAuthorizationCode(mongoClient, {
     code: genCode.data.code,
     code_challenge,
     userId: user.insertedId.toHexString()
@@ -179,7 +174,7 @@ test('fail token (invalid code)', async () => {
   }
 
   try {
-    await token({ body } as any)
+    await createTokenHandler()({ body } as any)
   } catch (e) {
     expect(e instanceof Unauthorized).toStrictEqual(true)
   }
@@ -201,7 +196,7 @@ test('fail token (invalid refresh_token)', async () => {
   }
 
   try {
-    await token({ body } as any)
+    await createTokenHandler()({ body } as any)
   } catch (e) {
     expect(e instanceof Unauthorized).toStrictEqual(true)
     expect(verifyRefreshTokenMock).toBeCalledTimes(1)

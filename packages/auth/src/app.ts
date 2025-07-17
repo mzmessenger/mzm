@@ -9,7 +9,7 @@ import { Strategy as GitHubStrategy } from 'passport-github'
 import { Strategy as TwitterStrategy } from 'passport-twitter'
 import session from 'express-session'
 import { createErrorHandler } from 'mzm-shared/src/lib/middleware'
-import { wrap } from 'mzm-shared/src/lib/wrap'
+import { response } from 'mzm-shared/src/lib/wrap'
 import {
   TWITTER_STRATEGY_OPTIONS,
   GITHUB_STRATEGY_OPTIONS,
@@ -104,10 +104,9 @@ export const createApp = ({ sessionClientPromise }: Options) => {
         }
       }
     }),
-    (req, res, next) => {
-      return wrap(
-        authorizeHandlers.createAuthorize(res as NonceResponse)
-      )(req, res, next)
+    async (req, res) => {
+      const html = await authorizeHandlers.createAuthorize(res as NonceResponse)(req)
+      return response(html)(req, res)
     }
   )
 
@@ -118,7 +117,10 @@ export const createApp = ({ sessionClientPromise }: Options) => {
     '/auth/token',
     defaultHelmet,
     jsonParser,
-    wrap(authorizeHandlers.createTokenHandler())
+    async (req, res) => {
+      const data = await authorizeHandlers.createTokenHandler()(req)
+      return response(data)(req, res)
+    }
   )
 
   app.get('/auth/twitter', defaultHelmet, (req, res, next) => {
@@ -138,7 +140,10 @@ export const createApp = ({ sessionClientPromise }: Options) => {
   app.delete(
     '/auth/twitter',
     defaultHelmet,
-    wrap(twitterHandlers.removeTwitter)
+    async (req, res) => {
+      const data = await twitterHandlers.removeTwitter(req)
+      return response(data)(req, res)
+    }
   )
 
   app.get('/auth/github', defaultHelmet, (req, res, next) => {
@@ -155,11 +160,17 @@ export const createApp = ({ sessionClientPromise }: Options) => {
       oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
     }
   )
-  app.delete('/auth/github', defaultHelmet, wrap(githubHandlers.removeGithub))
+  app.delete('/auth/github', defaultHelmet, async (req, res) => {
+    const data = await githubHandlers.removeGithub(req)
+    return response(data)(req, res)
+  })
 
   app.get('/auth/logout', defaultHelmet, handlers.logout)
 
-  app.delete('/auth/user', defaultHelmet, wrap(handlers.remove))
+  app.delete('/auth/user', defaultHelmet, async (req, res) => {
+    const data = await handlers.remove(req)
+    return response(data)(req, res)
+  })
   app.get('/auth/error', defaultHelmet, (_, res) =>
     res.redirect(ALLOW_REDIRECT_ORIGINS[0])
   )

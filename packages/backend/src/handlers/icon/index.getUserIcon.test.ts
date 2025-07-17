@@ -12,12 +12,11 @@ vi.mock('../../lib/db.js', async () => {
   return { ...actual, mongoClient: vi.fn() }
 })
 
-import type { API } from 'mzm-shared/src/api/universal'
 import { Readable } from 'stream'
 import { ObjectId, WithId } from 'mongodb'
 import { request } from 'undici'
 import { BadRequest } from 'mzm-shared/src/lib/errors'
-import { createRequest, getTestMongoClient } from '../../../test/testUtil.js'
+import { getTestMongoClient } from '../../../test/testUtil.js'
 import {
   createGetObjectMockValue,
   createHeadObjectMockValue
@@ -26,7 +25,6 @@ import { collections, type User } from '../../lib/db.js'
 import * as storage from '../../lib/storage.js'
 import { getUserIcon } from './index.js'
 
-type ParamsType = API['/api/icon/user/:account/:version']['params']
 type ResponseBody = Awaited<ReturnType<typeof request>>['body']
 
 beforeAll(async () => {
@@ -50,9 +48,6 @@ test('getUserIcon from storage', async () => {
     icon: { key: 'iconkey', version }
   })
 
-  const req = createRequest<unknown, ParamsType>(null, {
-    params: { account, version }
-  })
 
   const headObjectMock = vi.mocked(storage.headObject).mockClear()
   const headers = createHeadObjectMockValue({
@@ -70,7 +65,7 @@ test('getUserIcon from storage', async () => {
   })
   getObjectMock.mockReturnValueOnce(getObject)
 
-  const res = await getUserIcon.handler(req)
+  const res = await getUserIcon(account, version)
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
@@ -127,11 +122,7 @@ test.each([
       context: undefined
     })
 
-    const req = createRequest<unknown, ParamsType>(null, {
-      params: { account, version: requestVersion }
-    })
-
-    const res = await getUserIcon.handler(req)
+    const res = await getUserIcon(account, requestVersion)
 
     expect(headObjectMock.mock.calls.length).toStrictEqual(0)
     expect(getObjectMock.mock.calls.length).toStrictEqual(0)
@@ -180,11 +171,7 @@ test('getUserIcon from identicon: not found on storage', async () => {
     context: undefined
   })
 
-  const req = createRequest(null, {
-    params: { account, version: user?.icon?.version ?? '' }
-  })
-
-  const res = await getUserIcon.handler(req)
+  const res = await getUserIcon(account, user?.icon?.version ?? '')
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(res.headers.ETag).toStrictEqual(headers.ETag)
@@ -198,14 +185,8 @@ test('getUserIcon from identicon: not found on storage', async () => {
 test('getUserIcon BadRequest: no account', async () => {
   expect.assertions(1)
 
-  const version = '12345'
-
-  const req = createRequest<unknown, ParamsType>(null, {
-    params: { account: '', version }
-  })
-
   try {
-    await getUserIcon.handler(req)
+    await getUserIcon('', '12345')
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

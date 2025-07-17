@@ -1,5 +1,4 @@
 import type { Request } from 'express'
-import type { WrapFn } from 'mzm-shared/src/lib/wrap'
 import type { VerifyCallback } from 'passport-oauth2'
 import type { PassportRequest } from '../types.js'
 import { BadRequest, Unauthorized } from 'mzm-shared/src/lib/errors'
@@ -51,7 +50,7 @@ export const loginTwitter = async (
   }
 }
 
-export const removeTwitter: WrapFn<Request, string> = async (req) => {
+export const removeTwitter= async (req: Request) => {
   const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
     throw new BadRequest('no auth token')
