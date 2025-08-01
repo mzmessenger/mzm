@@ -1,6 +1,5 @@
-/* eslint-disable no-empty-pattern */
-import { vi, test as baseTest, expect } from 'vitest'
-import { getTestMongoClient } from '../../test/testUtil.js'
+import { vi, expect } from 'vitest'
+import { createTest } from '../../test/testUtil.js'
 vi.mock('../lib/logger.js')
 vi.mock('./internal/socket.js')
 
@@ -24,14 +23,7 @@ import {
   updateRoomDescription
 } from './internal/socket.js'
 
-const test = baseTest.extend<{
-  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
-}>({
-  testDb: async ({}, use) => {
-    const db = await getTestMongoClient(globalThis)
-    await use(db)
-  }
-})
+const test = await createTest(globalThis)
 
 test.for([
   [TO_SERVER_CMD.MESSAGE_SEND, sendMessage],
@@ -47,7 +39,7 @@ test.for([
   [TO_SERVER_CMD.VOTE_ANSWER_SEND, sendVoteAnswer],
   [TO_SERVER_CMD.VOTE_ANSWER_REMOVE, removeVoteAnswer],
   [TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION, updateRoomDescription]
-] as const)('socket %s', async ([cmd, called], { testDb }) => {
+] as const)('socket %s', async ([cmd, called], { testDb, testRedis }) => {
   const userId = new ObjectId()
   const body = { cmd }
   const req = createRequest(userId, { body })
@@ -55,7 +47,7 @@ test.for([
   const calledMock = vi.mocked(called)
   calledMock.mockClear()
 
-  await socket(req, testDb)
+  await socket(req, { db: testDb, redis: testRedis })
 
   expect(calledMock.mock.calls.length).toStrictEqual(1)
 })

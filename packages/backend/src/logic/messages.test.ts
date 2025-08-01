@@ -45,7 +45,9 @@ test('saveMessage', async ({ testDb }) => {
     return
   }
 
-  const found = await collections(testDb).messages.findOne({ _id: save.insertedId })
+  const found = await collections(testDb).messages.findOne({
+    _id: save.insertedId
+  })
 
   expect(found?._id).toStrictEqual(save.insertedId)
   expect(found?.message).toStrictEqual(message)
@@ -79,7 +81,11 @@ test('getMessages', async ({ testDb }) => {
   const overNum = 2
   const userId = new ObjectId()
   const account = 'test'
-  await collections(testDb).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
   const roomId = new ObjectId()
 
   const insert: Omit<Message, '_id'>[] = []
@@ -125,7 +131,11 @@ test('getMessages', async ({ testDb }) => {
     expect(message.iine).toStrictEqual(messageMap.get(message.id)?.iine)
   }
 
-  messages = await getMessages(testDb, roomId.toHexString(), messages.messages[0].id)
+  messages = await getMessages(
+    testDb,
+    roomId.toHexString(),
+    messages.messages[0].id
+  )
 
   expect(messages.existHistory).toStrictEqual(false)
   expect(messages.messages.length).toStrictEqual(overNum)
@@ -134,7 +144,11 @@ test('getMessages', async ({ testDb }) => {
 test('getMessages just', async ({ testDb }) => {
   const userId = new ObjectId()
   const account = 'test'
-  await collections(testDb).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
   const roomId = new ObjectId()
 
   const insert: Omit<Message, '_id'>[] = []
@@ -159,12 +173,20 @@ test('getMessages just', async ({ testDb }) => {
   expect(messages.existHistory).toStrictEqual(true)
   expect(messages.messages.length).toStrictEqual(config.room.MESSAGE_LIMIT)
 
-  messages = await getMessages(testDb, roomId.toHexString(), messages.messages[0].id)
+  messages = await getMessages(
+    testDb,
+    roomId.toHexString(),
+    messages.messages[0].id
+  )
 
   expect(messages.existHistory).toStrictEqual(true)
   expect(messages.messages.length).toStrictEqual(config.room.MESSAGE_LIMIT)
 
-  messages = await getMessages(testDb, roomId.toHexString(), messages.messages[0].id)
+  messages = await getMessages(
+    testDb,
+    roomId.toHexString(),
+    messages.messages[0].id
+  )
 
   expect(messages.existHistory).toStrictEqual(false)
   expect(messages.messages.length).toStrictEqual(0)
@@ -173,7 +195,11 @@ test('getMessages just', async ({ testDb }) => {
 test('getMessages vote', async ({ testDb }) => {
   const userId = new ObjectId()
   const account = 'test'
-  await collections(testDb).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
   const roomId = new ObjectId()
 
   const insert: Omit<Message, '_id'>[] = []
@@ -211,7 +237,11 @@ test('getMessages vote', async ({ testDb }) => {
 test('getMessages removed', async ({ testDb }) => {
   const userId = new ObjectId()
   const account = 'test'
-  await collections(testDb).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
   const roomId = new ObjectId()
 
   const insert: Omit<Message, '_id'>[] = []

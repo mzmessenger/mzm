@@ -1,5 +1,4 @@
-/* eslint-disable no-empty-pattern */
-import { vi, test as baseTest, expect, beforeEach } from 'vitest'
+import { vi, expect, beforeEach } from 'vitest'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/redis.js', () => {
   return {
@@ -7,34 +6,26 @@ vi.mock('../lib/redis.js', () => {
     release: vi.fn()
   }
 })
-vi.mock('../lib/db.js', async () => {
-  const actual =
-    await vi.importActual<typeof import('../lib/db.js')>('../lib/db.js')
-  return { ...actual, mongoClient: vi.fn() }
-})
 
 import { ObjectId } from 'mongodb'
-import { getTestMongoClient, dropCollection } from '../../test/testUtil.js'
+import {
+  createTest,
+  getTestMongoClient,
+  dropCollection
+} from '../../test/testUtil.js'
 import * as config from '../config.js'
 import { collections, RoomStatusEnum, COLLECTION_NAMES } from '../lib/db.js'
 import * as redis from '../lib/redis.js'
 import { initGeneral, enterRoom, isValidateRoomName } from './rooms.js'
 
-const test = baseTest.extend<{
-  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
-}>({
-  testDb: async ({}, use) => {
-    const db = await getTestMongoClient(globalThis)
-    await use(db)
-  }
-})
+const test = await createTest(globalThis)
 
 beforeEach(async () => {
   const db = await getTestMongoClient(globalThis)
   await dropCollection(db, COLLECTION_NAMES.ROOMS)
 })
 
-test('initGeneral', async ({ testDb }) => {
+test('initGeneral', async ({ testDb, testRedis }) => {
   const release = vi.mocked(redis.release)
   release.mockClear()
 
@@ -46,7 +37,7 @@ test('initGeneral', async ({ testDb }) => {
 
   expect(general.length).toStrictEqual(0)
 
-  await initGeneral(testDb)
+  await initGeneral({ db: testDb, redis: testRedis })
 
   general = await collections(testDb)
     .rooms.find({
@@ -70,7 +61,7 @@ test('initGeneral', async ({ testDb }) => {
     }
   )
 
-  await initGeneral(testDb)
+  await initGeneral({ db: testDb, redis: testRedis })
 
   const updated = await collections(testDb).rooms.findOne({
     _id: general[0]._id
@@ -79,7 +70,7 @@ test('initGeneral', async ({ testDb }) => {
   expect(updated?.status).toStrictEqual(RoomStatusEnum.OPEN)
 })
 
-test('initGeneral (locked)', async ({ testDb }) => {
+test('initGeneral (locked)', async ({ testDb, testRedis }) => {
   const lock = vi.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValue(false)
@@ -90,7 +81,7 @@ test('initGeneral (locked)', async ({ testDb }) => {
   const updateMock = vi.fn()
   collections(testDb).rooms.updateOne = updateMock
 
-  await initGeneral(testDb)
+  await initGeneral({ db: testDb, redis: testRedis })
 
   expect(updateMock.mock.calls.length).toStrictEqual(0)
   expect(release.mock.calls.length).toStrictEqual(0)

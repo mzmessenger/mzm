@@ -49,13 +49,8 @@ async function _oauthCallback(
   }
 }
 
-export function oauthCallback(
-  db: MongoClient
-) {
-  return (
-    req: Request & { user?: SerializeUser },
-    res: Response
-  ) => {
+export function oauthCallback(db: MongoClient) {
+  return (req: Request & { user?: SerializeUser }, res: Response) => {
     _oauthCallback(req, db).then((params) => {
       if (params.success === false) {
         logger.error({ label: 'oauth2Callback', error: params.error.message })

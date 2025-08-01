@@ -23,7 +23,11 @@ async function enterGeneral(db: MongoClient, userId: ObjectId) {
   await enterRoom(db, userId, general!._id)
 }
 
-export async function initUser(db: MongoClient, userId: ObjectId, account: string) {
+export async function initUser(
+  db: MongoClient,
+  userId: ObjectId,
+  account: string
+) {
   const [user] = await Promise.all([
     collections(db).users.findOneAndUpdate(
       {
@@ -45,7 +49,10 @@ export async function initUser(db: MongoClient, userId: ObjectId, account: strin
   return user
 }
 
-export async function getRooms(db: MongoClient, userId: string): Promise<SendRoomType[]> {
+export async function getRooms(
+  db: MongoClient,
+  userId: string
+): Promise<SendRoomType[]> {
   type AggregateType = WithId<Enter> & { room: WithId<Room>[] }
 
   const cursor = await collections(db).enter.aggregate<AggregateType>([

@@ -1,4 +1,4 @@
-import type { MulterFile } from '../src/types/index.js'
+/* eslint-disable no-empty-pattern */
 import type { MongoClient, ObjectId } from 'mongodb'
 import type { Request } from 'express'
 
@@ -23,15 +23,32 @@ export function getTestDbParams() {
   }
 }
 
+export async function createTest(context: typeof globalThis) {
+  const { test } = await import('vitest')
+  return test.extend<{
+    testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+    testRedis: Awaited<ReturnType<typeof getTestRedisClient>>
+  }>({
+    testDb: async ({}, use) => {
+      const db = await getTestMongoClient(context)
+      await use(db)
+    },
+    testRedis: async ({}, use) => {
+      const redis = await getTestRedisClient(context)
+      await use(redis)
+    }
+  })
+}
+
 export async function getTestMongoClient(context: typeof globalThis) {
   return context.testMongoClient
 }
 
-export const getTestRedisClient = async (context: typeof globalThis) => {
+export async function getTestRedisClient(context: typeof globalThis) {
   return context.testRedisClient
 }
 
-export const dropCollection = async (client: MongoClient, name: string) => {
+export async function dropCollection(client: MongoClient, name: string) {
   const collections = (await client.db().collections()).map(
     (c) => c.collectionName
   )
@@ -39,14 +56,6 @@ export const dropCollection = async (client: MongoClient, name: string) => {
     return Promise.resolve()
   }
   await client.db().collection(name).drop()
-}
-
-export const createFileRequest = <TBody, TParams = { [key: string]: string }>(
-  ...args: Parameters<typeof createRequest<TBody, TParams>>
-) => {
-  return createRequest<TBody, TParams>(...args) as Request & {
-    file?: MulterFile
-  }
 }
 
 export const createRequest = <TBody, TParams = { [key: string]: string }>(

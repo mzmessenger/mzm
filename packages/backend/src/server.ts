@@ -2,21 +2,38 @@ import cluster from 'cluster'
 import http from 'http'
 import schedule from 'node-schedule'
 
-import { WORKER_NUM, PORT } from './config.js'
+import { WORKER_NUM, PORT, redis } from './config.js'
 import { logger } from './lib/logger.js'
-import * as redis from './lib/redis.js'
+import { connect } from './lib/redis.js'
 import { initMongoClient } from './lib/db.js'
 import { init } from './logic/server.js'
 import { addSyncSearchRoomQueue } from './lib/provider/index.js'
 import { createApp } from './app.js'
 
-schedule.scheduleJob('0 * * * *', () => {
-  try {
-    addSyncSearchRoomQueue()
-  } catch (e) {
-    logger.error(e)
-  }
-})
+async function main() {
+  const redisClient = await connect(redis.options)
+
+  schedule.scheduleJob('0 * * * *', () => {
+    try {
+      addSyncSearchRoomQueue(redisClient)
+    } catch (e) {
+      logger.error(e)
+    }
+  })
+
+  const db = await initMongoClient()
+
+  await init({ db, redis: redisClient })
+
+  const app = createApp({ db, redis: redisClient })
+  const server = http.createServer(app)
+
+  server.listen(PORT, () => {
+    logger.info(`(#${process.pid}) Listening on`, server?.address())
+  })
+
+  return server
+}
 
 if (WORKER_NUM > 1 && cluster.isPrimary) {
   for (let i = 0; i < WORKER_NUM; i++) {
@@ -51,23 +68,10 @@ if (WORKER_NUM > 1 && cluster.isPrimary) {
     }, 20000)
   })
 
-  const main = async () => {
-    await redis.connect()
-
-    const db = await initMongoClient()
-
-    await init(db)
-
-    const app = createApp(db)
-    server = http.createServer(app)
-
-    server.listen(PORT, () => {
-      logger.info(`(#${process.pid}) Listening on`, server?.address())
+  main()
+    .then((s) => (server = s))
+    .catch((e) => {
+      logger.error(e)
+      process.exit(1)
     })
-  }
-
-  main().catch((e) => {
-    logger.error(e)
-    process.exit(1)
-  })
 }

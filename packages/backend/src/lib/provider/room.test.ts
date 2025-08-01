@@ -1,20 +1,19 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-import { vi, test, expect, beforeEach } from 'vitest'
+import { vi, expect, beforeEach } from 'vitest'
+import { createTest } from '../../../test/testUtil.js'
 vi.mock('../logger.js')
 vi.mock('../redis.js', () => {
   return {
-    client: vi.fn(() => ({
-      xadd: vi.fn()
-    })),
     lock: vi.fn(() => Promise.resolve(true)),
     release: vi.fn()
   }
 })
-import { client, lock, release } from '../redis.js'
+
+import { type ExRedisClient, lock, release } from '../redis.js'
 import * as types from '../../types.js'
 import * as config from '../../config.js'
-
 import * as room from './room.js'
+
+const test = await createTest(globalThis)
 
 beforeEach(() => {
   vi.clearAllMocks()
@@ -22,14 +21,13 @@ beforeEach(() => {
 
 test('addInitializeSearchRoomQueue', async () => {
   const xadd = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xadd }))
+  const redis = { xadd } as unknown as ExRedisClient
 
   const lockMock = vi.mocked(lock)
   lockMock.mockResolvedValue(true)
   const releaseMock = vi.mocked(release)
 
-  await room.addInitializeSearchRoomQueue()
+  await room.addInitializeSearchRoomQueue(redis)
 
   expect(xadd).toHaveBeenCalledTimes(2)
   expect(releaseMock).toHaveBeenCalledTimes(2)
@@ -43,13 +41,12 @@ test('addInitializeSearchRoomQueue', async () => {
 
 test('addInitializeSearchRoomQueue (locked)', async () => {
   const xadd = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xadd }))
+  const redis = { xadd } as unknown as ExRedisClient
   const lockMock = vi.mocked(lock)
   lockMock.mockResolvedValue(false)
   const releaseMock = vi.mocked(release)
 
-  await room.addInitializeSearchRoomQueue()
+  await room.addInitializeSearchRoomQueue(redis)
 
   expect(xadd.mock.calls.length).toBe(0)
   expect(releaseMock.mock.calls.length).toBe(0)
@@ -57,12 +54,11 @@ test('addInitializeSearchRoomQueue (locked)', async () => {
 
 test('addSyncSearchRoomQueue', async () => {
   const xadd = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xadd }))
+  const redis = { xadd } as unknown as ExRedisClient
   const lockMock = vi.mocked(lock)
   lockMock.mockResolvedValue(true)
 
-  await room.addSyncSearchRoomQueue()
+  await room.addSyncSearchRoomQueue(redis)
 
   expect(xadd.mock.calls.length).toBe(1)
 
@@ -72,13 +68,12 @@ test('addSyncSearchRoomQueue', async () => {
 
 test('addSyncSearchRoomQueue (locked)', async () => {
   const xadd = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xadd }))
+  const redis = { xadd } as unknown as ExRedisClient
   const lockMock = vi.mocked(lock)
   lockMock.mockResolvedValueOnce(false)
   const releaseMock = vi.mocked(release)
 
-  await room.addSyncSearchRoomQueue()
+  await room.addSyncSearchRoomQueue(redis)
 
   expect(xadd.mock.calls.length).toBe(0)
   expect(releaseMock.mock.calls.length).toBe(0)

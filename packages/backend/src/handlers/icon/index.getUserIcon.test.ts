@@ -48,7 +48,6 @@ test('getUserIcon from storage', async ({ testDb }) => {
     icon: { key: 'iconkey', version }
   })
 
-
   const headObjectMock = vi.mocked(storage.headObject).mockClear()
   const headers = createHeadObjectMockValue({
     ETag: 'etag',
@@ -65,7 +64,7 @@ test('getUserIcon from storage', async ({ testDb }) => {
   })
   getObjectMock.mockReturnValueOnce(getObject)
 
-  const res = await getUserIcon(testDb, {account, version })
+  const res = await getUserIcon(testDb, { account, version })
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
@@ -165,7 +164,10 @@ test('getUserIcon from identicon: not found on storage', async ({ testDb }) => {
     context: {}
   })
 
-  const res = await getUserIcon(testDb, { account, version: user?.icon?.version ?? '' })
+  const res = await getUserIcon(testDb, {
+    account,
+    version: user?.icon?.version ?? ''
+  })
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(res.headers.ETag).toStrictEqual(headers.ETag)

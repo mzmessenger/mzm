@@ -43,7 +43,6 @@ export function collections(c: MongoClient) {
     throw new Error('no db client')
   }
 
-
   return initCollections(c)
 }
 

@@ -32,7 +32,12 @@ export async function initRemoveConsumerGroup(client: Redis) {
   await initConsumerGroup(client, REMOVE_STREAM, REMOVE_GROUP)
 }
 
-async function remove(client: Redis, db: MongoClient, id: string, user: string) {
+async function remove(
+  client: Redis,
+  db: MongoClient,
+  id: string,
+  user: string
+) {
   const userId = new ObjectId(user)
   const target = await collections(db).users.findOne({ _id: userId })
   logger.info({

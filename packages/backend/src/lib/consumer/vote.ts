@@ -3,7 +3,7 @@ import { TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
 import * as config from '../../config.js'
 import { VoteQueue } from '../../types.js'
 import { collections } from '../db.js'
-import { client } from '../redis.js'
+import { type ExRedisClient } from '../redis.js'
 import { logger } from '../logger.js'
 import { initConsumerGroup, createParser, consumeGroup } from './common.js'
 import { getVoteAnswers } from '../../logic/vote.js'
@@ -13,11 +13,16 @@ import { addQueueToUsers } from '../provider/index.js'
 const STREAM = config.stream.VOTE
 const VOTE_GROUP = 'group:vote'
 
-export async function initVoteConsumerGroup() {
-  await initConsumerGroup(STREAM, VOTE_GROUP)
+export async function initVoteConsumerGroup(client: ExRedisClient) {
+  await initConsumerGroup(client, STREAM, VOTE_GROUP)
 }
 
-export async function vote(db: MongoClient, ackid: string, messages: string[]) {
+export async function vote({
+  redis,
+  db,
+  ackId,
+  messages
+}: Parameters<Parameters<typeof createParser>[1]>[0]) {
   const queue = JSON.parse(messages[1]) as VoteQueue
 
   // @todo lazy 1min
@@ -32,18 +37,24 @@ export async function vote(db: MongoClient, ackid: string, messages: string[]) {
   const users = await getAllUserIdsInRoom(db, message.roomId.toHexString())
   const answers = await getVoteAnswers(db, messageId)
 
-  addQueueToUsers(users, {
+  addQueueToUsers(redis, users, {
     cmd: TO_CLIENT_CMD.VOTE_ANSWERS,
     messageId: queue.messageId,
     answers
   })
 
-  await client().xack(STREAM, VOTE_GROUP, ackid)
+  await redis.xack(STREAM, VOTE_GROUP, ackId)
 
   logger.info('[vote]', queue.messageId)
 }
 
-export async function consumeVote(db: MongoClient) {
-  const parser = createParser(db, vote)
-  await consumeGroup(VOTE_GROUP, 'consume-backend', STREAM, parser)
+export async function consumeVote({
+  redis,
+  db
+}: {
+  redis: ExRedisClient
+  db: MongoClient
+}) {
+  const parser = createParser({ redis, db }, vote)
+  await consumeGroup(redis, VOTE_GROUP, 'consume-backend', STREAM, parser)
 }

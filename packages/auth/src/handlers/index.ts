@@ -1,5 +1,6 @@
 import type { Request, Response } from 'express'
 import type { SerializeUser, RequestUser } from '../types.js'
+import type { Redis } from 'ioredis'
 import { BadRequest, Unauthorized } from 'mzm-shared/src/lib/errors'
 import { ObjectId, type MongoClient } from 'mongodb'
 import { z } from 'zod'
@@ -9,24 +10,19 @@ import {
 } from 'mzm-shared/src/auth/index'
 import { collections } from '../lib/db.js'
 import { logger } from '../lib/logger.js'
-import { redis } from '../lib/redis.js'
 import { JWT, REMOVE_STREAM, ALLOW_REDIRECT_URIS } from '../config.js'
 
 export function createSerializeUser() {
-  return (
-    user: Express.User,
-    done: (err: unknown, id: string) => void
-  ) => {
+  return (user: Express.User, done: (err: unknown, id: string) => void) => {
     const { _id } = user as SerializeUser
     done(null, _id.toHexString())
   }
 }
 
-export function createDeserializeUserHandler (
-  db: MongoClient
-) {
+export function createDeserializeUserHandler(db: MongoClient) {
   return (id: string, done: (err: unknown, user?: RequestUser) => void) => {
-    collections(db).users.findOne({ _id: new ObjectId(id) })
+    collections(db)
+      .users.findOne({ _id: new ObjectId(id) })
       .then((user) => {
         done(null, user)
       })
@@ -34,7 +30,7 @@ export function createDeserializeUserHandler (
   }
 }
 
-export async function remove(req: Request) {
+export async function remove(req: Request, redis: Redis) {
   const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
     throw new Unauthorized('no auth token')
@@ -51,7 +47,7 @@ export async function remove(req: Request) {
   if (!decoded.user._id) {
     throw new BadRequest('not auth')
   }
-  await redis!.xadd(REMOVE_STREAM, '*', 'user', decoded.user._id)
+  await redis.xadd(REMOVE_STREAM, '*', 'user', decoded.user._id)
   return 'ok'
 }
 

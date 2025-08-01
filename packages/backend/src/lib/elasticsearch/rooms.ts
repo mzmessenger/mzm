@@ -1,7 +1,7 @@
 import { apis } from 'mzm-shared/src/api/universal'
 import { type MongoClient, ObjectId } from 'mongodb'
 import { logger } from '../logger.js'
-import { lock, release } from '../redis.js'
+import { type ExRedisClient, lock, release } from '../redis.js'
 import * as config from '../../config.js'
 import { collections, RoomStatusEnum, type Room } from '../db.js'
 import { client as es } from './index.js'
@@ -109,7 +109,7 @@ export type RoomMappings = {
   }
 }
 
-const putIndex = async () => {
+async function putIndex() {
   await es.indices.close({ index: config.elasticsearch.index.room })
 
   await es.indices.putSettings({
@@ -125,10 +125,10 @@ const putIndex = async () => {
   await es.indices.open({ index: config.elasticsearch.index.room })
 }
 
-export async function initAlias() {
+export async function initAlias(client: ExRedisClient) {
   const lockKey = config.lock.INIT_SEARCH_ROOM
   const lockVal = new ObjectId().toHexString()
-  const locked = await lock(lockKey, lockVal, 1000 * 5)
+  const locked = await lock(client, lockKey, lockVal, 1000 * 5)
 
   if (!locked) {
     logger.info('[locked] initAlias')
@@ -154,7 +154,7 @@ export async function initAlias() {
     name: config.elasticsearch.alias.room
   })
 
-  await release(lockKey, lockVal)
+  await release(client, lockKey, lockVal)
 }
 
 export async function insertRooms(db: MongoClient, roomIds: string[]) {

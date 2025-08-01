@@ -1,5 +1,4 @@
-/* eslint-disable no-empty-pattern */
-import { vi, test as baseTest, expect } from 'vitest'
+import { vi, expect } from 'vitest'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/redis.js', () => {
   return {
@@ -7,14 +6,9 @@ vi.mock('../lib/redis.js', () => {
     release: vi.fn()
   }
 })
-vi.mock('../lib/db.js', async () => {
-  const actual =
-    await vi.importActual<typeof import('../lib/db.js')>('../lib/db.js')
-  return { ...actual, mongoClient: vi.fn() }
-})
 
 import { ObjectId } from 'mongodb'
-import { getTestMongoClient } from '../../test/testUtil.js'
+import { createTest } from '../../test/testUtil.js'
 import * as config from '../config.js'
 import {
   collections,
@@ -25,17 +19,10 @@ import {
 import { initGeneral } from './rooms.js'
 import { initUser, getAllUserIdsInRoom } from './users.js'
 
-const test = baseTest.extend<{
-  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
-}>({
-  testDb: async ({}, use) => {
-    const db = await getTestMongoClient(globalThis)
-    await use(db)
-  }
-})
+const test = await createTest(globalThis)
 
-test('initUser', async ({ testDb }) => {
-  await initGeneral(testDb)
+test('initUser', async ({ testDb, testRedis }) => {
+  await initGeneral({ db: testDb, redis: testRedis })
 
   const userId = new ObjectId()
   const account = 'aaa'
@@ -43,13 +30,12 @@ test('initUser', async ({ testDb }) => {
   await initUser(testDb, userId, account)
 
   // user
-  const db = await getTestMongoClient(globalThis)
-  const foundUser = await collections(db).users.findOne({ _id: userId })
+  const foundUser = await collections(testDb).users.findOne({ _id: userId })
   expect(userId.toHexString()).toStrictEqual(foundUser?._id.toHexString())
   expect(`${account}_${userId.toHexString()}`).toStrictEqual(foundUser?.account)
 
   // default room
-  const foundRooms = await collections(db)
+  const foundRooms = await collections(testDb)
     .enter.aggregate<Enter & { room: Room[] }>([
       {
         $match: { userId: userId }
@@ -89,6 +75,7 @@ test('getAllUserIdsInRoom', async ({ testDb }) => {
 
   const ids = await getAllUserIdsInRoom(testDb, roomId.toHexString())
 
+  expect.assertions(ids.length + 1)
   expect(ids.length).toStrictEqual(users.length)
   for (const id of ids) {
     expect(userIdStrs.includes(id)).toStrictEqual(true)

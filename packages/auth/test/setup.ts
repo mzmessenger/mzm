@@ -13,7 +13,5 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await globalThis.testMongoClient?.db().dropDatabase()
-  await Promise.all([
-    globalThis.testMongoClient?.close()
-  ])
+  await Promise.all([globalThis.testMongoClient?.close()])
 })

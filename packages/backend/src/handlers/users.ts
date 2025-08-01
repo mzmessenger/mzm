@@ -7,10 +7,7 @@ import { apis, type API } from 'mzm-shared/src/api/universal'
 import { response } from 'mzm-shared/src/lib/wrap'
 import { isValidAccount } from 'mzm-shared/src/validator'
 import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
-import {
-  getRequestUserId,
-  createUserIconPath
-} from '../lib/utils.js'
+import { getRequestUserId, createUserIconPath } from '../lib/utils.js'
 import { collections } from '../lib/db.js'
 
 export function createRoute(
@@ -25,26 +22,23 @@ export function createRoute(
     checkAccessToken: typeof checkAccessTokenMiddleware
   }
 ) {
-  app.put(
-    '/api/user/@me',
-    checkAccessToken,
-    jsonParser,
-    async (req, res) => {
-      const userId = getRequestUserId(req)
-      const data = await update(db, new ObjectId(userId), req.body)
-      return response<API['/api/user/@me']['PUT']['response'][200]['body']>(data)(req, res)
-    }
-  )
+  app.put('/api/user/@me', checkAccessToken, jsonParser, async (req, res) => {
+    const userId = getRequestUserId(req)
+    const data = await update(db, new ObjectId(userId), req.body)
+    return response<API['/api/user/@me']['PUT']['response'][200]['body']>(data)(
+      req,
+      res
+    )
+  })
 
-  app.get(
-    '/api/user/@me',
-    checkAccessToken,
-    async (req, res) => {
-      const userId = getRequestUserId(req)
-      const data = await getUserInfo(db, new ObjectId(userId))
-      return response<API['/api/user/@me']['GET']['response'][200]['body']>(data)(req, res)
-    }
-  )
+  app.get('/api/user/@me', checkAccessToken, async (req, res) => {
+    const userId = getRequestUserId(req)
+    const data = await getUserInfo(db, new ObjectId(userId))
+    return response<API['/api/user/@me']['GET']['response'][200]['body']>(data)(
+      req,
+      res
+    )
+  })
 
   return app
 }
@@ -52,7 +46,7 @@ export function createRoute(
 export async function update(db: MongoClient, userId: ObjectId, body: unknown) {
   const api = apis['/api/user/@me']['PUT']
   const bodyParser = z.object({
-   account: z.string().min(1).trim()
+    account: z.string().min(1).trim()
   })
   const parsed = bodyParser.safeParse(body)
   if (parsed.success === false) {
@@ -67,9 +61,7 @@ export async function update(db: MongoClient, userId: ObjectId, body: unknown) {
     account: account
   })
   if (user && user._id.toHexString() !== userId.toHexString()) {
-    throw new BadRequest(
-      api.response[400].body(`${account} is already exists`)
-    )
+    throw new BadRequest(api.response[400].body(`${account} is already exists`))
   }
 
   await collections(db).users.findOneAndUpdate(

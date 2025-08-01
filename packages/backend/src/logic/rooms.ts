@@ -6,14 +6,20 @@ import {
   type Room
 } from '../lib/db.js'
 import { logger } from '../lib/logger.js'
-import { lock, release } from '../lib/redis.js'
+import { type ExRedisClient, lock, release } from '../lib/redis.js'
 import * as config from '../config.js'
 import { addUpdateSearchRoomQueue } from '../lib/provider/index.js'
 
-export async function initGeneral(db: MongoClient) {
+export async function initGeneral({
+  db,
+  redis
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+}) {
   const lockKey = config.lock.INIT_GENERAL_ROOM
   const lockVal = new ObjectId().toHexString()
-  const locked = await lock(lockKey, lockVal, 1000)
+  const locked = await lock(redis, lockKey, lockVal, 1000)
 
   if (!locked) {
     logger.info('[locked] initGeneral')
@@ -34,12 +40,13 @@ export async function initGeneral(db: MongoClient) {
     { upsert: true }
   )
 
-  await release(lockKey, lockVal)
+  await release(redis, lockKey, lockVal)
 }
 
-export function isValidateRoomName(
-  name: string
-): { valid: boolean; reason?: string } {
+export function isValidateRoomName(name: string): {
+  valid: boolean
+  reason?: string
+} {
   if (!name.trim()) {
     return { valid: false, reason: 'name is empty' }
   } else if (name.length > config.room.MAX_ROOM_NAME_LENGTH) {
@@ -69,7 +76,11 @@ export function isValidateRoomName(
   return { valid: true }
 }
 
-export async function enterRoom(db: MongoClient, userId: ObjectId, roomId: ObjectId) {
+export async function enterRoom(
+  db: MongoClient,
+  userId: ObjectId,
+  roomId: ObjectId
+) {
   const enter: Enter = {
     userId: userId,
     roomId: roomId,
@@ -92,14 +103,20 @@ export async function enterRoom(db: MongoClient, userId: ObjectId, roomId: Objec
   ])
 }
 
-export async function createRoom(
-  db: MongoClient,
-  userId: ObjectId,
+export async function createRoom({
+  userId,
+  name,
+  db,
+  redis
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  userId: ObjectId
   name: string
-): Promise<WithId<Room> | null> {
+}): Promise<WithId<Room> | null> {
   const lockKey = config.lock.CREATE_ROOM + ':' + name
   const lockVal = new ObjectId().toHexString()
-  const locked = await lock(lockKey, lockVal, 1000)
+  const locked = await lock(redis, lockKey, lockVal, 1000)
 
   if (!locked) {
     logger.info('[locked] createRoom:' + name)
@@ -119,7 +136,7 @@ export async function createRoom(
   const id = inserted.insertedId.toHexString()
   logger.info(`[room:create] ${name} (${id}) created by ${createdBy}`)
 
-  await release(lockKey, lockVal)
+  await release(redis, lockKey, lockVal)
 
   return {
     _id: inserted.insertedId,
@@ -130,7 +147,13 @@ export async function createRoom(
   }
 }
 
-export async function syncSeachAllRooms(db: MongoClient) {
+export async function syncSeachAllRooms({
+  redis,
+  db
+}: {
+  redis: ExRedisClient
+  db: MongoClient
+}) {
   let counter = 0
   let roomIds: string[] = []
 
@@ -143,11 +166,11 @@ export async function syncSeachAllRooms(db: MongoClient) {
     roomIds.push(doc._id.toHexString())
     counter++
     if (roomIds.length > 100) {
-      await addUpdateSearchRoomQueue(roomIds)
+      await addUpdateSearchRoomQueue(redis, roomIds)
       roomIds = []
     }
   }
 
-  await addUpdateSearchRoomQueue(roomIds)
+  await addUpdateSearchRoomQueue(redis, roomIds)
   logger.info(`[syncSeachAllRooms] ${counter}`)
 }

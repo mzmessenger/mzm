@@ -1,6 +1,5 @@
-/* eslint-disable no-empty-pattern */
-import { vi, test as baseTest, expect } from 'vitest'
-import { getTestMongoClient } from '../../../test/testUtil.js'
+import { vi, expect } from 'vitest'
+import { createTest } from '../../../test/testUtil.js'
 vi.mock('./remove.js', () => {
   return {
     initRemoveConsumerGroup: vi.fn(),
@@ -53,16 +52,9 @@ import * as consumeJob from './job.js'
 import * as consumeVote from './vote.js'
 import * as consumeMessage from './message.js'
 
-const test = baseTest.extend<{
-  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
-}>({
-  testDb: async ({}, use) => {
-    const db = await getTestMongoClient(globalThis)
-    await use(db)
-  }
-})
+const test = await createTest(globalThis)
 
-test('init', async ({ testDb }) => {
+test('init', async ({ testDb, testRedis }) => {
   const mocks = [
     [consumerRemove.initRemoveConsumerGroup, consumerRemove.consumeRemove],
     [consumerUnread.initUnreadConsumerGroup, consumerUnread.consumeUnread],
@@ -87,7 +79,7 @@ test('init', async ({ testDb }) => {
     consumeMock.mockResolvedValue()
   }
 
-  await initConsumer(testDb)
+  await initConsumer({ db: testDb, redis: testRedis })
 
   for (const [init, consume] of mocks) {
     expect(init.call.length).toStrictEqual(1)

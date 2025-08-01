@@ -2,7 +2,10 @@ import type { Request } from 'express'
 import type { Result } from 'mzm-shared/src/type'
 import type { MongoClient } from 'mongodb'
 import { z } from 'zod'
-import { verifyAuthorizationCode as _verifyAuthorizationCode, generateAuthorizationCode } from './util.js'
+import {
+  verifyAuthorizationCode as _verifyAuthorizationCode,
+  generateAuthorizationCode
+} from './util.js'
 import { logger } from '../logger.js'
 import {
   saveCodeChallenge,

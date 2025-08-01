@@ -4,7 +4,7 @@
   "compilerOptions": {
     "noEmit": true,
     "noImplicitThis": false,
-    "noImplicitAny":  false,
+    "noImplicitAny": false
   },
   "references": [{ "path": "../shared" }]
 }

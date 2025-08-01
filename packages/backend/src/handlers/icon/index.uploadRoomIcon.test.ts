@@ -16,9 +16,7 @@ vi.mock('../../lib/db.js', async () => {
 import { Readable } from 'stream'
 import { ObjectId } from 'mongodb'
 import { BadRequest } from 'mzm-shared/src/lib/errors'
-import {
-  getTestMongoClient
-} from '../../../test/testUtil.js'
+import { getTestMongoClient } from '../../../test/testUtil.js'
 import { collections, RoomStatusEnum } from '../../lib/db.js'
 import * as storage from '../../lib/storage.js'
 import * as config from '../../config.js'

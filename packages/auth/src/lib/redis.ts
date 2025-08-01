@@ -3,10 +3,8 @@ import { Redis } from 'ioredis'
 import { REDIS } from '../config.js'
 import { logger } from './logger.js'
 
-export let redis: Redis | null = null
-
-export const connect = async () => {
-  redis = new Redis({
+export async function connect() {
+  const redis = new Redis({
     ...REDIS.options,
     reconnectOnError(err) {
       if (err.message.includes('ECONNRESET')) {

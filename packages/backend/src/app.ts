@@ -10,6 +10,7 @@ import {
   getRequestGithubUserName,
   getRequestTwitterUserName
 } from './lib/utils.js'
+import { type ExRedisClient } from './lib/redis.js'
 import { addUserResponse, closeUserResponse } from './lib/fetchStreaming.js'
 import { response } from 'mzm-shared/src/lib/wrap'
 import * as rooms from './handlers/rooms.js'
@@ -21,7 +22,13 @@ import { checkAccessToken } from './middleware/index.js'
 
 const jsonParser = express.json({ limit: '1mb' })
 
-export function createApp(db: MongoClient) {
+export function createApp({
+  db,
+  redis
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+}) {
   const app = express()
   app.use(helmet())
   app.use(
@@ -30,7 +37,7 @@ export function createApp(db: MongoClient) {
     })
   )
 
-  rooms.createRoute(app, { db, jsonParser, checkAccessToken })
+  rooms.createRoute(app, { db, redis, jsonParser, checkAccessToken })
   user.createRoute(app, { db, jsonParser, checkAccessToken })
   icon.createRoute(app, { db, checkAccessToken })
 
@@ -63,7 +70,7 @@ export function createApp(db: MongoClient) {
   })
 
   app.post('/api/socket', checkAccessToken, jsonParser, async (req, res) => {
-    const data = await internal.socket(req, db)
+    const data = await internal.socket(req, { db, redis })
     return response(data)(req, res)
   })
 

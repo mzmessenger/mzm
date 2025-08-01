@@ -1,10 +1,11 @@
 /* eslint-disable no-console */
 import('./types.js')
 import { once } from 'node:events'
-import { afterAll, beforeAll } from 'vitest'
+import { afterAll, beforeAll, vi } from 'vitest'
 import { MongoClient } from 'mongodb'
 import { Redis, type RedisOptions } from 'ioredis'
 import { getTestDbName, getTestDbParams } from './testUtil.js'
+import { type ExRedisClient } from '../src/lib/redis.js'
 
 const TEST_REDIS_HOST = process.env.TEST_REDIS_HOST ?? 'localhost'
 const TEST_REDIS_PORT = process.env.TEST_REDIS_PORT
@@ -27,10 +28,11 @@ beforeAll(async () => {
     connectTimeout: 30000,
     db: 1
   }
-  const redisClient = new Redis(testRedisOptions)
+  const redisClient = new Redis(testRedisOptions) as ExRedisClient
   redisClient.on('error', (e) => {
     console.error(e)
-  })
+  })  
+  redisClient.release = vi.fn()
 
   await once(redisClient, 'ready')
   globalThis.testRedisClient = redisClient

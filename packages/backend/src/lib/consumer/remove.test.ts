@@ -1,14 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment,  no-empty-pattern */
-import { vi, test as baseTest, expect } from 'vitest'
+import { vi, expect } from 'vitest'
+import { createTest } from '../../../test/testUtil.js'
 vi.mock('../logger.js')
-
-vi.mock('../redis.js', () => {
-  return {
-    client: vi.fn(() => ({
-      xack: vi.fn()
-    }))
-  }
-})
 vi.mock('./common.js', () => {
   return {
     initConsumerGroup: vi.fn(),
@@ -16,52 +8,39 @@ vi.mock('./common.js', () => {
     createParser: vi.fn()
   }
 })
-vi.mock('../db.js', async () => {
-  const actual = await vi.importActual<typeof import('../db.js')>('../db.js')
-  return { ...actual, mongoClient: vi.fn() }
-})
 
 import { ObjectId } from 'mongodb'
 import * as config from '../../config.js'
-import { getTestMongoClient } from '../../../test/testUtil.js'
 import { collections } from '../db.js'
-import { client } from '../redis.js'
+import { type ExRedisClient } from '../redis.js'
 import { initConsumerGroup, consumeGroup } from './common.js'
 import { remove, initRemoveConsumerGroup, consumeRemove } from './remove.js'
 
-const test = baseTest.extend<{
-  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
-}>({
-  testDb: async ({}, use) => {
-    const db = await getTestMongoClient(globalThis)
-    await use(db)
-  }
-})
+const test = await createTest(globalThis)
 
-test('initRemoveConsumerGroup', async () => {
+test('initRemoveConsumerGroup', async ({ testRedis }) => {
   const init = vi.mocked(initConsumerGroup)
 
-  await initRemoveConsumerGroup()
+  await initRemoveConsumerGroup(testRedis)
 
   expect(init.mock.calls.length).toStrictEqual(1)
-  expect(init.mock.calls[0][0]).toStrictEqual(config.stream.REMOVE_USER)
+  expect(init.mock.calls[0][1]).toStrictEqual(config.stream.REMOVE_USER)
 })
 
-test('consumeRemove', async ({ testDb }) => {
+test('consumeRemove', async ({ testDb, testRedis }) => {
   const consume = vi.mocked(consumeGroup)
 
-  await consumeRemove(testDb)
+  await consumeRemove({ db: testDb, redis: testRedis })
 
   expect(consume.mock.calls.length).toStrictEqual(1)
-  expect(consume.mock.calls[0][2]).toStrictEqual(config.stream.REMOVE_USER)
+  expect(consume.mock.calls[0][3]).toStrictEqual(config.stream.REMOVE_USER)
 })
 
 test('remove', async ({ testDb }) => {
   const xack = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xack }))
   xack.mockClear()
   xack.mockResolvedValue(1)
+  const redis = { xack } as unknown as ExRedisClient
 
   const userId = new ObjectId()
   const roomIds = [new ObjectId(), new ObjectId()]
@@ -75,10 +54,17 @@ test('remove', async ({ testDb }) => {
   })
   await collections(testDb).enter.insertMany(insert)
 
-  const before = await collections(testDb).removed.find({ _id: userId }).toArray()
+  const before = await collections(testDb)
+    .removed.find({ _id: userId })
+    .toArray()
   expect(before.length).toStrictEqual(0)
 
-  await remove(testDb, 'queue-id', ['user', userId.toHexString()])
+  await remove({
+    db: testDb,
+    redis,
+    ackId: 'queue-id',
+    messages: ['user', userId.toHexString()]
+  })
 
   const removed = await collections(testDb)
     .removed.find({ originId: userId })

@@ -9,9 +9,7 @@ vi.mock('../lib/db.js', async () => {
 import type { API } from 'mzm-shared/src/api/universal'
 import { ObjectId } from 'mongodb'
 import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
-import {
-  getTestMongoClient
-} from '../../test/testUtil.js'
+import { getTestMongoClient } from '../../test/testUtil.js'
 import { collections } from '../lib/db.js'
 import { update, getUserInfo } from './users.js'
 
@@ -28,7 +26,11 @@ test('update', async ({ task, testDb }) => {
   const userId = new ObjectId()
   const account = `${task.id}-aaa`
 
-  await collections(testDb).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
 
   const body: API['/api/user/@me']['PUT']['request']['body'] = {
     account: `${task.id}-changed-account`
@@ -47,7 +49,11 @@ test('update failed: exists account', async ({ task, testDb }) => {
   const userId = new ObjectId()
   const account = 'aaa'
 
-  await collections(testDb).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
   const existsAccount = `${task.id}-exists`
   await collections(testDb).users.insertOne({
     _id: new ObjectId(),
@@ -87,7 +93,11 @@ test('getUserInfo', async ({ testDb }) => {
   const userId = new ObjectId()
   const account = 'aaa'
 
-  await collections(testDb).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
 
   const user = await getUserInfo(testDb, userId)
 

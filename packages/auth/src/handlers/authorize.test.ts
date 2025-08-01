@@ -2,9 +2,7 @@
 import assert from 'node:assert'
 import { test as baseTest, expect, vi } from 'vitest'
 import { BadRequest, Unauthorized } from 'mzm-shared/src/lib/errors'
-import {
-  getTestMongoClient
-} from '../../test/testUtil.js'
+import { getTestMongoClient } from '../../test/testUtil.js'
 import {
   saveAuthorizationCode,
   generateUniqAuthorizationCode

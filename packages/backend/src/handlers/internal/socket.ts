@@ -18,6 +18,7 @@ import {
   type User,
   type VoteAnswer
 } from '../../lib/db.js'
+import { type ExRedisClient } from '../../lib/redis.js'
 import * as config from '../../config.js'
 import {
   escape,
@@ -46,10 +47,13 @@ import {
   enterRoom as logicEnterRoom
 } from '../../logic/rooms.js'
 
-export async function getRooms(
-  db: MongoClient,
-  userId: string
-): Promise<ToClientType | void> {
+export async function getRooms({
+  db,
+  user: userId
+}: {
+  db: MongoClient
+  user: string
+}): Promise<ToClientType | void> {
   const [user, rooms] = await Promise.all([
     collections(db).users.findOne<Pick<User, 'roomOrder'>>(
       { _id: new ObjectId(userId) },
@@ -82,11 +86,17 @@ const sendMessageParser = z.object({
     })
     .optional()
 })
-export async function sendMessage(
-  db: MongoClient,
-  user: string,
+export async function sendMessage({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_SEND>
-) {
+}) {
   const parsed = sendMessageParser.safeParse(data)
   if (parsed.success === false) {
     return
@@ -161,29 +171,33 @@ export async function sendMessage(
   }
 
   // reply
-  await addUnreadQueue(room, saved.insertedId.toHexString())
+  await addUnreadQueue(redis, room, saved.insertedId.toHexString())
   const replied = repliedAccounts(message)
   // @todo
   if (replied.length > 0) {
     for (const account of replied) {
       const user = await collections(db).users.findOne({ account })
       if (user) {
-        await addRepliedQueue(room, user._id.toHexString())
+        await addRepliedQueue(redis, room, user._id.toHexString())
       }
     }
   }
 
   const users = await getAllUserIdsInRoom(db, room)
-  addQueueToUsers(users, send)
+  addQueueToUsers(redis, users, send)
 
   return send
 }
 
-export async function iine(
-  db: MongoClient,
-  user: string,
+export async function iine({
+  db,
+  redis,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_IINE>
-) {
+}) {
   const target = await collections(db).messages.findOne({
     _id: new ObjectId(data.id)
   })
@@ -203,7 +217,7 @@ export async function iine(
     room: target.roomId.toHexString(),
     id: target._id.toHexString()
   }
-  addQueueToUsers(users, send)
+  addQueueToUsers(redis, users, send)
 
   return send
 }
@@ -213,11 +227,17 @@ const ModifyMessageParser = z.object({
   message: z.string().min(1)
 })
 
-export async function modifyMessage(
-  db: MongoClient,
-  user: string,
+export async function modifyMessage({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_MODIFY>
-) {
+}) {
   const parsed = ModifyMessageParser.safeParse(data)
   // todo: send bad request
   if (parsed.success === false) {
@@ -271,16 +291,22 @@ export async function modifyMessage(
   }
 
   const users = await getAllUserIdsInRoom(db, from.roomId.toHexString())
-  addQueueToUsers(users, send)
+  addQueueToUsers(redis, users, send)
 
   return send
 }
 
-export async function removeMessage(
-  db: MongoClient,
-  user: string,
+export async function removeMessage({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_REMOVE>
-) {
+}) {
   const id = escape(data.id.trim())
   // todo: send bad request
   if (!id) {
@@ -328,7 +354,7 @@ export async function removeMessage(
   }
 
   const users = await getAllUserIdsInRoom(db, from.roomId.toHexString())
-  addQueueToUsers(users, send)
+  addQueueToUsers(redis, users, send)
 
   return send
 }
@@ -338,11 +364,15 @@ const GetMessagesFromRoomParser = z.object({
   room: z.string().min(1)
 })
 
-export async function getMessagesFromRoom(
-  db: MongoClient,
-  user: string,
+export async function getMessagesFromRoom({
+  db,
+  user,
+  data
+}: {
+  db: MongoClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGES_ROOM>
-): Promise<ToClientType | void> {
+}): Promise<ToClientType | void> {
   const parsed = GetMessagesFromRoomParser.safeParse(data)
   if (parsed.success === false) {
     return
@@ -376,11 +406,17 @@ export async function getMessagesFromRoom(
   return send
 }
 
-export async function enterRoom(
-  db: MongoClient,
-  user: string,
+export async function enterRoom({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_ENTER>
-): Promise<ToClientType> {
+}): Promise<ToClientType> {
   let room: WithId<Room> | null = null
   if (data.id) {
     const id = escape(data.id.trim())
@@ -402,7 +438,7 @@ export async function enterRoom(
     if (found) {
       room = found
     } else {
-      room = await createRoom(db, new ObjectId(user), name)
+      room = await createRoom({ db, redis, userId: new ObjectId(user), name })
     }
   }
 
@@ -428,11 +464,17 @@ export async function enterRoom(
   }
 }
 
-export async function readMessage(
-  db: MongoClient,
-  user: string,
+export async function readMessage({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_READ>
-) {
+}) {
   if (!data.room) {
     // todo BadRequest
     return
@@ -450,16 +492,22 @@ export async function readMessage(
     cmd: TO_CLIENT_CMD.ROOMS_READ,
     room: data.room
   }
-  await addMessageQueue(send)
+  await addMessageQueue(redis, send)
 
   return send
 }
 
-export async function sortRooms (
-  db: MongoClient,
-  user: string,
+export async function sortRooms({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_SORT>
-) {
+}) {
   if (!data.roomOrder || !Array.isArray(data.roomOrder)) {
     // todo BadRequest
     return
@@ -484,15 +532,21 @@ export async function sortRooms (
     cmd: TO_CLIENT_CMD.ROOMS_SORT_SUCCESS,
     roomOrder
   }
-  await addMessageQueue(send)
+  await addMessageQueue(redis, send)
   return send
 }
 
-export async function openRoom(
-  db: MongoClient,
-  user: string,
+export async function openRoom({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_OPEN>
-) {
+}) {
   const roomId = new ObjectId(data.roomId)
 
   const general = await collections(db).rooms.findOne({
@@ -507,15 +561,21 @@ export async function openRoom(
     { _id: new ObjectId(data.roomId) },
     { $set: { status: RoomStatusEnum.OPEN, updatedBy: new ObjectId(user) } }
   )
-  addUpdateSearchRoomQueue([data.roomId])
+  addUpdateSearchRoomQueue(redis, [data.roomId])
   // @todo 伝播
 }
 
-export async function closeRoom(
-  db: MongoClient,
-  user: string,
+export async function closeRoom({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_CLOSE>
-) {
+}) {
   if (!data.roomId) {
     return
   }
@@ -534,15 +594,21 @@ export async function closeRoom(
     { $set: { status: RoomStatusEnum.CLOSE, updatedBy: new ObjectId(user) } }
   )
 
-  addUpdateSearchRoomQueue([data.roomId])
+  addUpdateSearchRoomQueue(redis, [data.roomId])
   // @todo 伝播
 }
 
-export async function updateRoomDescription(
-  db: MongoClient,
-  user: string,
+export async function updateRoomDescription({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION>
-) {
+}) {
   logger.info('updateRoomDescription', data.roomId, data.description)
   const roomId = new ObjectId(data.roomId)
 
@@ -566,12 +632,12 @@ export async function updateRoomDescription(
     roomId: data.roomId,
     descrioption: data.description
   }
-  addQueueToUsers(users, send)
+  addQueueToUsers(redis, users, send)
 
-  addUpdateSearchRoomQueue([data.roomId])
+  addUpdateSearchRoomQueue(redis, [data.roomId])
 }
 
-const isAnswer = (answer: number): answer is VoteAnswer['answer'] => {
+function isAnswer(answer: number): answer is VoteAnswer['answer'] {
   return Object.values<number>(VoteAnswerEnum).includes(answer)
 }
 
@@ -581,11 +647,17 @@ const SendVoteAnswerParser = z.object({
   answer: z.number().min(0)
 })
 
-export async function sendVoteAnswer(
-  db: MongoClient,
-  user: string,
+export async function sendVoteAnswer({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_SEND>
-) {
+}) {
   const parsed = SendVoteAnswerParser.safeParse(data)
   if (parsed.success === false) {
     // todo: send bad request
@@ -622,18 +694,24 @@ export async function sendVoteAnswer(
     { upsert: true }
   )
 
-  addVoteQueue(parsed.data.messageId)
+  addVoteQueue(redis, parsed.data.messageId)
 }
 
 const RemoveVoteAnswerParser = z.object({
   messageId: z.string().min(1),
   index: z.number().min(0)
 })
-export async function removeVoteAnswer(
-  db: MongoClient,
-  user: string,
+export async function removeVoteAnswer({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_REMOVE>
-) {
+}) {
   const parsed = RemoveVoteAnswerParser.safeParse(data)
   if (parsed.success === false) {
     // todo: send bad request
@@ -659,5 +737,5 @@ export async function removeVoteAnswer(
     index: parsed.data.index
   })
 
-  addVoteQueue(data.messageId)
+  addVoteQueue(redis, data.messageId)
 }

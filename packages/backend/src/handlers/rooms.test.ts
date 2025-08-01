@@ -1,6 +1,5 @@
-/* eslint-disable no-empty-pattern */
-import { vi, test as baseTest, expect } from 'vitest'
-import { getTestMongoClient } from '../../test/testUtil.js'
+import { vi, expect } from 'vitest'
+import { createTest } from '../../test/testUtil.js'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/redis.js', () => {
   return {
@@ -13,11 +12,6 @@ vi.mock('../lib/elasticsearch/index.js', () => {
     client: {}
   }
 })
-vi.mock('../lib/db.js', async () => {
-  const actual =
-    await vi.importActual<typeof import('../lib/db.js')>('../lib/db.js')
-  return { ...actual, mongoClient: vi.fn() }
-})
 
 import type { API } from 'mzm-shared/src/api/universal'
 import { ObjectId, WithId } from 'mongodb'
@@ -27,17 +21,10 @@ import { collections, type User, type Enter } from '../lib/db.js'
 import { initGeneral } from '../logic/rooms.js'
 import { exitRoom, getUsers } from './rooms.js'
 
-const test = baseTest.extend<{
-  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
-}>({
-  testDb: async ({}, use) => {
-    const db = await getTestMongoClient(globalThis)
-    await use(db)
-  }
-})
+const test = await createTest(globalThis)
 
-test('exitRoom fail (general)', async ({ testDb }) => {
-  await initGeneral(testDb)
+test('exitRoom fail (general)', async ({ testDb, testRedis }) => {
+  await initGeneral({ db: testDb, redis: testRedis })
 
   const userId = new ObjectId()
 

@@ -1,7 +1,7 @@
 import type { MongoClient } from 'mongodb'
-import { Redis } from 'ioredis'
+import type { ExRedisClient } from '../src/lib/redis.js'
 
 declare global {
   var testMongoClient: MongoClient
-  var testRedisClient: Redis
+  var testRedisClient: ExRedisClient
 }

@@ -1,4 +1,4 @@
-import { client } from '../redis.js'
+import { type ExRedisClient } from '../redis.js'
 import { logger } from '../logger.js'
 import { type ToClientType } from 'mzm-shared/src/type/socket'
 import { UnreadQueue, ReplyQueue, VoteQueue } from '../../types.js'
@@ -9,9 +9,12 @@ export {
   addSyncSearchRoomQueue
 } from './room.js'
 
-export const addMessageQueue = async (data: ToClientType) => {
+export async function addMessageQueue(
+  client: ExRedisClient,
+  data: ToClientType
+) {
   const message = JSON.stringify(data)
-  await client().xadd(
+  await client.xadd(
     config.stream.MESSAGE,
     'MAXLEN',
     100000,
@@ -25,17 +28,25 @@ export const addMessageQueue = async (data: ToClientType) => {
   })
 }
 
-export const addQueueToUsers = async (users: string[], data: ToClientType) => {
+export async function addQueueToUsers(
+  client: ExRedisClient,
+  users: string[],
+  data: ToClientType
+) {
   // todo: too heavy
   const promises = users.map((user) => {
-    addMessageQueue({ ...data, user })
+    addMessageQueue(client, { ...data, user })
   })
   await Promise.all(promises)
 }
 
-export const addUnreadQueue = async (roomId: string, messageId: string) => {
+export async function addUnreadQueue(
+  client: ExRedisClient,
+  roomId: string,
+  messageId: string
+) {
   const data: UnreadQueue = { roomId, messageId }
-  client().xadd(
+  client.xadd(
     config.stream.UNREAD,
     'MAXLEN',
     1000,
@@ -45,9 +56,13 @@ export const addUnreadQueue = async (roomId: string, messageId: string) => {
   )
 }
 
-export const addRepliedQueue = async (roomId: string, userId: string) => {
+export async function addRepliedQueue(
+  client: ExRedisClient,
+  roomId: string,
+  userId: string
+) {
   const data: ReplyQueue = { roomId, userId }
-  client().xadd(
+  client.xadd(
     config.stream.REPLY,
     'MAXLEN',
     1000,
@@ -57,9 +72,9 @@ export const addRepliedQueue = async (roomId: string, userId: string) => {
   )
 }
 
-export const addVoteQueue = async (messageId: string) => {
+export async function addVoteQueue(client: ExRedisClient, messageId: string) {
   const data: VoteQueue = { messageId }
-  client().xadd(
+  client.xadd(
     config.stream.VOTE,
     'MAXLEN',
     1000,

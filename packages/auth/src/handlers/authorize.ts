@@ -111,10 +111,8 @@ const AuthorizationQuery = z.object({
   state: z.string().optional()
 })
 
-export function createAuthorize(
-  db: MongoClient
-) {
-  return async (req: Request, res: NonceResponse,) => {
+export function createAuthorize(db: MongoClient) {
+  return async (req: Request, res: NonceResponse) => {
     const nonce = res.locals.nonce
     try {
       const { user } = req as PassportRequest
