@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-import { vi, test, expect, beforeAll } from 'vitest'
+/* eslint-disable @typescript-eslint/ban-ts-comment, no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
 vi.mock('../logger.js')
 vi.mock('../redis.js', async () => {
   return {
@@ -27,12 +27,13 @@ import { client } from '../redis.js'
 import { initConsumerGroup, consumeGroup } from './common.js'
 import { increment, initUnreadConsumerGroup, consumeUnread } from './unread.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../db.js')
-  const { getTestMongoClient } = await import('../../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
 test('initUnreadConsumerGroup', async () => {
@@ -44,16 +45,16 @@ test('initUnreadConsumerGroup', async () => {
   expect(init.mock.calls[0][0]).toStrictEqual(config.stream.UNREAD)
 })
 
-test('consumeUnread', async () => {
+test('consumeUnread', async ({ testDb }) => {
   const consume = vi.mocked(consumeGroup)
 
-  await consumeUnread()
+  await consumeUnread(testDb)
 
   expect(consume.mock.calls.length).toStrictEqual(1)
   expect(consume.mock.calls[0][2]).toStrictEqual(config.stream.UNREAD)
 })
 
-test('increment', async () => {
+test('increment', async ({ testDb }) => {
   const xack = vi.fn()
   // @ts-expect-error
   vi.mocked(client).mockImplementation(() => ({ xack }))
@@ -68,8 +69,7 @@ test('increment', async () => {
     return { _id: userId, account: userId.toHexString(), roomOrder: [] }
   })
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertMany(users)
+  await collections(testDb).users.insertMany(users)
   const roomId = new ObjectId()
   const enter = userIds.map((userId) => ({
     userId,
@@ -79,16 +79,16 @@ test('increment', async () => {
   }))
   // max test
   enter[maxIndex].unreadCounter = maxValue
-  await collections(db).enter.insertMany(enter)
+  await collections(testDb).enter.insertMany(enter)
 
   const _unreadQueue: UnreadQueue = {
     roomId: roomId.toHexString(),
     messageId: new ObjectId().toHexString()
   }
   const unreadQueue = JSON.stringify(_unreadQueue)
-  await increment('queue-id', ['unread', unreadQueue])
+  await increment(testDb, 'queue-id', ['unread', unreadQueue])
 
-  let targets = await collections(db)
+  let targets = await collections(testDb)
     .enter.find({ userId: { $in: userIds }, roomId })
     .toArray()
   expect(targets.length).toStrictEqual(enter.length)
@@ -105,9 +105,9 @@ test('increment', async () => {
   expect(xack.mock.calls[0][2]).toStrictEqual('queue-id')
 
   // call twice
-  await increment('queue-id', ['unread', unreadQueue])
+  await increment(testDb, 'queue-id', ['unread', unreadQueue])
 
-  targets = await collections(db)
+  targets = await collections(testDb)
     .enter.find({ userId: { $in: userIds }, roomId })
     .toArray()
   for (const target of targets) {

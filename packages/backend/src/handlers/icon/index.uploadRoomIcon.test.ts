@@ -1,4 +1,5 @@
-import { vi, test, expect, beforeAll } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
 
 vi.mock('undici', () => {
   return { request: vi.fn() }
@@ -24,22 +25,22 @@ import * as config from '../../config.js'
 import { uploadRoomIcon } from './index.js'
 import { sizeOf } from '../../lib/image.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../../lib/db.js')
-  const { getTestMongoClient } = await import('../../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test('uploadRoomIcon', async () => {
+test('uploadRoomIcon', async ({ testDb }) => {
   const roomId = new ObjectId()
-  const name = roomId.toHexString()
+  const roomName = roomId.toHexString()
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).rooms.insertOne({
+  await collections(testDb).rooms.insertOne({
     _id: roomId,
-    name,
+    name: roomName,
     createdBy: new ObjectId().toHexString(),
     status: RoomStatusEnum.CLOSE
   })
@@ -67,20 +68,20 @@ test('uploadRoomIcon', async () => {
     path: '/path/to/file'
   }
 
-  const res = await uploadRoomIcon(name, file)
+  const res = await uploadRoomIcon(testDb, { roomName, file })
 
-  const room = await collections(db).rooms.findOne({ _id: roomId })
+  const room = await collections(testDb).rooms.findOne({ _id: roomId })
 
   expect(typeof room?.icon?.version).toStrictEqual('string')
   expect(res.version).toStrictEqual(room?.icon?.version)
 })
 
-test.each([['image/gif'], ['image/svg+xml']])(
+test.for([['image/gif'], ['image/svg+xml']])(
   'uploadRoomIcon: fail file type (%s)',
-  async (mimetype) => {
+  async ([mimetype], { testDb }) => {
     expect.assertions(1)
 
-    const name = new ObjectId().toHexString()
+    const roomName = new ObjectId().toHexString()
 
     const file = {
       key: 'filekey',
@@ -92,29 +93,29 @@ test.each([['image/gif'], ['image/svg+xml']])(
     }
 
     try {
-      await uploadRoomIcon(name, file)
+      await uploadRoomIcon(testDb, { roomName, file })
     } catch (e) {
       expect(e instanceof BadRequest).toStrictEqual(true)
     }
   }
 )
 
-test('uploadRoomIcon: empty file', async () => {
+test('uploadRoomIcon: empty file', async ({ testDb }) => {
   expect.assertions(1)
 
-  const name = new ObjectId().toHexString()
+  const roomName = new ObjectId().toHexString()
 
   try {
-    await uploadRoomIcon(name, undefined)
+    await uploadRoomIcon(testDb, { roomName, file: undefined })
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test('uploadRoomIcon: validation: size over ', async () => {
+test('uploadRoomIcon: validation: size over ', async ({ testDb }) => {
   expect.assertions(1)
 
-  const name = new ObjectId().toHexString()
+  const roomName = new ObjectId().toHexString()
 
   const file = {
     key: 'filekey',
@@ -133,16 +134,16 @@ test('uploadRoomIcon: validation: size over ', async () => {
   })
 
   try {
-    await uploadRoomIcon(name, file)
+    await uploadRoomIcon(testDb, { roomName, file })
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test('uploadUserIcon validation: not square', async () => {
+test('uploadUserIcon validation: not square', async ({ testDb }) => {
   expect.assertions(1)
 
-  const name = new ObjectId().toHexString()
+  const roomName = new ObjectId().toHexString()
 
   const file = {
     key: 'filekey',
@@ -161,7 +162,7 @@ test('uploadUserIcon validation: not square', async () => {
   })
 
   try {
-    await uploadRoomIcon(name, file)
+    await uploadRoomIcon(testDb, { roomName, file })
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

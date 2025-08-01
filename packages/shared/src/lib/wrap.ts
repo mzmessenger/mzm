@@ -1,8 +1,4 @@
-import type { Request, Response, NextFunction } from 'express'
-
-export type WrapFn<TReq = Request, TRes = string | object | void> = {
-  (_req: TReq): Promise<TRes>
-}
+import type { Request, Response } from 'express'
 
 export function response<T>(data: T) {
   return async (req: Request, res: Response) => {

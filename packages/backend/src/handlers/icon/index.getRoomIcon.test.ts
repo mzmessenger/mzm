@@ -1,4 +1,5 @@
-import { vi, test, expect, beforeAll } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
 vi.mock('undici', () => {
   return { request: vi.fn() }
 })
@@ -23,23 +24,24 @@ import { collections, RoomStatusEnum } from '../../lib/db.js'
 import * as storage from '../../lib/storage.js'
 import { getRoomIcon } from './index.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../../lib/db.js')
-  const { getTestMongoClient } = await import('../../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test('getRoomIcon', async () => {
+test('getRoomIcon', async ({ testDb }) => {
   const roomId = new ObjectId()
-  const name = roomId.toHexString()
+  const roomName = roomId.toHexString()
   const version = '12345'
 
   const db = await getTestMongoClient(globalThis)
   await collections(db).rooms.insertOne({
     _id: roomId,
-    name,
+    name: roomName,
     createdBy: new ObjectId().toHexString(),
     updatedBy: undefined,
     icon: { key: 'iconkey', version },
@@ -62,7 +64,7 @@ test('getRoomIcon', async () => {
   })
   getObjectMock.mockReturnValueOnce(getObject)
 
-  const res = await getRoomIcon(name, version)
+  const res = await getRoomIcon(testDb, { roomName, version })
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
@@ -78,50 +80,50 @@ test('getRoomIcon', async () => {
   expect(res.stream).toStrictEqual(readableStream)
 })
 
-test('getRoomIcon BadRequest: no room name', async () => {
+test('getRoomIcon BadRequest: no room name', async ({ testDb }) => {
   expect.assertions(1)
 
   try {
-    await getRoomIcon('', '12345')
+    await getRoomIcon(testDb, { roomName: '', version: '12345' })
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test('getRoomIcon NotFound: different version', async () => {
+test('getRoomIcon NotFound: different version', async ({ testDb }) => {
   expect.assertions(1)
 
   const roomId = new ObjectId()
-  const name = roomId.toHexString()
+  const roomName = roomId.toHexString()
   const version = '12345'
 
   const db = await getTestMongoClient(globalThis)
   await collections(db).rooms.insertOne({
     _id: roomId,
-    name: name,
+    name: roomName,
     createdBy: new ObjectId().toHexString(),
     icon: { key: 'iconkey', version },
     status: RoomStatusEnum.CLOSE
   })
 
   try {
-    await getRoomIcon(name, '54321')
+    await getRoomIcon(testDb, { roomName, version: '54321' })
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }
 })
 
-test('getRoomIcon NotFound: not found on storage', async () => {
+test('getRoomIcon NotFound: not found on storage', async ({ testDb }) => {
   expect.assertions(1)
 
   const roomId = new ObjectId()
-  const name = roomId.toHexString()
+  const roomName = roomId.toHexString()
   const version = '12345'
 
   const db = await getTestMongoClient(globalThis)
   await collections(db).rooms.insertOne({
     _id: roomId,
-    name: name,
+    name: roomName,
     createdBy: new ObjectId().toHexString(),
     icon: { key: 'iconkey', version },
     status: RoomStatusEnum.CLOSE
@@ -131,7 +133,7 @@ test('getRoomIcon NotFound: not found on storage', async () => {
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
 
   try {
-    await getRoomIcon(name, version)
+    await getRoomIcon(testDb, { roomName, version })
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }

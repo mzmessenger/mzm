@@ -1,9 +1,9 @@
 import { apis } from 'mzm-shared/src/api/universal'
-import { ObjectId } from 'mongodb'
+import { type MongoClient, ObjectId } from 'mongodb'
 import { logger } from '../logger.js'
 import { lock, release } from '../redis.js'
 import * as config from '../../config.js'
-import { mongoClient, collections, RoomStatusEnum, type Room } from '../db.js'
+import { collections, RoomStatusEnum, type Room } from '../db.js'
 import { client as es } from './index.js'
 import { createRoomIconPath } from '../utils.js'
 
@@ -125,7 +125,7 @@ const putIndex = async () => {
   await es.indices.open({ index: config.elasticsearch.index.room })
 }
 
-export const initAlias = async () => {
+export async function initAlias() {
   const lockKey = config.lock.INIT_SEARCH_ROOM
   const lockVal = new ObjectId().toHexString()
   const locked = await lock(lockKey, lockVal, 1000 * 5)
@@ -157,9 +157,8 @@ export const initAlias = async () => {
   await release(lockKey, lockVal)
 }
 
-export const insertRooms = async (roomIds: string[]) => {
+export async function insertRooms(db: MongoClient, roomIds: string[]) {
   const ids = roomIds.map((e) => new ObjectId(e))
-  const db = await mongoClient()
   const cursor = await collections(db).rooms.find({ _id: { $in: ids } })
 
   type Body =
@@ -217,10 +216,11 @@ export const insertRooms = async (roomIds: string[]) => {
   }
 }
 
-export const searchRoom = async (
+export async function searchRoom(
+  db: MongoClient,
   query: string | null,
   scroll: string | null
-) => {
+) {
   // @todo multi query
   const must: object[] = []
 
@@ -270,7 +270,6 @@ export const searchRoom = async (
 
   const hits = resBody.hits.hits as { _id: string }[]
   const ids = hits.map((elem) => new ObjectId(elem._id))
-  const db = await mongoClient()
   const cursor = await collections(db).rooms.find({ _id: { $in: ids } })
 
   type ResRoom = Pick<Room, 'name' | 'description'> & {

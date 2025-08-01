@@ -1,4 +1,5 @@
-import { vi, test, expect, beforeAll } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
 vi.mock('../lib/db.js', async () => {
   const actual =
     await vi.importActual<typeof import('../lib/db.js')>('../lib/db.js')
@@ -14,42 +15,41 @@ import {
 import { collections } from '../lib/db.js'
 import { update, getUserInfo } from './users.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient } = await import('../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test('update', async ({ task }) => {
+test('update', async ({ task, testDb }) => {
   const userId = new ObjectId()
   const account = `${task.id}-aaa`
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({ _id: userId, account, roomOrder: [] })
 
   const body: API['/api/user/@me']['PUT']['request']['body'] = {
     account: `${task.id}-changed-account`
   }
 
-  const user = await update(userId, body)
+  const user = await update(testDb, userId, body)
 
-  const found = await collections(db).users.findOne({ _id: userId })
+  const found = await collections(testDb).users.findOne({ _id: userId })
 
   expect(user.id).toStrictEqual(found?._id.toHexString())
   expect(user.account).toStrictEqual(found?.account)
   expect(found?.account).toStrictEqual(body.account)
 })
 
-test('update failed: exists account', async ({ task }) => {
+test('update failed: exists account', async ({ task, testDb }) => {
   const userId = new ObjectId()
   const account = 'aaa'
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({ _id: userId, account, roomOrder: [] })
   const existsAccount = `${task.id}-exists`
-  await collections(db).users.insertOne({
+  await collections(testDb).users.insertOne({
     _id: new ObjectId(),
     account: existsAccount,
     roomOrder: []
@@ -59,17 +59,17 @@ test('update failed: exists account', async ({ task }) => {
     account: existsAccount
   }
 
-  await expect(update(userId, body)).rejects.toThrow(BadRequest)
+  await expect(update(testDb, userId, body)).rejects.toThrow(BadRequest)
 })
 
-test.each([
+test.for([
   ['null', null],
   ['undefined', undefined],
   ['空文字', ''],
   ['space', ' '],
   ['space2', '　'],
   ['space3', '　 　']
-])('update fail (account: %s)', async (_label, account) => {
+] as const)('update fail (account: %s)', async ([, account], { testDb }) => {
   expect.assertions(1)
 
   const userId = new ObjectId()
@@ -77,42 +77,40 @@ test.each([
   const body = { account }
 
   try {
-    await update(userId, body)
+    await update(testDb, userId, body)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test('getUserInfo', async () => {
+test('getUserInfo', async ({ testDb }) => {
   const userId = new ObjectId()
   const account = 'aaa'
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({ _id: userId, account, roomOrder: [] })
 
-  const user = await getUserInfo(userId)
+  const user = await getUserInfo(testDb, userId)
 
-  const found = await collections(db).users.findOne({ _id: userId })
+  const found = await collections(testDb).users.findOne({ _id: userId })
 
   expect(user.id).toStrictEqual(found?._id.toHexString())
   expect(user.account).toStrictEqual(found?.account)
 })
 
-test('getUserInfo before signUp', async () => {
+test('getUserInfo before signUp', async ({ testDb }) => {
   expect.assertions(1)
 
   const userId = new ObjectId()
   const account = ''
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({
+  await collections(testDb).users.insertOne({
     _id: userId,
     account,
     roomOrder: []
   })
 
   try {
-    await getUserInfo(userId)
+    await getUserInfo(testDb, userId)
   } catch (e) {
     expect(e instanceof NotFound).toStrictEqual(true)
   }

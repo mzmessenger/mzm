@@ -1,4 +1,5 @@
-import { vi, test, expect, beforeAll } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/redis.js', () => {
   return {
@@ -32,23 +33,23 @@ import { initConsumer } from '../lib/consumer/index.js'
 import { addInitializeSearchRoomQueue } from '../lib/provider/index.js'
 import { getTestMongoClient } from '../../test/testUtil.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient } = await import('../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test('init', async () => {
-  await init()
+test('init', async ({ testDb }) => {
+  await init(testDb)
 
   expect(init.call.length).toStrictEqual(1)
   expect(initConsumer.call.length).toStrictEqual(1)
   expect(addInitializeSearchRoomQueue.call.length).toStrictEqual(1)
 
-  const db = await getTestMongoClient(globalThis)
-  const general = await collections(db)
+  const general = await collections(testDb)
     .rooms.find({ name: config.room.GENERAL_ROOM_NAME })
     .toArray()
 
@@ -56,9 +57,9 @@ test('init', async () => {
   expect(general[0].name).toStrictEqual(config.room.GENERAL_ROOM_NAME)
 })
 
-test('init twice', async () => {
-  await init()
-  await init()
+test('init twice', async ({ testDb }) => {
+  await init(testDb)
+  await init(testDb)
 
   const db = await getTestMongoClient(globalThis)
   const general = await collections(db)

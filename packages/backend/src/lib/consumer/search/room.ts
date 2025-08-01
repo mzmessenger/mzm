@@ -1,3 +1,4 @@
+import { MongoClient } from 'mongodb'
 import * as config from '../../../config.js'
 import { logger } from '../../logger.js'
 import { client as redis } from '../../redis.js'
@@ -11,26 +12,26 @@ import { RoomQueueType } from '../../../types.js'
 const STREAM = config.stream.ELASTICSEARCH_ROOMS
 const ELASTICSEARCH_ROOMS_GROUP = 'group:elasticsearch:rooms'
 
-export const initSearchRoomConsumerGroup = async () => {
+export async function initSearchRoomConsumerGroup() {
   await initConsumerGroup(STREAM, ELASTICSEARCH_ROOMS_GROUP)
 }
 
-export const searchRooms = async (ackid: string, messages: string[]) => {
+export async function searchRooms(db: MongoClient, ackid: string, messages: string[]) {
   if (messages[0] === RoomQueueType.INIT) {
     await initAlias()
     logger.info('[init:elasticsearch:rooms]')
   } else if (messages[0] === RoomQueueType.ROOM) {
     const roomIds = JSON.parse(messages[1])
 
-    await _insertRooms(roomIds)
+    await _insertRooms(db, roomIds)
 
     logger.info('[insert:elasticsearch:rooms]', roomIds.length)
   }
   await redis().xack(STREAM, ELASTICSEARCH_ROOMS_GROUP, ackid)
 }
 
-export const consumeSearchRooms = async () => {
-  const parser = createParser(searchRooms)
+export async function consumeSearchRooms(db: MongoClient) {
+  const parser = createParser(db, searchRooms)
   await consumeGroup(
     ELASTICSEARCH_ROOMS_GROUP,
     'consume-backend',

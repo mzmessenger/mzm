@@ -1,3 +1,4 @@
+import type { MongoClient } from 'mongodb'
 import type { Express, json } from 'express'
 import type QueryString from 'qs'
 import type { checkAccessToken as checkAccessTokenMiddleware } from '../middleware/index.js'
@@ -10,7 +11,6 @@ import * as config from '../config.js'
 import { getRequestUserId } from '../lib/utils.js'
 import {
   collections,
-  mongoClient,
   COLLECTION_NAMES,
   type Message,
   type User
@@ -26,9 +26,11 @@ import {
 export function createRoute(
   app: Express,
   {
+    db,
     jsonParser,
     checkAccessToken
   }: {
+    db: MongoClient,
     jsonParser: ReturnType<typeof json>
     checkAccessToken: typeof checkAccessTokenMiddleware
   }
@@ -39,7 +41,7 @@ export function createRoute(
     jsonParser,
     async (req, res) => {
       const userId = getRequestUserId(req)
-      const data = await createRoom(new ObjectId(userId), req.body)
+      const data = await createRoom(db, { userId: new ObjectId(userId), body: req.body })
       return response<API['/api/rooms']['POST']['response'][200]['body']>(data)(req, res)
     }
   )
@@ -50,7 +52,7 @@ export function createRoute(
     jsonParser,
     async (req, res) => {
       const userId = getRequestUserId(req)
-      const data = await exitRoom(new ObjectId(userId), req.body)
+      const data = await exitRoom(db, { userId: new ObjectId(userId), body: req.body })
       return response<API['/api/rooms/enter']['DELETE']['response'][200]['body']>(data)(req, res)
     }
   )
@@ -70,7 +72,7 @@ export function createRoute(
         parsedParams.data
       )
 
-      const data = await getUsers(params, req.query)
+      const data = await getUsers(db, { params, query: req.query })
       return response<API['/api/rooms/:roomId/users']['GET']['response'][200]['body']>(data)(req, res)
     }
   )
@@ -79,7 +81,7 @@ export function createRoute(
     '/api/rooms/search',
     checkAccessToken,
     async (req, res) => {
-      const data = await search(req.query)
+      const data = await search(db, { query: req.query })
       return response<API['/api/rooms/search']['GET']['response'][200]['body']>(data)(req, res)
     }
   )
@@ -87,34 +89,40 @@ export function createRoute(
 }
 
 export async function createRoom(
-  userId: ObjectId,
-  reqBody: unknown
+  db: MongoClient,
+  {
+    userId,
+    body
+  }: {
+    userId: ObjectId,
+    body: unknown
+  }
 ) {
   const api = apis['/api/rooms']['POST']
   const bodyParser = z.object({
     name: z.string().min(1)
   })
-  const parsedBody = bodyParser.safeParse(reqBody)
+  const parsedBody = bodyParser.safeParse(body)
   if (parsedBody.success === false) {
     throw new BadRequest({ reason: parsedBody.error.message })
   }
-  const body = api.request.body(parsedBody.data)
-  const name = body.name.trim()
+  const { name: _name } = api.request.body(parsedBody.data)
+  const name = _name.trim()
   const valid = isValidateRoomName(name)
   if (!valid.valid) {
     throw new BadRequest({ reason: valid.reason })
   }
 
-  const found = await collections(await mongoClient()).rooms.findOne({
+  const found = await collections(db).rooms.findOne({
     name
   })
   // @todo throw error if room is rocked
   if (found) {
-    await enterRoomLogic(userId, new ObjectId(found._id))
+    await enterRoomLogic(db, userId, new ObjectId(found._id))
     return { id: found._id.toHexString(), name: found.name }
   }
 
-  const created = await createRoomLogic(userId, name)
+  const created = await createRoomLogic(db, userId, name)
 
   // @todo
   if (!created) {
@@ -128,23 +136,28 @@ export async function createRoom(
 }
 
 export async function exitRoom(
-  userId: ObjectId,
-  reqBody: unknown
+  db: MongoClient,
+  {
+    userId,
+    body
+  }: {
+    userId: ObjectId,
+    body: unknown
+  }
 ): Promise<API['/api/rooms/enter']['DELETE']['response'][200]['body']> {
   const bodyParser = z.object({
     room: z.string().min(1)
   })
-  const parsedBody = bodyParser.safeParse(reqBody)
+  const parsedBody = bodyParser.safeParse(body)
   if (parsedBody.success === false) {
     throw new BadRequest({ reason: parsedBody.error.message })
   }
   const api = apis['/api/rooms/enter']['DELETE']
-  const body = api.request.body(parsedBody.data)
-  const room = popParam(body.room)
+  const { room: _room } = api.request.body(parsedBody.data)
+  const room = popParam(_room)
 
   const roomId = new ObjectId(room)
 
-  const db = await mongoClient()
   const general = await collections(db).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
@@ -164,8 +177,14 @@ export async function exitRoom(
 }
 
 export async function getUsers(
-  params: API['/api/rooms/:roomId/users']['GET']['request']['params'],
-  query: QueryString.ParsedQs
+  db: MongoClient,
+  {
+    params,
+    query
+  }: {
+    params: API['/api/rooms/:roomId/users']['GET']['request']['params'],
+    query: QueryString.ParsedQs
+  }
 ) {
   const api = apis['/api/rooms/:roomId/users']['GET']
   const queryParser = z.object({
@@ -200,7 +219,6 @@ export async function getUsers(
     })
   }
 
-  const db = await mongoClient()
   const countQuery = collections(db).enter.countDocuments({ roomId })
 
   type AggregateType = WithId<Message> & { user: WithId<User>[] }
@@ -233,7 +251,7 @@ export async function getUsers(
   return api.response[200].body({ count, users })
 }
 
-async function search(query: QueryString.ParsedQs) {
+async function search(db: MongoClient, { query }: { query: QueryString.ParsedQs }) {
   const api = apis['/api/rooms/search']['GET']
   const queryParser = z.object({
     query: z.string().optional(),
@@ -245,6 +263,6 @@ async function search(query: QueryString.ParsedQs) {
     throw new BadRequest({ reason: q.error.message })
   }
 
-  const res = await searchRoom(q.data.query ?? null, q.data.scroll ?? null)
+  const res = await searchRoom(db, q.data.query ?? null, q.data.scroll ?? null)
   return api.response[200].body(res)
 }

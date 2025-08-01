@@ -1,4 +1,5 @@
 import type { Express, json } from 'express'
+import type { MongoClient } from 'mongodb'
 import type { checkAccessToken as checkAccessTokenMiddleware } from '../middleware/index.js'
 import { z } from 'zod'
 import { ObjectId } from 'mongodb'
@@ -10,14 +11,16 @@ import {
   getRequestUserId,
   createUserIconPath
 } from '../lib/utils.js'
-import { collections, mongoClient } from '../lib/db.js'
+import { collections } from '../lib/db.js'
 
 export function createRoute(
   app: Express,
   {
+    db,
     jsonParser,
     checkAccessToken
   }: {
+    db: MongoClient
     jsonParser: ReturnType<typeof json>
     checkAccessToken: typeof checkAccessTokenMiddleware
   }
@@ -28,7 +31,7 @@ export function createRoute(
     jsonParser,
     async (req, res) => {
       const userId = getRequestUserId(req)
-      const data = await update(new ObjectId(userId), req.body)
+      const data = await update(db, new ObjectId(userId), req.body)
       return response<API['/api/user/@me']['PUT']['response'][200]['body']>(data)(req, res)
     }
   )
@@ -38,7 +41,7 @@ export function createRoute(
     checkAccessToken,
     async (req, res) => {
       const userId = getRequestUserId(req)
-      const data = await getUserInfo(new ObjectId(userId))
+      const data = await getUserInfo(db, new ObjectId(userId))
       return response<API['/api/user/@me']['GET']['response'][200]['body']>(data)(req, res)
     }
   )
@@ -46,7 +49,7 @@ export function createRoute(
   return app
 }
 
-export async function update(userId: ObjectId, body: unknown) {
+export async function update(db: MongoClient, userId: ObjectId, body: unknown) {
   const api = apis['/api/user/@me']['PUT']
   const bodyParser = z.object({
    account: z.string().min(1).trim()
@@ -60,8 +63,6 @@ export async function update(userId: ObjectId, body: unknown) {
     throw new BadRequest(api.response[400].body('account is not valid'))
   }
 
-
-  const db = await mongoClient()
   const user = await collections(db).users.findOne({
     account: account
   })
@@ -80,9 +81,8 @@ export async function update(userId: ObjectId, body: unknown) {
   return api.response[200].body({ id: userId.toHexString(), account: account })
 }
 
-export async function getUserInfo(userId: ObjectId) {
+export async function getUserInfo(db: MongoClient, userId: ObjectId) {
   const api = apis['/api/user/@me']['GET']
-  const db = await mongoClient()
   const user = await collections(db).users.findOne(
     { _id: userId },
     { projection: { account: 1, icon: 1 } }

@@ -1,18 +1,19 @@
 import { TO_CLIENT_CMD, ToClientType } from 'mzm-shared/src/type/socket'
 import { randomUUID } from 'node:crypto'
-import { ObjectId } from 'mongodb'
-import { collections, mongoClient } from '../../lib/db.js'
+import { ObjectId, type MongoClient } from 'mongodb'
+import { collections } from '../../lib/db.js'
 import { initUser } from '../../logic/users.js'
 
-export const connection = async (
+export async function connection(
+  db: MongoClient,
   userId: string,
   payload: {
     twitterUserName: string | null
     githubUserName: string | null
   }
-): Promise<ToClientType> => {
+): Promise<ToClientType> {
   const id = new ObjectId(userId)
-  const user = await collections(await mongoClient()).users.findOne({
+  const user = await collections(db).users.findOne({
     _id: id
   })
 
@@ -21,7 +22,7 @@ export const connection = async (
   if (!user || !user.account || user.account === '') {
     const account =
       payload.twitterUserName ?? payload.githubUserName ?? randomUUID()
-    await initUser(id, account)
+    await initUser(db, id, account)
     signup = true
   }
 

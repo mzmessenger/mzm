@@ -1,5 +1,5 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-import { vi, test, expect, describe, beforeEach, beforeAll } from 'vitest'
+/* eslint-disable @typescript-eslint/ban-ts-comment, no-empty-pattern */
+import { vi, test as baseTest, expect, describe, beforeEach } from 'vitest'
 vi.mock('../../lib/logger.js')
 vi.mock('../../logic/messages.js')
 vi.mock('../../lib/provider/index.js')
@@ -15,7 +15,9 @@ import {
   TO_SERVER_CMD,
   FilterSocketToBackendType
 } from 'mzm-shared/src/type/socket'
-import { getTestMongoClient } from '../../../test/testUtil.js'
+import { 
+  getTestMongoClient
+} from '../../../test/testUtil.js'
 import {
   collections,
   RoomStatusEnum,
@@ -32,20 +34,20 @@ import {
 import * as config from '../../config.js'
 import * as socket from './socket.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../../lib/db.js')
-  const { getTestMongoClient } = await import('../../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test('sendMessage', async () => {
+test('sendMessage', async ({ testDb }) => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({
+  await collections(testDb).users.insertOne({
     _id: userId,
     account: 'test',
     roomOrder: []
@@ -66,7 +68,7 @@ test('sendMessage', async () => {
   const addUnreadQueueMock = vi.mocked(addUnreadQueue)
   addUnreadQueueMock.mockClear()
 
-  await socket.sendMessage(userId.toHexString(), {
+  await socket.sendMessage(testDb, userId.toHexString(), {
     cmd: 'message:send',
     message: message,
     room: roomId.toHexString()
@@ -75,26 +77,25 @@ test('sendMessage', async () => {
   expect(saveMessageMock.mock.calls.length).toStrictEqual(1)
   const args = saveMessageMock.mock.calls[0]
 
-  expect(args[0]).toStrictEqual(message)
-  expect(args[1]).toStrictEqual(roomId.toHexString())
-  expect(args[2]).toStrictEqual(userId.toHexString())
+  expect(args[1]).toStrictEqual(message)
+  expect(args[2]).toStrictEqual(roomId.toHexString())
+  expect(args[3]).toStrictEqual(userId.toHexString())
 
   expect(addUnreadQueueMock.mock.calls.length).toStrictEqual(1)
   expect(addQueueToUsersMock.mock.calls.length).toStrictEqual(1)
 })
 
-test('fail: sendMessage', async () => {
+test('fail: sendMessage', async ({ testDb }) => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({
+  await collections(testDb).users.insertOne({
     _id: userId,
     account: 'test',
     roomOrder: []
   })
 
-  const beforeCount = await collections(db).messages.countDocuments()
+  const beforeCount = await collections(testDb).messages.countDocuments()
   const message = 'a'.repeat(config.message.MAX_MESSAGE_LENGTH + 1)
 
   const saveMessageMock = vi.mocked(logicMessages.saveMessage)
@@ -104,13 +105,13 @@ test('fail: sendMessage', async () => {
   const addUnreadQueueMock = vi.mocked(addUnreadQueue)
   addUnreadQueueMock.mockClear()
 
-  await socket.sendMessage(userId.toHexString(), {
+  await socket.sendMessage(testDb, userId.toHexString(), {
     cmd: 'message:send',
     message: message,
     room: roomId.toHexString()
   })
 
-  const afterCount = await collections(db).messages.countDocuments()
+  const afterCount = await collections(testDb).messages.countDocuments()
 
   expect(beforeCount).toStrictEqual(afterCount)
   expect(saveMessageMock.mock.calls.length).toStrictEqual(1)
@@ -118,19 +119,18 @@ test('fail: sendMessage', async () => {
   expect(addQueueToUsersMock.mock.calls.length).toStrictEqual(0)
 })
 
-test('modifyMessage', async () => {
+test('modifyMessage', async ({ testDb }) => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
   const createdAt = new Date()
 
-  const db = await getTestMongoClient(globalThis)
-  const user = collections(db).users.insertOne({
+  const user = collections(testDb).users.insertOne({
     _id: userId,
     account: 'test',
     roomOrder: []
   })
 
-  const message = collections(db).messages.insertOne({
+  const message = collections(testDb).messages.insertOne({
     roomId,
     userId,
     updated: false,
@@ -146,13 +146,13 @@ test('modifyMessage', async () => {
   const addQueueToUsersMock = vi.mocked(addQueueToUsers)
   addQueueToUsersMock.mockClear()
 
-  await socket.modifyMessage(userId.toHexString(), {
+  await socket.modifyMessage(testDb, userId.toHexString(), {
     cmd: 'message:modify',
     id: created.insertedId.toHexString(),
     message: 'modify'
   })
 
-  const updated = await collections(db).messages.findOne({
+  const updated = await collections(testDb).messages.findOne({
     _id: created.insertedId
   })
 
@@ -166,18 +166,17 @@ test('modifyMessage', async () => {
   expect(addQueueToUsersMock.mock.calls.length).toStrictEqual(1)
 })
 
-test('readMessage', async () => {
+test('readMessage', async ({ testDb }) => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
-  const db = await getTestMongoClient(globalThis)
 
   await Promise.all([
-    collections(db).users.insertOne({
+    collections(testDb).users.insertOne({
       _id: userId,
       account: 'test',
       roomOrder: []
     }),
-    collections(db).enter.insertOne({
+    collections(testDb).enter.insertOne({
       userId,
       roomId,
       unreadCounter: 10,
@@ -188,12 +187,12 @@ test('readMessage', async () => {
   const addMessageQueueMock = vi.mocked(addMessageQueue)
   addMessageQueueMock.mockClear()
 
-  await socket.readMessage(userId.toHexString(), {
+  await socket.readMessage(testDb, userId.toHexString(), {
     cmd: 'rooms:read',
     room: roomId.toHexString()
   })
 
-  const updated = await collections(db).enter.findOne({ userId, roomId })
+  const updated = await collections(testDb).enter.findOne({ userId, roomId })
 
   expect(updated?.unreadCounter).toStrictEqual(0)
   expect(updated?.replied).toStrictEqual(0)
@@ -201,11 +200,10 @@ test('readMessage', async () => {
   expect(addMessageQueueMock.mock.calls.length).toStrictEqual(1)
 })
 
-test('iine', async () => {
+test('iine', async ({ testDb }) => {
   const userId = new ObjectId()
 
-  const db = await getTestMongoClient(globalThis)
-  const seed = await collections(db).messages.insertOne({
+  const seed = await collections(testDb).messages.insertOne({
     roomId: new ObjectId(),
     userId,
     message: 'iine',
@@ -216,37 +214,36 @@ test('iine', async () => {
     updatedAt: null
   })
 
-  await socket.iine(userId.toHexString(), {
+  await socket.iine(testDb, userId.toHexString(), {
     cmd: 'message:iine',
     id: seed.insertedId.toHexString()
   })
 
-  const message = await collections(db).messages.findOne({
+  const message = await collections(testDb).messages.findOne({
     _id: seed.insertedId
   })
 
   expect(message?.iine).toStrictEqual(2)
 })
 
-test('openRoom', async () => {
+test('openRoom', async ({ testDb }) => {
   const queueMock = vi.mocked(addUpdateSearchRoomQueue)
   queueMock.mockClear()
 
   const userId = new ObjectId()
 
-  const db = await getTestMongoClient(globalThis)
-  const insert = await collections(db).rooms.insertOne({
+  const insert = await collections(testDb).rooms.insertOne({
     name: userId.toHexString(),
     status: RoomStatusEnum.CLOSE,
     createdBy: 'system'
   })
 
-  await socket.openRoom(userId.toHexString(), {
+  await socket.openRoom(testDb, userId.toHexString(), {
     cmd: TO_SERVER_CMD.ROOMS_OPEN,
     roomId: insert.insertedId.toHexString()
   })
 
-  const updated = await collections(db).rooms.findOne({
+  const updated = await collections(testDb).rooms.findOne({
     _id: insert.insertedId
   })
 
@@ -255,25 +252,24 @@ test('openRoom', async () => {
   expect(queueMock.call.length).toStrictEqual(1)
 })
 
-test('closeRoom', async () => {
+test('closeRoom', async ({ testDb }) => {
   const queueMock = vi.mocked(addUpdateSearchRoomQueue)
   queueMock.mockClear()
 
   const userId = new ObjectId()
 
-  const db = await getTestMongoClient(globalThis)
-  const insert = await collections(db).rooms.insertOne({
+  const insert = await collections(testDb).rooms.insertOne({
     name: userId.toHexString(),
     status: RoomStatusEnum.OPEN,
     createdBy: 'system'
   })
 
-  await socket.closeRoom(userId.toHexString(), {
+  await socket.closeRoom(testDb, userId.toHexString(), {
     cmd: TO_SERVER_CMD.ROOMS_CLOSE,
     roomId: insert.insertedId.toHexString()
   })
 
-  const updated = await collections(db).rooms.findOne({
+  const updated = await collections(testDb).rooms.findOne({
     _id: insert.insertedId
   })
 
@@ -282,7 +278,7 @@ test('closeRoom', async () => {
   expect(queueMock.call.length).toStrictEqual(1)
 })
 
-test('sendVoteAnswer (first time)', async () => {
+test('sendVoteAnswer (first time)', async ({ testDb }) => {
   const userId = new ObjectId()
   const vote: Message['vote'] = {
     questions: [{ text: '4/1' }, { text: '4/2' }, { text: '4/3' }],
@@ -290,8 +286,7 @@ test('sendVoteAnswer (first time)', async () => {
     type: VoteTypeEnum.CHOICE
   }
 
-  const db = await getTestMongoClient(globalThis)
-  const message = await collections(db).messages.insertOne({
+  const message = await collections(testDb).messages.insertOne({
     message: 'vote test',
     iine: 0,
     roomId: new ObjectId(),
@@ -303,21 +298,21 @@ test('sendVoteAnswer (first time)', async () => {
     vote: vote
   })
 
-  await socket.sendVoteAnswer(userId.toHexString(), {
+  await socket.sendVoteAnswer(testDb, userId.toHexString(), {
     cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
     messageId: message.insertedId.toHexString(),
     index: 0,
     answer: VoteAnswerEnum.OK
   })
 
-  const answers = await collections(db)
+  const answers = await collections(testDb)
     .voteAnswer.find({ messageId: message.insertedId })
     .toArray()
 
   expect(answers.length).toStrictEqual(1)
 })
 
-test('sendVoteAnswer (second time)', async () => {
+test('sendVoteAnswer (second time)', async ({ testDb }) => {
   const userId = new ObjectId()
 
   const vote: Message['vote'] = {
@@ -326,8 +321,7 @@ test('sendVoteAnswer (second time)', async () => {
     type: VoteTypeEnum.CHOICE
   }
 
-  const db = await getTestMongoClient(globalThis)
-  const message = await collections(db).messages.insertOne({
+  const message = await collections(testDb).messages.insertOne({
     message: 'vote test',
     iine: 0,
     roomId: new ObjectId(),
@@ -339,34 +333,34 @@ test('sendVoteAnswer (second time)', async () => {
     vote: vote
   })
 
-  const insertVote = await collections(db).voteAnswer.insertOne({
+  const insertVote = await collections(testDb).voteAnswer.insertOne({
     messageId: message.insertedId,
     userId: userId,
     index: 0,
     answer: VoteAnswerEnum.OK
   })
 
-  const before = await collections(db)
+  const before = await collections(testDb)
     .voteAnswer.find({ messageId: message.insertedId })
     .toArray()
 
   expect(before.length).toStrictEqual(1)
   expect(before[0].answer).toStrictEqual(VoteAnswerEnum.OK)
 
-  await socket.sendVoteAnswer(userId.toHexString(), {
+  await socket.sendVoteAnswer(testDb, userId.toHexString(), {
     cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
     messageId: message.insertedId.toHexString(),
     index: 0,
     answer: VoteAnswerEnum.NG
   })
 
-  const answers = await collections(db)
+  const answers = await collections(testDb)
     .voteAnswer.find({ messageId: message.insertedId })
     .toArray()
 
   expect(answers.length).toStrictEqual(1)
 
-  const updated = await collections(db).voteAnswer.findOne({
+  const updated = await collections(testDb).voteAnswer.findOne({
     _id: insertVote.insertedId
   })
 
@@ -401,29 +395,28 @@ describe('sendVoteAnswer: BadRequest', () => {
     messageId = message.insertedId
   })
 
-  test('no messageId', async () => {
-    const db = await getTestMongoClient(globalThis)
-    const before = await collections(db)
+  test('no messageId', async ({ testDb }) => {
+    const before = await collections(testDb)
       .voteAnswer.find({ messageId: messageId! })
       .toArray()
 
-    await socket.sendVoteAnswer(userId!.toHexString(), {
+    await socket.sendVoteAnswer(testDb, userId!.toHexString(), {
       cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
       index: 0,
       answer: VoteAnswerEnum.OK
     } as FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_SEND>)
 
-    const after = await collections(db)
+    const after = await collections(testDb)
       .voteAnswer.find({ messageId: messageId! })
       .toArray()
 
     expect(before.length).toStrictEqual(after.length)
   })
 
-  test.each([
+  test.for([
     ['no index', TO_SERVER_CMD.VOTE_ANSWER_SEND, VoteAnswerEnum.OK, undefined]
-  ])('%s', async (_label, cmd, answer, index) => {
-    await socket.sendVoteAnswer(userId!.toHexString(), {
+  ] as const)('%s', async ([, cmd, answer, index], { testDb }) => {
+    await socket.sendVoteAnswer(testDb, userId!.toHexString(), {
       messageId: messageId!.toHexString(),
       cmd,
       answer,
@@ -431,8 +424,7 @@ describe('sendVoteAnswer: BadRequest', () => {
       index
     })
 
-    const db = await getTestMongoClient(globalThis)
-    const answers = await collections(db)
+    const answers = await collections(testDb)
       .voteAnswer.find({
         messageId: messageId!
       })
@@ -442,7 +434,7 @@ describe('sendVoteAnswer: BadRequest', () => {
   })
 })
 
-test('removeVoteAnswer', async () => {
+test('removeVoteAnswer', async ({ testDb }) => {
   const userId = new ObjectId()
 
   const vote: Message['vote'] = {
@@ -451,8 +443,7 @@ test('removeVoteAnswer', async () => {
     type: VoteTypeEnum.CHOICE
   }
 
-  const db = await getTestMongoClient(globalThis)
-  const message = await collections(db).messages.insertOne({
+  const message = await collections(testDb).messages.insertOne({
     message: 'vote test',
     iine: 0,
     roomId: new ObjectId(),
@@ -464,41 +455,41 @@ test('removeVoteAnswer', async () => {
     vote: vote
   })
 
-  await collections(db).voteAnswer.insertOne({
+  await collections(testDb).voteAnswer.insertOne({
     messageId: message.insertedId,
     userId: userId,
     index: 0,
     answer: VoteAnswerEnum.OK
   })
 
-  const before = await collections(db)
+  const before = await collections(testDb)
     .voteAnswer.find({ messageId: message.insertedId })
     .toArray()
 
   expect(before.length).toStrictEqual(1)
   expect(before[0].answer).toStrictEqual(VoteAnswerEnum.OK)
 
-  await socket.removeVoteAnswer(userId.toHexString(), {
+  await socket.removeVoteAnswer(testDb, userId.toHexString(), {
     cmd: TO_SERVER_CMD.VOTE_ANSWER_REMOVE,
     messageId: message.insertedId.toHexString(),
     index: 0
   })
 
-  const answers = await collections(db)
+  const answers = await collections(testDb)
     .voteAnswer.find({ messageId: message.insertedId })
     .toArray()
 
   expect(answers.length).toStrictEqual(0)
 })
 
-test('fail: updateRoomDescription over length', async () => {
+test('fail: updateRoomDescription over length', async ({ testDb }) => {
   const userId = new ObjectId()
   const roomId = new ObjectId()
 
   const addQueueToUsersMock = vi.mocked(addQueueToUsers)
   addQueueToUsersMock.mockClear()
 
-  await socket.updateRoomDescription(userId.toHexString(), {
+  await socket.updateRoomDescription(testDb, userId.toHexString(), {
     cmd: TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION,
     description: 'a'.repeat(config.room.MAX_ROOM_DESCRIPTION_LENGTH + 1),
     roomId: roomId.toHexString()

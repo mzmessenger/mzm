@@ -1,7 +1,7 @@
-import { ObjectId } from 'mongodb'
+import { type MongoClient, ObjectId } from 'mongodb'
 import * as config from '../../config.js'
 import { UnreadQueue } from '../../types.js'
-import { collections, mongoClient } from '../db.js'
+import { collections } from '../db.js'
 import { client } from '../redis.js'
 import { logger } from '../logger.js'
 import { initConsumerGroup, createParser, consumeGroup } from './common.js'
@@ -9,14 +9,14 @@ import { initConsumerGroup, createParser, consumeGroup } from './common.js'
 const STREAM = config.stream.UNREAD
 const UNREAD_GROUP = 'group:unread'
 
-export const initUnreadConsumerGroup = async () => {
+export async function initUnreadConsumerGroup() {
   await initConsumerGroup(STREAM, UNREAD_GROUP)
 }
 
-export const increment = async (ackid: string, messages: string[]) => {
+export async function increment(db: MongoClient, ackid: string, messages: string[]) {
   const queue = JSON.parse(messages[1]) as UnreadQueue
 
-  await collections(await mongoClient()).enter.updateMany(
+  await collections(db).enter.updateMany(
     { roomId: new ObjectId(queue.roomId), unreadCounter: { $lt: 100 } },
     { $inc: { unreadCounter: 1 } }
   )
@@ -25,7 +25,7 @@ export const increment = async (ackid: string, messages: string[]) => {
   logger.info('[unread:increment]', queue.roomId)
 }
 
-export const consumeUnread = async () => {
-  const parser = createParser(increment)
+export async function consumeUnread(db: MongoClient) {
+  const parser = createParser(db, increment)
   await consumeGroup(UNREAD_GROUP, 'consume-backend', STREAM, parser)
 }

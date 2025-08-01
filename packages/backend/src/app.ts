@@ -1,3 +1,4 @@
+import type { MongoClient } from 'mongodb'
 import express from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
@@ -20,7 +21,7 @@ import { checkAccessToken } from './middleware/index.js'
 
 const jsonParser = express.json({ limit: '1mb' })
 
-export const createApp = () => {
+export function createApp(db: MongoClient) {
   const app = express()
   app.use(helmet())
   app.use(
@@ -29,9 +30,9 @@ export const createApp = () => {
     })
   )
 
-  rooms.createRoute(app, { jsonParser, checkAccessToken })
-  user.createRoute(app, { jsonParser, checkAccessToken })
-  icon.createRoute(app, { checkAccessToken })
+  rooms.createRoute(app, { db, jsonParser, checkAccessToken })
+  user.createRoute(app, { db, jsonParser, checkAccessToken })
+  icon.createRoute(app, { db, checkAccessToken })
 
   app.get('/api/socket', checkAccessToken, (req, res) => {
     const user = getRequestUserId(req)
@@ -47,7 +48,7 @@ export const createApp = () => {
 
     const twitterUserName = getRequestTwitterUserName(req)
     const githubUserName = getRequestGithubUserName(req)
-    connection(user, {
+    connection(db, user, {
       twitterUserName,
       githubUserName
     }).then((r) => {
@@ -62,7 +63,7 @@ export const createApp = () => {
   })
 
   app.post('/api/socket', checkAccessToken, jsonParser, async (req, res) => {
-    const data = await internal.socket(req)
+    const data = await internal.socket(req, db)
     return response(data)(req, res)
   })
 

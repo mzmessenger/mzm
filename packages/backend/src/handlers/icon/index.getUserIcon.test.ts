@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
+/* eslint-disable no-empty-pattern */
 import type { IncomingHttpHeaders } from 'http'
-import { vi, test, expect, beforeAll } from 'vitest'
+import { vi, test as baseTest, expect } from 'vitest'
 vi.mock('undici', () => {
   return { request: vi.fn() }
 })
@@ -27,21 +27,21 @@ import { getUserIcon } from './index.js'
 
 type ResponseBody = Awaited<ReturnType<typeof request>>['body']
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../../lib/db.js')
-  const { getTestMongoClient } = await import('../../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test('getUserIcon from storage', async () => {
+test('getUserIcon from storage', async ({ testDb }) => {
   const userId = new ObjectId()
   const account = userId.toHexString()
   const version = '12345'
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({
+  await collections(testDb).users.insertOne({
     _id: userId,
     account,
     roomOrder: [],
@@ -65,7 +65,7 @@ test('getUserIcon from storage', async () => {
   })
   getObjectMock.mockReturnValueOnce(getObject)
 
-  const res = await getUserIcon(account, version)
+  const res = await getUserIcon(testDb, {account, version })
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(getObjectMock.mock.calls.length).toStrictEqual(1)
@@ -81,12 +81,12 @@ test('getUserIcon from storage', async () => {
   expect(res.stream).toStrictEqual(readableStream)
 })
 
-test.each([
-  [null, '1234'], // no version
+test.for([
+  [undefined, '1234'], // no version
   ['1234', '4321'] // different version
 ])(
   'getUserIcon from identicon (user: %s, icon version: %s, request icon version: %s)',
-  async (iconVersion, requestVersion) => {
+  async ([iconVersion, requestVersion], { testDb }) => {
     const id = new ObjectId()
     const account = id.toHexString()
     const user: WithId<User> = {
@@ -97,8 +97,7 @@ test.each([
     if (iconVersion) {
       user.icon = { key: 'iconkey', version: iconVersion }
     }
-    const db = await getTestMongoClient(globalThis)
-    await collections(db).users.insertOne(user)
+    await collections(testDb).users.insertOne(user)
 
     const headObjectMock = vi.mocked(storage.headObject).mockClear()
     const getObjectMock = vi.mocked(storage.getObject).mockClear()
@@ -115,14 +114,12 @@ test.each([
       headers,
       body: readableStream,
       statusCode: 200,
-      // @ts-expect-error
-      trailers: undefined,
+      trailers: {},
       opaque: undefined,
-      // @ts-expect-error
-      context: undefined
+      context: {}
     })
 
-    const res = await getUserIcon(account, requestVersion)
+    const res = await getUserIcon(testDb, { account, version: requestVersion })
 
     expect(headObjectMock.mock.calls.length).toStrictEqual(0)
     expect(getObjectMock.mock.calls.length).toStrictEqual(0)
@@ -134,7 +131,7 @@ test.each([
   }
 )
 
-test('getUserIcon from identicon: not found on storage', async () => {
+test('getUserIcon from identicon: not found on storage', async ({ testDb }) => {
   const id = new ObjectId()
   const account = id.toHexString()
   const user: WithId<User> = {
@@ -146,8 +143,7 @@ test('getUserIcon from identicon: not found on storage', async () => {
       version: '1234'
     }
   }
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne(user)
+  await collections(testDb).users.insertOne(user)
 
   const headObjectMock = vi.mocked(storage.headObject).mockClear()
   headObjectMock.mockRejectedValueOnce({ statusCode: 404 })
@@ -164,14 +160,12 @@ test('getUserIcon from identicon: not found on storage', async () => {
     headers,
     body: readableStream,
     statusCode: 200,
-    // @ts-expect-error
-    trailers: undefined,
+    trailers: {},
     opaque: undefined,
-    // @ts-expect-error
-    context: undefined
+    context: {}
   })
 
-  const res = await getUserIcon(account, user?.icon?.version ?? '')
+  const res = await getUserIcon(testDb, { account, version: user?.icon?.version ?? '' })
 
   expect(headObjectMock.mock.calls.length).toStrictEqual(1)
   expect(res.headers.ETag).toStrictEqual(headers.ETag)
@@ -182,11 +176,11 @@ test('getUserIcon from identicon: not found on storage', async () => {
   expect(res.stream).toStrictEqual(readableStream)
 })
 
-test('getUserIcon BadRequest: no account', async () => {
+test('getUserIcon BadRequest: no account', async ({ testDb }) => {
   expect.assertions(1)
 
   try {
-    await getUserIcon('', '12345')
+    await getUserIcon(testDb, { account: '', version: '12345' })
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

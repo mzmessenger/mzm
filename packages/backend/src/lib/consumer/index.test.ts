@@ -1,4 +1,6 @@
-import { vi, test, expect } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
+import { getTestMongoClient } from '../../../test/testUtil.js'
 vi.mock('./remove.js', () => {
   return {
     initRemoveConsumerGroup: vi.fn(),
@@ -31,7 +33,7 @@ vi.mock('./job.js', () => {
 })
 vi.mock('./vote.js', () => {
   return {
-    initRenameConsumerGroup: vi.fn(),
+    initVoteConsumerGroup: vi.fn(),
     consumeVote: vi.fn()
   }
 })
@@ -51,7 +53,16 @@ import * as consumeJob from './job.js'
 import * as consumeVote from './vote.js'
 import * as consumeMessage from './message.js'
 
-test('init', async () => {
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
+})
+
+test('init', async ({ testDb }) => {
   const mocks = [
     [consumerRemove.initRemoveConsumerGroup, consumerRemove.consumeRemove],
     [consumerUnread.initUnreadConsumerGroup, consumerUnread.consumeUnread],
@@ -61,7 +72,7 @@ test('init', async () => {
       consumeSearchRoom.consumeSearchRooms
     ],
     [consumeJob.initJobConsumerGroup, consumeJob.consumeJob],
-    [consumeVote.initRenameConsumerGroup, consumeVote.consumeVote],
+    [consumeVote.initVoteConsumerGroup, consumeVote.consumeVote],
     [consumeMessage.initMessageConsumerGroup, consumeMessage.consumeMessage]
   ]
 
@@ -76,7 +87,7 @@ test('init', async () => {
     consumeMock.mockResolvedValue()
   }
 
-  await initConsumer()
+  await initConsumer(testDb)
 
   for (const [init, consume] of mocks) {
     expect(init.call.length).toStrictEqual(1)

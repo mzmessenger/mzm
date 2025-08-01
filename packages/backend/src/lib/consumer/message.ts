@@ -1,3 +1,4 @@
+import { MongoClient } from 'mongodb'
 import * as config from '../../config.js'
 import { client } from '../redis.js'
 import { logger } from '../logger.js'
@@ -12,11 +13,11 @@ type ReceiveQueue = {
 const STREAM = config.stream.MESSAGE
 const GROUP = 'group:backend:message'
 
-export const initMessageConsumerGroup = async () => {
+export async function initMessageConsumerGroup() {
   await initConsumerGroup(STREAM, GROUP)
 }
 
-export const message = async (ackid: string, messages: string[]) => {
+export async function message(db: MongoClient, ackid: string, messages: string[]) {
   const message = messages[1]
   const queue = JSON.parse(message) as ReceiveQueue
   logger.info({
@@ -29,7 +30,7 @@ export const message = async (ackid: string, messages: string[]) => {
   await client().xack(STREAM, GROUP, ackid)
 }
 
-export const consumeMessage = async () => {
-  const parser = createParser(message)
+export async function consumeMessage(db: MongoClient) {
+  const parser = createParser(db, message)
   await consumeGroup(GROUP, 'consume-backend', STREAM, parser)
 }

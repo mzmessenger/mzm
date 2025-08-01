@@ -1,4 +1,5 @@
-import { vi, test, expect, beforeAll } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
 vi.mock('../lib/logger')
 vi.mock('../lib/redis', () => {
   return {
@@ -23,23 +24,24 @@ import { getTestMongoClient } from '../../test/testUtil.js'
 import { collections } from '../lib/db.js'
 import { createRoom } from './rooms.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient } = await import('../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test.each([
+test.for([
   ['aaa', 'aaa'],
   ['日本語　', '日本語'],
   ['🍣', '🍣']
-])('createRoom success (%s, %s)', async (name, createdName) => {
+])('createRoom success (%s, %s)', async ([name, createdName], { testDb }) => {
   const userId = new ObjectId()
   const body = { name }
 
-  const { id } = await createRoom(userId, body)
+  const { id } = await createRoom(testDb, { userId, body })
 
   const db = await getTestMongoClient(globalThis)
   const created = await collections(db).rooms.findOne({
@@ -50,17 +52,17 @@ test.each([
   expect(created?.createdBy).toStrictEqual(userId.toHexString())
 })
 
-test.each([
+test.for([
   ['slash', '/hoge/fuga'],
   ['00A0', '\u00A0']
-])('createRoom fail', async (_label, name) => {
+])('createRoom fail', async ([, name], { testDb }) => {
   expect.assertions(1)
 
   const userId = new ObjectId()
   const body = { name }
 
   try {
-    await createRoom(userId, body)
+    await createRoom(testDb, { userId, body })
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

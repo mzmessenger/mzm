@@ -1,4 +1,5 @@
-import { vi, test, expect, beforeAll } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
 vi.mock('../../lib/image.js')
 vi.mock('../../lib/logger.js')
 vi.mock('../../lib/storage.js')
@@ -20,19 +21,19 @@ import * as config from '../../config.js'
 import { uploadUserIcon } from './index.js'
 import { sizeOf } from '../../lib/image.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../../lib/db.js')
-  const { getTestMongoClient } = await import('../../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test('uploadUserIcon', async () => {
+test('uploadUserIcon', async ({ testDb }) => {
   const userId = new ObjectId()
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({
+  await collections(testDb).users.insertOne({
     _id: userId,
     account: userId.toString(),
     roomOrder: []
@@ -59,17 +60,17 @@ test('uploadUserIcon', async () => {
     path: '/path/to/file'
   }
 
-  const res = await uploadUserIcon(userId, file)
+  const res = await uploadUserIcon(testDb, { userId, file })
 
-  const user = await collections(db).users.findOne({ _id: userId })
+  const user = await collections(testDb).users.findOne({ _id: userId })
 
   expect(typeof user?.icon?.version).toStrictEqual('string')
   expect(res.version).toStrictEqual(user?.icon?.version)
 })
 
-test.each([['image/gif'], ['image/svg+xml']])(
+test.for([['image/gif'], ['image/svg+xml']])(
   'uploadUserIcon: fail file type (%s)',
-  async (mimetype) => {
+  async ([mimetype], { testDb }) => {
     expect.assertions(1)
 
     const userId = new ObjectId()
@@ -84,24 +85,24 @@ test.each([['image/gif'], ['image/svg+xml']])(
     }
 
     try {
-      await uploadUserIcon(userId, file)
+      await uploadUserIcon(testDb, { userId, file })
     } catch (e) {
       expect(e instanceof BadRequest).toStrictEqual(true)
     }
   }
 )
 
-test('uploadUserIcon: empty file', async () => {
+test('uploadUserIcon: empty file', async ({ testDb }) => {
   expect.assertions(1)
 
   try {
-    await uploadUserIcon(new ObjectId(), undefined)
+    await uploadUserIcon(testDb, { userId: new ObjectId(), file: undefined })
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test('uploadUserIcon validation: size over', async () => {
+test('uploadUserIcon validation: size over', async ({ testDb }) => {
   expect.assertions(1)
 
   const userId = new ObjectId()
@@ -123,13 +124,13 @@ test('uploadUserIcon validation: size over', async () => {
   })
 
   try {
-    await uploadUserIcon(userId, file)
+    await uploadUserIcon(testDb, { userId, file })
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test('uploadUserIcon validation: not square', async () => {
+test('uploadUserIcon validation: not square', async ({ testDb }) => {
   expect.assertions(1)
 
   const userId = new ObjectId()
@@ -151,7 +152,7 @@ test('uploadUserIcon validation: not square', async () => {
   })
 
   try {
-    await uploadUserIcon(userId, file)
+    await uploadUserIcon(testDb, { userId, file })
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }

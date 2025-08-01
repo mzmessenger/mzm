@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
-import { vi, test, expect, beforeAll } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
+import { getTestMongoClient } from '../../test/testUtil.js'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/redis.js', () => {
   return {
@@ -21,32 +22,30 @@ vi.mock('../lib/db.js', async () => {
 import type { API } from 'mzm-shared/src/api/universal'
 import { ObjectId, WithId } from 'mongodb'
 import { BadRequest } from 'mzm-shared/src/lib/errors'
-import { getTestMongoClient } from '../../test/testUtil.js'
 import * as config from '../config.js'
 import { collections, type User, type Enter } from '../lib/db.js'
 import { initGeneral } from '../logic/rooms.js'
 import { exitRoom, getUsers } from './rooms.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient } = await import('../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test('exitRoom fail (general)', async () => {
-  expect.assertions(1)
-  await initGeneral()
+test('exitRoom fail (general)', async ({ testDb }) => {
+  await initGeneral(testDb)
 
   const userId = new ObjectId()
 
-  const db = await getTestMongoClient(globalThis)
-  const general = await collections(db).rooms.findOne({
+  const general = await collections(testDb).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
 
-  await collections(db).enter.insertOne({
+  await collections(testDb).enter.insertOne({
     userId: userId,
     roomId: general!._id,
     unreadCounter: 0,
@@ -56,15 +55,14 @@ test('exitRoom fail (general)', async () => {
   const body = { room: general!._id.toHexString() }
 
   try {
-    await exitRoom(userId, body)
+    await exitRoom(testDb, { userId, body })
+    expect.unreachable('Should not pass build')
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test.each([[null, '']])('exitRoom BadRequest (%s)', async (arg) => {
-  expect.assertions(1)
-
+test.for([null, ''])('exitRoom BadRequest (%s)', async (arg, { testDb }) => {
   const body:
     | API['/api/rooms/enter']['DELETE']['request']['body']
     | { room: null } = {
@@ -72,13 +70,14 @@ test.each([[null, '']])('exitRoom BadRequest (%s)', async (arg) => {
   }
 
   try {
-    await exitRoom(new ObjectId(), body as any)
+    await exitRoom(testDb, { userId: new ObjectId(), body: body as unknown })
+    expect.unreachable('Should not pass build')
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test('getUsers', async () => {
+test('getUsers', async ({ testDb }) => {
   const roomId = new ObjectId()
 
   const overNum = 4
@@ -104,15 +103,14 @@ test('getUsers', async () => {
       users.push(user)
     }
   }
-  const db = await getTestMongoClient(globalThis)
   await Promise.all([
-    collections(db).enter.insertMany(insert),
-    collections(db).users.insertMany(users)
+    collections(testDb).enter.insertMany(insert),
+    collections(testDb).users.insertMany(users)
   ])
 
   const userIds = users.map((u) => u._id)
   const userMap = (
-    await collections(db)
+    await collections(testDb)
       .users.find({ _id: { $in: userIds } })
       .toArray()
   ).reduce((map, current) => {
@@ -122,7 +120,7 @@ test('getUsers', async () => {
 
   const params = { roomId: roomId.toHexString() }
 
-  let res = await getUsers(params, {})
+  let res = await getUsers(testDb, { params, query: {} })
 
   expect(res.count).toStrictEqual(config.room.USER_LIMIT + overNum)
   expect(res.users.length).toStrictEqual(config.room.USER_LIMIT)
@@ -139,7 +137,7 @@ test('getUsers', async () => {
 
   // threshold
   const query = { threshold: res.users[res.users.length - 1].enterId }
-  res = await getUsers(params, query)
+  res = await getUsers(testDb, { params, query })
 
   expect(res.count).toStrictEqual(config.room.USER_LIMIT + overNum)
   expect(res.users.length).toStrictEqual(overNum)

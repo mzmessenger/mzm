@@ -1,3 +1,4 @@
+import { type MongoClient } from 'mongodb'
 import { initRemoveConsumerGroup, consumeRemove } from './remove.js'
 import { initUnreadConsumerGroup, consumeUnread } from './unread.js'
 import { initReplyConsumerGroup, consumeReply } from './reply.js'
@@ -6,25 +7,25 @@ import {
   consumeSearchRooms
 } from './search/room.js'
 import { initJobConsumerGroup, consumeJob } from './job.js'
-import { initRenameConsumerGroup, consumeVote } from './vote.js'
+import { initVoteConsumerGroup, consumeVote } from './vote.js'
 import { initMessageConsumerGroup, consumeMessage } from './message.js'
 
-export async function initConsumer() {
+export async function initConsumer(db: MongoClient) {
   await Promise.all([
     initRemoveConsumerGroup(),
     initUnreadConsumerGroup(),
     initReplyConsumerGroup(),
     initSearchRoomConsumerGroup(),
     initJobConsumerGroup(),
-    initRenameConsumerGroup(),
+    initVoteConsumerGroup(),
     initMessageConsumerGroup()
   ])
 
-  consumeRemove()
-  consumeUnread()
-  consumeReply()
-  consumeSearchRooms()
-  consumeJob()
-  consumeVote()
-  consumeMessage()
+  consumeRemove(db)
+  consumeUnread(db)
+  consumeReply(db)
+  consumeSearchRooms(db)
+  consumeJob(db)
+  consumeVote(db)
+  consumeMessage(db)
 }

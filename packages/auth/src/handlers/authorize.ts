@@ -1,6 +1,7 @@
 import type { Request } from 'express'
 import type { PassportRequest } from '../types.js'
 import type { NonceResponse } from '../middleware/index.js'
+import type { MongoClient } from 'mongodb'
 import {
   BadRequest,
   Unauthorized,
@@ -10,7 +11,7 @@ import {
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 import { logger } from '../lib/logger.js'
-import { mongoClient, collections } from '../lib/db.js'
+import { collections } from '../lib/db.js'
 import { createTokens, verifyRefreshToken } from '../lib/token.js'
 import {
   generateUniqAuthorizationCode,
@@ -35,7 +36,7 @@ const TokenBody = z.union([
   })
 ])
 
-export function createTokenHandler() {
+export function createTokenHandler(db: MongoClient) {
   return async (req: Request) => {
     logger.info({
       label: 'accessToken',
@@ -48,7 +49,7 @@ export function createTokenHandler() {
 
     let userId: string | null = null
     if (body.data.grant_type === 'authorization_code') {
-      const verify = await verifyAuthorizationCode(await mongoClient(), {
+      const verify = await verifyAuthorizationCode(db, {
         code: body.data.code,
         grant_type: body.data.grant_type,
         code_verifier: body.data.code_verifier
@@ -68,7 +69,7 @@ export function createTokenHandler() {
     if (!userId) {
       throw new BadRequest({ message: 'invalid grant_type' })
     }
-    const user = await collections(await mongoClient()).users.findOne({
+    const user = await collections(db).users.findOne({
       _id: new ObjectId(userId)
     })
 
@@ -110,11 +111,11 @@ const AuthorizationQuery = z.object({
   state: z.string().optional()
 })
 
-export const createAuthorize = (
-  res: NonceResponse
-) => {
-  const nonce = res.locals.nonce
-  return async (req: Request) => {
+export function createAuthorize(
+  db: MongoClient
+) {
+  return async (req: Request, res: NonceResponse,) => {
+    const nonce = res.locals.nonce
     try {
       const { user } = req as PassportRequest
       if (!user) {
@@ -130,8 +131,7 @@ export const createAuthorize = (
         throw new BadRequest('invalid host')
       }
 
-      const client = await mongoClient()
-      const generateCode = await generateUniqAuthorizationCode(client)
+      const generateCode = await generateUniqAuthorizationCode(db)
       if (generateCode.success === false) {
         throw new InternalServerError('code generate error')
       }
@@ -139,7 +139,7 @@ export const createAuthorize = (
 
       const { code } = generateCode.data
 
-      await saveAuthorizationCode(client, {
+      await saveAuthorizationCode(db, {
         code,
         code_challenge,
         userId: user._id.toHexString()

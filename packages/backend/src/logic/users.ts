@@ -1,10 +1,9 @@
-import { ObjectId, WithId } from 'mongodb'
+import { ObjectId, WithId, type MongoClient } from 'mongodb'
 import { TO_CLIENT_CMD, FilterToClientType } from 'mzm-shared/src/type/socket'
 import * as config from '../config.js'
 import { logger } from '../lib/logger.js'
 import {
   collections,
-  mongoClient,
   RoomStatusEnum,
   COLLECTION_NAMES,
   type Enter,
@@ -17,15 +16,14 @@ type SendRoomType = FilterToClientType<
   typeof TO_CLIENT_CMD.ROOMS_GET
 >['rooms'][number]
 
-const enterGeneral = async (userId: ObjectId) => {
-  const general = await collections(await mongoClient()).rooms.findOne({
+async function enterGeneral(db: MongoClient, userId: ObjectId) {
+  const general = await collections(db).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
-  await enterRoom(userId, general!._id)
+  await enterRoom(db, userId, general!._id)
 }
 
-export const initUser = async (userId: ObjectId, account: string) => {
-  const db = await mongoClient()
+export async function initUser(db: MongoClient, userId: ObjectId, account: string) {
   const [user] = await Promise.all([
     collections(db).users.findOneAndUpdate(
       {
@@ -41,16 +39,15 @@ export const initUser = async (userId: ObjectId, account: string) => {
         upsert: true
       }
     ),
-    enterGeneral(userId)
+    enterGeneral(db, userId)
   ])
   logger.info('[logic/user] initUser', userId, account)
   return user
 }
 
-export const getRooms = async (userId: string): Promise<SendRoomType[]> => {
+export async function getRooms(db: MongoClient, userId: string): Promise<SendRoomType[]> {
   type AggregateType = WithId<Enter> & { room: WithId<Room>[] }
 
-  const db = await mongoClient()
   const cursor = await collections(db).enter.aggregate<AggregateType>([
     { $match: { userId: new ObjectId(userId) } },
     {
@@ -78,8 +75,8 @@ export const getRooms = async (userId: string): Promise<SendRoomType[]> => {
   return rooms
 }
 
-export const getAllUserIdsInRoom = async (roomId: string) => {
-  const cursor = await collections(await mongoClient()).enter.find({
+export async function getAllUserIdsInRoom(db: MongoClient, roomId: string) {
+  const cursor = await collections(db).enter.find({
     roomId: new ObjectId(roomId)
   })
 

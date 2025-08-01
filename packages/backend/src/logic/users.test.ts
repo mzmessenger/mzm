@@ -1,4 +1,5 @@
-import { vi, test, expect, beforeAll } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/redis.js', () => {
   return {
@@ -24,21 +25,22 @@ import {
 import { initGeneral } from './rooms.js'
 import { initUser, getAllUserIdsInRoom } from './users.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient } = await import('../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test('initUser', async () => {
-  await initGeneral()
+test('initUser', async ({ testDb }) => {
+  await initGeneral(testDb)
 
   const userId = new ObjectId()
   const account = 'aaa'
 
-  await initUser(userId, account)
+  await initUser(testDb, userId, account)
 
   // user
   const db = await getTestMongoClient(globalThis)
@@ -70,7 +72,7 @@ test('initUser', async () => {
   )
 })
 
-test('getAllUserIdsInRoom', async () => {
+test('getAllUserIdsInRoom', async ({ testDb }) => {
   const roomId = new ObjectId()
   const users = [new ObjectId(), new ObjectId(), new ObjectId()]
   const userIdStrs = users.map((user) => user.toHexString())
@@ -83,10 +85,9 @@ test('getAllUserIdsInRoom', async () => {
     }
   })
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).enter.insertMany(enter)
+  await collections(testDb).enter.insertMany(enter)
 
-  const ids = await getAllUserIdsInRoom(roomId.toHexString())
+  const ids = await getAllUserIdsInRoom(testDb, roomId.toHexString())
 
   expect(ids.length).toStrictEqual(users.length)
   for (const id of ids) {

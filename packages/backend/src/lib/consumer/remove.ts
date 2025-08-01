@@ -1,6 +1,6 @@
-import { ObjectId } from 'mongodb'
+import { type MongoClient, ObjectId } from 'mongodb'
 import * as config from '../../config.js'
-import { collections, mongoClient, type Removed } from '../db.js'
+import { collections, type Removed } from '../db.js'
 import { client } from '../redis.js'
 import { logger } from '../logger.js'
 import { initConsumerGroup, createParser, consumeGroup } from './common.js'
@@ -8,14 +8,13 @@ import { initConsumerGroup, createParser, consumeGroup } from './common.js'
 const REMOVE_STREAM = config.stream.REMOVE_USER
 const REMOVE_GROUP = 'group:backend:remove:user'
 
-export const initRemoveConsumerGroup = async () => {
+export async function initRemoveConsumerGroup() {
   await initConsumerGroup(REMOVE_STREAM, REMOVE_GROUP)
 }
 
-export const remove = async (ackid: string, messages: string[]) => {
+export async function remove(db: MongoClient, ackid: string, messages: string[]) {
   const user = messages[1]
   const userId = new ObjectId(user)
-  const db = await mongoClient()
   const target = await collections(db).users.findOne({ _id: userId })
   if (!target) {
     return
@@ -40,7 +39,7 @@ export const remove = async (ackid: string, messages: string[]) => {
   logger.info('[remove:user]', user)
 }
 
-export const consumeRemove = async () => {
-  const parser = createParser(remove)
+export async function consumeRemove(db: MongoClient) {
+  const parser = createParser(db, remove)
   await consumeGroup(REMOVE_GROUP, 'consume-backend', REMOVE_STREAM, parser)
 }

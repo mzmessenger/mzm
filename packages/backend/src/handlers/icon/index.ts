@@ -1,3 +1,4 @@
+import type { MongoClient } from 'mongodb'
 import type { Express } from 'express'
 import type { checkAccessToken as checkAccessTokenMiddleware } from '../../middleware/index.js'
 import type { MulterFile } from '../../types/index.js'
@@ -12,7 +13,7 @@ import { z } from 'zod'
 import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import { getRequestUserId } from '../../lib/utils.js'
 import * as storage from '../../lib/storage.js'
-import { collections, mongoClient, type User, type Room } from '../../lib/db.js'
+import { collections, type User, type Room } from '../../lib/db.js'
 import { logger } from '../../lib/logger.js'
 import * as config from '../../config.js'
 import { isValidMimetype, createVersion } from './internal.js'
@@ -26,8 +27,10 @@ const iconUpload = multer({
 export function createRoute(
   app: Express,
   {
+    db,
     checkAccessToken
   }: {
+    db: MongoClient,
     checkAccessToken: typeof checkAccessTokenMiddleware
   }
 ) {
@@ -45,7 +48,7 @@ export function createRoute(
         parsedParams.data
       )
 
-      const { headers, stream } = await getUserIcon(params.account)
+      const { headers, stream } = await getUserIcon(db, { account: params.account })
       res.set(headers)
       stream.pipe(res).on('error', (e) => next(e))
     }
@@ -64,7 +67,7 @@ export function createRoute(
       const params = apis['/api/icon/user/:account/:version']['GET'].request.params(
         parsedParams.data
       )
-      const { headers, stream } = await getUserIcon(params.account, params.version)
+      const { headers, stream } = await getUserIcon(db, { account: params.account, version: params.version })
       res.set(headers)
       stream.pipe(res).on('error', (e) => next(e))
     }
@@ -84,7 +87,7 @@ export function createRoute(
       }
 
       const _req = req as Request & { file?: MulterFile }
-      const data = await uploadUserIcon(new ObjectId(userId), _req.file)
+      const data = await uploadUserIcon(db, { userId: new ObjectId(userId), file: _req.file })
       return response<API['/api/icon/user']['POST']['response'][200]['body']>(data)(req, res)
     }
   )
@@ -102,7 +105,7 @@ export function createRoute(
       const params = apis['/api/icon/rooms/:roomName/:version']['GET'].request.params(
         parsedParams.data
       )
-      const { headers, stream } = await getRoomIcon(params.roomName, params.version)
+      const { headers, stream } = await getRoomIcon(db, { roomName: params.roomName, version: params.version })
       res.set(headers)
       stream.pipe(res).on('error', (e) => next(e))
     }
@@ -124,7 +127,7 @@ export function createRoute(
       )
 
       const _req = req as Request & { file?: MulterFile }
-      const data = await uploadRoomIcon(params.roomName, _req.file)
+      const data = await uploadRoomIcon(db, { roomName: params.roomName, file: _req.file })
       return response<API['/api/icon/rooms/:roomName']['POST']['response'][200]['body']>(data)(req, res)
     }
   )
@@ -164,8 +167,7 @@ async function fromIdenticon(account: string) {
   return { headers: res.headers, stream: res.body }
 }
 
-export async function getUserIcon(account: string, version?: string) {
-  const db = await mongoClient()
+export async function getUserIcon(db: MongoClient, { account, version }: { account: string, version?: string }) {
   const user = await collections(db).users.findOne({
     account: account
   })
@@ -202,11 +204,10 @@ export async function getUserIcon(account: string, version?: string) {
   }
 }
 
-export async function getRoomIcon(roomName: string, version: string) {
+export async function getRoomIcon(db: MongoClient, { roomName, version }: { roomName: string, version: string }) {
   if (!roomName) {
     throw new BadRequest('no room name')
   }
-  const db = await mongoClient()
   const room = await collections(db).rooms.findOne({ name: roomName })
 
   if (room?.icon?.version !== version) {
@@ -223,7 +224,7 @@ export async function getRoomIcon(roomName: string, version: string) {
   }
 }
 
-export async function uploadUserIcon(userId: ObjectId, file?: MulterFile) {
+export async function uploadUserIcon(db: MongoClient, { userId, file }: { userId: ObjectId, file?: MulterFile }) {
   const api = apis['/api/icon/user']['POST']
   if (!file) {
     throw new BadRequest(`file is empty`)
@@ -258,7 +259,6 @@ export async function uploadUserIcon(userId: ObjectId, file?: MulterFile) {
     icon: { key: iconKey, version }
   }
 
-  const db = await mongoClient()
   await collections(db).users.findOneAndUpdate(
     { _id: new ObjectId(userId) },
     { $set: update },
@@ -274,7 +274,7 @@ export async function uploadUserIcon(userId: ObjectId, file?: MulterFile) {
   })
 }
 
-export async function uploadRoomIcon(roomName: string, file?: MulterFile) {
+export async function uploadRoomIcon(db: MongoClient, { roomName, file }: { roomName: string, file?: MulterFile }) {
   const api = apis['/api/icon/rooms/:roomName']['POST']
   if (!file) {
     throw new BadRequest(`file is empty`)
@@ -294,7 +294,6 @@ export async function uploadRoomIcon(roomName: string, file?: MulterFile) {
     throw new BadRequest(`not square: ${JSON.stringify(dimensions)}`)
   }
 
-  const db = await mongoClient()
   const room = await collections(db).rooms.findOne({
     name: roomName
   })

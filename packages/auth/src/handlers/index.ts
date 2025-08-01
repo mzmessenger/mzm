@@ -1,41 +1,40 @@
 import type { Request, Response } from 'express'
 import type { SerializeUser, RequestUser } from '../types.js'
-import type { WrapFn } from 'mzm-shared/src/lib/wrap'
 import { BadRequest, Unauthorized } from 'mzm-shared/src/lib/errors'
-import { ObjectId } from 'mongodb'
+import { ObjectId, type MongoClient } from 'mongodb'
 import { z } from 'zod'
 import {
   parseAuthorizationHeader,
   verifyAccessToken
 } from 'mzm-shared/src/auth/index'
-import { collections, mongoClient } from '../lib/db.js'
+import { collections } from '../lib/db.js'
 import { logger } from '../lib/logger.js'
 import { redis } from '../lib/redis.js'
 import { JWT, REMOVE_STREAM, ALLOW_REDIRECT_URIS } from '../config.js'
 
-export const serializeUser = (
-  user: Express.User,
-  done: (err: unknown, id: string) => void
-) => {
-  const { _id } = user as SerializeUser
-  done(null, _id.toHexString())
+export function createSerializeUser() {
+  return (
+    user: Express.User,
+    done: (err: unknown, id: string) => void
+  ) => {
+    const { _id } = user as SerializeUser
+    done(null, _id.toHexString())
+  }
 }
 
-export const deserializeUser = (
-  id: string,
-  done: (err: unknown, user?: RequestUser) => void
-) => {
-  mongoClient()
-    .then((client) => {
-      return collections(client).users.findOne({ _id: new ObjectId(id) })
-    })
-    .then((user) => {
-      done(null, user)
-    })
-    .catch((err) => done(err))
+export function createDeserializeUserHandler (
+  db: MongoClient
+) {
+  return (id: string, done: (err: unknown, user?: RequestUser) => void) => {
+    collections(db).users.findOne({ _id: new ObjectId(id) })
+      .then((user) => {
+        done(null, user)
+      })
+      .catch((err) => done(err))
+  }
 }
 
-export const remove: WrapFn<Request, string> = async (req) => {
+export async function remove(req: Request) {
   const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
     throw new Unauthorized('no auth token')
@@ -60,7 +59,7 @@ const LogoutQuery = z.object({
   redirect_uri: z.string().trim().min(1).optional()
 })
 
-export const logout = (req: Request, res: Response) => {
+export function logout(req: Request, res: Response) {
   let redirect = ALLOW_REDIRECT_URIS[0]
   const query = LogoutQuery.safeParse(req.query)
   if (query.success && !!query.data.redirect_uri) {

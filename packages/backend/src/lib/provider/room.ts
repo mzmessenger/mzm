@@ -4,7 +4,7 @@ import { logger } from '../logger.js'
 import { RoomQueueType, JobType } from '../../types.js'
 import * as config from '../../config.js'
 
-export const addInitializeSearchRoomQueue = async () => {
+export async function addInitializeSearchRoomQueue() {
   const lockKey = config.lock.INIT_SEARCH_ROOM_QUEUE
   const lockVal = new ObjectId().toHexString()
   const locked = await lock(lockKey, lockVal, 1000 * 2)
@@ -28,7 +28,7 @@ export const addInitializeSearchRoomQueue = async () => {
   await addSyncSearchRoomQueue()
 }
 
-export const addUpdateSearchRoomQueue = async (roomIds: string[]) => {
+export async function addUpdateSearchRoomQueue(roomIds: string[]) {
   await client().xadd(
     config.stream.ELASTICSEARCH_ROOMS,
     'MAXLEN',
@@ -41,7 +41,7 @@ export const addUpdateSearchRoomQueue = async (roomIds: string[]) => {
   logger.info('[queue] addUpdateSearchRoomQueue', roomIds.length)
 }
 
-export const addSyncSearchRoomQueue = async () => {
+export async function addSyncSearchRoomQueue() {
   const lockKey = config.lock.SYNC_SEARCH_ROOM_QUEUE
   const lockVal = new ObjectId().toHexString()
   const locked = await lock(lockKey, lockVal, 1000 * 2)

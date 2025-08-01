@@ -1,4 +1,5 @@
-import { vi, test, expect, beforeAll, beforeEach } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect, beforeEach } from 'vitest'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/redis.js', () => {
   return {
@@ -19,12 +20,13 @@ import { collections, RoomStatusEnum, COLLECTION_NAMES } from '../lib/db.js'
 import * as redis from '../lib/redis.js'
 import { initGeneral, enterRoom, isValidateRoomName } from './rooms.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient } = await import('../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
 beforeEach(async () => {
@@ -32,12 +34,11 @@ beforeEach(async () => {
   await dropCollection(db, COLLECTION_NAMES.ROOMS)
 })
 
-test('initGeneral', async () => {
+test('initGeneral', async ({ testDb }) => {
   const release = vi.mocked(redis.release)
   release.mockClear()
 
-  const db = await getTestMongoClient(globalThis)
-  let general = await collections(db)
+  let general = await collections(testDb)
     .rooms.find({
       name: config.room.GENERAL_ROOM_NAME
     })
@@ -45,9 +46,9 @@ test('initGeneral', async () => {
 
   expect(general.length).toStrictEqual(0)
 
-  await initGeneral()
+  await initGeneral(testDb)
 
-  general = await collections(db)
+  general = await collections(testDb)
     .rooms.find({
       name: config.room.GENERAL_ROOM_NAME
     })
@@ -59,7 +60,7 @@ test('initGeneral', async () => {
   expect(release.mock.calls.length).toStrictEqual(1)
 
   // 初期化済みのものはupdateされる
-  await collections(db).rooms.updateOne(
+  await collections(testDb).rooms.updateOne(
     { _id: general[0]._id },
     {
       $set: {
@@ -69,41 +70,39 @@ test('initGeneral', async () => {
     }
   )
 
-  await initGeneral()
+  await initGeneral(testDb)
 
-  const updated = await collections(db).rooms.findOne({
+  const updated = await collections(testDb).rooms.findOne({
     _id: general[0]._id
   })
   expect(updated?.name).toStrictEqual(config.room.GENERAL_ROOM_NAME)
   expect(updated?.status).toStrictEqual(RoomStatusEnum.OPEN)
 })
 
-test('initGeneral (locked)', async () => {
+test('initGeneral (locked)', async ({ testDb }) => {
   const lock = vi.mocked(redis.lock)
   lock.mockClear()
   lock.mockResolvedValue(false)
   const release = vi.mocked(redis.release)
   release.mockClear()
 
-  const db = await getTestMongoClient(globalThis)
-  const originUpdate = collections(db).rooms.updateOne
+  const originUpdate = collections(testDb).rooms.updateOne
   const updateMock = vi.fn()
-  collections(db).rooms.updateOne = updateMock
+  collections(testDb).rooms.updateOne = updateMock
 
-  await initGeneral()
+  await initGeneral(testDb)
 
   expect(updateMock.mock.calls.length).toStrictEqual(0)
   expect(release.mock.calls.length).toStrictEqual(0)
 
-  collections(db).rooms.updateOne = originUpdate
+  collections(testDb).rooms.updateOne = originUpdate
 })
 
-test('enterRoom', async () => {
+test('enterRoom', async ({ testDb }) => {
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
-  const db = await getTestMongoClient(globalThis)
-  const before = await collections(db)
+  const before = await collections(testDb)
     .enter.find({
       userId: userId,
       roomId: roomId
@@ -112,9 +111,9 @@ test('enterRoom', async () => {
 
   expect(before.length).toStrictEqual(0)
 
-  await enterRoom(userId, roomId)
+  await enterRoom(testDb, userId, roomId)
 
-  const found = await collections(db)
+  const found = await collections(testDb)
     .enter.find({
       userId: userId,
       roomId: roomId
@@ -128,15 +127,15 @@ test('enterRoom', async () => {
   expect(found[0].replied).toStrictEqual(0)
 })
 
-test.each([['aaa'], ['日本語'], ['🍣']])(
+test.for([['aaa'], ['日本語'], ['🍣']])(
   'isValidateRoomName (%s, %s)',
-  async (name) => {
+  async ([name]) => {
     const valid = isValidateRoomName(name)
     expect(valid.valid).toStrictEqual(true)
   }
 )
 
-test.each([
+test.for([
   ['slash', '/hoge/fuga'],
   ['back slash', 't\\t'],
   ['space', 'aaa bbb'],
@@ -156,7 +155,7 @@ test.each([
   ['202A', '‪'],
   ['undefined', 'undefined'],
   ['null', 'null']
-])('isValidateRoomName fail (%s)', async (_label, name) => {
+])('isValidateRoomName fail (%s)', async ([, name]) => {
   const valid = isValidateRoomName(name)
   expect(valid.valid).toStrictEqual(false)
 })

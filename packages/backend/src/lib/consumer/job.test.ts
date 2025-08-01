@@ -1,5 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-import { vi, test, expect } from 'vitest'
+/* eslint-disable @typescript-eslint/ban-ts-comment, no-empty-pattern  */
+import { vi, test as baseTest, expect } from 'vitest'
+import { getTestMongoClient } from '../../../test/testUtil.js'
 vi.mock('../logger.js')
 
 vi.mock('../redis.js', () => {
@@ -25,6 +26,15 @@ import { syncSeachAllRooms } from '../../logic/rooms.js'
 import { initConsumerGroup, consumeGroup } from './common.js'
 import { job, initJobConsumerGroup, consumeJob } from './job.js'
 
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
+})
+
 test('initJobConsumerGroup', async () => {
   const init = vi.mocked(initConsumerGroup)
 
@@ -34,16 +44,16 @@ test('initJobConsumerGroup', async () => {
   expect(init.mock.calls[0][0]).toStrictEqual(config.stream.JOB)
 })
 
-test('consumeJob', async () => {
+test('consumeJob', async ({ testDb }) => {
   const consume = vi.mocked(consumeGroup)
 
-  await consumeJob()
+  await consumeJob(testDb)
 
   expect(consume.mock.calls.length).toStrictEqual(1)
   expect(consume.mock.calls[0][2]).toStrictEqual(config.stream.JOB)
 })
 
-test(`job: ${JobType.SEARCH_ROOM}`, async () => {
+test(`job: ${JobType.SEARCH_ROOM}`, async ({ testDb }) => {
   const xack = vi.fn()
   // @ts-expect-error
   vi.mocked(client).mockImplementation(() => ({ xack }))
@@ -53,14 +63,14 @@ test(`job: ${JobType.SEARCH_ROOM}`, async () => {
   const logic = vi.mocked(syncSeachAllRooms)
   logic.mockClear()
 
-  await job('queue-id', [JobType.SEARCH_ROOM])
+  await job(testDb, 'queue-id', [JobType.SEARCH_ROOM])
 
   expect(xack.mock.calls.length).toStrictEqual(1)
   expect(xack.mock.calls[0][2]).toStrictEqual('queue-id')
   expect(logic.mock.calls.length).toStrictEqual(1)
 })
 
-test('job no-type', async () => {
+test('job no-type', async ({ testDb }) => {
   const xack = vi.fn()
   // @ts-expect-error
   vi.mocked(client).mockImplementation(() => ({ xack }))
@@ -70,7 +80,7 @@ test('job no-type', async () => {
   const logic = vi.mocked(syncSeachAllRooms)
   logic.mockClear()
 
-  await job('queue-id', ['no-type'])
+  await job(testDb, 'queue-id', ['no-type'])
 
   expect(xack.mock.calls.length).toStrictEqual(1)
   expect(xack.mock.calls[0][2]).toStrictEqual('queue-id')

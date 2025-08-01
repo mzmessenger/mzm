@@ -1,3 +1,4 @@
+import { type MongoClient } from 'mongodb'
 import * as config from '../../config.js'
 import { JobType } from '../../types.js'
 import { logger } from '../logger.js'
@@ -8,13 +9,13 @@ import { syncSeachAllRooms } from '../../logic/rooms.js'
 const STREAM = config.stream.JOB
 const JOB_GROUP = 'group:job'
 
-export const initJobConsumerGroup = async () => {
+export async function initJobConsumerGroup() {
   await initConsumerGroup(STREAM, JOB_GROUP)
 }
 
-export const job = async (ackid: string, messages: string[]) => {
+export async function job(db: MongoClient, ackid: string, messages: string[]) {
   if (messages[0] === JobType.SEARCH_ROOM) {
-    await syncSeachAllRooms()
+    await syncSeachAllRooms(db)
   }
 
   await client().xack(STREAM, JOB_GROUP, ackid)
@@ -22,7 +23,7 @@ export const job = async (ackid: string, messages: string[]) => {
   logger.info('[job]', messages[0])
 }
 
-export const consumeJob = async () => {
-  const parser = createParser(job)
+export async function consumeJob(db: MongoClient) {
+  const parser = createParser(db, job)
   await consumeGroup(JOB_GROUP, 'consume-backend', STREAM, parser)
 }

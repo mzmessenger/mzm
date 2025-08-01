@@ -1,5 +1,7 @@
-import { vi, test, expect } from 'vitest'
-vi.mock('./logger.js')
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect } from 'vitest'
+import { getTestMongoClient } from '../../../test/testUtil.js'
+vi.mock('../logger.js')
 vi.mock('../redis.js', () => {
   return {
     client: vi.fn(() => ({
@@ -29,6 +31,15 @@ import { initConsumerGroup, consumeGroup } from './common.js'
 import { message, initMessageConsumerGroup, consumeMessage } from './message.js'
 import { sendToUser } from '../fetchStreaming.js'
 
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
+})
+
 test('initRemoveConsumerGroup', async () => {
   const init = vi.mocked(initConsumerGroup)
 
@@ -38,16 +49,16 @@ test('initRemoveConsumerGroup', async () => {
   expect(init.mock.calls[0][0]).toStrictEqual(config.stream.MESSAGE)
 })
 
-test('consumeRemove', async () => {
+test('consumeRemove', async ({ testDb }) => {
   const consume = vi.mocked(consumeGroup)
 
-  await consumeMessage()
+  await consumeMessage(testDb)
 
   expect(consume.mock.calls.length).toStrictEqual(1)
   expect(consume.mock.calls[0][2]).toStrictEqual(config.stream.MESSAGE)
 })
 
-test('message', async () => {
+test('message', async ({ testDb }) => {
   const sendToUserMock = vi.mocked(sendToUser)
   sendToUserMock.mockClear()
 
@@ -59,8 +70,8 @@ test('message', async () => {
     })
   })
 
-  await message('queue-id', ['message', queues[0]])
-  await message('queue-id', ['message', queues[1]])
+  await message(testDb, 'queue-id', ['message', queues[0]])
+  await message(testDb, 'queue-id', ['message', queues[1]])
 
   expect(sendToUserMock.mock.calls.length).toBe(2)
   expect(sendToUserMock.mock.calls[0][0]).toBe(users[0])

@@ -1,9 +1,9 @@
-import { ObjectId } from 'mongodb'
+import { type MongoClient, ObjectId } from 'mongodb'
 import { client, lock, release } from '../redis.js'
 import { logger } from '../logger.js'
 import * as config from '../../config.js'
 
-export const initConsumerGroup = async (stream: string, groupName: string) => {
+export async function initConsumerGroup(stream: string, groupName: string) {
   const lockKey =
     config.lock.INIT_CONSUMER_GROUP + ':' + stream + ':' + groupName
   const lockVal = new ObjectId().toHexString()
@@ -34,9 +34,10 @@ export const initConsumerGroup = async (stream: string, groupName: string) => {
   }
 }
 
-export const createParser = (
-  handler: (id: string, messages: string[]) => Promise<void | null>
-) => {
+export function createParser(
+  db: MongoClient,
+  handler: (db: MongoClient, id: string, messages: string[]) => Promise<void | null>
+) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return async (read: any) => {
     if (!read) {
@@ -46,7 +47,7 @@ export const createParser = (
     for (const [, val] of read) {
       for (const [id, messages] of val) {
         try {
-          await handler(id, messages)
+          await handler(db, id, messages)
         } catch (e) {
           logger.error('parse error', e, id, messages)
         }
@@ -55,12 +56,12 @@ export const createParser = (
   }
 }
 
-export const consumeGroup = async (
+export async function consumeGroup(
   groupName: string,
   consumerName: string,
   stream: string,
   parser: ReturnType<typeof createParser>
-) => {
+) {
   try {
     const res = await client().xreadgroup(
       'GROUP',
