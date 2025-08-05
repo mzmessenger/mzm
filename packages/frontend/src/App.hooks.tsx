@@ -52,6 +52,8 @@ const useResize = () => {
   }, [onResize])
 }
 
+let init = false
+
 export const useApp = () => {
   useRouter()
   useResize()
@@ -61,6 +63,10 @@ export const useApp = () => {
   const { handlers } = useMessageListener({ pathname: location.pathname })
 
   useEffect(() => {
+    if (init) {
+      return
+    }
+    init = true
     initAuth()
 
     function authoriaedListener() {

@@ -1,25 +1,15 @@
 import cluster from 'cluster'
 import http from 'http'
-import schedule from 'node-schedule'
 
 import { WORKER_NUM, PORT, redis } from './config.js'
 import { logger } from './lib/logger.js'
 import { connect } from './lib/redis.js'
 import { initMongoClient } from './lib/db.js'
 import { init } from './logic/server.js'
-import { addSyncSearchRoomQueue } from './lib/provider/index.js'
 import { createApp } from './app.js'
 
 async function main() {
   const redisClient = await connect(redis.options)
-
-  schedule.scheduleJob('0 * * * *', () => {
-    try {
-      addSyncSearchRoomQueue(redisClient)
-    } catch (e) {
-      logger.error(e)
-    }
-  })
 
   const db = await initMongoClient()
 

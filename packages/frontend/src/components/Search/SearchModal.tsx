@@ -18,7 +18,7 @@ export const SearchModal: React.FC = () => {
   }
 
   return (
-    <ModalBase open={showModal} onClose={() => cancel()} style={{ top: 200 }}>
+    <ModalBase open={showModal} onClose={() => cancel()}>
       <ModalInner>
         <div className="query">
           <Search />
@@ -68,6 +68,7 @@ const ModalInner = styled.div`
   }
 
   .result {
+    max-height: calc(80vh);
     min-height: 300px;
     overflow-y: scroll;
   }

@@ -13,7 +13,7 @@ import {
 import { type ExRedisClient } from './lib/redis.js'
 import { addUserResponse, closeUserResponse } from './lib/fetchStreaming.js'
 import { response } from 'mzm-shared/src/lib/wrap'
-import * as rooms from './handlers/rooms.js'
+import * as rooms from './handlers/rooms/index.js'
 import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import * as internal from './handlers/internal.js'

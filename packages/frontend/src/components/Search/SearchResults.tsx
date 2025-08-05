@@ -6,7 +6,7 @@ import { SearchRoomElement } from './SearchRoomElement'
 
 export const SearchResult = () => {
   const {
-    search: { results, total },
+    search: { query, results, total },
     execSearchNext
   } = useSearch()
 
@@ -27,7 +27,7 @@ export const SearchResult = () => {
         ))}
       </ul>
       <div className="buttons">
-        {total > results.length && (
+        {query !== '' && total > results.length && (
           <TransparentButton onClick={onClick}>さらに表示</TransparentButton>
         )}
       </div>

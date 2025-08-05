@@ -1,28 +1,28 @@
-import type { MongoClient } from 'mongodb'
 import type { Express, json } from 'express'
 import type QueryString from 'qs'
-import type { checkAccessToken as checkAccessTokenMiddleware } from '../middleware/index.js'
-import { ObjectId, type WithId, type Document } from 'mongodb'
+import type { checkAccessToken as checkAccessTokenMiddleware } from '../../middleware/index.js'
+import { ObjectId, type MongoClient, type WithId, type Document } from 'mongodb'
 import { z } from 'zod'
 import { BadRequest } from 'mzm-shared/src/lib/errors'
 import { apis, type API } from 'mzm-shared/src/api/universal'
 import { response } from 'mzm-shared/src/lib/wrap'
-import * as config from '../config.js'
-import { getRequestUserId } from '../lib/utils.js'
+import * as config from '../../config.js'
+import { getRequestUserId } from '../../lib/utils.js'
 import {
   collections,
   COLLECTION_NAMES,
   type Message,
   type User
-} from '../lib/db.js'
-import { type ExRedisClient } from '../lib/redis.js'
-import { searchRoom } from '../lib/elasticsearch/rooms.js'
-import { popParam, createUserIconPath } from '../lib/utils.js'
+} from '../../lib/db.js'
+import { type ExRedisClient } from '../../lib/redis.js'
+import { searchRoom } from '../../lib/elasticsearch/rooms.js'
+import { popParam, createUserIconPath } from '../../lib/utils.js'
 import {
   isValidateRoomName,
   enterRoom as enterRoomLogic,
   createRoom as createRoomLogic
-} from '../logic/rooms.js'
+} from '../../logic/rooms.js'
+import { listRooms } from './listRooms.js'
 
 export function createRoute(
   app: Express,
@@ -38,6 +38,28 @@ export function createRoute(
     checkAccessToken: typeof checkAccessTokenMiddleware
   }
 ) {
+  const queryParser = z.object({
+    threshold: z.string().optional()
+  })
+  app.get('/api/rooms', checkAccessToken, async (req, res) => {
+    const userId = getRequestUserId(req)
+    const parsedQuery = queryParser.safeParse(req.query)
+    if (parsedQuery.success === false) {
+      throw new BadRequest({ reason: parsedQuery.error.message })
+    }
+    const query = apis['/api/rooms']['GET'].request.query(parsedQuery.data)
+
+    const body = await listRooms({
+      db,
+      userId: new ObjectId(userId),
+      threshold: query.threshold ?? null
+    })
+    return response<API['/api/rooms']['GET']['response'][200]['body']>(body)(
+      req,
+      res
+    )
+  })
+
   app.post('/api/rooms', checkAccessToken, jsonParser, async (req, res) => {
     const userId = getRequestUserId(req)
     const data = await createRoom({

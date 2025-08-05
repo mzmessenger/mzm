@@ -3,11 +3,6 @@ import { logger } from '../logger.js'
 import { type ToClientType } from 'mzm-shared/src/type/socket'
 import { UnreadQueue, ReplyQueue, VoteQueue } from '../../types.js'
 import * as config from '../../config.js'
-export {
-  addInitializeSearchRoomQueue,
-  addUpdateSearchRoomQueue,
-  addSyncSearchRoomQueue
-} from './room.js'
 
 export async function addMessageQueue(
   client: ExRedisClient,

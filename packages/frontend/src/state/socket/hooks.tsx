@@ -13,6 +13,7 @@ import { useMyInfoActions, useUserAccount } from '../user/hooks'
 import { useUiActions } from '../ui/hooks'
 import { getRoomName } from '../../lib/util'
 import { sendSocket } from '../../lib/client'
+import { createRoutePath } from '../../lib/route'
 
 type HandlerArgs<P extends ToClientType['cmd']> = {
   message: FilterToClientType<P>
@@ -269,7 +270,7 @@ export const useMessageListener = (props: { pathname: string }) => {
     [TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS]: ({ message }) => {
       const currentPathRoomName = getRoomName(props.pathname)
       if (currentPathRoomName !== message.name) {
-        navigate(`/rooms/${message.name}`)
+        navigate(createRoutePath({ type: 'room', params: { roomName: message.name } }))
         changeRoom(message.id, {
           getMessages: (roomId) => sharedActions.getMessages(roomId),
           closeMenu

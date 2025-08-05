@@ -1,10 +1,11 @@
-import React, { StrictMode } from 'react'
+import { StrictMode } from 'react'
 import { registerSW } from 'virtual:pwa-register'
 import { createRoot } from 'react-dom/client'
 import { createBrowserRouter, RouterProvider } from 'react-router'
 import 'normalize.css'
 import 'highlight.js/styles/base16/onedark.css'
 import './index.css'
+import DuckDBProvider from './state/duckdb/Provider'
 import App from './App'
 import Top from './pages/Top'
 import Room from './pages/Room'
@@ -45,7 +46,9 @@ const router = createBrowserRouter([
 
 root.render(
   <StrictMode>
-    <RouterProvider router={router} />
+    <DuckDBProvider>
+      <RouterProvider router={router} />
+    </DuckDBProvider>
   </StrictMode>
 )
 

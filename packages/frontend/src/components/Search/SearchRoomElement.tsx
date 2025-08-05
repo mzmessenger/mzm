@@ -2,6 +2,7 @@ import React, { useMemo } from 'react'
 import { useNavigate } from 'react-router'
 import styled from '@emotion/styled'
 import { Home, Forward } from '@mui/icons-material'
+import { createRoutePath } from '../../lib/route'
 import { useEnterRoomActions } from '../../state/rooms/hooks'
 import { useSocketActions } from '../../state/socket/hooks'
 import { useUiActions } from '../../state/ui/hooks'
@@ -29,7 +30,7 @@ export const SearchRoomElement: React.FC<{
 
   const onClick = () => {
     enterRoom(props.name).then(() => {
-      navigate(`/rooms/${props.name}`)
+      navigate(createRoutePath({ type: 'room', params: { roomName: props.name } }))
       cancel()
     })
   }

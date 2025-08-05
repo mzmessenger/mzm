@@ -37,7 +37,9 @@ export const fetcher: Fetcher = async <T>(options: Parameters<Fetcher>[0]) => {
   return res as T
 }
 
-export const textFetcher: Fetcher = async <T>(options: Parameters<Fetcher>[0]) => {
+export const textFetcher: Fetcher = async <T>(
+  options: Parameters<Fetcher>[0]
+) => {
   const init = createInit(options)
 
   const res = await proxyRequest(options.url, { ...init, bodyParser: 'text' })

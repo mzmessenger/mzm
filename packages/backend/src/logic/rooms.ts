@@ -8,7 +8,6 @@ import {
 import { logger } from '../lib/logger.js'
 import { type ExRedisClient, lock, release } from '../lib/redis.js'
 import * as config from '../config.js'
-import { addUpdateSearchRoomQueue } from '../lib/provider/index.js'
 
 export async function initGeneral({
   db,
@@ -145,32 +144,4 @@ export async function createRoom({
     updatedBy: undefined,
     status: RoomStatusEnum.CLOSE
   }
-}
-
-export async function syncSeachAllRooms({
-  redis,
-  db
-}: {
-  redis: ExRedisClient
-  db: MongoClient
-}) {
-  let counter = 0
-  let roomIds: string[] = []
-
-  const cursor = await collections(db).rooms.find(
-    {},
-    { projection: { _id: 1 } }
-  )
-
-  for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
-    roomIds.push(doc._id.toHexString())
-    counter++
-    if (roomIds.length > 100) {
-      await addUpdateSearchRoomQueue(redis, roomIds)
-      roomIds = []
-    }
-  }
-
-  await addUpdateSearchRoomQueue(redis, roomIds)
-  logger.info(`[syncSeachAllRooms] ${counter}`)
 }

@@ -42,9 +42,9 @@ export async function socket(
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_SORT) {
     res = await _socket.sortRooms({ db, redis, user, data })
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_OPEN) {
-    res = await _socket.openRoom({ db, redis, user, data })
+    res = await _socket.openRoom({ db, user, data })
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_CLOSE) {
-    res = await _socket.closeRoom({ db, redis, user, data })
+    res = await _socket.closeRoom({ db, user, data })
   } else if (data.cmd === TO_SERVER_CMD.VOTE_ANSWER_SEND) {
     res = await _socket.sendVoteAnswer({ db, redis, user, data })
   } else if (data.cmd === TO_SERVER_CMD.VOTE_ANSWER_REMOVE) {

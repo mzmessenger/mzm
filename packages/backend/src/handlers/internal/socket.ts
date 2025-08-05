@@ -33,7 +33,6 @@ import {
   addQueueToUsers,
   addUnreadQueue,
   addRepliedQueue,
-  addUpdateSearchRoomQueue,
   addVoteQueue
 } from '../../lib/provider/index.js'
 import { saveMessage, getMessages } from '../../logic/messages.js'
@@ -538,12 +537,10 @@ export async function sortRooms({
 
 export async function openRoom({
   db,
-  redis,
   user,
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_OPEN>
 }) {
@@ -561,18 +558,15 @@ export async function openRoom({
     { _id: new ObjectId(data.roomId) },
     { $set: { status: RoomStatusEnum.OPEN, updatedBy: new ObjectId(user) } }
   )
-  addUpdateSearchRoomQueue(redis, [data.roomId])
   // @todo 伝播
 }
 
 export async function closeRoom({
   db,
-  redis,
   user,
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_CLOSE>
 }) {
@@ -594,7 +588,6 @@ export async function closeRoom({
     { $set: { status: RoomStatusEnum.CLOSE, updatedBy: new ObjectId(user) } }
   )
 
-  addUpdateSearchRoomQueue(redis, [data.roomId])
   // @todo 伝播
 }
 
@@ -634,7 +627,6 @@ export async function updateRoomDescription({
   }
   addQueueToUsers(redis, users, send)
 
-  addUpdateSearchRoomQueue(redis, [data.roomId])
 }
 
 function isAnswer(answer: number): answer is VoteAnswer['answer'] {

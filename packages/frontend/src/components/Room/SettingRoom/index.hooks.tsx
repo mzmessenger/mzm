@@ -6,6 +6,7 @@ import {
   useRoomById
 } from '../../../state/rooms/hooks'
 import { useSocketActions } from '../../../state/socket/hooks'
+import { createRoutePath } from '../../../lib/route'
 import { Props as RoomInfoProps } from './RoomInfo'
 
 export const useSettiongRooms = () => {
@@ -31,7 +32,7 @@ export const useSettiongRooms = () => {
 
   const onExit = useCallback(() => {
     exitRoom({ body: { room: currentRoomId } })
-    navigate('/')
+    navigate(createRoutePath({ type: 'top' }))
   }, [exitRoom, currentRoomId, navigate])
 
   const onLoadFile = (file: string) => {

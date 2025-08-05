@@ -16,7 +16,6 @@ import { collections } from '../lib/db.js'
 import * as config from '../config.js'
 import { init } from './server.js'
 import { initConsumer } from '../lib/consumer/index.js'
-import { addInitializeSearchRoomQueue } from '../lib/provider/index.js'
 import { getTestMongoClient, getTestRedisClient } from '../../test/testUtil.js'
 
 const test = baseTest.extend<{
@@ -38,7 +37,6 @@ test('init', async ({ testDb, testRedis }) => {
 
   expect(init.call.length).toStrictEqual(1)
   expect(initConsumer.call.length).toStrictEqual(1)
-  expect(addInitializeSearchRoomQueue.call.length).toStrictEqual(1)
 
   const general = await collections(testDb)
     .rooms.find({ name: config.room.GENERAL_ROOM_NAME })

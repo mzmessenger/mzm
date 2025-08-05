@@ -1,6 +1,7 @@
+import { defineConfig, type UserConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import { VitePWA } from 'vite-plugin-pwa'
-import { defineConfig, type UserConfig } from 'vite'
+import wasm from 'vite-plugin-wasm'
 import { configDefaults } from 'vitest/config'
 import path from 'node:path'
 
@@ -28,6 +29,7 @@ export default defineConfig(({ mode }) => {
     },
     plugins: [
       react(),
+      wasm(),
       VitePWA({
         manifest: {
           name: 'MZM',
@@ -65,6 +67,9 @@ export default defineConfig(({ mode }) => {
       sourcemap: true,
       target: 'esnext',
       outDir: path.resolve(dirname, 'dist')
+    },
+    optimizeDeps: {
+      exclude: ['@sqlite.org/sqlite-wasm', 'lindera-wasm-ipadic']
     },
     root: path.resolve(dirname, 'src'),
     server: {

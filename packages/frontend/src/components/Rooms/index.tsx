@@ -2,6 +2,7 @@ import type { Room } from '../../state/rooms/types'
 import React, { useCallback } from 'react'
 import styled from '@emotion/styled'
 import { useNavigate } from 'react-router'
+import { createRoutePath } from '../../lib/route'
 import {
   useChangeRoomActions,
   useChangeRoomOrderActions,
@@ -32,7 +33,7 @@ export const Rooms = () => {
       if (room.id === currentRoomId) {
         return
       }
-      navigate(`/rooms/${room.name}`)
+      navigate(createRoutePath({ type: 'room', params: { roomName: room.name } }))
       changeRoom(room.id)
       readMessages(room.id)
     },

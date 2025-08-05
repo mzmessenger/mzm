@@ -18,8 +18,7 @@ import * as logicMessages from '../../logic/messages.js'
 import {
   addMessageQueue,
   addQueueToUsers,
-  addUnreadQueue,
-  addUpdateSearchRoomQueue
+  addUnreadQueue
 } from '../../lib/provider/index.js'
 import * as config from '../../config.js'
 import * as socket from './socket.js'
@@ -233,10 +232,7 @@ test('iine', async ({ testDb, testRedis }) => {
   expect(message?.iine).toStrictEqual(2)
 })
 
-test('openRoom', async ({ testDb, testRedis }) => {
-  const queueMock = vi.mocked(addUpdateSearchRoomQueue)
-  queueMock.mockClear()
-
+test('openRoom', async ({ testDb }) => {
   const userId = new ObjectId()
 
   const insert = await collections(testDb).rooms.insertOne({
@@ -247,7 +243,6 @@ test('openRoom', async ({ testDb, testRedis }) => {
 
   await socket.openRoom({
     db: testDb,
-    redis: testRedis,
     user: userId.toHexString(),
     data: {
       cmd: TO_SERVER_CMD.ROOMS_OPEN,
@@ -261,13 +256,9 @@ test('openRoom', async ({ testDb, testRedis }) => {
 
   expect(updated?.status).toStrictEqual(RoomStatusEnum.OPEN)
   expect(updated?.updatedBy).toStrictEqual(userId)
-  expect(queueMock.call.length).toStrictEqual(1)
 })
 
-test('closeRoom', async ({ testDb, testRedis }) => {
-  const queueMock = vi.mocked(addUpdateSearchRoomQueue)
-  queueMock.mockClear()
-
+test('closeRoom', async ({ testDb }) => {
   const userId = new ObjectId()
 
   const insert = await collections(testDb).rooms.insertOne({
@@ -278,7 +269,6 @@ test('closeRoom', async ({ testDb, testRedis }) => {
 
   await socket.closeRoom({
     db: testDb,
-    redis: testRedis,
     user: userId.toHexString(),
     data: {
       cmd: TO_SERVER_CMD.ROOMS_CLOSE,
@@ -292,7 +282,6 @@ test('closeRoom', async ({ testDb, testRedis }) => {
 
   expect(updated?.status).toStrictEqual(RoomStatusEnum.CLOSE)
   expect(updated?.updatedBy).toStrictEqual(userId)
-  expect(queueMock.call.length).toStrictEqual(1)
 })
 
 test('sendVoteAnswer (first time)', async ({ testDb, testRedis }) => {
@@ -447,26 +436,26 @@ test('removeVoteAnswer', async ({ testDb, testRedis }) => {
   expect(answers.length).toStrictEqual(0)
 })
 
-test(
-  'fail: updateRoomDescription over length',
-  async ({ testDb, testRedis }) => {
-    const userId = new ObjectId()
-    const roomId = new ObjectId()
+test('fail: updateRoomDescription over length', async ({
+  testDb,
+  testRedis
+}) => {
+  const userId = new ObjectId()
+  const roomId = new ObjectId()
 
-    const addQueueToUsersMock = vi.mocked(addQueueToUsers)
-    addQueueToUsersMock.mockClear()
+  const addQueueToUsersMock = vi.mocked(addQueueToUsers)
+  addQueueToUsersMock.mockClear()
 
-    await socket.updateRoomDescription({
-      db: testDb,
-      redis: testRedis,
-      user: userId.toHexString(),
-      data: {
-        cmd: TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION,
-        description: 'a'.repeat(config.room.MAX_ROOM_DESCRIPTION_LENGTH + 1),
-        roomId: roomId.toHexString()
-      }
-    })
+  await socket.updateRoomDescription({
+    db: testDb,
+    redis: testRedis,
+    user: userId.toHexString(),
+    data: {
+      cmd: TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION,
+      description: 'a'.repeat(config.room.MAX_ROOM_DESCRIPTION_LENGTH + 1),
+      roomId: roomId.toHexString()
+    }
+  })
 
-    expect(addQueueToUsersMock).toBeCalledTimes(0)
-  }
-)
+  expect(addQueueToUsersMock).toBeCalledTimes(0)
+})

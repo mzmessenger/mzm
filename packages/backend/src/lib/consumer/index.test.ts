@@ -24,12 +24,6 @@ vi.mock('./search/room.js', () => {
     consumeSearchRooms: vi.fn()
   }
 })
-vi.mock('./job.js', () => {
-  return {
-    initJobConsumerGroup: vi.fn(),
-    consumeJob: vi.fn()
-  }
-})
 vi.mock('./vote.js', () => {
   return {
     initVoteConsumerGroup: vi.fn(),
@@ -48,7 +42,6 @@ import * as consumerRemove from './remove.js'
 import * as consumerUnread from './unread.js'
 import * as consumeReply from './reply.js'
 import * as consumeSearchRoom from './search/room.js'
-import * as consumeJob from './job.js'
 import * as consumeVote from './vote.js'
 import * as consumeMessage from './message.js'
 
@@ -63,7 +56,6 @@ test('init', async ({ testDb, testRedis }) => {
       consumeSearchRoom.initSearchRoomConsumerGroup,
       consumeSearchRoom.consumeSearchRooms
     ],
-    [consumeJob.initJobConsumerGroup, consumeJob.consumeJob],
     [consumeVote.initVoteConsumerGroup, consumeVote.consumeVote],
     [consumeMessage.initMessageConsumerGroup, consumeMessage.consumeMessage]
   ]

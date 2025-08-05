@@ -1,7 +1,7 @@
 import { vi, expect } from 'vitest'
-import { createTest } from '../../test/testUtil.js'
-vi.mock('../lib/logger')
-vi.mock('../lib/elasticsearch/index', () => {
+import { createTest } from '../../../test/testUtil.js'
+vi.mock('../../lib/logger')
+vi.mock('../../lib/elasticsearch/index', () => {
   return {
     client: {}
   }
@@ -9,8 +9,8 @@ vi.mock('../lib/elasticsearch/index', () => {
 
 import { ObjectId } from 'mongodb'
 import { BadRequest } from 'mzm-shared/src/lib/errors'
-import { collections } from '../lib/db.js'
-import { createRoom } from './rooms.js'
+import { collections } from '../../lib/db.js'
+import { createRoom } from './index.js'
 
 const test = await createTest(globalThis)
 

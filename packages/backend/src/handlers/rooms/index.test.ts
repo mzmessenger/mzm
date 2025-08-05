@@ -1,13 +1,13 @@
 import { vi, expect } from 'vitest'
-import { createTest } from '../../test/testUtil.js'
-vi.mock('../lib/logger.js')
-vi.mock('../lib/redis.js', () => {
+import { createTest } from '../../../test/testUtil.js'
+vi.mock('../../lib/logger.js')
+vi.mock('../../lib/redis.js', () => {
   return {
     lock: vi.fn(() => Promise.resolve(true)),
     release: vi.fn()
   }
 })
-vi.mock('../lib/elasticsearch/index.js', () => {
+vi.mock('../../lib/elasticsearch/index.js', () => {
   return {
     client: {}
   }
@@ -16,10 +16,10 @@ vi.mock('../lib/elasticsearch/index.js', () => {
 import type { API } from 'mzm-shared/src/api/universal'
 import { ObjectId, WithId } from 'mongodb'
 import { BadRequest } from 'mzm-shared/src/lib/errors'
-import * as config from '../config.js'
-import { collections, type User, type Enter } from '../lib/db.js'
-import { initGeneral } from '../logic/rooms.js'
-import { exitRoom, getUsers } from './rooms.js'
+import * as config from '../../config.js'
+import { collections, type User, type Enter } from '../../lib/db.js'
+import { initGeneral } from '../../logic/rooms.js'
+import { exitRoom, getUsers } from './index.js'
 
 const test = await createTest(globalThis)
 
