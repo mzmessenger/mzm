@@ -41,7 +41,6 @@ import { initConsumer } from './index.js'
 import * as consumerRemove from './remove.js'
 import * as consumerUnread from './unread.js'
 import * as consumeReply from './reply.js'
-import * as consumeSearchRoom from './search/room.js'
 import * as consumeVote from './vote.js'
 import * as consumeMessage from './message.js'
 
@@ -52,10 +51,6 @@ test('init', async ({ testDb, testRedis }) => {
     [consumerRemove.initRemoveConsumerGroup, consumerRemove.consumeRemove],
     [consumerUnread.initUnreadConsumerGroup, consumerUnread.consumeUnread],
     [consumeReply.initReplyConsumerGroup, consumeReply.consumeReply],
-    [
-      consumeSearchRoom.initSearchRoomConsumerGroup,
-      consumeSearchRoom.consumeSearchRooms
-    ],
     [consumeVote.initVoteConsumerGroup, consumeVote.consumeVote],
     [consumeMessage.initMessageConsumerGroup, consumeMessage.consumeMessage]
   ]

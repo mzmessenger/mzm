@@ -49,6 +49,7 @@ export default defineConfig(({ mode }) => {
         },
         workbox: {
           navigateFallbackDenylist: [/\/api/, /\/auth/],
+          globIgnores: ['**/assets/*.wasm'],
           runtimeCaching: [
             {
               urlPattern: /\/api/,
@@ -69,7 +70,7 @@ export default defineConfig(({ mode }) => {
       outDir: path.resolve(dirname, 'dist')
     },
     optimizeDeps: {
-      exclude: ['@sqlite.org/sqlite-wasm', 'lindera-wasm-ipadic']
+      exclude: ['lindera-wasm-ipadic']
     },
     root: path.resolve(dirname, 'src'),
     server: {
