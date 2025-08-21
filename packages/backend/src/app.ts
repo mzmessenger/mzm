@@ -51,14 +51,24 @@ export function createApp({
     })
 
     res.status(200)
-    res.set('Content-Type', 'text/plain')
+    res.set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache'
+    })
+    res.flushHeaders()
 
     const twitterUserName = getRequestTwitterUserName(req)
     const githubUserName = getRequestGithubUserName(req)
+    logger.info('mzm:socket:connection', {
+      user,
+      twitterUserName,
+      githubUserName
+    })
     connection(db, user, {
       twitterUserName,
       githubUserName
     }).then((r) => {
+      logger.info('mzm:socket:connection:response', r)
       res.write(Buffer.from(JSON.stringify(r)))
       res.write('\0')
     })

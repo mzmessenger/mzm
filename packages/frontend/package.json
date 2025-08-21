@@ -19,6 +19,7 @@
     "build": "vite build",
     "prebuild:tsc": "npm run clean",
     "build:tsc": "tsc --build tsconfig.json",
+    "predeploy": "npm run build",
     "deploy": "wrangler deploy --minify"
   },
   "license": "MIT",

@@ -2,7 +2,7 @@
 import { MongoClient } from 'mongodb'
 
 /**
- * node -r esbuild-register ./packages/bin/init_mongodb.ts --password=example --user=mzm --user_password=xxx --port=27018
+ * npm run cli -w bin init_mongodb -- --password example --user=mzm --user_password=password
  */
 
 async function createUser(client: MongoClient, dbname: string, user: string, password: string) {
