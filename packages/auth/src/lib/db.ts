@@ -1,4 +1,4 @@
-import { MongoClient, ObjectId } from 'mongodb'
+import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI, MONGO_SESSION_URI } from '../config.js'
 import { logger } from './logger.js'
 
@@ -14,18 +14,30 @@ export function collections(c: MongoClient) {
   }
 }
 
-let _client: MongoClient | null = null
 
 export async function createMongoClient() {
-  if (!_client) {
-    _client = await MongoClient.connect(MONGODB_URI)
-    logger.info('[db] connected mongodb')
-  }
-  return _client
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
+  })
+  await client.connect()
+  logger.info('[db] connected mongodb')
+  return client
 }
 
 export async function sessionClient() {
-  return await MongoClient.connect(MONGO_SESSION_URI)
+  const client = new MongoClient(MONGO_SESSION_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
+  })
+  await client.connect()
+  return client
 }
 
 export type User = {

@@ -1,5 +1,5 @@
 import type {} from 'mzm-shared/src/type/db'
-import { MongoClient, ObjectId } from 'mongodb'
+import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import {
   VoteStatusEnum,
   VoteTypeEnum,
@@ -47,9 +47,16 @@ export function collections(c: MongoClient) {
 }
 
 export async function initMongoClient() {
-  const _client = await MongoClient.connect(MONGODB_URI)
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
+  })
+  await client.connect()
   logger.info('[db] connected mongodb')
-  return _client
+  return client
 }
 
 export async function close(c: MongoClient) {
