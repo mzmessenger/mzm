@@ -1,0 +1,17 @@
+{
+  "$schema": "node_modules/wrangler/config-schema.json",
+  "name": "mzm-worker",
+  "compatibility_date": "2025-04-02",
+  "routes": [
+    {
+      "pattern": "mzm.dev",
+      "custom_domain": true
+    }
+  ],
+  "assets": {
+    "directory": "./dist"
+  },
+  "vars": {
+    "ENV": "production",
+  }
+}

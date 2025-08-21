@@ -56,18 +56,6 @@ export const REDIS = {
   } satisfies RedisOptions
 } as const
 
-export const SESSION_REDIS = {
-  options: {
-    host: process.env.SESSION_REDIS_HOST,
-    port: process.env.SESSION_REDIS_PORT
-      ? Number(process.env.SESSION_REDIS_PORT)
-      : 6379,
-    enableOfflineQueue: false,
-    connectTimeout: Number(process.env.SESSION_REDIS_TIMEOUT ?? 30000),
-    db: 1
-  } satisfies RedisOptions
-} as const
-
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not defined')
 }
