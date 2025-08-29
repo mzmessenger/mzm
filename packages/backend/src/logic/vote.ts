@@ -1,18 +1,16 @@
-import { ObjectId } from 'mongodb'
+import { ObjectId, type MongoClient } from 'mongodb'
 import { MessageType } from 'mzm-shared/src/type/socket'
 import {
   collections,
-  mongoClient,
   COLLECTION_NAMES,
   type VoteAnswer,
   type User
 } from '../lib/db.js'
 import { createUserIconPath } from '../lib/utils.js'
 
-export const getVoteAnswers = async (messageId: ObjectId) => {
+export async function getVoteAnswers(db: MongoClient, messageId: ObjectId) {
   const answers: Exclude<MessageType['vote'], undefined>['answers'] = []
 
-  const db = await mongoClient()
   const cursor = await collections(db).voteAnswer.aggregate<
     VoteAnswer & { user: User[] }
   >([

@@ -1,9 +1,7 @@
 import type { Request } from 'express'
-import type { AuthAPI } from 'mzm-shared/src/api/universal'
-import type { WrapFn } from 'mzm-shared/src/lib/wrap'
 import type { PassportRequest } from '../types.js'
 import type { NonceResponse } from '../middleware/index.js'
-import type { Redis } from 'ioredis'
+import type { MongoClient } from 'mongodb'
 import {
   BadRequest,
   Unauthorized,
@@ -13,14 +11,13 @@ import {
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 import { logger } from '../lib/logger.js'
-import { mongoClient, collections } from '../lib/db.js'
-import { sessionRedis } from '../lib/redis.js'
+import { collections } from '../lib/db.js'
 import { createTokens, verifyRefreshToken } from '../lib/token.js'
 import {
   generateUniqAuthorizationCode,
   saveAuthorizationCode
 } from '../lib/pkce/index.js'
-import { verifyAuthorizationCodeFromRedis } from '../lib/pkce/index.js'
+import { verifyAuthorizationCode } from '../lib/pkce/index.js'
 import {
   authorizeTemplate,
   authorizeErrorTemplate
@@ -39,75 +36,73 @@ const TokenBody = z.union([
   })
 ])
 
-export const token: WrapFn<
-  Request,
-  AuthAPI['/auth/token']['POST']['response'][200]['body']
-> = async (req) => {
-  logger.info({
-    label: 'accessToken',
-    message: 'start'
-  })
-  const body = TokenBody.safeParse(req.body)
-  if (body.success === false) {
-    throw new BadRequest({ message: body.error.message })
-  }
-
-  let userId: string | null = null
-  if (body.data.grant_type === 'authorization_code') {
-    const client = await sessionRedis()
-    const verify = await verifyAuthorizationCodeFromRedis(client, {
-      code: body.data.code,
-      grant_type: body.data.grant_type,
-      code_verifier: body.data.code_verifier
+export function createTokenHandler(db: MongoClient) {
+  return async (req: Request) => {
+    logger.info({
+      label: 'accessToken',
+      message: 'start'
     })
-    if (verify.success === false) {
-      throw new Unauthorized({ message: verify.error.message })
+    const body = TokenBody.safeParse(req.body)
+    if (body.success === false) {
+      throw new BadRequest({ message: body.error.message })
     }
-    userId = verify.data.userId
-  } else if (body.data.grant_type === 'refresh_token') {
-    const { err, decoded } = await verifyRefreshToken(body.data.refresh_token)
-    if (err) {
-      throw new Unauthorized({ message: 'invalid token' })
+
+    let userId: string | null = null
+    if (body.data.grant_type === 'authorization_code') {
+      const verify = await verifyAuthorizationCode(db, {
+        code: body.data.code,
+        grant_type: body.data.grant_type,
+        code_verifier: body.data.code_verifier
+      })
+      if (verify.success === false) {
+        throw new Unauthorized({ message: verify.error.message })
+      }
+      userId = verify.data.userId
+    } else if (body.data.grant_type === 'refresh_token') {
+      const { err, decoded } = await verifyRefreshToken(body.data.refresh_token)
+      if (err) {
+        throw new Unauthorized({ message: 'invalid token' })
+      }
+      userId = decoded?.user?._id ?? null
     }
-    userId = decoded?.user?._id ?? null
-  }
 
-  if (!userId) {
-    throw new BadRequest({ message: 'invalid grant_type' })
-  }
-  const user = await collections(await mongoClient()).users.findOne({
-    _id: new ObjectId(userId)
-  })
+    if (!userId) {
+      throw new BadRequest({ message: 'invalid grant_type' })
+    }
+    const user = await collections(db).users.findOne({
+      _id: new ObjectId(userId)
+    })
 
-  if (!user) {
-    throw new BadRequest({ message: 'invalid user' })
-  }
+    if (!user) {
+      throw new BadRequest({ message: 'invalid user' })
+    }
 
-  const { accessToken, refreshToken } = await createTokens({
-    _id: user._id.toHexString(),
-    twitterId: user.twitterId,
-    twitterUserName: user.twitterUserName,
-    githubId: user.githubId,
-    githubUserName: user.githubUserName
-  })
-  logger.info({
-    label: 'accessToken',
-    message: 'createTokens',
-    user: user._id.toHexString()
-  })
-
-  const response = {
-    accessToken,
-    refreshToken,
-    user: {
+    const { accessToken, refreshToken } = await createTokens({
       _id: user._id.toHexString(),
-      twitterId: user.twitterId ?? null,
-      twitterUserName: user.twitterUserName ?? null,
-      githubId: user.githubId ?? null,
-      githubUserName: user.githubUserName ?? null
+      twitterId: user.twitterId,
+      twitterUserName: user.twitterUserName,
+      githubId: user.githubId,
+      githubUserName: user.githubUserName
+    })
+    logger.info({
+      label: 'accessToken',
+      message: 'createTokens',
+      user: user._id.toHexString()
+    })
+
+    const response = {
+      accessToken,
+      refreshToken,
+      user: {
+        _id: user._id.toHexString(),
+        twitterId: user.twitterId ?? null,
+        twitterUserName: user.twitterUserName ?? null,
+        githubId: user.githubId ?? null,
+        githubUserName: user.githubUserName ?? null
+      }
     }
+    return response
   }
-  return response
 }
 
 const AuthorizationQuery = z.object({
@@ -116,12 +111,9 @@ const AuthorizationQuery = z.object({
   state: z.string().optional()
 })
 
-export const createAuthorize = (
-  res: NonceResponse,
-  client: Redis
-): WrapFn<Request, string> => {
-  const nonce = res.locals.nonce
-  return async (req) => {
+export function createAuthorize(db: MongoClient) {
+  return async (req: Request, res: NonceResponse) => {
+    const nonce = res.locals.nonce
     try {
       const { user } = req as PassportRequest
       if (!user) {
@@ -137,7 +129,7 @@ export const createAuthorize = (
         throw new BadRequest('invalid host')
       }
 
-      const generateCode = await generateUniqAuthorizationCode(client)
+      const generateCode = await generateUniqAuthorizationCode(db)
       if (generateCode.success === false) {
         throw new InternalServerError('code generate error')
       }
@@ -145,7 +137,7 @@ export const createAuthorize = (
 
       const { code } = generateCode.data
 
-      await saveAuthorizationCode(client, {
+      await saveAuthorizationCode(db, {
         code,
         code_challenge,
         userId: user._id.toHexString()

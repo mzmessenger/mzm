@@ -1,27 +1,30 @@
-import { ObjectId, WithId } from 'mongodb'
+import { ObjectId, type WithId, type MongoClient } from 'mongodb'
 import {
   collections,
-  mongoClient,
   RoomStatusEnum,
   type Enter,
   type Room
 } from '../lib/db.js'
 import { logger } from '../lib/logger.js'
-import { lock, release } from '../lib/redis.js'
+import { type ExRedisClient, lock, release } from '../lib/redis.js'
 import * as config from '../config.js'
-import { addUpdateSearchRoomQueue } from '../lib/provider/index.js'
 
-export const initGeneral = async () => {
+export async function initGeneral({
+  db,
+  redis
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+}) {
   const lockKey = config.lock.INIT_GENERAL_ROOM
   const lockVal = new ObjectId().toHexString()
-  const locked = await lock(lockKey, lockVal, 1000)
+  const locked = await lock(redis, lockKey, lockVal, 1000)
 
   if (!locked) {
     logger.info('[locked] initGeneral')
     return
   }
 
-  const db = await mongoClient()
   await collections(db).rooms.updateOne(
     {
       name: config.room.GENERAL_ROOM_NAME
@@ -36,12 +39,13 @@ export const initGeneral = async () => {
     { upsert: true }
   )
 
-  await release(lockKey, lockVal)
+  await release(redis, lockKey, lockVal)
 }
 
-export const isValidateRoomName = (
-  name: string
-): { valid: boolean; reason?: string } => {
+export function isValidateRoomName(name: string): {
+  valid: boolean
+  reason?: string
+} {
   if (!name.trim()) {
     return { valid: false, reason: 'name is empty' }
   } else if (name.length > config.room.MAX_ROOM_NAME_LENGTH) {
@@ -71,7 +75,11 @@ export const isValidateRoomName = (
   return { valid: true }
 }
 
-export const enterRoom = async (userId: ObjectId, roomId: ObjectId) => {
+export async function enterRoom(
+  db: MongoClient,
+  userId: ObjectId,
+  roomId: ObjectId
+) {
   const enter: Enter = {
     userId: userId,
     roomId: roomId,
@@ -79,7 +87,6 @@ export const enterRoom = async (userId: ObjectId, roomId: ObjectId) => {
     replied: 0
   }
 
-  const db = await mongoClient()
   await Promise.all([
     collections(db).enter.findOneAndUpdate(
       { userId: userId, roomId: roomId },
@@ -95,13 +102,20 @@ export const enterRoom = async (userId: ObjectId, roomId: ObjectId) => {
   ])
 }
 
-export const createRoom = async (
-  userId: ObjectId,
+export async function createRoom({
+  userId,
+  name,
+  db,
+  redis
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  userId: ObjectId
   name: string
-): Promise<WithId<Room> | null> => {
+}): Promise<WithId<Room> | null> {
   const lockKey = config.lock.CREATE_ROOM + ':' + name
   const lockVal = new ObjectId().toHexString()
-  const locked = await lock(lockKey, lockVal, 1000)
+  const locked = await lock(redis, lockKey, lockVal, 1000)
 
   if (!locked) {
     logger.info('[locked] createRoom:' + name)
@@ -114,14 +128,14 @@ export const createRoom = async (
     createdBy,
     status: RoomStatusEnum.CLOSE
   }
-  const db = await mongoClient()
+
   const inserted = await collections(db).rooms.insertOne(room)
-  await enterRoom(userId, inserted.insertedId)
+  await enterRoom(db, userId, inserted.insertedId)
 
   const id = inserted.insertedId.toHexString()
   logger.info(`[room:create] ${name} (${id}) created by ${createdBy}`)
 
-  await release(lockKey, lockVal)
+  await release(redis, lockKey, lockVal)
 
   return {
     _id: inserted.insertedId,
@@ -130,27 +144,4 @@ export const createRoom = async (
     updatedBy: undefined,
     status: RoomStatusEnum.CLOSE
   }
-}
-
-export const syncSeachAllRooms = async () => {
-  let counter = 0
-  let roomIds: string[] = []
-
-  const db = await mongoClient()
-  const cursor = await collections(db).rooms.find(
-    {},
-    { projection: { _id: 1 } }
-  )
-
-  for (let doc = await cursor.next(); doc != null; doc = await cursor.next()) {
-    roomIds.push(doc._id.toHexString())
-    counter++
-    if (roomIds.length > 100) {
-      await addUpdateSearchRoomQueue(roomIds)
-      roomIds = []
-    }
-  }
-
-  await addUpdateSearchRoomQueue(roomIds)
-  logger.info(`[syncSeachAllRooms] ${counter}`)
 }

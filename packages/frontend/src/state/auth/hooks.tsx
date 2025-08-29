@@ -20,6 +20,7 @@ export const useAuth = () => {
 
   const logout = useCallback(() => {
     location.href = AUTH_URL_BASE + '/auth/logout'
+    logger.info('mzm:logout')
     setLoginFlag(false)
   }, [setLoginFlag])
 
@@ -44,6 +45,7 @@ export const useAuth = () => {
   const init = useCallback(async () => {
     try {
       const res = await getAccessTokenFromIframe()
+      logger.info('mzm:auth:init', res.success)
       if (res.success) {
         setUser((current) => ({
           ...current,

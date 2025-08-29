@@ -4,7 +4,7 @@ import { createClients, type Fetcher } from 'mzm-shared/src/api/client'
 import { API_URL_BASE, AUTH_URL_BASE } from '../constants'
 import { proxyRequest } from '../lib/auth'
 
-export const fetcher: Fetcher = async <T>(options: Parameters<Fetcher>[0]) => {
+function createInit(options: Parameters<Fetcher>[0]) {
   const init: Parameters<typeof proxyRequest>[1] = {
     method: options.method
   }
@@ -27,8 +27,22 @@ export const fetcher: Fetcher = async <T>(options: Parameters<Fetcher>[0]) => {
         ? options.body
         : JSON.stringify(options.body)
   }
+  return init
+}
+
+export const fetcher: Fetcher = async <T>(options: Parameters<Fetcher>[0]) => {
+  const init = createInit(options)
 
   const res = await proxyRequest(options.url, init)
+  return res as T
+}
+
+export const textFetcher: Fetcher = async <T>(
+  options: Parameters<Fetcher>[0]
+) => {
+  const init = createInit(options)
+
+  const res = await proxyRequest(options.url, { ...init, bodyParser: 'text' })
   return res as T
 }
 

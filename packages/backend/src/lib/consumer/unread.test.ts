@@ -1,11 +1,6 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-import { vi, test, expect, beforeAll } from 'vitest'
+import { vi, expect } from 'vitest'
+import { createTest } from '../../../test/testUtil.js'
 vi.mock('../logger.js')
-vi.mock('../redis.js', async () => {
-  return {
-    client: vi.fn()
-  }
-})
 vi.mock('./common.js', () => {
   return {
     initConsumerGroup: vi.fn(),
@@ -13,52 +8,40 @@ vi.mock('./common.js', () => {
     createParser: vi.fn()
   }
 })
-vi.mock('../db.js', async () => {
-  const actual = await vi.importActual<typeof import('../db.js')>('../db.js')
-  return { ...actual, mongoClient: vi.fn() }
-})
 
 import { ObjectId } from 'mongodb'
 import * as config from '../../config.js'
-import { getTestMongoClient } from '../../../test/testUtil.js'
 import { UnreadQueue } from '../../types.js'
 import { collections, type User } from '../db.js'
-import { client } from '../redis.js'
+import { type ExRedisClient } from '../redis.js'
 import { initConsumerGroup, consumeGroup } from './common.js'
 import { increment, initUnreadConsumerGroup, consumeUnread } from './unread.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../db.js')
-  const { getTestMongoClient } = await import('../../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
-})
+const test = await createTest(globalThis)
 
-test('initUnreadConsumerGroup', async () => {
+test('initUnreadConsumerGroup', async ({ testRedis }) => {
   const init = vi.mocked(initConsumerGroup)
 
-  await initUnreadConsumerGroup()
+  await initUnreadConsumerGroup(testRedis)
 
   expect(init.mock.calls.length).toStrictEqual(1)
-  expect(init.mock.calls[0][0]).toStrictEqual(config.stream.UNREAD)
+  expect(init.mock.calls[0][1]).toStrictEqual(config.stream.UNREAD)
 })
 
-test('consumeUnread', async () => {
+test('consumeUnread', async ({ testDb, testRedis }) => {
   const consume = vi.mocked(consumeGroup)
 
-  await consumeUnread()
+  await consumeUnread({ db: testDb, redis: testRedis })
 
   expect(consume.mock.calls.length).toStrictEqual(1)
-  expect(consume.mock.calls[0][2]).toStrictEqual(config.stream.UNREAD)
+  expect(consume.mock.calls[0][3]).toStrictEqual(config.stream.UNREAD)
 })
 
-test('increment', async () => {
+test('increment', async ({ testDb }) => {
   const xack = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xack }))
   xack.mockClear()
   xack.mockResolvedValue(1)
+  const redis = { xack } as unknown as ExRedisClient
 
   const maxIndex = 1
   const maxValue = 100
@@ -68,8 +51,7 @@ test('increment', async () => {
     return { _id: userId, account: userId.toHexString(), roomOrder: [] }
   })
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertMany(users)
+  await collections(testDb).users.insertMany(users)
   const roomId = new ObjectId()
   const enter = userIds.map((userId) => ({
     userId,
@@ -79,16 +61,21 @@ test('increment', async () => {
   }))
   // max test
   enter[maxIndex].unreadCounter = maxValue
-  await collections(db).enter.insertMany(enter)
+  await collections(testDb).enter.insertMany(enter)
 
   const _unreadQueue: UnreadQueue = {
     roomId: roomId.toHexString(),
     messageId: new ObjectId().toHexString()
   }
   const unreadQueue = JSON.stringify(_unreadQueue)
-  await increment('queue-id', ['unread', unreadQueue])
+  await increment({
+    db: testDb,
+    redis,
+    ackId: 'queue-id',
+    messages: ['unread', unreadQueue]
+  })
 
-  let targets = await collections(db)
+  let targets = await collections(testDb)
     .enter.find({ userId: { $in: userIds }, roomId })
     .toArray()
   expect(targets.length).toStrictEqual(enter.length)
@@ -105,9 +92,14 @@ test('increment', async () => {
   expect(xack.mock.calls[0][2]).toStrictEqual('queue-id')
 
   // call twice
-  await increment('queue-id', ['unread', unreadQueue])
+  await increment({
+    db: testDb,
+    redis,
+    ackId: 'queue-id',
+    messages: ['unread', unreadQueue]
+  })
 
-  targets = await collections(db)
+  targets = await collections(testDb)
     .enter.find({ userId: { $in: userIds }, roomId })
     .toArray()
   for (const target of targets) {

@@ -1,6 +1,3 @@
-import type { Readable } from 'stream'
-import type { IncomingHttpHeaders } from 'http'
-
 export type UnreadQueue = {
   roomId: string
   messageId: string
@@ -23,8 +20,3 @@ export const RoomQueueType = {
 export const JobType = {
   SEARCH_ROOM: 'job:SEARCH_ROOM'
 } as const
-
-export type StreamWrapResponse = Promise<{
-  headers: IncomingHttpHeaders
-  stream: Readable
-}>

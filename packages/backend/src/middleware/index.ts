@@ -18,10 +18,7 @@ export const checkAccessToken = (
     return
   }
 
-  verifyAccessToken(accessToken, JWT.accessTokenSecret, {
-    issuer: JWT.issuer,
-    audience: JWT.audience
-  })
+  verifyAccessToken(accessToken, JWT.accessTokenSecret, JWT.verifyOptions)
     .then(({ err, decoded }) => {
       if (err) {
         res.status(401).send('not verify token')

@@ -1,6 +1,6 @@
-/* eslint-disable @typescript-eslint/no-explicit-any */
+/* eslint-disable @typescript-eslint/no-explicit-any,no-empty-pattern */
 import assert from 'node:assert'
-import { test, expect, vi, beforeAll } from 'vitest'
+import { test as baseTest, expect, vi } from 'vitest'
 import { BadRequest } from 'mzm-shared/src/lib/errors'
 import { getTestMongoClient } from '../../test/testUtil.js'
 import { collections } from '../lib/db.js'
@@ -30,17 +30,17 @@ vi.mock('mzm-shared/src/auth/index', async () => {
 
 import { removeGithub } from './github.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient } = await import('../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
-test('removeGithub', async () => {
-  const db = await getTestMongoClient(globalThis)
-  const user = await collections(db).users.insertOne({
+test('removeGithub', async ({ testDb }) => {
+  const user = await collections(testDb).users.insertOne({
     twitterId: 'twitterId',
     twitterUserName: 'twitterUserName',
     githubId: 'githubId',
@@ -69,10 +69,10 @@ test('removeGithub', async () => {
     }
   }
 
-  await removeGithub(req as any)
+  await removeGithub(req as any, testDb)
   expect(verifyAccessTokenMock).toHaveBeenCalledTimes(1)
 
-  const updated = await collections(db).users.findOne({
+  const updated = await collections(testDb).users.findOne({
     _id: user.insertedId
   })
   expect(updated?.twitterId).toStrictEqual('twitterId')
@@ -81,7 +81,7 @@ test('removeGithub', async () => {
   expect(updated?.githubUserName).toStrictEqual(undefined)
 })
 
-test('removeGithub (no access token)', async () => {
+test('removeGithub (no access token)', async ({ testDb }) => {
   expect.assertions(1)
 
   const req = {
@@ -89,17 +89,16 @@ test('removeGithub (no access token)', async () => {
   }
 
   try {
-    await removeGithub(req as any)
+    await removeGithub(req as any, testDb)
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test('removeGithub (not linked)', async () => {
+test('removeGithub (not linked)', async ({ testDb }) => {
   expect.assertions(3)
 
-  const db = await getTestMongoClient(globalThis)
-  const user = await collections(db).users.insertOne({
+  const user = await collections(testDb).users.insertOne({
     twitterId: 'twitterId',
     twitterUserName: 'twitterUserName'
   })
@@ -127,7 +126,7 @@ test('removeGithub (not linked)', async () => {
   }
 
   try {
-    await removeGithub(req as any)
+    await removeGithub(req as any, testDb)
   } catch (e) {
     expect(verifyAccessTokenMock).toHaveBeenCalledTimes(1)
     assert(e instanceof BadRequest)
@@ -136,11 +135,10 @@ test('removeGithub (not linked)', async () => {
   }
 })
 
-test('removeGithub (can not remove)', async () => {
+test('removeGithub (can not remove)', async ({ testDb }) => {
   expect.assertions(3)
 
-  const db = await getTestMongoClient(globalThis)
-  const user = await collections(db).users.insertOne({
+  const user = await collections(testDb).users.insertOne({
     githubId: 'githubId',
     githubUserName: 'githubUserName'
   })
@@ -168,7 +166,7 @@ test('removeGithub (can not remove)', async () => {
   }
 
   try {
-    await removeGithub(req as any)
+    await removeGithub(req as any, testDb)
   } catch (e) {
     expect(verifyAccessTokenMock).toHaveBeenCalledTimes(1)
     assert(e instanceof BadRequest)

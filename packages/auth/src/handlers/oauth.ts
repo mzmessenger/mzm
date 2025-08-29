@@ -2,7 +2,7 @@ import type { Request, Response, NextFunction } from 'express'
 import type { PassportStatic } from 'passport'
 import type { Result } from 'mzm-shared/src/type'
 import type { SerializeUser } from '../types.js'
-import { sessionRedis } from '../lib/redis.js'
+import type { MongoClient } from 'mongodb'
 import {
   getParametaerFromSession,
   generateUniqAuthorizationCode,
@@ -11,14 +11,14 @@ import {
 } from '../lib/pkce/index.js'
 import { logger } from '../lib/logger.js'
 
-const _oauthCallback = async (
-  req: Request & { user?: SerializeUser }
-): Promise<Result<{ redirectUrl: string }>> => {
+async function _oauthCallback(
+  req: Request & { user?: SerializeUser },
+  db: MongoClient
+): Promise<Result<{ redirectUrl: string }>> {
   if (!req.user) {
     return { success: false, error: { status: 400, message: 'invalid user' } }
   }
 
-  const client = await sessionRedis()
   const params = await getParametaerFromSession(req)
   if (params.success === false) {
     return {
@@ -29,13 +29,13 @@ const _oauthCallback = async (
       }
     }
   }
-  const generateCode = await generateUniqAuthorizationCode(client)
+  const generateCode = await generateUniqAuthorizationCode(db)
   if (generateCode.success === false) {
     return generateCode
   }
 
   const { code } = generateCode.data
-  await saveAuthorizationCode(client, {
+  await saveAuthorizationCode(db, {
     code,
     code_challenge: params.data.code_challenge,
     userId: req.user._id.toHexString()
@@ -49,20 +49,19 @@ const _oauthCallback = async (
   }
 }
 
-export const oauthCallback = (
-  req: Request & { user?: SerializeUser },
-  res: Response
-) => {
-  _oauthCallback(req).then((params) => {
-    if (params.success === false) {
-      logger.error({ label: 'oauth2Callback', error: params.error.message })
-      return res.status(params.error.status ?? 500).send(params.error.message)
-    }
-    return res.redirect(params.data.redirectUrl)
-  })
+export function oauthCallback(db: MongoClient) {
+  return (req: Request & { user?: SerializeUser }, res: Response) => {
+    _oauthCallback(req, db).then((params) => {
+      if (params.success === false) {
+        logger.error({ label: 'oauth2Callback', error: params.error.message })
+        return res.status(params.error.status ?? 500).send(params.error.message)
+      }
+      return res.redirect(params.data.redirectUrl)
+    })
+  }
 }
 
-export const oauth = (passport: PassportStatic, strategy: string) => {
+export function oauthHandler(passport: PassportStatic, strategy: string) {
   return async (req: Request, res: Response, next: NextFunction) => {
     try {
       const save = await saveParameterToSession(req)

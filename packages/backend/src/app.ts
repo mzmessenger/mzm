@@ -1,37 +1,34 @@
-import type { MulterFile } from './types/index.js'
-import express, { type Request } from 'express'
+import type { MongoClient } from 'mongodb'
+import express from 'express'
 import cors from 'cors'
-import multer from 'multer'
 import helmet from 'helmet'
 import { createErrorHandler } from 'mzm-shared/src/lib/middleware'
-import { MULTER_PATH, CORS_ORIGIN } from './config.js'
-import { streamWrap } from './lib/wrap.js'
+import { CORS_ORIGIN } from './config.js'
 import { logger } from './lib/logger.js'
 import {
   getRequestUserId,
   getRequestGithubUserName,
   getRequestTwitterUserName
 } from './lib/utils.js'
+import { type ExRedisClient } from './lib/redis.js'
 import { addUserResponse, closeUserResponse } from './lib/fetchStreaming.js'
-import { wrap } from 'mzm-shared/src/lib/wrap'
-import * as rooms from './handlers/rooms.js'
+import { response } from 'mzm-shared/src/lib/wrap'
+import * as rooms from './handlers/rooms/index.js'
 import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import * as internal from './handlers/internal.js'
 import { connection } from './handlers/socket/connection.js'
-import {
-  checkAccessToken,
-  checkInternalAccessToken
-} from './middleware/index.js'
-
-const iconUpload = multer({
-  dest: MULTER_PATH,
-  limits: { fileSize: 1000 * 1000 }
-})
+import { checkAccessToken } from './middleware/index.js'
 
 const jsonParser = express.json({ limit: '1mb' })
 
-export const createApp = () => {
+export function createApp({
+  db,
+  redis
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+}) {
   const app = express()
   app.use(helmet())
   app.use(
@@ -40,59 +37,9 @@ export const createApp = () => {
     })
   )
 
-  app[rooms.createRoom.method](
-    rooms.createRoom.path,
-    checkAccessToken,
-    jsonParser,
-    wrap(rooms.createRoom.handler)
-  )
-  app[rooms.exitRoom.method](
-    rooms.exitRoom.path,
-    checkAccessToken,
-    jsonParser,
-    wrap(rooms.exitRoom.handler)
-  )
-  app[rooms.search.method](rooms.search.path, wrap(rooms.search.handler))
-  app[rooms.getUsers.method](
-    rooms.getUsers.path,
-    checkAccessToken,
-    wrap(rooms.getUsers.handler)
-  )
-  app[user.getUserInfo.method](
-    user.getUserInfo.path,
-    checkAccessToken,
-    wrap(user.getUserInfo.handler)
-  )
-  app[user.update.method](
-    user.update.path,
-    checkAccessToken,
-    jsonParser,
-    wrap(user.update.handler)
-  )
-  app[icon.getUserIcon.method](
-    icon.getUserIcon.path,
-    streamWrap(icon.getUserIcon.handler)
-  )
-  app[icon.getUserIcon.method](
-    '/api/icon/user/:account/:version',
-    streamWrap(icon.getUserIcon.handler)
-  )
-  app[icon.uploadUserIcon.method](
-    icon.uploadUserIcon.path,
-    checkAccessToken,
-    iconUpload.single('icon'),
-    wrap<Request & { file?: MulterFile }>(icon.uploadUserIcon.handler)
-  )
-  app[icon.getRoomIcon.method](
-    icon.getRoomIcon.path,
-    streamWrap(icon.getRoomIcon.handler)
-  )
-  app[icon.uploadRoomIcon.method](
-    icon.uploadRoomIcon.path,
-    checkAccessToken,
-    iconUpload.single('icon'),
-    wrap(icon.uploadRoomIcon.handler)
-  )
+  rooms.createRoute(app, { db, redis, jsonParser, checkAccessToken })
+  user.createRoute(app, { db, jsonParser, checkAccessToken })
+  icon.createRoute(app, { db, checkAccessToken })
 
   app.get('/api/socket', checkAccessToken, (req, res) => {
     const user = getRequestUserId(req)
@@ -104,14 +51,24 @@ export const createApp = () => {
     })
 
     res.status(200)
-    res.set('Content-Type', 'text/plain')
+    res.set({
+      'Content-Type': 'text/event-stream',
+      'Cache-Control': 'no-cache'
+    })
+    res.flushHeaders()
 
     const twitterUserName = getRequestTwitterUserName(req)
     const githubUserName = getRequestGithubUserName(req)
-    connection(user, {
+    logger.info('mzm:socket:connection', {
+      user,
+      twitterUserName,
+      githubUserName
+    })
+    connection(db, user, {
       twitterUserName,
       githubUserName
     }).then((r) => {
+      logger.info('mzm:socket:connection:response', r)
       res.write(Buffer.from(JSON.stringify(r)))
       res.write('\0')
     })
@@ -122,14 +79,10 @@ export const createApp = () => {
     }, 5000)
   })
 
-  app.post('/api/socket', checkAccessToken, jsonParser, wrap(internal.socket))
-
-  app.post(
-    '/api/internal/socket',
-    checkInternalAccessToken,
-    jsonParser,
-    wrap(internal.socket)
-  )
+  app.post('/api/socket', checkAccessToken, jsonParser, async (req, res) => {
+    const data = await internal.socket(req, { db, redis })
+    return response(data)(req, res)
+  })
 
   app.use(createErrorHandler(logger))
 

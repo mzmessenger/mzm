@@ -1,5 +1,5 @@
 import type {} from 'mzm-shared/src/type/db'
-import { MongoClient, Collection, ObjectId } from 'mongodb'
+import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import {
   VoteStatusEnum,
   VoteTypeEnum,
@@ -19,27 +19,7 @@ export {
   type Enter
 } from 'mzm-shared/src/type/db'
 
-type CollectionType = {
-  rooms: Collection<Room>
-  enter: Collection<Enter>
-  users: Collection<User>
-  removed: Collection<Removed>
-  messages: Collection<Message>
-  voteAnswer: Collection<VoteAnswer>
-}
-
-const _collections: Partial<CollectionType> = {
-  rooms: undefined,
-  enter: undefined,
-  users: undefined,
-  messages: undefined,
-  removed: undefined,
-  voteAnswer: undefined
-} as const
-
-let connected = false
-
-const initCollections = (c: MongoClient): CollectionType => {
+function initCollections(c: MongoClient) {
   const db = c.db()
   const rooms = db.collection<Room>(COLLECTION_NAMES.ROOMS)
   const enter = db.collection<Enter>(COLLECTION_NAMES.ENTER)
@@ -47,13 +27,6 @@ const initCollections = (c: MongoClient): CollectionType => {
   const messages = db.collection<Message>(COLLECTION_NAMES.MESSAGES)
   const removed = db.collection<Removed>(COLLECTION_NAMES.REMOVED)
   const voteAnswer = db.collection<VoteAnswer>(COLLECTION_NAMES.VOTE_ANSWER)
-
-  _collections.rooms = rooms
-  _collections.enter = enter
-  _collections.users = users
-  _collections.messages = messages
-  _collections.removed = removed
-  _collections.voteAnswer = voteAnswer
 
   return {
     rooms,
@@ -65,39 +38,28 @@ const initCollections = (c: MongoClient): CollectionType => {
   }
 }
 
-export const collections = (c: MongoClient): CollectionType => {
+export function collections(c: MongoClient) {
   if (!c) {
     throw new Error('no db client')
   }
 
-  if (!connected) {
-    initCollections(c)
-  }
-
-  return _collections as CollectionType
+  return initCollections(c)
 }
 
-let _client: MongoClient | null = null
-
-export const mongoClient = async () => {
-  if (!_client) {
-    _client = await MongoClient.connect(MONGODB_URI)
-  }
-  return _client
+export async function initMongoClient() {
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
+  })
+  await client.connect()
+  logger.info('[db] connected mongodb')
+  return client
 }
 
-export const connect = async (c: MongoClient) => {
-  initCollections(c)
-  connected = true
-
-  if (process.env.NODE_ENV !== 'test') {
-    logger.info('[db] connected mongodb')
-  }
-
-  return c
-}
-
-export const close = async (c: MongoClient) => {
+export async function close(c: MongoClient) {
   c.close()
 }
 

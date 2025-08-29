@@ -1,4 +1,5 @@
-import { vi, test, expect, beforeEach, beforeAll } from 'vitest'
+/* eslint-disable no-empty-pattern */
+import { vi, test as baseTest, expect, beforeEach } from 'vitest'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/db.js', async () => {
   const actual =
@@ -13,12 +14,13 @@ import { collections, COLLECTION_NAMES, type Message } from '../lib/db.js'
 import { saveMessage, getMessages } from './messages.js'
 import * as config from '../config.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient } = await import('../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
+const test = baseTest.extend<{
+  testDb: Awaited<ReturnType<typeof getTestMongoClient>>
+}>({
+  testDb: async ({}, use) => {
+    const db = await getTestMongoClient(globalThis)
+    await use(db)
+  }
 })
 
 beforeEach(async () => {
@@ -26,12 +28,13 @@ beforeEach(async () => {
   await dropCollection(db, COLLECTION_NAMES.MESSAGES)
 })
 
-test('saveMessage', async () => {
+test('saveMessage', async ({ testDb }) => {
   const message = 'test'
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
   const save = await saveMessage(
+    testDb,
     message,
     roomId.toHexString(),
     userId.toHexString()
@@ -42,8 +45,9 @@ test('saveMessage', async () => {
     return
   }
 
-  const db = await getTestMongoClient(globalThis)
-  const found = await collections(db).messages.findOne({ _id: save.insertedId })
+  const found = await collections(testDb).messages.findOne({
+    _id: save.insertedId
+  })
 
   expect(found?._id).toStrictEqual(save.insertedId)
   expect(found?.message).toStrictEqual(message)
@@ -51,34 +55,37 @@ test('saveMessage', async () => {
   expect(found?.userId.toHexString()).toStrictEqual(userId.toHexString())
 })
 
-test.each([[''], ['a'.repeat(config.message.MAX_MESSAGE_LENGTH + 1)]])(
+test.for([[''], ['a'.repeat(config.message.MAX_MESSAGE_LENGTH + 1)]])(
   'valid: saveMessage (%s)',
-  async (message) => {
+  async ([message], { testDb }) => {
     const roomId = new ObjectId()
     const userId = new ObjectId()
 
-    const db = await getTestMongoClient(globalThis)
-    const beforeCount = await collections(db).messages.countDocuments()
+    const beforeCount = await collections(testDb).messages.countDocuments()
 
     const save = await saveMessage(
+      testDb,
       message,
       roomId.toHexString(),
       userId.toHexString()
     )
 
-    const afterCount = await collections(db).messages.countDocuments()
+    const afterCount = await collections(testDb).messages.countDocuments()
 
     expect(save).toStrictEqual(false)
     expect(beforeCount).toStrictEqual(afterCount)
   }
 )
 
-test('getMessages', async () => {
+test('getMessages', async ({ testDb }) => {
   const overNum = 2
   const userId = new ObjectId()
   const account = 'test'
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
   const roomId = new ObjectId()
 
   const insert: Omit<Message, '_id'>[] = []
@@ -96,13 +103,13 @@ test('getMessages', async () => {
     insert.push(message)
   }
 
-  await collections(db).messages.insertMany(insert)
+  await collections(testDb).messages.insertMany(insert)
 
-  let messages = await getMessages(roomId.toHexString())
+  let messages = await getMessages(testDb, roomId.toHexString())
 
   const idList = messages.messages.map((message) => new ObjectId(message.id))
   const messageMap = (
-    await collections(db)
+    await collections(testDb)
       .messages.find({
         _id: { $in: idList }
       })
@@ -124,17 +131,24 @@ test('getMessages', async () => {
     expect(message.iine).toStrictEqual(messageMap.get(message.id)?.iine)
   }
 
-  messages = await getMessages(roomId.toHexString(), messages.messages[0].id)
+  messages = await getMessages(
+    testDb,
+    roomId.toHexString(),
+    messages.messages[0].id
+  )
 
   expect(messages.existHistory).toStrictEqual(false)
   expect(messages.messages.length).toStrictEqual(overNum)
 })
 
-test('getMessages just', async () => {
+test('getMessages just', async ({ testDb }) => {
   const userId = new ObjectId()
   const account = 'test'
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
   const roomId = new ObjectId()
 
   const insert: Omit<Message, '_id'>[] = []
@@ -152,29 +166,40 @@ test('getMessages just', async () => {
     insert.push(message)
   }
 
-  await collections(db).messages.insertMany(insert)
+  await collections(testDb).messages.insertMany(insert)
 
-  let messages = await getMessages(roomId.toHexString())
-
-  expect(messages.existHistory).toStrictEqual(true)
-  expect(messages.messages.length).toStrictEqual(config.room.MESSAGE_LIMIT)
-
-  messages = await getMessages(roomId.toHexString(), messages.messages[0].id)
+  let messages = await getMessages(testDb, roomId.toHexString())
 
   expect(messages.existHistory).toStrictEqual(true)
   expect(messages.messages.length).toStrictEqual(config.room.MESSAGE_LIMIT)
 
-  messages = await getMessages(roomId.toHexString(), messages.messages[0].id)
+  messages = await getMessages(
+    testDb,
+    roomId.toHexString(),
+    messages.messages[0].id
+  )
+
+  expect(messages.existHistory).toStrictEqual(true)
+  expect(messages.messages.length).toStrictEqual(config.room.MESSAGE_LIMIT)
+
+  messages = await getMessages(
+    testDb,
+    roomId.toHexString(),
+    messages.messages[0].id
+  )
 
   expect(messages.existHistory).toStrictEqual(false)
   expect(messages.messages.length).toStrictEqual(0)
 })
 
-test('getMessages vote', async () => {
+test('getMessages vote', async ({ testDb }) => {
   const userId = new ObjectId()
   const account = 'test'
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
   const roomId = new ObjectId()
 
   const insert: Omit<Message, '_id'>[] = []
@@ -197,9 +222,9 @@ test('getMessages vote', async () => {
     insert.push(message)
   }
 
-  await collections(db).messages.insertMany(insert)
+  await collections(testDb).messages.insertMany(insert)
 
-  const messages = await getMessages(roomId.toHexString())
+  const messages = await getMessages(testDb, roomId.toHexString())
 
   expect(messages.messages.length).toStrictEqual(10)
 
@@ -209,11 +234,14 @@ test('getMessages vote', async () => {
   }
 })
 
-test('getMessages removed', async () => {
+test('getMessages removed', async ({ testDb }) => {
   const userId = new ObjectId()
   const account = 'test'
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).users.insertOne({ _id: userId, account, roomOrder: [] })
+  await collections(testDb).users.insertOne({
+    _id: userId,
+    account,
+    roomOrder: []
+  })
   const roomId = new ObjectId()
 
   const insert: Omit<Message, '_id'>[] = []
@@ -236,9 +264,9 @@ test('getMessages removed', async () => {
     insert.push(message)
   }
 
-  await collections(db).messages.insertMany(insert)
+  await collections(testDb).messages.insertMany(insert)
 
-  const messages = await getMessages(roomId.toHexString())
+  const messages = await getMessages(testDb, roomId.toHexString())
 
   expect(messages.messages.length).toStrictEqual(10)
 

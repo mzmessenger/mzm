@@ -1,8 +1,11 @@
-import type { Redis } from 'ioredis'
 import type { Request } from 'express'
 import type { Result } from 'mzm-shared/src/type'
+import type { MongoClient } from 'mongodb'
 import { z } from 'zod'
-import { verifyAuthorizationCode, generateAuthorizationCode } from './util.js'
+import {
+  verifyAuthorizationCode as _verifyAuthorizationCode,
+  generateAuthorizationCode
+} from './util.js'
 import { logger } from '../logger.js'
 import {
   saveCodeChallenge,
@@ -10,11 +13,12 @@ import {
   removeCodeChallenge
 } from '../session.js'
 import { ALLOW_REDIRECT_URIS } from '../../config.js'
+import { collections } from '../db.js'
 
 export { verifyCodeChallenge } from './util.js'
 
 export const generateUniqAuthorizationCode = async (
-  client: Redis
+  client: MongoClient
 ): Promise<Result<{ code: string }>> => {
   try {
     let generated = false
@@ -23,16 +27,11 @@ export const generateUniqAuthorizationCode = async (
       code = generateAuthorizationCode()
       // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
       // A maximum authorization code lifetime of 10 minutes is RECOMMENDED.
-      const res = await client.set(
-        `codegen:${code}`,
-        code,
-        'EX',
-        6000 * 10,
-        'NX'
-      )
-      if (res !== null) {
+      const res = await collections(client).authorizationCode.findOne({
+        code
+      })
+      if (!res) {
         generated = true
-        break
       }
     }
     if (!generated || !code) {
@@ -45,20 +44,8 @@ export const generateUniqAuthorizationCode = async (
   }
 }
 
-export const removeCodeFromCodeGenerator = async (
-  client: Redis,
-  code: string
-) => {
-  const res = await client.del(`codegen:${code}`)
-  return res
-}
-
-const createAuthorizationCodeRedisKey = (code: string) => {
-  return `code:${code}`
-}
-
 export const saveAuthorizationCode = async (
-  client: Redis,
+  client: MongoClient,
   options: {
     code: string
     code_challenge: string
@@ -67,50 +54,19 @@ export const saveAuthorizationCode = async (
 ) => {
   // https://datatracker.ietf.org/doc/html/rfc6749#section-4.1.2
   // A maximum authorization code lifetime of 10 minutes is RECOMMENDED.
-  await client.set(
-    createAuthorizationCodeRedisKey(options.code),
-    JSON.stringify({
-      code: options.code,
-      code_challenge: options.code_challenge,
-      code_challenge_method: 'S256',
-      userId: options.userId
-    }),
-    'EX',
-    60 * 10
-  )
+  await collections(client).authorizationCode.insertOne({
+    code: options.code,
+    code_challenge: options.code_challenge,
+    code_challenge_method: 'S256',
+    userId: options.userId,
+    createdAt: new Date()
+  })
 
   return { code: options.code, code_challenge: options.code_challenge }
 }
 
-const getAuthorizationCode = async (client: Redis, code: string) => {
-  const key = createAuthorizationCodeRedisKey(code)
-  const val = await client.get(key)
-  return val
-}
-
-const removeAuthorizationCode = async (client: Redis, code: string) => {
-  const key = createAuthorizationCodeRedisKey(code)
-  return await client.del(key)
-}
-
-const AuthorizationCode = z.string().transform((str, ctx) => {
-  const parser = z.object({
-    code_challenge: z.string(),
-    code_challenge_method: z.string(),
-    userId: z.string()
-  })
-
-  try {
-    return parser.parse(JSON.parse(str))
-  } catch (e) {
-    logger.info('[AuthorizationCode]', e)
-    ctx.addIssue({ code: 'custom', message: 'invalid code json' })
-    return z.NEVER
-  }
-})
-
-export const verifyAuthorizationCodeFromRedis = async (
-  client: Redis,
+export const verifyAuthorizationCode = async (
+  client: MongoClient,
   args: {
     code: string
     grant_type: string
@@ -118,36 +74,31 @@ export const verifyAuthorizationCodeFromRedis = async (
   }
 ): Promise<Result<{ userId: string }>> => {
   try {
-    const val = await getAuthorizationCode(client, args.code)
+    const { authorizationCode } = await collections(client)
+    const val = await authorizationCode.findOne({
+      code: args.code
+    })
     if (!val) {
       return { success: false, error: { message: 'invalid code' } }
     }
 
-    const parsedAuthorizationCode = AuthorizationCode.safeParse(val)
-    if (parsedAuthorizationCode.success === false) {
-      return {
-        success: false,
-        error: { message: parsedAuthorizationCode.error.message }
-      }
-    }
-
-    const res = await verifyAuthorizationCode({
+    const res = await _verifyAuthorizationCode({
       code: args.code,
       grant_type: args.grant_type,
       code_verifier: args.code_verifier,
-      code_challenge: parsedAuthorizationCode.data.code_challenge
+      code_challenge: val.code_challenge
     })
     if (res.success === false) {
       return res
     }
 
-    await Promise.any([
-      removeAuthorizationCode(client, args.code),
-      removeCodeFromCodeGenerator(client, args.code)
-    ])
+    await authorizationCode.deleteOne({
+      code: args.code
+    })
+
     return {
       success: true,
-      data: { userId: parsedAuthorizationCode.data.userId }
+      data: { userId: val.userId }
     }
   } catch (e) {
     logger.info('[verifyAuthorizationCodeFromRedis]', e)

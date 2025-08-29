@@ -1,4 +1,4 @@
-import { ObjectId, WithId } from 'mongodb'
+import { ObjectId, WithId, type MongoClient } from 'mongodb'
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/src/type/db'
 import {
   TO_SERVER_CMD,
@@ -10,7 +10,6 @@ import { z } from 'zod'
 import { logger } from '../../lib/logger.js'
 import {
   collections,
-  mongoClient,
   RoomStatusEnum,
   VoteAnswerEnum,
   type Message,
@@ -19,6 +18,7 @@ import {
   type User,
   type VoteAnswer
 } from '../../lib/db.js'
+import { type ExRedisClient } from '../../lib/redis.js'
 import * as config from '../../config.js'
 import {
   escape,
@@ -33,7 +33,6 @@ import {
   addQueueToUsers,
   addUnreadQueue,
   addRepliedQueue,
-  addUpdateSearchRoomQueue,
   addVoteQueue
 } from '../../lib/provider/index.js'
 import { saveMessage, getMessages } from '../../logic/messages.js'
@@ -47,16 +46,19 @@ import {
   enterRoom as logicEnterRoom
 } from '../../logic/rooms.js'
 
-export const getRooms = async (
-  userId: string
-): Promise<ToClientType | void> => {
-  const db = await mongoClient()
+export async function getRooms({
+  db,
+  user: userId
+}: {
+  db: MongoClient
+  user: string
+}): Promise<ToClientType | void> {
   const [user, rooms] = await Promise.all([
     collections(db).users.findOne<Pick<User, 'roomOrder'>>(
       { _id: new ObjectId(userId) },
       { projection: { roomOrder: 1 } }
     ),
-    getRoomsLogic(userId)
+    getRoomsLogic(db, userId)
   ])
   if (!user) {
     return
@@ -83,10 +85,17 @@ const sendMessageParser = z.object({
     })
     .optional()
 })
-export const sendMessage = async (
-  user: string,
+export async function sendMessage({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_SEND>
-) => {
+}) {
   const parsed = sendMessageParser.safeParse(data)
   if (parsed.success === false) {
     return
@@ -121,13 +130,12 @@ export const sendMessage = async (
     }
   }
 
-  const saved = await saveMessage(message, room, user, vote)
+  const saved = await saveMessage(db, message, room, user, vote)
 
   if (!saved) {
     return
   }
 
-  const db = await mongoClient()
   const u = await collections(db).users.findOne({
     _id: new ObjectId(user)
   })
@@ -162,29 +170,33 @@ export const sendMessage = async (
   }
 
   // reply
-  await addUnreadQueue(room, saved.insertedId.toHexString())
+  await addUnreadQueue(redis, room, saved.insertedId.toHexString())
   const replied = repliedAccounts(message)
   // @todo
   if (replied.length > 0) {
     for (const account of replied) {
       const user = await collections(db).users.findOne({ account })
       if (user) {
-        await addRepliedQueue(room, user._id.toHexString())
+        await addRepliedQueue(redis, room, user._id.toHexString())
       }
     }
   }
 
-  const users = await getAllUserIdsInRoom(room)
-  addQueueToUsers(users, send)
+  const users = await getAllUserIdsInRoom(db, room)
+  addQueueToUsers(redis, users, send)
 
   return send
 }
 
-export const iine = async (
-  user: string,
+export async function iine({
+  db,
+  redis,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_IINE>
-) => {
-  const db = await mongoClient()
+}) {
   const target = await collections(db).messages.findOne({
     _id: new ObjectId(data.id)
   })
@@ -197,14 +209,14 @@ export const iine = async (
     { $inc: { iine: 1 } }
   )
 
-  const users = await getAllUserIdsInRoom(target.roomId.toHexString())
+  const users = await getAllUserIdsInRoom(db, target.roomId.toHexString())
   const send: ToClientType = {
     cmd: TO_CLIENT_CMD.MESSAGE_IINE,
     iine: (target.iine ? target.iine : 0) + 1,
     room: target.roomId.toHexString(),
     id: target._id.toHexString()
   }
-  addQueueToUsers(users, send)
+  addQueueToUsers(redis, users, send)
 
   return send
 }
@@ -214,10 +226,17 @@ const ModifyMessageParser = z.object({
   message: z.string().min(1)
 })
 
-export const modifyMessage = async (
-  user: string,
+export async function modifyMessage({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_MODIFY>
-) => {
+}) {
   const parsed = ModifyMessageParser.safeParse(data)
   // todo: send bad request
   if (parsed.success === false) {
@@ -231,7 +250,6 @@ export const modifyMessage = async (
   }
   const targetId = new ObjectId(id)
 
-  const db = await mongoClient()
   const from = await collections(db).messages.findOne({
     _id: targetId
   })
@@ -271,16 +289,23 @@ export const modifyMessage = async (
     room: from.roomId.toHexString()
   }
 
-  const users = await getAllUserIdsInRoom(from.roomId.toHexString())
-  addQueueToUsers(users, send)
+  const users = await getAllUserIdsInRoom(db, from.roomId.toHexString())
+  addQueueToUsers(redis, users, send)
 
   return send
 }
 
-export const removeMessage = async (
-  user: string,
+export async function removeMessage({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_REMOVE>
-) => {
+}) {
   const id = escape(data.id.trim())
   // todo: send bad request
   if (!id) {
@@ -288,7 +313,6 @@ export const removeMessage = async (
   }
   const targetId = new ObjectId(id)
 
-  const db = await mongoClient()
   const from = await collections(db).messages.findOne({
     _id: targetId
   })
@@ -328,8 +352,8 @@ export const removeMessage = async (
     room: from.roomId.toHexString()
   }
 
-  const users = await getAllUserIdsInRoom(from.roomId.toHexString())
-  addQueueToUsers(users, send)
+  const users = await getAllUserIdsInRoom(db, from.roomId.toHexString())
+  addQueueToUsers(redis, users, send)
 
   return send
 }
@@ -339,10 +363,15 @@ const GetMessagesFromRoomParser = z.object({
   room: z.string().min(1)
 })
 
-export const getMessagesFromRoom = async (
-  user: string,
+export async function getMessagesFromRoom({
+  db,
+  user,
+  data
+}: {
+  db: MongoClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGES_ROOM>
-): Promise<ToClientType | void> => {
+}): Promise<ToClientType | void> {
   const parsed = GetMessagesFromRoomParser.safeParse(data)
   if (parsed.success === false) {
     return
@@ -356,7 +385,6 @@ export const getMessagesFromRoom = async (
     userId: new ObjectId(user),
     roomId: new ObjectId(room)
   }
-  const db = await mongoClient()
   const exist = await collections(db).enter.findOne(filter)
   // todo: send bad request
   if (!exist) {
@@ -366,7 +394,7 @@ export const getMessagesFromRoom = async (
   if (data.id) {
     id = escape(data.id.trim())
   }
-  const { existHistory, messages } = await getMessages(room, id)
+  const { existHistory, messages } = await getMessages(db, room, id)
   const send: ToClientType = {
     user: user,
     cmd: TO_CLIENT_CMD.MESSAGES_ROOM,
@@ -377,12 +405,18 @@ export const getMessagesFromRoom = async (
   return send
 }
 
-export const enterRoom = async (
-  user: string,
+export async function enterRoom({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_ENTER>
-): Promise<ToClientType> => {
+}): Promise<ToClientType> {
   let room: WithId<Room> | null = null
-  const db = await mongoClient()
   if (data.id) {
     const id = escape(data.id.trim())
     room = await collections(db).rooms.findOne({ _id: new ObjectId(id) })
@@ -403,7 +437,7 @@ export const enterRoom = async (
     if (found) {
       room = found
     } else {
-      room = await createRoom(new ObjectId(user), name)
+      room = await createRoom({ db, redis, userId: new ObjectId(user), name })
     }
   }
 
@@ -417,7 +451,7 @@ export const enterRoom = async (
     }
   }
 
-  await logicEnterRoom(new ObjectId(user), room._id)
+  await logicEnterRoom(db, new ObjectId(user), room._id)
 
   return {
     user,
@@ -429,15 +463,21 @@ export const enterRoom = async (
   }
 }
 
-export const readMessage = async (
-  user: string,
+export async function readMessage({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_READ>
-) => {
+}) {
   if (!data.room) {
     // todo BadRequest
     return
   }
-  const db = await mongoClient()
   await collections(db).enter.updateOne(
     {
       userId: new ObjectId(user),
@@ -451,15 +491,22 @@ export const readMessage = async (
     cmd: TO_CLIENT_CMD.ROOMS_READ,
     room: data.room
   }
-  await addMessageQueue(send)
+  await addMessageQueue(redis, send)
 
   return send
 }
 
-export const sortRooms = async (
-  user: string,
+export async function sortRooms({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_SORT>
-) => {
+}) {
   if (!data.roomOrder || !Array.isArray(data.roomOrder)) {
     // todo BadRequest
     return
@@ -474,7 +521,6 @@ export const sortRooms = async (
     roomOrder.push(room)
   }
 
-  const db = await mongoClient()
   await collections(db).users.updateOne(
     { _id: new ObjectId(user) },
     { $set: { roomOrder } }
@@ -485,17 +531,21 @@ export const sortRooms = async (
     cmd: TO_CLIENT_CMD.ROOMS_SORT_SUCCESS,
     roomOrder
   }
-  await addMessageQueue(send)
+  await addMessageQueue(redis, send)
   return send
 }
 
-export const openRoom = async (
-  user: string,
+export async function openRoom({
+  db,
+  user,
+  data
+}: {
+  db: MongoClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_OPEN>
-) => {
+}) {
   const roomId = new ObjectId(data.roomId)
 
-  const db = await mongoClient()
   const general = await collections(db).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
@@ -508,20 +558,23 @@ export const openRoom = async (
     { _id: new ObjectId(data.roomId) },
     { $set: { status: RoomStatusEnum.OPEN, updatedBy: new ObjectId(user) } }
   )
-  addUpdateSearchRoomQueue([data.roomId])
   // @todo 伝播
 }
 
-export const closeRoom = async (
-  user: string,
+export async function closeRoom({
+  db,
+  user,
+  data
+}: {
+  db: MongoClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_CLOSE>
-) => {
+}) {
   if (!data.roomId) {
     return
   }
   const roomId = new ObjectId(data.roomId)
 
-  const db = await mongoClient()
   const general = await collections(db).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
@@ -535,14 +588,20 @@ export const closeRoom = async (
     { $set: { status: RoomStatusEnum.CLOSE, updatedBy: new ObjectId(user) } }
   )
 
-  addUpdateSearchRoomQueue([data.roomId])
   // @todo 伝播
 }
 
-export const updateRoomDescription = async (
-  user: string,
+export async function updateRoomDescription({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION>
-) => {
+}) {
   logger.info('updateRoomDescription', data.roomId, data.description)
   const roomId = new ObjectId(data.roomId)
 
@@ -555,24 +614,22 @@ export const updateRoomDescription = async (
     return
   }
 
-  const db = await mongoClient()
   await collections(db).rooms.updateOne(
     { _id: roomId },
     { $set: { description: data.description, updatedBy: new ObjectId(user) } }
   )
 
-  const users = await getAllUserIdsInRoom(roomId.toHexString())
+  const users = await getAllUserIdsInRoom(db, roomId.toHexString())
   const send: ToClientType = {
     cmd: TO_CLIENT_CMD.ROOMS_UPDATE_DESCRIPTION,
     roomId: data.roomId,
     descrioption: data.description
   }
-  addQueueToUsers(users, send)
+  addQueueToUsers(redis, users, send)
 
-  addUpdateSearchRoomQueue([data.roomId])
 }
 
-const isAnswer = (answer: number): answer is VoteAnswer['answer'] => {
+function isAnswer(answer: number): answer is VoteAnswer['answer'] {
   return Object.values<number>(VoteAnswerEnum).includes(answer)
 }
 
@@ -582,10 +639,17 @@ const SendVoteAnswerParser = z.object({
   answer: z.number().min(0)
 })
 
-export const sendVoteAnswer = async (
-  user: string,
+export async function sendVoteAnswer({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_SEND>
-) => {
+}) {
   const parsed = SendVoteAnswerParser.safeParse(data)
   if (parsed.success === false) {
     // todo: send bad request
@@ -599,7 +663,6 @@ export const sendVoteAnswer = async (
 
   const messageId = new ObjectId(parsed.data.messageId)
 
-  const db = await mongoClient()
   const message = await collections(db).messages.findOne({ _id: messageId })
   if (
     !message ||
@@ -623,17 +686,24 @@ export const sendVoteAnswer = async (
     { upsert: true }
   )
 
-  addVoteQueue(parsed.data.messageId)
+  addVoteQueue(redis, parsed.data.messageId)
 }
 
 const RemoveVoteAnswerParser = z.object({
   messageId: z.string().min(1),
   index: z.number().min(0)
 })
-export const removeVoteAnswer = async (
-  user: string,
+export async function removeVoteAnswer({
+  db,
+  redis,
+  user,
+  data
+}: {
+  db: MongoClient
+  redis: ExRedisClient
+  user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_REMOVE>
-) => {
+}) {
   const parsed = RemoveVoteAnswerParser.safeParse(data)
   if (parsed.success === false) {
     // todo: send bad request
@@ -642,7 +712,6 @@ export const removeVoteAnswer = async (
 
   const messageId = new ObjectId(parsed.data.messageId)
 
-  const db = await mongoClient()
   const message = await collections(db).messages.findOne({ _id: messageId })
   if (
     !message ||
@@ -660,5 +729,5 @@ export const removeVoteAnswer = async (
     index: parsed.data.index
   })
 
-  addVoteQueue(data.messageId)
+  addVoteQueue(redis, data.messageId)
 }

@@ -1,15 +1,16 @@
+import type { MongoClient } from 'mongodb'
 import type { Redis } from 'ioredis'
 import type { PassportRequest, SerializeUser } from './types.js'
 import express, { type Request } from 'express'
 import cors from 'cors'
 import helmet from 'helmet'
 import passport from 'passport'
-import { RedisStore } from 'connect-redis'
+import MongoStore from 'connect-mongo'
 import { Strategy as GitHubStrategy } from 'passport-github'
 import { Strategy as TwitterStrategy } from 'passport-twitter'
 import session from 'express-session'
 import { createErrorHandler } from 'mzm-shared/src/lib/middleware'
-import { wrap } from 'mzm-shared/src/lib/wrap'
+import { response } from 'mzm-shared/src/lib/wrap'
 import {
   TWITTER_STRATEGY_OPTIONS,
   GITHUB_STRATEGY_OPTIONS,
@@ -32,10 +33,12 @@ import * as authorizeHandlers from './handlers/authorize.js'
 const jsonParser = express.json({ limit: '1mb' })
 
 type Options = {
-  client: Redis
+  db: MongoClient
+  redis: Redis
+  sessionClientPromise: Promise<MongoClient>
 }
 
-export const createApp = ({ client }: Options) => {
+export function createApp({ db, redis, sessionClientPromise }: Options) {
   const app = express()
   const defaultHelmet = helmet()
   app.use(
@@ -46,7 +49,7 @@ export const createApp = ({ client }: Options) => {
   app.set('trust proxy', TRUST_PROXY)
   app.use(
     session({
-      store: new RedisStore({ client: client }),
+      store: MongoStore.create({ clientPromise: sessionClientPromise }),
       ...SESSION_PARSER
     })
   )
@@ -64,6 +67,7 @@ export const createApp = ({ client }: Options) => {
       (req, accessToken, refreshToken, profile, done) => {
         twitterHandlers.loginTwitter(
           req as unknown as PassportRequest,
+          db,
           profile.id,
           profile.username,
           done
@@ -79,6 +83,7 @@ export const createApp = ({ client }: Options) => {
       (req, accessToken, refreshToken, profile, done) => {
         githubHandlers.loginGithub(
           req as PassportRequest,
+          db,
           profile.id,
           profile.username,
           done
@@ -104,25 +109,25 @@ export const createApp = ({ client }: Options) => {
         }
       }
     }),
-    (req, res, next) => {
-      return wrap(
-        authorizeHandlers.createAuthorize(res as NonceResponse, client)
-      )(req, res, next)
+    async (req, res) => {
+      const html = await authorizeHandlers.createAuthorize(db)(
+        req,
+        res as NonceResponse
+      )
+      return response(html)(req, res)
     }
   )
 
-  passport.serializeUser(handlers.serializeUser)
-  passport.deserializeUser(handlers.deserializeUser)
+  passport.serializeUser(handlers.createSerializeUser())
+  passport.deserializeUser(handlers.createDeserializeUserHandler(db))
 
-  app.post(
-    '/auth/token',
-    defaultHelmet,
-    jsonParser,
-    wrap(authorizeHandlers.token)
-  )
+  app.post('/auth/token', defaultHelmet, jsonParser, async (req, res) => {
+    const data = await authorizeHandlers.createTokenHandler(db)(req)
+    return response(data)(req, res)
+  })
 
   app.get('/auth/twitter', defaultHelmet, (req, res, next) => {
-    oauthHandlers.oauth(passport, 'twitter')(req, res, next)
+    oauthHandlers.oauthHandler(passport, 'twitter')(req, res, next)
   })
   app.get(
     '/auth/twitter/callback',
@@ -132,17 +137,19 @@ export const createApp = ({ client }: Options) => {
       failureRedirect: '/auth/error'
     }),
     (req, res) => {
-      oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
+      oauthHandlers.oauthCallback(db)(
+        req as Request & { user: SerializeUser },
+        res
+      )
     }
   )
-  app.delete(
-    '/auth/twitter',
-    defaultHelmet,
-    wrap(twitterHandlers.removeTwitter)
-  )
+  app.delete('/auth/twitter', defaultHelmet, async (req, res) => {
+    const data = await twitterHandlers.removeTwitter(req, db)
+    return response(data)(req, res)
+  })
 
   app.get('/auth/github', defaultHelmet, (req, res, next) => {
-    oauthHandlers.oauth(passport, 'github')(req, res, next)
+    oauthHandlers.oauthHandler(passport, 'github')(req, res, next)
   })
   app.get(
     '/auth/github/callback',
@@ -152,14 +159,23 @@ export const createApp = ({ client }: Options) => {
       failureRedirect: '/auth/error'
     }),
     (req, res) => {
-      oauthHandlers.oauthCallback(req as Request & { user: SerializeUser }, res)
+      oauthHandlers.oauthCallback(db)(
+        req as Request & { user: SerializeUser },
+        res
+      )
     }
   )
-  app.delete('/auth/github', defaultHelmet, wrap(githubHandlers.removeGithub))
+  app.delete('/auth/github', defaultHelmet, async (req, res) => {
+    const data = await githubHandlers.removeGithub(req, db)
+    return response(data)(req, res)
+  })
 
   app.get('/auth/logout', defaultHelmet, handlers.logout)
 
-  app.delete('/auth/user', defaultHelmet, wrap(handlers.remove))
+  app.delete('/auth/user', defaultHelmet, async (req, res) => {
+    const data = await handlers.remove(req, redis)
+    return response(data)(req, res)
+  })
   app.get('/auth/error', defaultHelmet, (_, res) =>
     res.redirect(ALLOW_REDIRECT_ORIGINS[0])
   )

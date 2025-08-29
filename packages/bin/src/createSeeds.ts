@@ -1,6 +1,7 @@
 import { MongoClient, ObjectId } from 'mongodb'
 import {
   COLLECTION_NAMES,
+  RoomStatusEnum,
   type User,
   type Room,
   type Enter
@@ -12,7 +13,11 @@ export async function createSeeds(dbUser: string, userPassword: string) {
 
   for (let i = 0; i < 100; i++) {
     const account = `test_user_${i}`
-    await createUser(account, client)
+    const roomName = `test_room_${i}`
+    await Promise.all([
+      createUser(account, client),
+      createRooms(roomName, client)
+    ])
   }
   client.close()
 }
@@ -86,5 +91,30 @@ async function createUser(account: string, client: MongoClient) {
       })
 
     await createEnterGeneral(createUser.insertedId, general._id, client)
+  }
+}
+
+async function createRooms(name: string, client: MongoClient) {
+  const db = client.db('mzm')
+
+  const room = await db.collection<Room>(COLLECTION_NAMES.ROOMS).findOne({
+    name: name
+  })
+
+  if (!room) {
+    console.log('create room:', name)
+    await db.collection<Room>(COLLECTION_NAMES.ROOMS).updateOne(
+      { name: name },
+      {
+        $setOnInsert: {
+          description: `${name} description`,
+          createdBy: new ObjectId().toHexString(),
+          status: RoomStatusEnum.OPEN
+        }
+      },
+      { upsert: true }
+    )
+  } else {
+    console.log('room already exists:', name)
   }
 }

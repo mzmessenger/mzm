@@ -1,52 +1,38 @@
-import { vi, test, expect, beforeAll } from 'vitest'
-vi.mock('../lib/logger.js')
-vi.mock('../lib/redis.js', () => {
+import { vi, expect } from 'vitest'
+import { createTest } from '../../../test/testUtil.js'
+vi.mock('../../lib/logger.js')
+vi.mock('../../lib/redis.js', () => {
   return {
     lock: vi.fn(() => Promise.resolve(true)),
     release: vi.fn()
   }
 })
-vi.mock('../lib/elasticsearch/index.js', () => {
+vi.mock('../../lib/elasticsearch/index.js', () => {
   return {
     client: {}
   }
 })
-vi.mock('../lib/db.js', async () => {
-  const actual =
-    await vi.importActual<typeof import('../lib/db.js')>('../lib/db.js')
-  return { ...actual, mongoClient: vi.fn() }
-})
 
 import type { API } from 'mzm-shared/src/api/universal'
-import type { RouteParams } from 'mzm-shared/src/api/type'
 import { ObjectId, WithId } from 'mongodb'
 import { BadRequest } from 'mzm-shared/src/lib/errors'
-import { getTestMongoClient, createRequest } from '../../test/testUtil.js'
-import * as config from '../config.js'
-import { collections, type User, type Enter } from '../lib/db.js'
-import { initGeneral } from '../logic/rooms.js'
-import { exitRoom, getUsers } from './rooms.js'
+import * as config from '../../config.js'
+import { collections, type User, type Enter } from '../../lib/db.js'
+import { initGeneral } from '../../logic/rooms.js'
+import { exitRoom, getUsers } from './index.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient } = await import('../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
-})
+const test = await createTest(globalThis)
 
-test('exitRoom fail (general)', async () => {
-  expect.assertions(1)
-  await initGeneral()
+test('exitRoom fail (general)', async ({ testDb, testRedis }) => {
+  await initGeneral({ db: testDb, redis: testRedis })
 
   const userId = new ObjectId()
 
-  const db = await getTestMongoClient(globalThis)
-  const general = await collections(db).rooms.findOne({
+  const general = await collections(testDb).rooms.findOne({
     name: config.room.GENERAL_ROOM_NAME
   })
 
-  await collections(db).enter.insertOne({
+  await collections(testDb).enter.insertOne({
     userId: userId,
     roomId: general!._id,
     unreadCounter: 0,
@@ -54,36 +40,31 @@ test('exitRoom fail (general)', async () => {
   })
 
   const body = { room: general!._id.toHexString() }
-  const req = createRequest<
-    API['/api/rooms/enter']['DELETE']['request']['body']
-  >(userId, { body })
 
   try {
-    await exitRoom.handler(req)
+    await exitRoom(testDb, { userId, body })
+    expect.unreachable('Should not pass build')
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test.each([[null, '']])('exitRoom BadRequest (%s)', async (arg) => {
-  expect.assertions(1)
-
+test.for([null, ''])('exitRoom BadRequest (%s)', async (arg, { testDb }) => {
   const body:
     | API['/api/rooms/enter']['DELETE']['request']['body']
     | { room: null } = {
     room: arg
   }
-  const req = createRequest(new ObjectId(), { body })
 
   try {
-    await exitRoom.handler(req)
+    await exitRoom(testDb, { userId: new ObjectId(), body: body as unknown })
+    expect.unreachable('Should not pass build')
   } catch (e) {
     expect(e instanceof BadRequest).toStrictEqual(true)
   }
 })
 
-test('getUsers', async () => {
-  const userId = new ObjectId()
+test('getUsers', async ({ testDb }) => {
   const roomId = new ObjectId()
 
   const overNum = 4
@@ -109,15 +90,14 @@ test('getUsers', async () => {
       users.push(user)
     }
   }
-  const db = await getTestMongoClient(globalThis)
   await Promise.all([
-    collections(db).enter.insertMany(insert),
-    collections(db).users.insertMany(users)
+    collections(testDb).enter.insertMany(insert),
+    collections(testDb).users.insertMany(users)
   ])
 
   const userIds = users.map((u) => u._id)
   const userMap = (
-    await collections(db)
+    await collections(testDb)
       .users.find({ _id: { $in: userIds } })
       .toArray()
   ).reduce((map, current) => {
@@ -126,12 +106,8 @@ test('getUsers', async () => {
   }, new Map<string, WithId<User>>())
 
   const params = { roomId: roomId.toHexString() }
-  let req = createRequest<unknown, RouteParams<'/api/rooms/:roomId/users'>>(
-    userId,
-    { params }
-  )
 
-  let res = await getUsers.handler(req)
+  let res = await getUsers(testDb, { params, query: {} })
 
   expect(res.count).toStrictEqual(config.room.USER_LIMIT + overNum)
   expect(res.users.length).toStrictEqual(config.room.USER_LIMIT)
@@ -148,8 +124,7 @@ test('getUsers', async () => {
 
   // threshold
   const query = { threshold: res.users[res.users.length - 1].enterId }
-  req = createRequest(userId, { params, query })
-  res = await getUsers.handler(req)
+  res = await getUsers(testDb, { params, query })
 
   expect(res.count).toStrictEqual(config.room.USER_LIMIT + overNum)
   expect(res.users.length).toStrictEqual(overNum)

@@ -61,14 +61,13 @@ export const useApp = () => {
   const { handlers } = useMessageListener({ pathname: location.pathname })
 
   useEffect(() => {
-    initAuth()
-
+    logger.info('mzm:app:init')
     function authoriaedListener() {
-      logger.info(events.authorized)
+      logger.info('mzm:listner:authorized', events.authorized)
       comsumeSocket()
     }
     function messageListener(e: MessageEvent) {
-      logger.info(events.message, e.detail)
+      logger.info('mzm:listner:message', events.message, e.detail)
 
       if (handlers[e.detail.cmd]) {
         const handler = handlers[e.detail.cmd]
@@ -78,6 +77,7 @@ export const useApp = () => {
     }
     window.addEventListener(events.authorized, authoriaedListener)
     window.addEventListener(events.message, messageListener)
+    initAuth()
 
     return () => {
       window.removeEventListener(events.authorized, authoriaedListener)

@@ -1,55 +1,43 @@
-import { MongoClient, Collection, ObjectId } from 'mongodb'
-import { MONGODB_URI } from '../config.js'
+import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
+import { MONGODB_URI, MONGO_SESSION_URI } from '../config.js'
 import { logger } from './logger.js'
 
-type CollectionType = {
-  users: Collection<User>
-  removed: Collection<Removed>
-}
-
-const _collections: Partial<CollectionType> = {
-  users: undefined,
-  removed: undefined
-}
-
-let connected = false
-
-export const collections = (c: MongoClient): CollectionType => {
+export function collections(c: MongoClient) {
   if (!c) {
     throw new Error('no db client')
   }
 
-  if (!connected) {
-    const db = c.db()
-    _collections.users = db.collection('users')
-    _collections.removed = db.collection('removed')
-  }
-
   return {
-    users: _collections.users!,
-    removed: _collections.removed!
+    users: c.db().collection<User>('users'),
+    removed: c.db().collection<Removed>('removed'),
+    authorizationCode: c.db().collection<AuthorizationCode>('authorizationCode')
   }
 }
 
-let _client: MongoClient | null = null
 
-export const mongoClient = async () => {
-  if (!_client) {
-    _client = await MongoClient.connect(MONGODB_URI)
-  }
-  return _client
-}
-
-export const connect = async (c: MongoClient) => {
-  const db = c.db()
-  _collections.users = db.collection('users')
-  _collections.removed = db.collection('removed')
-
-  connected = true
-
+export async function createMongoClient() {
+  const client = new MongoClient(MONGODB_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
+  })
+  await client.connect()
   logger.info('[db] connected mongodb')
+  return client
+}
 
-  return mongoClient
+export async function sessionClient() {
+  const client = new MongoClient(MONGO_SESSION_URI, {
+    serverApi: {
+      version: ServerApiVersion.v1,
+      strict: true,
+      deprecationErrors: true,
+    }
+  })
+  await client.connect()
+  return client
 }
 
 export type User = {
@@ -61,4 +49,12 @@ export type User = {
 
 export type Removed = User & {
   originId: ObjectId
+}
+
+export type AuthorizationCode = {
+  code: string
+  code_challenge: string
+  code_challenge_method: string
+  userId: string
+  createdAt: Date
 }

@@ -2,7 +2,7 @@
 import { MongoClient } from 'mongodb'
 
 /**
- * node -r esbuild-register ./packages/bin/init_mongodb.ts --password=example --user=mzm --user_password=xxx --port=27018
+ * npm run cli -w bin init_mongodb -- --password example --user=mzm --user_password=password
  */
 
 async function createUser(client: MongoClient, dbname: string, user: string, password: string) {
@@ -25,6 +25,7 @@ export async function initMongoDb(root_password: string, user:string, user_passw
 
   await createUser(client, 'mzm', user, user_password)
   await createUser(client, 'auth', user, user_password)
+  await createUser(client, 'session', user, user_password)
 
   // index
   await client
@@ -38,6 +39,16 @@ export async function initMongoDb(root_password: string, user:string, user_passw
     .db('mzm')
     .collection('users')
     .createIndex({ account: 1 }, { unique: true })
+
+  await client
+    .db('auth')
+    .collection('authorizationCode')
+    .createIndex({ code: 1 }, { unique: true })
+
+  await client
+    .db('auth')
+    .collection('authorizationCode')
+    .createIndex({ createdAt: 1 }, { expireAfterSeconds: 60 * 10 })
 
   client.close()
 }

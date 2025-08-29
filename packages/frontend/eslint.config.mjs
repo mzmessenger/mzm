@@ -11,7 +11,12 @@ export default [
     ignores: ['dist/**']
   },
   {
-    languageOptions: { globals: globals.browser },
+    languageOptions: {
+      globals: globals.browser,
+      parserOptions: {
+        tsconfigRootDir: import.meta.dirname
+      }
+    },
     rules: {
       'no-console': 'warn',
       'prefer-const': 'error',

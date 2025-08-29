@@ -1,22 +1,12 @@
-import { vi, test, expect } from 'vitest'
-vi.mock('./logger.js')
-vi.mock('../redis.js', () => {
-  return {
-    client: vi.fn(() => ({
-      xack: vi.fn()
-    }))
-  }
-})
+import { vi, expect } from 'vitest'
+import { createTest } from '../../../test/testUtil.js'
+vi.mock('../logger.js')
 vi.mock('./common.js', () => {
   return {
     initConsumerGroup: vi.fn(),
     consumeGroup: vi.fn(),
     createParser: vi.fn()
   }
-})
-vi.mock('../db.js', async () => {
-  const actual = await vi.importActual<typeof import('../db.js')>('../db.js')
-  return { ...actual, mongoClient: vi.fn() }
 })
 vi.mock('../fetchStreaming.js', async () => {
   return {
@@ -29,25 +19,27 @@ import { initConsumerGroup, consumeGroup } from './common.js'
 import { message, initMessageConsumerGroup, consumeMessage } from './message.js'
 import { sendToUser } from '../fetchStreaming.js'
 
-test('initRemoveConsumerGroup', async () => {
+const test = await createTest(globalThis)
+
+test('initRemoveConsumerGroup', async ({ testRedis }) => {
   const init = vi.mocked(initConsumerGroup)
 
-  await initMessageConsumerGroup()
+  await initMessageConsumerGroup(testRedis)
 
   expect(init.mock.calls.length).toStrictEqual(1)
-  expect(init.mock.calls[0][0]).toStrictEqual(config.stream.MESSAGE)
+  expect(init.mock.calls[0][1]).toStrictEqual(config.stream.MESSAGE)
 })
 
-test('consumeRemove', async () => {
+test('consumeRemove', async ({ testDb, testRedis }) => {
   const consume = vi.mocked(consumeGroup)
 
-  await consumeMessage()
+  await consumeMessage({ db: testDb, redis: testRedis })
 
   expect(consume.mock.calls.length).toStrictEqual(1)
-  expect(consume.mock.calls[0][2]).toStrictEqual(config.stream.MESSAGE)
+  expect(consume.mock.calls[0][3]).toStrictEqual(config.stream.MESSAGE)
 })
 
-test('message', async () => {
+test('message', async ({ testDb, testRedis }) => {
   const sendToUserMock = vi.mocked(sendToUser)
   sendToUserMock.mockClear()
 
@@ -59,8 +51,18 @@ test('message', async () => {
     })
   })
 
-  await message('queue-id', ['message', queues[0]])
-  await message('queue-id', ['message', queues[1]])
+  await message({
+    db: testDb,
+    redis: testRedis,
+    ackId: 'queue-id',
+    messages: ['message', queues[0]]
+  })
+  await message({
+    db: testDb,
+    redis: testRedis,
+    ackId: 'queue-id',
+    messages: ['message', queues[1]]
+  })
 
   expect(sendToUserMock.mock.calls.length).toBe(2)
   expect(sendToUserMock.mock.calls[0][0]).toBe(users[0])

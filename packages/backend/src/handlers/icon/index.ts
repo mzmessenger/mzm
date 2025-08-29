@@ -1,22 +1,150 @@
+import type { MongoClient } from 'mongodb'
+import type { Express } from 'express'
+import type { checkAccessToken as checkAccessTokenMiddleware } from '../../middleware/index.js'
 import type { MulterFile } from '../../types/index.js'
 import type { Readable } from 'stream'
-import { apis } from 'mzm-shared/src/api/universal'
+import { apis, type API } from 'mzm-shared/src/api/universal'
+import { response } from 'mzm-shared/src/lib/wrap'
+import multer from 'multer'
 import { Request } from 'express'
 import { request } from 'undici'
 import { ObjectId } from 'mongodb'
 import { z } from 'zod'
 import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
-import { getRequestUserId, createContextParser } from '../../lib/utils.js'
-import { createHandler, createStreamHandler } from '../../lib/wrap.js'
+import { getRequestUserId } from '../../lib/utils.js'
 import * as storage from '../../lib/storage.js'
-import { collections, mongoClient, type User, type Room } from '../../lib/db.js'
+import { collections, type User, type Room } from '../../lib/db.js'
 import { logger } from '../../lib/logger.js'
 import * as config from '../../config.js'
-import { StreamWrapResponse } from '../../types.js'
 import { isValidMimetype, createVersion } from './internal.js'
 import { sizeOf } from '../../lib/image.js'
 
-const returnIconStream = async (key: string): StreamWrapResponse => {
+const iconUpload = multer({
+  dest: config.MULTER_PATH,
+  limits: { fileSize: 1000 * 1000 }
+})
+
+export function createRoute(
+  app: Express,
+  {
+    db,
+    checkAccessToken
+  }: {
+    db: MongoClient
+    checkAccessToken: typeof checkAccessTokenMiddleware
+  }
+) {
+  app.get('/api/icon/user/:account', async (req, res, next) => {
+    const paramsParser = z.object({
+      account: z.string().min(1)
+    })
+    const parsedParams = paramsParser.safeParse(req.params)
+    if (parsedParams.success === false) {
+      throw new BadRequest({ reason: parsedParams.error.message })
+    }
+    const params = apis['/api/icon/user/:account']['GET'].request.params(
+      parsedParams.data
+    )
+
+    const { headers, stream } = await getUserIcon(db, {
+      account: params.account
+    })
+    res.set(headers)
+    stream.pipe(res).on('error', (e) => next(e))
+  })
+  app.get('/api/icon/user/:account/:version', async (req, res, next) => {
+    const paramsParser = z.object({
+      account: z.string().min(1),
+      version: z.string()
+    })
+    const parsedParams = paramsParser.safeParse(req.params)
+    if (parsedParams.success === false) {
+      throw new BadRequest({ reason: parsedParams.error.message })
+    }
+    const params = apis['/api/icon/user/:account/:version'][
+      'GET'
+    ].request.params(parsedParams.data)
+    const { headers, stream } = await getUserIcon(db, {
+      account: params.account,
+      version: params.version
+    })
+    res.set(headers)
+    stream.pipe(res).on('error', (e) => next(e))
+  })
+  app.post(
+    '/api/icon/user',
+    checkAccessToken,
+    iconUpload.single('icon'),
+    async (req, res) => {
+      const userId = getRequestUserId(req)
+      if (!userId) {
+        throw new NotFound('not found')
+      }
+
+      if (!req.file) {
+        throw new BadRequest(`file is empty`)
+      }
+
+      const _req = req as Request & { file?: MulterFile }
+      const data = await uploadUserIcon(db, {
+        userId: new ObjectId(userId),
+        file: _req.file
+      })
+      return response<API['/api/icon/user']['POST']['response'][200]['body']>(
+        data
+      )(req, res)
+    }
+  )
+  app.get('/api/icon/rooms/:roomName/:version', async (req, res, next) => {
+    const paramsParser = z.object({
+      roomName: z.string().min(1),
+      version: z.string().min(1)
+    })
+    const parsedParams = paramsParser.safeParse(req.params)
+    if (parsedParams.success === false) {
+      throw new BadRequest({ reason: parsedParams.error.message })
+    }
+    const params = apis['/api/icon/rooms/:roomName/:version'][
+      'GET'
+    ].request.params(parsedParams.data)
+    const { headers, stream } = await getRoomIcon(db, {
+      roomName: params.roomName,
+      version: params.version
+    })
+    res.set(headers)
+    stream.pipe(res).on('error', (e) => next(e))
+  })
+  app.post(
+    '/api/icon/rooms/:roomName',
+    checkAccessToken,
+    iconUpload.single('icon'),
+    async (req, res) => {
+      const paramsParser = z.object({
+        roomName: z.string().min(1)
+      })
+      const parsedParams = paramsParser.safeParse(req.params)
+      if (parsedParams.success === false) {
+        throw new BadRequest(`invalid room name`)
+      }
+      const params = apis['/api/icon/rooms/:roomName']['POST'].request.params(
+        parsedParams.data
+      )
+
+      const _req = req as Request & { file?: MulterFile }
+      const data = await uploadRoomIcon(db, {
+        roomName: params.roomName,
+        file: _req.file
+      })
+      return response<
+        API['/api/icon/rooms/:roomName']['POST']['response'][200]['body']
+      >(data)(req, res)
+    }
+  )
+
+  return app
+}
+
+async function returnIconStream(key: string) {
   const head = await storage.headObject({ Key: key })
 
   logger.info('[icon:returnIconStream]', key, JSON.stringify(head))
@@ -38,7 +166,7 @@ const returnIconStream = async (key: string): StreamWrapResponse => {
   }
 }
 
-const fromIdenticon = async (account: string): StreamWrapResponse => {
+async function fromIdenticon(account: string) {
   const res = await request(
     `https://identicon.mzm.dev/api/identicon/${account}`,
     {
@@ -48,43 +176,12 @@ const fromIdenticon = async (account: string): StreamWrapResponse => {
   return { headers: res.headers, stream: res.body }
 }
 
-export const getUserIcon = createStreamHandler(
-  '/api/icon/user/:account',
-  'GET',
-  ({ path, method }) => {
-    const api = apis[path][method]
-    const params = createContextParser(
-      z.object({
-        account: z.string().min(1)
-      }),
-      (parsed) => {
-        return {
-          success: true,
-          data: api.request.params({
-            account: parsed.data.account
-          })
-        }
-      }
-    )
-    return {
-      parser: {
-        params,
-        version: z.object({
-          version: z.string().optional()
-        })
-      }
-    }
-  }
-)(async (req, context) => {
-  const params = context.parser.params(req.params)
-  if (!params.success) {
-    throw new BadRequest(`no account`)
-  }
-  const v = context.parser.version.safeParse(req.params)
-  const version = v.success ? v.data.version : null
-  const db = await mongoClient()
+export async function getUserIcon(
+  db: MongoClient,
+  { account, version }: { account: string; version?: string }
+) {
   const user = await collections(db).users.findOne({
-    account: params.data.account
+    account: account
   })
 
   if (!user) {
@@ -92,18 +189,18 @@ export const getUserIcon = createStreamHandler(
   }
 
   if (!user.icon) {
-    return await fromIdenticon(params.data.account)
+    return await fromIdenticon(account)
   }
 
   if (version) {
     if (user?.icon?.version !== version) {
-      return await fromIdenticon(params.data.account)
+      return await fromIdenticon(account)
     }
     try {
       return await returnIconStream(user.icon.key)
     } catch (e) {
       if ((e as { statusCode: number })?.statusCode === 404) {
-        return await fromIdenticon(params.data.account)
+        return await fromIdenticon(account)
       }
       throw e
     }
@@ -113,46 +210,19 @@ export const getUserIcon = createStreamHandler(
     return await returnIconStream(user.icon.key)
   } catch (e) {
     if ((e as { statusCode: number })?.statusCode === 404) {
-      return await fromIdenticon(params.data.account)
+      return await fromIdenticon(account)
     }
     throw e
   }
-})
+}
 
-export const getRoomIcon = createStreamHandler(
-  '/api/icon/rooms/:roomName/:version',
-  'GET',
-  ({ path, method }) => {
-    const api = apis[path][method]
-    const params = createContextParser(
-      z.object({
-        roomName: z.string().min(1),
-        version: z.string().min(1)
-      }),
-      (parsed) => {
-        return {
-          success: true,
-          data: api.request.params({
-            roomName: parsed.data.roomName,
-            version: parsed.data.version
-          })
-        }
-      }
-    )
-    return {
-      parser: {
-        params
-      }
-    }
+export async function getRoomIcon(
+  db: MongoClient,
+  { roomName, version }: { roomName: string; version: string }
+) {
+  if (!roomName) {
+    throw new BadRequest('no room name')
   }
-)(async (req, context) => {
-  const params = context.parser.params(req.params)
-  if (!params.success) {
-    throw new BadRequest(`invalid params`)
-  }
-  const roomName = params.data.roomName
-  const version = params.data.version
-  const db = await mongoClient()
   const room = await collections(db).rooms.findOne({ name: roomName })
 
   if (room?.icon?.version !== version) {
@@ -167,27 +237,16 @@ export const getRoomIcon = createStreamHandler(
     }
     throw e
   }
-})
+}
 
-export const uploadUserIcon = createHandler(
-  '/api/icon/user',
-  'POST',
-  ({ path, method }) => {
-    return {
-      api: apis[path][method]
-    }
-  }
-)(async (req: Request & { file?: MulterFile }, context) => {
-  const userId = getRequestUserId(req)
-  if (!userId) {
-    throw new NotFound('not found')
-  }
-
-  if (!req.file) {
+export async function uploadUserIcon(
+  db: MongoClient,
+  { userId, file }: { userId: ObjectId; file?: MulterFile }
+) {
+  const api = apis['/api/icon/user']['POST']
+  if (!file) {
     throw new BadRequest(`file is empty`)
   }
-
-  const file = req.file
   if (!isValidMimetype(file.mimetype)) {
     throw new BadRequest(`${file.mimetype} is not allowed`)
   }
@@ -218,7 +277,6 @@ export const uploadUserIcon = createHandler(
     icon: { key: iconKey, version }
   }
 
-  const db = await mongoClient()
   await collections(db).users.findOneAndUpdate(
     { _id: new ObjectId(userId) },
     { $set: update },
@@ -229,46 +287,19 @@ export const uploadUserIcon = createHandler(
 
   logger.info('[icon:user] upload', userId, version)
 
-  return context.api.response[200].body({
+  return api.response[200].body({
     version: version
   })
-})
+}
 
-export const uploadRoomIcon = createHandler(
-  '/api/icon/rooms/:roomName',
-  'POST',
-  ({ path, method }) => {
-    const api = apis[path][method]
-    const params = createContextParser(
-      z.object({
-        roomName: z.string().min(1)
-      }),
-      (parsed) => {
-        return {
-          success: true,
-          data: api.request.params({
-            roomName: parsed.data.roomName
-          })
-        }
-      }
-    )
-
-    return {
-      api,
-      parser: { params }
-    }
+export async function uploadRoomIcon(
+  db: MongoClient,
+  { roomName, file }: { roomName: string; file?: MulterFile }
+) {
+  const api = apis['/api/icon/rooms/:roomName']['POST']
+  if (!file) {
+    throw new BadRequest(`file is empty`)
   }
-)(async (req: Request & { file?: MulterFile }, context) => {
-  const params = context.parser.params(req.params)
-  if (params.success === false) {
-    throw new BadRequest(`invalid room name`)
-  }
-
-  if (!req.file) {
-    throw new BadRequest('file is empty')
-  }
-
-  const file = req.file
   if (!isValidMimetype(file.mimetype)) {
     throw new BadRequest(`${file.mimetype} is not allowed`)
   }
@@ -284,9 +315,8 @@ export const uploadRoomIcon = createHandler(
     throw new BadRequest(`not square: ${JSON.stringify(dimensions)}`)
   }
 
-  const db = await mongoClient()
   const room = await collections(db).rooms.findOne({
-    name: params.data.roomName
+    name: roomName
   })
   if (!room) {
     throw new NotFound('not exist')
@@ -315,10 +345,10 @@ export const uploadRoomIcon = createHandler(
     }
   )
 
-  logger.info('[icon:room] upload', params.data.roomName, version)
+  logger.info('[icon:room] upload', roomName, version)
 
-  return context.api.response[200].body({
+  return api.response[200].body({
     id: room._id.toHexString(),
     version: version
   })
-})
+}

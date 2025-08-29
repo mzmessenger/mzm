@@ -31,6 +31,9 @@ export const GITHUB_STRATEGY_OPTIONS = {
 } as const satisfies GitHubStrategyOptions
 
 export const MONGODB_URI = isTest ? '' : (process.env.MONGODB_URI ?? '')
+export const MONGO_SESSION_URI = isTest
+  ? ''
+  : (process.env.MONGO_SESSION_URI ?? '')
 
 export const CORS_ORIGIN = process.env.CORS_ORIGIN
   ? process.env.CORS_ORIGIN.split(',').map((e) => e.trim())
@@ -50,18 +53,6 @@ export const REDIS = {
       : 6379,
     enableOfflineQueue: false,
     connectTimeout: Number(process.env.REDIS_TIMEOUT ?? 30000)
-  } satisfies RedisOptions
-} as const
-
-export const SESSION_REDIS = {
-  options: {
-    host: process.env.SESSION_REDIS_HOST,
-    port: process.env.SESSION_REDIS_PORT
-      ? Number(process.env.SESSION_REDIS_PORT)
-      : 6379,
-    enableOfflineQueue: false,
-    connectTimeout: Number(process.env.SESSION_REDIS_TIMEOUT ?? 30000),
-    db: 1
   } satisfies RedisOptions
 } as const
 
@@ -96,8 +87,12 @@ if (!process.env.REFRESH_TOKEN_SECRET) {
 export const JWT = {
   accessTokenSecret: process.env.ACCESS_TOKEN_SECRET,
   refreshTokenSecret: process.env.REFRESH_TOKEN_SECRET,
-  issuer: process.env.JWT_ISSURE ?? 'https://mzm.dev',
-  audience: process.env.JWT_AUDIENCE
-    ? process.env.JWT_AUDIENCE.split(',')
-    : (['https://mzm.dev'] satisfies string[])
-} as const
+  signOptions: {
+    issuer: process.env.JWT_ISSURE ?? 'https://mzm.dev',
+    audience: process.env.JWT_AUDIENCE ?? 'https://mzm.dev'
+  }
+} as const satisfies {
+  accessTokenSecret: string
+  refreshTokenSecret: string
+  signOptions: import('jsonwebtoken').SignOptions
+}

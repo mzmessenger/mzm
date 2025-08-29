@@ -1,9 +1,8 @@
-import { ObjectId, type WithId, type Document } from 'mongodb'
+import { type MongoClient, ObjectId, type WithId, type Document } from 'mongodb'
 import { MessageType } from 'mzm-shared/src/type/socket'
 import * as config from '../config.js'
 import {
   collections,
-  mongoClient,
   COLLECTION_NAMES,
   type Message,
   type User
@@ -11,12 +10,13 @@ import {
 import { createUserIconPath, unescape } from '../lib/utils.js'
 import { getVoteAnswers } from './vote.js'
 
-export const saveMessage = async (
+export async function saveMessage(
+  db: MongoClient,
   message: string,
   roomId: string,
   userId: string,
   vote?: Message['vote']
-) => {
+) {
   if (
     message.length > config.message.MAX_MESSAGE_LENGTH ||
     message.length < config.message.MIN_MESSAGE_LENGTH
@@ -37,13 +37,14 @@ export const saveMessage = async (
   if (vote) {
     insert.vote = vote
   }
-  return await collections(await mongoClient()).messages.insertOne(insert)
+  return await collections(db).messages.insertOne(insert)
 }
 
-export const getMessages = async (
+export async function getMessages(
+  db: MongoClient,
   roomId: string,
   thresholdId?: string
-): Promise<{ existHistory: boolean; messages: MessageType[] }> => {
+): Promise<{ existHistory: boolean; messages: MessageType[] }> {
   const query: Document[] = [
     {
       $match: { roomId: new ObjectId(roomId) }
@@ -68,7 +69,6 @@ export const getMessages = async (
     user: WithId<User>[]
   }
 
-  const db = await mongoClient()
   const cursor = await collections(db)
     .messages.aggregate<AggregateType>(query)
     .sort({ _id: -1 })
@@ -96,7 +96,7 @@ export const getMessages = async (
         return { text: q.text }
       })
 
-      const answers = await getVoteAnswers(doc._id)
+      const answers = await getVoteAnswers(db, doc._id)
 
       message.vote = {
         questions,

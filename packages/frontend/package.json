@@ -7,6 +7,7 @@
   "scripts": {
     "prestart": "npm run build:tsc",
     "start": "vite",
+    "dev": "npm run start",
     "serve": "vite preview --port 8080",
     "format": "prettier --write src ./*.{js,json}",
     "lint": "eslint -c eslint.config.mjs .",
@@ -17,7 +18,9 @@
     "prebuild": "npm run clean",
     "build": "vite build",
     "prebuild:tsc": "npm run clean",
-    "build:tsc": "tsc --build tsconfig.json"
+    "build:tsc": "tsc --build tsconfig.json",
+    "predeploy": "npm run build",
+    "deploy": "wrangler deploy --minify"
   },
   "license": "MIT",
   "devDependencies": {
@@ -29,18 +32,21 @@
     "eslint": "^9.20.1",
     "eslint-plugin-react": "^7.37.2",
     "eslint-plugin-react-hooks": "^5.1.0-rc-603e6108-20241029",
-    "globals": "^15.11.0",
+    "globals": "^16.3.0",
     "typescript": "^5.6.3",
-    "typescript-eslint": "^8.24.0",
-    "vite": "^6.0.11",
-    "vite-plugin-pwa": "^0.21.1",
-    "vitest": "^3.0.5"
+    "typescript-eslint": "^8.37.0",
+    "vite": "^7.0.1",
+    "vite-plugin-pwa": "^1.0.1",
+    "vite-plugin-wasm": "^3.5.0",
+    "vitest": "^3.0.5",
+    "wrangler": "^4.31.0"
   },
   "dependencies": {
+    "@duckdb/duckdb-wasm": "^1.29.1-dev132.0",
     "@emotion/react": "^11.13.3",
     "@emotion/styled": "^11.13.0",
-    "@mui/icons-material": "^6.1.6",
-    "@mui/material": "^6.1.6",
+    "@mui/icons-material": "^7.2.0",
+    "@mui/material": "^7.2.0",
     "comlink": "^4.3.0",
     "dayjs": "^1.11.13",
     "dompurify": "^3.1.7",
@@ -48,7 +54,8 @@
     "jotai": "^2.12.0",
     "jsdom": "^26.0.0",
     "jwt-decode": "^4.0.0",
-    "marked": "^15.0.6",
+    "lindera-wasm-ipadic": "^0.45.0",
+    "marked": "^16.0.0",
     "marked-mangle": "^1.1.9",
     "normalize.css": "^8.0.1",
     "react": "^19.0.0",

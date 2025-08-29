@@ -1,4 +1,4 @@
-import { vi, test, expect, beforeAll } from 'vitest'
+import { vi, expect } from 'vitest'
 vi.mock('../lib/logger.js')
 vi.mock('../lib/redis.js', () => {
   return {
@@ -6,14 +6,9 @@ vi.mock('../lib/redis.js', () => {
     release: vi.fn()
   }
 })
-vi.mock('../lib/db.js', async () => {
-  const actual =
-    await vi.importActual<typeof import('../lib/db.js')>('../lib/db.js')
-  return { ...actual, mongoClient: vi.fn() }
-})
 
 import { ObjectId } from 'mongodb'
-import { getTestMongoClient } from '../../test/testUtil.js'
+import { createTest } from '../../test/testUtil.js'
 import * as config from '../config.js'
 import {
   collections,
@@ -24,30 +19,23 @@ import {
 import { initGeneral } from './rooms.js'
 import { initUser, getAllUserIdsInRoom } from './users.js'
 
-beforeAll(async () => {
-  const { mongoClient } = await import('../lib/db.js')
-  const { getTestMongoClient } = await import('../../test/testUtil.js')
-  vi.mocked(mongoClient).mockImplementation(() => {
-    return getTestMongoClient(globalThis)
-  })
-})
+const test = await createTest(globalThis)
 
-test('initUser', async () => {
-  await initGeneral()
+test('initUser', async ({ testDb, testRedis }) => {
+  await initGeneral({ db: testDb, redis: testRedis })
 
   const userId = new ObjectId()
   const account = 'aaa'
 
-  await initUser(userId, account)
+  await initUser(testDb, userId, account)
 
   // user
-  const db = await getTestMongoClient(globalThis)
-  const foundUser = await collections(db).users.findOne({ _id: userId })
+  const foundUser = await collections(testDb).users.findOne({ _id: userId })
   expect(userId.toHexString()).toStrictEqual(foundUser?._id.toHexString())
   expect(`${account}_${userId.toHexString()}`).toStrictEqual(foundUser?.account)
 
   // default room
-  const foundRooms = await collections(db)
+  const foundRooms = await collections(testDb)
     .enter.aggregate<Enter & { room: Room[] }>([
       {
         $match: { userId: userId }
@@ -70,7 +58,7 @@ test('initUser', async () => {
   )
 })
 
-test('getAllUserIdsInRoom', async () => {
+test('getAllUserIdsInRoom', async ({ testDb }) => {
   const roomId = new ObjectId()
   const users = [new ObjectId(), new ObjectId(), new ObjectId()]
   const userIdStrs = users.map((user) => user.toHexString())
@@ -83,11 +71,11 @@ test('getAllUserIdsInRoom', async () => {
     }
   })
 
-  const db = await getTestMongoClient(globalThis)
-  await collections(db).enter.insertMany(enter)
+  await collections(testDb).enter.insertMany(enter)
 
-  const ids = await getAllUserIdsInRoom(roomId.toHexString())
+  const ids = await getAllUserIdsInRoom(testDb, roomId.toHexString())
 
+  expect.assertions(ids.length + 1)
   expect(ids.length).toStrictEqual(users.length)
   for (const id of ids) {
     expect(userIdStrs.includes(id)).toStrictEqual(true)

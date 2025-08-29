@@ -1,6 +1,7 @@
 import React, { useState, type FormEventHandler } from 'react'
 import { useNavigate } from 'react-router'
 import styled from '@emotion/styled'
+import { createRoutePath } from '../../lib/route'
 import { useRoomActions } from '../../state/rooms/hooks'
 import { useSocketActions } from '../../state/socket/hooks'
 import { Button } from '../atoms/Button'
@@ -24,7 +25,7 @@ export const ModalCraeteRoom = ({ open, onClose }: Props) => {
       .then((data) => {
         if (data.status === 200) {
           onClose()
-          navigate(`/rooms/${txt}`)
+          navigate(createRoutePath({ type: 'room', params: { roomName: txt } }))
           setTxt('')
           setErrorTxt('')
         } else {

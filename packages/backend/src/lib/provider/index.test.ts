@@ -1,23 +1,17 @@
-/* eslint-disable @typescript-eslint/ban-ts-comment */
-import { vi, test, expect } from 'vitest'
+import { vi, expect } from 'vitest'
+import { createTest } from '../../../test/testUtil.js'
 vi.mock('../logger.js')
-vi.mock('../redis.js', () => {
-  return {
-    client: vi.fn(() => ({
-      xadd: vi.fn()
-    }))
-  }
-})
+import { type ExRedisClient } from '../redis.js'
 import { ObjectId } from 'mongodb'
 import { ToClientType } from 'mzm-shared/src/type/socket'
-import { client } from '../redis.js'
 import * as config from '../../config.js'
 import { addQueueToUsers, addUnreadQueue, addRepliedQueue } from './index.js'
 
+const test = await createTest(globalThis)
+
 test('addQueueToUsers', async () => {
   const xadd = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xadd }))
+  const redis = { xadd } as unknown as ExRedisClient
 
   const users = ['5cc9d148139370d11b706624']
 
@@ -28,7 +22,7 @@ test('addQueueToUsers', async () => {
     roomOrder: []
   }
 
-  await addQueueToUsers(users, queue)
+  await addQueueToUsers(redis, users, queue)
 
   expect(xadd.mock.calls.length).toBe(1)
 
@@ -39,14 +33,13 @@ test('addQueueToUsers', async () => {
 
 test('addUnreadQueue', async () => {
   const xadd = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xadd }))
+  const redis = { xadd } as unknown as ExRedisClient
   xadd.mockClear()
 
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
-  await addUnreadQueue(roomId.toHexString(), userId.toHexString())
+  await addUnreadQueue(redis, roomId.toHexString(), userId.toHexString())
 
   expect(xadd.mock.calls.length).toBe(1)
 
@@ -56,14 +49,13 @@ test('addUnreadQueue', async () => {
 
 test('addRepliedQueue', async () => {
   const xadd = vi.fn()
-  // @ts-expect-error
-  vi.mocked(client).mockImplementation(() => ({ xadd }))
+  const redis = { xadd } as unknown as ExRedisClient
   xadd.mockClear()
 
   const roomId = new ObjectId()
   const userId = new ObjectId()
 
-  await addRepliedQueue(roomId.toHexString(), userId.toHexString())
+  await addRepliedQueue(redis, roomId.toHexString(), userId.toHexString())
 
   expect(xadd.mock.calls.length).toBe(1)
 

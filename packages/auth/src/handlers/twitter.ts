@@ -1,6 +1,6 @@
 import type { Request } from 'express'
-import type { WrapFn } from 'mzm-shared/src/lib/wrap'
 import type { VerifyCallback } from 'passport-oauth2'
+import type { MongoClient } from 'mongodb'
 import type { PassportRequest } from '../types.js'
 import { BadRequest, Unauthorized } from 'mzm-shared/src/lib/errors'
 import { ObjectId } from 'mongodb'
@@ -9,15 +9,16 @@ import {
   verifyAccessToken
 } from 'mzm-shared/src/auth/index'
 import { logger } from '../lib/logger.js'
-import { collections, mongoClient, type User } from '../lib/db.js'
+import { collections, type User } from '../lib/db.js'
 import { JWT } from '../config.js'
 
-export const loginTwitter = async (
+export async function loginTwitter(
   req: PassportRequest,
+  db: MongoClient,
   twitterId: string,
   twitterUserName: string,
   cb: VerifyCallback
-) => {
+) {
   try {
     const filter: { _id: ObjectId } | Pick<User, 'twitterId'> = req.user
       ? { _id: new ObjectId(req.user._id) }
@@ -27,8 +28,6 @@ export const loginTwitter = async (
       twitterId,
       twitterUserName
     }
-
-    const db = await mongoClient()
     const updated = await collections(db).users.findOneAndUpdate(
       filter,
       { $set: update },
@@ -51,7 +50,7 @@ export const loginTwitter = async (
   }
 }
 
-export const removeTwitter: WrapFn<Request, string> = async (req) => {
+export async function removeTwitter(req: Request, db: MongoClient) {
   const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
     throw new BadRequest('no auth token')
@@ -59,10 +58,7 @@ export const removeTwitter: WrapFn<Request, string> = async (req) => {
   const { err, decoded } = await verifyAccessToken(
     accessToken,
     JWT.accessTokenSecret,
-    {
-      issuer: JWT.issuer,
-      audience: JWT.audience
-    }
+    JWT.signOptions
   )
 
   if (err || !decoded.user) {
@@ -70,7 +66,6 @@ export const removeTwitter: WrapFn<Request, string> = async (req) => {
   }
 
   const _id = new ObjectId(decoded.user._id)
-  const db = await mongoClient()
   const user = await collections(db).users.findOne({ _id })
 
   if (!user) {

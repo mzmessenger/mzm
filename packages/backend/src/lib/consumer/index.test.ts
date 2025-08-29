@@ -1,4 +1,5 @@
-import { vi, test, expect } from 'vitest'
+import { vi, expect } from 'vitest'
+import { createTest } from '../../../test/testUtil.js'
 vi.mock('./remove.js', () => {
   return {
     initRemoveConsumerGroup: vi.fn(),
@@ -23,15 +24,9 @@ vi.mock('./search/room.js', () => {
     consumeSearchRooms: vi.fn()
   }
 })
-vi.mock('./job.js', () => {
-  return {
-    initJobConsumerGroup: vi.fn(),
-    consumeJob: vi.fn()
-  }
-})
 vi.mock('./vote.js', () => {
   return {
-    initRenameConsumerGroup: vi.fn(),
+    initVoteConsumerGroup: vi.fn(),
     consumeVote: vi.fn()
   }
 })
@@ -46,22 +41,17 @@ import { initConsumer } from './index.js'
 import * as consumerRemove from './remove.js'
 import * as consumerUnread from './unread.js'
 import * as consumeReply from './reply.js'
-import * as consumeSearchRoom from './search/room.js'
-import * as consumeJob from './job.js'
 import * as consumeVote from './vote.js'
 import * as consumeMessage from './message.js'
 
-test('init', async () => {
+const test = await createTest(globalThis)
+
+test('init', async ({ testDb, testRedis }) => {
   const mocks = [
     [consumerRemove.initRemoveConsumerGroup, consumerRemove.consumeRemove],
     [consumerUnread.initUnreadConsumerGroup, consumerUnread.consumeUnread],
     [consumeReply.initReplyConsumerGroup, consumeReply.consumeReply],
-    [
-      consumeSearchRoom.initSearchRoomConsumerGroup,
-      consumeSearchRoom.consumeSearchRooms
-    ],
-    [consumeJob.initJobConsumerGroup, consumeJob.consumeJob],
-    [consumeVote.initRenameConsumerGroup, consumeVote.consumeVote],
+    [consumeVote.initVoteConsumerGroup, consumeVote.consumeVote],
     [consumeMessage.initMessageConsumerGroup, consumeMessage.consumeMessage]
   ]
 
@@ -76,7 +66,7 @@ test('init', async () => {
     consumeMock.mockResolvedValue()
   }
 
-  await initConsumer()
+  await initConsumer({ db: testDb, redis: testRedis })
 
   for (const [init, consume] of mocks) {
     expect(init.call.length).toStrictEqual(1)

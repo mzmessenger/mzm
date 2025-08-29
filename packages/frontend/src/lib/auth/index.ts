@@ -21,6 +21,7 @@ async function getInstance(): Promise<Remote<AuthProxy>> {
 }
 
 async function init() {
+  logger.info('mzm:worker:init')
   const ProxyedWorker = await import('../../worker/authProxy/index?worker')
   const worker = new ProxyedWorker.default()
   worker.addEventListener('message', (e) => {

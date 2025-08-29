@@ -6,6 +6,7 @@
     "sourceMap": true,
     "esModuleInterop": true,
     "target": "esnext",
+    "lib": ["ESNext"],
     "module": "nodenext",
     "skipLibCheck": true,
     "paths": {

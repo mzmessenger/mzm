@@ -16,6 +16,8 @@ export type {
   Method
 } from './type.js'
 
+import type { RoomStatusEnum } from '../type/db.js'
+
 export function define<T>() {
   return (args: T) => args
 }
@@ -62,6 +64,27 @@ export function defineApis<T extends Routes<TKeys>, TKeys extends string>(
 
 export const { apis } = defineApis({
   '/api/rooms': {
+    GET: {
+      request: {
+        query: define<{
+          threshold?: string
+        }>()
+      },
+      response: {
+        200: {
+          body: define<{
+            rooms: {
+              id: string
+              name: string
+              description?: string
+              iconUrl: string | null
+              status: (typeof RoomStatusEnum)[keyof typeof RoomStatusEnum]
+            }[]
+            total: number
+          }>()
+        }
+      }
+    },
     POST: {
       request: {
         body: define<{ name: string }>()

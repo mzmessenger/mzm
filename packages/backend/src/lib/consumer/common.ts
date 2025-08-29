@@ -1,13 +1,17 @@
-import { ObjectId } from 'mongodb'
-import { client, lock, release } from '../redis.js'
+import { type MongoClient, ObjectId } from 'mongodb'
+import { type ExRedisClient, lock, release } from '../redis.js'
 import { logger } from '../logger.js'
 import * as config from '../../config.js'
 
-export const initConsumerGroup = async (stream: string, groupName: string) => {
+export async function initConsumerGroup(
+  client: ExRedisClient,
+  stream: string,
+  groupName: string
+) {
   const lockKey =
     config.lock.INIT_CONSUMER_GROUP + ':' + stream + ':' + groupName
   const lockVal = new ObjectId().toHexString()
-  const locked = await lock(lockKey, lockVal, 1000)
+  const locked = await lock(client, lockKey, lockVal, 1000)
 
   if (!locked) {
     logger.info(`[locked] initConsumerGroup: ${lockKey}`)
@@ -16,10 +20,10 @@ export const initConsumerGroup = async (stream: string, groupName: string) => {
 
   // create consumer group
   try {
-    await client().xgroup('SETID', stream, groupName, '$')
+    await client.xgroup('SETID', stream, groupName, '$')
   } catch (e) {
     try {
-      await client().xgroup('CREATE', stream, groupName, '$', 'MKSTREAM')
+      await client.xgroup('CREATE', stream, groupName, '$', 'MKSTREAM')
     } catch (err) {
       if (`${err}`.includes('already exists')) {
         return
@@ -27,16 +31,28 @@ export const initConsumerGroup = async (stream: string, groupName: string) => {
       logger.error(`failed creating xgroup (${stream}, ${groupName}):`, e)
       throw err
     } finally {
-      await release(lockKey, lockVal)
+      await release(client, lockKey, lockVal)
     }
   } finally {
-    await release(lockKey, lockVal)
+    await release(client, lockKey, lockVal)
   }
 }
 
-export const createParser = (
-  handler: (id: string, messages: string[]) => Promise<void | null>
-) => {
+export function createParser(
+  {
+    redis,
+    db
+  }: {
+    redis: ExRedisClient
+    db: MongoClient
+  },
+  handler: (args: {
+    redis: ExRedisClient
+    db: MongoClient
+    ackId: string
+    messages: string[]
+  }) => Promise<void | null>
+) {
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   return async (read: any) => {
     if (!read) {
@@ -44,25 +60,26 @@ export const createParser = (
     }
 
     for (const [, val] of read) {
-      for (const [id, messages] of val) {
+      for (const [ackId, messages] of val) {
         try {
-          await handler(id, messages)
+          await handler({ redis, db, ackId, messages })
         } catch (e) {
-          logger.error('parse error', e, id, messages)
+          logger.error('parse error', e, ackId, messages)
         }
       }
     }
   }
 }
 
-export const consumeGroup = async (
+export async function consumeGroup(
+  client: ExRedisClient,
   groupName: string,
   consumerName: string,
   stream: string,
   parser: ReturnType<typeof createParser>
-) => {
+) {
   try {
-    const res = await client().xreadgroup(
+    const res = await client.xreadgroup(
       'GROUP',
       groupName,
       consumerName,
@@ -78,5 +95,5 @@ export const consumeGroup = async (
   } catch (e) {
     logger.error('[read]', stream, e)
   }
-  await consumeGroup(groupName, consumerName, stream, parser)
+  await consumeGroup(client, groupName, consumerName, stream, parser)
 }

@@ -1,4 +1,5 @@
-import { vi, test, expect } from 'vitest'
+import { vi, expect } from 'vitest'
+import { createTest } from '../../test/testUtil.js'
 vi.mock('../lib/logger.js')
 vi.mock('./internal/socket.js')
 
@@ -22,7 +23,9 @@ import {
   updateRoomDescription
 } from './internal/socket.js'
 
-test.each([
+const test = await createTest(globalThis)
+
+test.for([
   [TO_SERVER_CMD.MESSAGE_SEND, sendMessage],
   [TO_SERVER_CMD.MESSAGE_MODIFY, modifyMessage],
   [TO_SERVER_CMD.MESSAGES_ROOM, getMessagesFromRoom],
@@ -36,7 +39,7 @@ test.each([
   [TO_SERVER_CMD.VOTE_ANSWER_SEND, sendVoteAnswer],
   [TO_SERVER_CMD.VOTE_ANSWER_REMOVE, removeVoteAnswer],
   [TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION, updateRoomDescription]
-])('socket %s', async (cmd, called) => {
+] as const)('socket %s', async ([cmd, called], { testDb, testRedis }) => {
   const userId = new ObjectId()
   const body = { cmd }
   const req = createRequest(userId, { body })
@@ -44,7 +47,7 @@ test.each([
   const calledMock = vi.mocked(called)
   calledMock.mockClear()
 
-  await socket(req)
+  await socket(req, { db: testDb, redis: testRedis })
 
   expect(calledMock.mock.calls.length).toStrictEqual(1)
 })

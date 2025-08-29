@@ -1,4 +1,3 @@
-/* eslint-disable no-var */
 declare global {
   var __API_URL_BASE__: string
   var __AUTH_URL_BASE__: string
