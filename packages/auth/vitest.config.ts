@@ -12,11 +12,6 @@ export default defineConfig({
       REFRESH_TOKEN_SECRET: 'mzmTestRefreshTokenSecret'
     },
     pool: 'forks',
-    poolOptions: {
-      forks: {
-        maxForks: 16,
-        minForks: 4
-      }
-    }
+    maxWorkers: 16
   }
 })

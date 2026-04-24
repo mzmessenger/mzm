@@ -27,14 +27,14 @@
   },
   "license": "MIT",
   "dependencies": {
-    "express": "^5.1.0",
-    "jsonwebtoken": "^9.0.0",
-    "path-to-regexp": "^8.2.0"
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3",
+    "path-to-regexp": "^8.4.2"
   },
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.7",
-    "eslint": "^9.20.1",
-    "typescript": "^5.6.3",
-    "typescript-eslint": "^8.37.0"
+    "eslint": "^10.2.1",
+    "typescript": "^6.0.0",
+    "typescript-eslint": "^8.59.0"
   }
 }
