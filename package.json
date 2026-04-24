@@ -20,11 +20,11 @@
     "build-docker-image:frontend": "docker build -f packages/frontend/Dockerfile -t mzm-frontend ."
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
-    "@types/node": "^24.0.10",
-    "concurrently": "^9.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.6.0",
+    "concurrently": "^9.2.1",
     "mzm-auth": "^1.0.1",
     "mzm-frontend": "^0.0.0",
-    "prettier": "^3.5.1"
+    "prettier": "^3.8.3"
   }
 }

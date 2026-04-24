@@ -3,12 +3,14 @@
     "incremental": true,
     "strict": true,
     "outDir": "dist",
+    "rootDir": "./",
     "sourceMap": true,
     "esModuleInterop": true,
     "target": "esnext",
     "lib": ["ESNext"],
     "module": "nodenext",
     "skipLibCheck": true,
+    "types": ["node"],
     "paths": {
       "mzm-shared": ["../shared"]
     }

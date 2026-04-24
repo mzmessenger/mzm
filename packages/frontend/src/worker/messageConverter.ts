@@ -53,13 +53,13 @@ const renderer: RendererObject = {
   checkbox({ checked }) {
     return `<span class="check">${checked ? '[x]' : '[ ]'}</span>`
   },
-  code({ text, lang }) {
+  code({ text, lang }: { text?: string; lang?: string }) {
     const language = hljs.getLanguage(lang) ? lang : 'bash'
     const classAttr = 'hljs language_' + escape(language)
     const html = [
       '<pre>',
       `<code class="${classAttr}">`,
-      hljs.highlight(text, { language }).value,
+      text ? hljs.highlight(text, { language: language as string }).value : '',
       '</code>',
       '</pre>'
     ].join('')

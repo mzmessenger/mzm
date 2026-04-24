@@ -12,9 +12,8 @@ vi.mock('../lib/redis.js', async () => {
   return { sessionRedis: vi.fn() }
 })
 
-vi.mock('../lib/db.js', async () => {
-  const actual =
-    await vi.importActual<typeof import('../lib/db.js')>('../lib/db.js')
+vi.mock('../lib/db.js', async (importOriginal) => {
+  const actual = await importOriginal<typeof import('../lib/db.js')>()
   return { ...actual, mongoClient: vi.fn() }
 })
 

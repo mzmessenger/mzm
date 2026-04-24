@@ -10,6 +10,7 @@
     "skipLibCheck": true,
     "noEmit": true,
     "allowImportingTsExtensions": true,
+    "types": ["node"],
     "paths": {
       "mzm-shared": ["../shared"]
     }
