@@ -1,16 +1,14 @@
 {
   "compilerOptions": {
     "incremental": true,
-    "strict": true,
-    "lib": ["es2022", "dom", "webworker"],
+    "lib": ["es2022", "dom", "dom.iterable", "webworker"],
     "outDir": "dist",
-    "rootDir": "./",
     "sourceMap": true,
     "noImplicitAny": true,
     "esModuleInterop": true,
     "module": "esnext",
     "target": "es2022",
-    "moduleResolution": "bundler",
+    "moduleResolution": "node",
     "skipLibCheck": true,
     "jsx": "react-jsx",
     "isolatedModules": true,
