@@ -1,12 +1,7 @@
 import { vi, expect } from 'vitest'
 import { createTest } from '../../../test/testUtil.js'
 vi.mock('../../lib/logger.js')
-vi.mock('../../lib/redis.js', () => {
-  return {
-    lock: vi.fn(() => Promise.resolve(true)),
-    release: vi.fn()
-  }
-})
+
 vi.mock('../../lib/elasticsearch/index.js', () => {
   return {
     client: {}
@@ -23,8 +18,8 @@ import { exitRoom, getUsers } from './index.js'
 
 const test = await createTest(globalThis)
 
-test('exitRoom fail (general)', async ({ testDb, testRedis }) => {
-  await initGeneral({ db: testDb, redis: testRedis })
+test('exitRoom fail (general)', async ({ testDb }) => {
+  await initGeneral({ db: testDb })
 
   const userId = new ObjectId()
 

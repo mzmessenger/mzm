@@ -1,4 +1,4 @@
-import type { RedisOptions } from 'ioredis'
+import { resolveQueueConfig } from 'mzm-shared/src/lib/queue'
 
 export const API_URL_BASE = process.env.API_URL_BASE ?? 'http://localhost:3001'
 
@@ -111,13 +111,13 @@ export const aws = {
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ?? ''
 } as const
 
-export const redis = {
-  options: {
-    host: process.env.REDIS_HOST,
-    enableOfflineQueue: false,
-    connectTimeout: Number(process.env.REDIS_TIMEOUT ?? 30000)
-  } satisfies RedisOptions
-} as const
+const queue = resolveQueueConfig({
+  nodeEnv: process.env.NODE_ENV,
+  url: process.env.QUEUE_URL,
+  secret: process.env.QUEUE_SECRET
+})
+export const QUEUE_URL = queue.url
+export const QUEUE_SECRET = queue.secret
 
 export const elasticsearch = {
   client: {

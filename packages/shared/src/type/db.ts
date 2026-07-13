@@ -49,4 +49,5 @@ export type Enter = {
   userId: ObjectId
   unreadCounter: number
   replied: number
+  processedEventIds?: string[]
 }

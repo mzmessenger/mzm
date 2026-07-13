@@ -1,29 +1,29 @@
-import { type MongoClient } from 'mongodb'
-import { type ExRedisClient } from '../redis.js'
-import { initRemoveConsumerGroup, consumeRemove } from './remove.js'
-import { initUnreadConsumerGroup, consumeUnread } from './unread.js'
-import { initReplyConsumerGroup, consumeReply } from './reply.js'
-import { initVoteConsumerGroup, consumeVote } from './vote.js'
-import { initMessageConsumerGroup, consumeMessage } from './message.js'
+import type { MongoClient } from 'mongodb'
+import type { EventPublisher, QueueEvent } from 'mzm-shared/src/lib/queue'
+import { message } from './message.js'
+import { increment } from './unread.js'
+import { reply } from './reply.js'
+import { vote } from './vote.js'
+import { remove } from './remove.js'
 
-export async function initConsumer({
+export async function handleQueueEvent({
   db,
-  redis
+  publisher,
+  event
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  publisher: EventPublisher
+  event: QueueEvent
 }) {
-  await Promise.all([
-    initRemoveConsumerGroup(redis),
-    initUnreadConsumerGroup(redis),
-    initReplyConsumerGroup(redis),
-    initVoteConsumerGroup(redis),
-    initMessageConsumerGroup(redis)
-  ])
-
-  consumeRemove({ redis, db })
-  consumeUnread({ redis, db })
-  consumeReply({ redis, db })
-  consumeVote({ redis, db })
-  consumeMessage({ redis, db })
+  if (event.type === 'message') {
+    await message({ event })
+  } else if (event.type === 'unread') {
+    await increment({ db, event })
+  } else if (event.type === 'reply') {
+    await reply({ db, event })
+  } else if (event.type === 'vote') {
+    await vote({ db, publisher, event })
+  } else if (event.type === 'removeUser') {
+    await remove({ db, event })
+  }
 }

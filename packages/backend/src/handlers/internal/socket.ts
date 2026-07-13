@@ -18,7 +18,7 @@ import {
   type User,
   type VoteAnswer
 } from '../../lib/db.js'
-import { type ExRedisClient } from '../../lib/redis.js'
+import { type EventPublisher } from '../../lib/queue.js'
 import * as config from '../../config.js'
 import {
   escape,
@@ -92,7 +92,7 @@ export async function sendMessage({
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  redis: EventPublisher
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_SEND>
 }) {
@@ -194,7 +194,7 @@ export async function iine({
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  redis: EventPublisher
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_IINE>
 }) {
   const target = await collections(db).messages.findOne({
@@ -233,7 +233,7 @@ export async function modifyMessage({
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  redis: EventPublisher
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_MODIFY>
 }) {
@@ -302,7 +302,7 @@ export async function removeMessage({
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  redis: EventPublisher
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.MESSAGE_REMOVE>
 }) {
@@ -407,12 +407,10 @@ export async function getMessagesFromRoom({
 
 export async function enterRoom({
   db,
-  redis,
   user,
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_ENTER>
 }): Promise<ToClientType> {
@@ -437,7 +435,7 @@ export async function enterRoom({
     if (found) {
       room = found
     } else {
-      room = await createRoom({ db, redis, userId: new ObjectId(user), name })
+      room = await createRoom({ db, userId: new ObjectId(user), name })
     }
   }
 
@@ -470,7 +468,7 @@ export async function readMessage({
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  redis: EventPublisher
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_READ>
 }) {
@@ -503,7 +501,7 @@ export async function sortRooms({
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  redis: EventPublisher
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_SORT>
 }) {
@@ -598,7 +596,7 @@ export async function updateRoomDescription({
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  redis: EventPublisher
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION>
 }) {
@@ -626,7 +624,6 @@ export async function updateRoomDescription({
     descrioption: data.description
   }
   addQueueToUsers(redis, users, send)
-
 }
 
 function isAnswer(answer: number): answer is VoteAnswer['answer'] {
@@ -646,7 +643,7 @@ export async function sendVoteAnswer({
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  redis: EventPublisher
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_SEND>
 }) {
@@ -700,7 +697,7 @@ export async function removeVoteAnswer({
   data
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  redis: EventPublisher
   user: string
   data: FilterSocketToBackendType<typeof TO_SERVER_CMD.VOTE_ANSWER_REMOVE>
 }) {

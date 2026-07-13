@@ -6,7 +6,7 @@
   "type": "module",
   "scripts": {
     "prestart": "npm run cleanbuild",
-    "start": "node --env-file=.env --watch dist/src/server.js | bunyan",
+    "start": "node --env-file-if-exists=.env --watch dist/src/server.js | bunyan",
     "dev": "npm run start",
     "build": "tsc --build tsconfig.json",
     "build:test": "tsc --build tsconfig.test.json",
@@ -27,7 +27,6 @@
     "express": "^5.2.1",
     "helmet": "^8.1.0",
     "image-size": "^2.0.2",
-    "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.3",
     "mongodb": "^6.21.0",
     "multer": "^2.1.1",

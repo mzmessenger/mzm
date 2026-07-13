@@ -1,5 +1,5 @@
 import type { MongoClient } from 'mongodb'
-import type { Redis } from 'ioredis'
+import type { EventPublisher } from 'mzm-shared/src/lib/queue'
 import type { PassportRequest, SerializeUser } from './types.js'
 import express, { type Request } from 'express'
 import cors from 'cors'
@@ -17,7 +17,8 @@ import {
   TRUST_PROXY,
   SESSION_PARSER,
   ALLOW_REDIRECT_ORIGINS,
-  CORS_ORIGIN
+  CORS_ORIGIN,
+  QUEUE_SECRET
 } from './config.js'
 import { logger } from './lib/logger.js'
 import {
@@ -29,16 +30,17 @@ import * as oauthHandlers from './handlers/oauth.js'
 import * as githubHandlers from './handlers/github.js'
 import * as twitterHandlers from './handlers/twitter.js'
 import * as authorizeHandlers from './handlers/authorize.js'
+import { removeUser } from './lib/consumer.js'
 
 const jsonParser = express.json({ limit: '1mb' })
 
 type Options = {
   db: MongoClient
-  redis: Redis
+  publisher: EventPublisher
   sessionClientPromise: Promise<MongoClient>
 }
 
-export function createApp({ db, redis, sessionClientPromise }: Options) {
+export function createApp({ db, publisher, sessionClientPromise }: Options) {
   const app = express()
   const defaultHelmet = helmet()
   app.use(
@@ -58,6 +60,15 @@ export function createApp({ db, redis, sessionClientPromise }: Options) {
 
   app.get('/', defaultHelmet, (_, res) => {
     res.status(200).send('ok')
+  })
+
+  app.post('/internal/queue/remove-user', jsonParser, async (req, res) => {
+    if (req.headers.authorization !== `Bearer ${QUEUE_SECRET}`) {
+      res.status(401).send('invalid queue secret')
+      return
+    }
+    await removeUser({ db, event: req.body })
+    res.status(204).send()
   })
 
   passport.use(
@@ -173,7 +184,7 @@ export function createApp({ db, redis, sessionClientPromise }: Options) {
   app.get('/auth/logout', defaultHelmet, handlers.logout)
 
   app.delete('/auth/user', defaultHelmet, async (req, res) => {
-    const data = await handlers.remove(req, redis)
+    const data = await handlers.remove(req, publisher)
     return response(data)(req, res)
   })
   app.get('/auth/error', defaultHelmet, (_, res) =>

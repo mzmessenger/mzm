@@ -10,7 +10,7 @@ import {
   getRequestGithubUserName,
   getRequestTwitterUserName
 } from './lib/utils.js'
-import { type ExRedisClient } from './lib/redis.js'
+import { type EventPublisher } from './lib/queue.js'
 import { addUserResponse, closeUserResponse } from './lib/fetchStreaming.js'
 import { response } from 'mzm-shared/src/lib/wrap'
 import * as rooms from './handlers/rooms/index.js'
@@ -18,16 +18,17 @@ import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import * as internal from './handlers/internal.js'
 import { connection } from './handlers/socket/connection.js'
-import { checkAccessToken } from './middleware/index.js'
+import { checkAccessToken, checkQueueSecret } from './middleware/index.js'
+import { handleQueueEvent } from './lib/consumer/index.js'
 
 const jsonParser = express.json({ limit: '1mb' })
 
 export function createApp({
   db,
-  redis
+  publisher
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  publisher: EventPublisher
 }) {
   const app = express()
   app.use(helmet())
@@ -37,9 +38,19 @@ export function createApp({
     })
   )
 
-  rooms.createRoute(app, { db, redis, jsonParser, checkAccessToken })
+  rooms.createRoute(app, { db, jsonParser, checkAccessToken })
   user.createRoute(app, { db, jsonParser, checkAccessToken })
   icon.createRoute(app, { db, checkAccessToken })
+
+  app.post(
+    '/internal/queue',
+    checkQueueSecret,
+    jsonParser,
+    async (req, res) => {
+      await handleQueueEvent({ db, publisher, event: req.body })
+      res.status(204).send()
+    }
+  )
 
   app.get('/api/socket', checkAccessToken, (req, res) => {
     const user = getRequestUserId(req)
@@ -80,7 +91,7 @@ export function createApp({
   })
 
   app.post('/api/socket', checkAccessToken, jsonParser, async (req, res) => {
-    const data = await internal.socket(req, { db, redis })
+    const data = await internal.socket(req, { db, redis: publisher })
     return response(data)(req, res)
   })
 
