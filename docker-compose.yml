@@ -1,4 +1,3 @@
-version: '3.5'
 services:
   web:
     image: nginx
@@ -29,14 +28,6 @@ services:
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
-  redis:
-    image: redis:6
-    ports:
-      - 6379:6379
-  redis-test:
-    image: redis:6
-    ports:
-      - 6380:6379
   elasticsearch:
     build:
       context: ./packages/infra/elasticsearch

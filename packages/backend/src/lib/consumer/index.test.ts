@@ -1,75 +1,25 @@
-import { vi, expect } from 'vitest'
+import { expect, vi } from 'vitest'
+vi.mock('./unread.js', () => ({ increment: vi.fn() }))
+import { ObjectId } from 'mongodb'
 import { createTest } from '../../../test/testUtil.js'
-vi.mock('./remove.js', () => {
-  return {
-    initRemoveConsumerGroup: vi.fn(),
-    consumeRemove: vi.fn()
-  }
-})
-vi.mock('./unread.js', () => {
-  return {
-    initUnreadConsumerGroup: vi.fn(),
-    consumeUnread: vi.fn()
-  }
-})
-vi.mock('./reply.js', () => {
-  return {
-    initReplyConsumerGroup: vi.fn(),
-    consumeReply: vi.fn()
-  }
-})
-vi.mock('./search/room.js', () => {
-  return {
-    initSearchRoomConsumerGroup: vi.fn(),
-    consumeSearchRooms: vi.fn()
-  }
-})
-vi.mock('./vote.js', () => {
-  return {
-    initVoteConsumerGroup: vi.fn(),
-    consumeVote: vi.fn()
-  }
-})
-vi.mock('./message.js', () => {
-  return {
-    initMessageConsumerGroup: vi.fn(),
-    consumeMessage: vi.fn()
-  }
-})
-
-import { initConsumer } from './index.js'
-import * as consumerRemove from './remove.js'
-import * as consumerUnread from './unread.js'
-import * as consumeReply from './reply.js'
-import * as consumeVote from './vote.js'
-import * as consumeMessage from './message.js'
+import { increment } from './unread.js'
+import { handleQueueEvent } from './index.js'
 
 const test = await createTest(globalThis)
 
-test('init', async ({ testDb, testRedis }) => {
-  const mocks = [
-    [consumerRemove.initRemoveConsumerGroup, consumerRemove.consumeRemove],
-    [consumerUnread.initUnreadConsumerGroup, consumerUnread.consumeUnread],
-    [consumeReply.initReplyConsumerGroup, consumeReply.consumeReply],
-    [consumeVote.initVoteConsumerGroup, consumeVote.consumeVote],
-    [consumeMessage.initMessageConsumerGroup, consumeMessage.consumeMessage]
-  ]
-
-  expect.assertions(mocks.length * 2)
-
-  for (const [init, consume] of mocks) {
-    const initMock = vi.mocked(init)
-    initMock.mockClear()
-    initMock.mockResolvedValue()
-    const consumeMock = vi.mocked(consume)
-    consumeMock.mockClear()
-    consumeMock.mockResolvedValue()
+test('event typeに対応するhandlerへdispatchする', async ({
+  testDb,
+  testRedis
+}) => {
+  const event = {
+    id: 'event-1',
+    type: 'unread' as const,
+    payload: {
+      roomId: new ObjectId().toHexString(),
+      messageId: new ObjectId().toHexString()
+    },
+    createdAt: new Date().toISOString()
   }
-
-  await initConsumer({ db: testDb, redis: testRedis })
-
-  for (const [init, consume] of mocks) {
-    expect(init.call.length).toStrictEqual(1)
-    expect(consume.call.length).toStrictEqual(1)
-  }
+  await handleQueueEvent({ db: testDb, publisher: testRedis, event })
+  expect(increment).toHaveBeenCalledWith({ db: testDb, event })
 })

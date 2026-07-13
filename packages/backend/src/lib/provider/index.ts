@@ -1,80 +1,44 @@
-import { type ExRedisClient } from '../redis.js'
 import { logger } from '../logger.js'
-import { type ToClientType } from 'mzm-shared/src/type/socket'
-import { UnreadQueue, ReplyQueue, VoteQueue } from '../../types.js'
-import * as config from '../../config.js'
+import type { ToClientType } from 'mzm-shared/src/type/socket'
+import type { EventPublisher } from '../queue.js'
 
 export async function addMessageQueue(
-  client: ExRedisClient,
+  publisher: EventPublisher,
   data: ToClientType
 ) {
-  const message = JSON.stringify(data)
-  await client.xadd(
-    config.stream.MESSAGE,
-    'MAXLEN',
-    100000,
-    '*',
-    'message',
-    message
-  )
-  logger.info({
-    label: 'queue:add:user',
-    message
-  })
+  await publisher.publish('message', data)
+  logger.info({ label: 'queue:add:user', message: data })
 }
 
 export async function addQueueToUsers(
-  client: ExRedisClient,
+  publisher: EventPublisher,
   users: string[],
   data: ToClientType
 ) {
-  // todo: too heavy
-  const promises = users.map((user) => {
-    addMessageQueue(client, { ...data, user })
-  })
-  await Promise.all(promises)
+  await Promise.all(
+    users.map((user) => addMessageQueue(publisher, { ...data, user }))
+  )
 }
 
 export async function addUnreadQueue(
-  client: ExRedisClient,
+  publisher: EventPublisher,
   roomId: string,
   messageId: string
 ) {
-  const data: UnreadQueue = { roomId, messageId }
-  client.xadd(
-    config.stream.UNREAD,
-    'MAXLEN',
-    1000,
-    '*',
-    'unread',
-    JSON.stringify(data)
-  )
+  await publisher.publish('unread', { roomId, messageId })
 }
 
 export async function addRepliedQueue(
-  client: ExRedisClient,
+  publisher: EventPublisher,
   roomId: string,
   userId: string
 ) {
-  const data: ReplyQueue = { roomId, userId }
-  client.xadd(
-    config.stream.REPLY,
-    'MAXLEN',
-    1000,
-    '*',
-    'reply',
-    JSON.stringify(data)
-  )
+  await publisher.publish('reply', { roomId, userId })
 }
 
-export async function addVoteQueue(client: ExRedisClient, messageId: string) {
-  const data: VoteQueue = { messageId }
-  client.xadd(
-    config.stream.VOTE,
-    'MAXLEN',
-    1000,
-    '*',
-    'reply',
-    JSON.stringify(data)
-  )
+export async function addVoteQueue(
+  publisher: EventPublisher,
+  messageId: string
+) {
+  await publisher.publish('vote', { messageId })
 }

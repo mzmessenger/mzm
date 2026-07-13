@@ -8,10 +8,6 @@ import { verifyAccessToken } from 'mzm-shared/src/auth/index'
 
 vi.mock('../lib/logger.js')
 
-vi.mock('../lib/redis.js', async () => {
-  return { sessionRedis: vi.fn() }
-})
-
 vi.mock('../lib/db.js', async (importOriginal) => {
   const actual = await importOriginal<typeof import('../lib/db.js')>()
   return { ...actual, mongoClient: vi.fn() }

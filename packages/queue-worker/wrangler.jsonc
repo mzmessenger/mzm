@@ -1,0 +1,25 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mzm-queue-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "dev": {
+    "port": 8787
+  },
+  "queues": {
+    "producers": [
+      {
+        "binding": "EVENTS",
+        "queue": "mzm-events"
+      }
+    ],
+    "consumers": [
+      {
+        "queue": "mzm-events",
+        "max_batch_size": 10,
+        "max_batch_timeout": 1,
+        "max_retries": 5
+      }
+    ]
+  }
+}

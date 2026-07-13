@@ -1,5 +1,6 @@
 import type { SessionOptions } from 'express-session'
-import type { RedisOptions } from 'ioredis'
+import { resolveQueueConfig } from 'mzm-shared/src/lib/queue'
+
 import type { StrategyOptionsWithRequest as GitHubStrategyOptions } from 'passport-github'
 
 const isTest = process.env.NODE_ENV === 'test'
@@ -43,18 +44,13 @@ export const WORKER_NUM = Number(process.env.WORKER_NUM ?? 1)
 
 export const PORT = process.env.PORT ?? 3002
 
-export const REMOVE_STREAM = 'stream:auth:remove:user'
-
-export const REDIS = {
-  options: {
-    host: process.env.REDIS_HOST,
-    port: process.env.REDIS_PORT
-      ? Number(process.env.SESSION_REDIS_PORT)
-      : 6379,
-    enableOfflineQueue: false,
-    connectTimeout: Number(process.env.REDIS_TIMEOUT ?? 30000)
-  } satisfies RedisOptions
-} as const
+const queue = resolveQueueConfig({
+  nodeEnv: process.env.NODE_ENV,
+  url: process.env.QUEUE_URL,
+  secret: process.env.QUEUE_SECRET
+})
+export const QUEUE_URL = queue.url
+export const QUEUE_SECRET = queue.secret
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not defined')

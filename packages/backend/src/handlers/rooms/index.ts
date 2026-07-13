@@ -14,7 +14,7 @@ import {
   type Message,
   type User
 } from '../../lib/db.js'
-import { type ExRedisClient } from '../../lib/redis.js'
+
 import { searchRoom } from '../../lib/elasticsearch/rooms.js'
 import { popParam, createUserIconPath } from '../../lib/utils.js'
 import {
@@ -28,12 +28,11 @@ export function createRoute(
   app: Express,
   {
     db,
-    redis,
     jsonParser,
     checkAccessToken
   }: {
     db: MongoClient
-    redis: ExRedisClient
+
     jsonParser: ReturnType<typeof json>
     checkAccessToken: typeof checkAccessTokenMiddleware
   }
@@ -64,7 +63,6 @@ export function createRoute(
     const userId = getRequestUserId(req)
     const data = await createRoom({
       db,
-      redis,
       userId: new ObjectId(userId),
       body: req.body
     })
@@ -119,12 +117,11 @@ export function createRoute(
 
 export async function createRoom({
   db,
-  redis,
   userId,
   body
 }: {
   db: MongoClient
-  redis: ExRedisClient
+
   userId: ObjectId
   body: unknown
 }) {
@@ -152,7 +149,7 @@ export async function createRoom({
     return { id: found._id.toHexString(), name: found.name }
   }
 
-  const created = await createRoomLogic({ db, redis, userId, name })
+  const created = await createRoomLogic({ db, userId, name })
 
   // @todo
   if (!created) {

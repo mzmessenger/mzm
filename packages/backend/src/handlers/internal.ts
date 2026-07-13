@@ -9,13 +9,13 @@ import { getRequestUserId } from '../lib/utils.js'
 import { logger } from '../lib/logger.js'
 import * as _socket from './internal/socket.js'
 import { sendToUser } from '../lib/fetchStreaming.js'
-import { ExRedisClient } from '../lib/redis.js'
+import { type EventPublisher } from '../lib/queue.js'
 
 type Res = void | undefined | ToClientType
 
 export async function socket(
   req: Request,
-  { db, redis }: { db: MongoClient; redis: ExRedisClient }
+  { db, redis }: { db: MongoClient; redis: EventPublisher }
 ): Promise<Res> {
   const user = getRequestUserId(req)
   const data = req.body as SocketToBackendType
@@ -34,7 +34,7 @@ export async function socket(
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_GET) {
     res = await _socket.getRooms({ db, user })
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_ENTER) {
-    res = await _socket.enterRoom({ db, redis, user, data })
+    res = await _socket.enterRoom({ db, user, data })
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION) {
     res = await _socket.updateRoomDescription({ db, redis, user, data })
   } else if (data.cmd === TO_SERVER_CMD.ROOMS_READ) {

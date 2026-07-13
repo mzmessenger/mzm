@@ -51,7 +51,7 @@ export async function initMongoClient() {
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,
-      deprecationErrors: true,
+      deprecationErrors: true
     }
   })
   await client.connect()
@@ -59,8 +59,16 @@ export async function initMongoClient() {
   return client
 }
 
+export async function initIndexes(c: MongoClient) {
+  const db = collections(c)
+  await Promise.all([
+    db.rooms.createIndex({ name: 1 }, { unique: true }),
+    db.enter.createIndex({ userId: 1, roomId: 1 }, { unique: true })
+  ])
+}
+
 export async function close(c: MongoClient) {
-  c.close()
+  await c.close()
 }
 
 export type Removed = {
