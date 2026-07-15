@@ -1,5 +1,4 @@
 import type { SessionOptions } from 'express-session'
-import { resolveQueueConfig } from 'mzm-shared/src/lib/queue'
 
 import type { StrategyOptionsWithRequest as GitHubStrategyOptions } from 'passport-github'
 
@@ -44,13 +43,8 @@ export const WORKER_NUM = Number(process.env.WORKER_NUM ?? 1)
 
 export const PORT = process.env.PORT ?? 3002
 
-const queue = resolveQueueConfig({
-  nodeEnv: process.env.NODE_ENV,
-  url: process.env.QUEUE_URL,
-  secret: process.env.QUEUE_SECRET
-})
-export const QUEUE_URL = queue.url
-export const QUEUE_SECRET = queue.secret
+export const GATEWAY_ORIGIN_SECRET = process.env.GATEWAY_ORIGIN_SECRET ?? ''
+export const QUEUE_CALLBACK_SECRET = process.env.QUEUE_CALLBACK_SECRET ?? ''
 
 if (!process.env.SESSION_SECRET) {
   throw new Error('SESSION_SECRET is not defined')

@@ -4,7 +4,7 @@ import {
   parseAuthorizationHeader
 } from 'mzm-shared/src/auth/index'
 import { HEADERS } from 'mzm-shared/src/auth/constants'
-import { JWT, QUEUE_SECRET } from '../config.js'
+import { JWT, QUEUE_CALLBACK_SECRET } from '../config.js'
 import { verifyInternalAccessToken } from '../lib/token.js'
 
 export const checkAccessToken = (
@@ -45,7 +45,7 @@ export const checkQueueSecret = (
   res: Response,
   next: NextFunction
 ) => {
-  if (req.headers.authorization !== `Bearer ${QUEUE_SECRET}`) {
+  if (!QUEUE_CALLBACK_SECRET || req.headers.authorization !== `Bearer ${QUEUE_CALLBACK_SECRET}`) {
     res.status(401).send('invalid queue secret')
     return
   }

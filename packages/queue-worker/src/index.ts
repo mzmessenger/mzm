@@ -1,134 +1,139 @@
-import type { QueueEvent } from 'mzm-shared/src/lib/queue'
+import {
+  isQueueWireEvent,
+  type QueueWireEvent
+} from 'mzm-shared/src/lib/outbox'
 
-type Env = {
-  EVENTS: Pick<Queue<QueueEvent>, 'send'>
+export type Env = {
   AUTH_SERVICE_URL: string
   BACKEND_SERVICE_URL: string
-  QUEUE_SECRET: string
+  QUEUE_CALLBACK_SECRET: string
+  CF_ACCESS_AUD: string
+  CF_ACCESS_TEAM_DOMAIN: string
+  DLQ_ARCHIVE: {
+    get(key: string): Promise<{ json(): Promise<unknown> } | null>
+    put(key: string, value: string, options?: { httpMetadata?: { contentType?: string } }): Promise<void>
+  }
+  EVENTS: { sendBatch(values: { body: unknown }[]): Promise<void> }
 }
 
-function isAuthorized(request: Request, secret: string) {
-  return request.headers.get('authorization') === `Bearer ${secret}`
+function callbackUrl(event: QueueWireEvent, env: Env) {
+  if (event.destination === 'auth') {
+    return new URL('/internal/queue/remove-user', env.AUTH_SERVICE_URL)
+  }
+  return new URL('/internal/queue', env.BACKEND_SERVICE_URL)
 }
 
-function isRecord(value: unknown): value is Record<string, unknown> {
-  return typeof value === 'object' && value !== null
+export async function handleFetch() {
+  return new Response('not found', { status: 404 })
 }
 
-function hasString(value: Record<string, unknown>, key: string) {
-  return typeof value[key] === 'string'
+export async function archiveDlqEvent(event: QueueWireEvent, archive: Pick<Env['DLQ_ARCHIVE'], 'put'>) {
+  await archive.put(event.eventId, JSON.stringify(event), {
+    httpMetadata: { contentType: 'application/json' }
+  })
 }
 
-function hasObjectId(value: Record<string, unknown>, key: string) {
-  const candidate = value[key]
-  return typeof candidate === 'string' && /^[a-f\d]{24}$/i.test(candidate)
+function decodeBase64Url(value: string) {
+  const base64 = value.replace(/-/g, '+').replace(/_/g, '/')
+  const padded = base64.padEnd(Math.ceil(base64.length / 4) * 4, '=')
+  return Uint8Array.from(atob(padded), (character) => character.charCodeAt(0))
 }
 
-function isQueueEvent(value: unknown): value is QueueEvent {
-  if (
-    !isRecord(value) ||
-    !hasString(value, 'id') ||
-    !hasString(value, 'type') ||
-    !hasString(value, 'createdAt') ||
-    !isRecord(value.payload)
-  ) {
+function parseJson(value: Uint8Array) {
+  return JSON.parse(new TextDecoder().decode(value))
+}
+
+function isJsonWebKey(value: unknown): value is JsonWebKey {
+  return typeof value === 'object' && value !== null && typeof Reflect.get(value, 'kty') === 'string'
+}
+
+export async function validateAccessJwt(token: string, env: Env, fetcher: typeof fetch = fetch) {
+  const [encodedHeader, encodedPayload, encodedSignature, ...extra] = token.split('.')
+  if (!encodedHeader || !encodedPayload || !encodedSignature || extra.length !== 0) return false
+  try {
+    const header = parseJson(decodeBase64Url(encodedHeader))
+    const payload = parseJson(decodeBase64Url(encodedPayload))
+    if (!header || typeof header !== 'object' || Reflect.get(header, 'alg') !== 'RS256' || typeof Reflect.get(header, 'kid') !== 'string') return false
+    if (!payload || typeof payload !== 'object') return false
+    const audience = Reflect.get(payload, 'aud')
+    const audiences = typeof audience === 'string' ? [audience] : Array.isArray(audience) ? audience : []
+    const now = Math.floor(Date.now() / 1000)
+    if (!audiences.includes(env.CF_ACCESS_AUD) || Reflect.get(payload, 'iss') !== `https://${env.CF_ACCESS_TEAM_DOMAIN}` || typeof Reflect.get(payload, 'exp') !== 'number' || Reflect.get(payload, 'exp') <= now || (typeof Reflect.get(payload, 'nbf') === 'number' && Reflect.get(payload, 'nbf') > now)) return false
+    const certificates = await fetcher(`https://${env.CF_ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs`)
+    if (!certificates.ok) return false
+    const body: unknown = await certificates.json()
+    if (!body || typeof body !== 'object' || !Array.isArray(Reflect.get(body, 'keys'))) return false
+    const key = Reflect.get(body, 'keys').find((candidate) => candidate && typeof candidate === 'object' && Reflect.get(candidate, 'kid') === Reflect.get(header, 'kid'))
+    if (!isJsonWebKey(key)) return false
+    const publicKey = await crypto.subtle.importKey('jwk', key, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify'])
+    return await crypto.subtle.verify('RSASSA-PKCS1-v1_5', publicKey, decodeBase64Url(encodedSignature), new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`))
+  } catch {
     return false
   }
-
-  if (value.type === 'message') {
-    return true
-  }
-  if (value.type === 'unread') {
-    return (
-      hasObjectId(value.payload, 'roomId') &&
-      hasObjectId(value.payload, 'messageId')
-    )
-  }
-  if (value.type === 'reply') {
-    return (
-      hasObjectId(value.payload, 'roomId') &&
-      hasObjectId(value.payload, 'userId')
-    )
-  }
-  if (value.type === 'vote') {
-    return hasObjectId(value.payload, 'messageId')
-  }
-  if (value.type === 'removeUser') {
-    return hasObjectId(value.payload, 'userId')
-  }
-  return false
 }
 
-export async function handleFetch(request: Request, env: Env) {
-  const url = new URL(request.url)
-  if (request.method !== 'POST' || url.pathname !== '/events') {
-    return new Response('not found', { status: 404 })
-  }
-  if (!isAuthorized(request, env.QUEUE_SECRET)) {
-    return new Response('unauthorized', { status: 401 })
-  }
-
-  let event: unknown
-  try {
-    event = await request.json()
-  } catch {
-    return new Response('invalid event', { status: 400 })
-  }
-  if (!isQueueEvent(event)) {
-    return new Response('invalid event', { status: 400 })
-  }
-  await env.EVENTS.send(event)
-  return new Response(null, { status: 202 })
-}
-
-async function postEvent(
-  url: URL,
-  event: QueueEvent,
-  secret: string,
-  fetcher: typeof fetch
-) {
-  const response = await fetcher(url, {
-    method: 'POST',
-    headers: {
-      authorization: `Bearer ${secret}`,
-      'content-type': 'application/json'
-    },
-    body: JSON.stringify(event)
-  })
-  if (!response.ok) {
-    throw new Error(
-      `queue callback failed: ${url.toString()} (${response.status})`
-    )
-  }
+export async function replayDlq(request: Request, env: Env, fetcher: typeof fetch = fetch) {
+  const assertion = request.headers.get('cf-access-jwt-assertion')
+  if (!assertion || !await validateAccessJwt(assertion, env, fetcher)) return new Response('Cloudflare Access authentication required', { status: 401 })
+  const body: unknown = await request.json()
+  if (!body || typeof body !== 'object') return new Response('invalid replay request', { status: 400 })
+  const eventIds: unknown = Reflect.get(body, 'eventIds')
+  if (!Array.isArray(eventIds) || !eventIds.every((id) => typeof id === 'string')) return new Response('invalid replay request', { status: 400 })
+  if (eventIds.length === 0 || eventIds.length > 100) return new Response('invalid replay request', { status: 400 })
+  const events = await Promise.all(eventIds.map(async (eventId) => {
+    const saved = await env.DLQ_ARCHIVE.get(eventId)
+    if (!saved) return undefined
+    return parseQueueEvent(await saved.json())
+  }))
+  const replayable = events.filter((event) => event !== undefined)
+  if (replayable.length > 0) await env.EVENTS.sendBatch(replayable.map((event) => ({ body: event })))
+  return Response.json({ replayed: replayable.length })
 }
 
 export async function dispatchEvent(
-  event: QueueEvent,
+  event: QueueWireEvent,
   env: Env,
   fetcher: typeof fetch = fetch
 ) {
-  if (event.type === 'removeUser') {
-    await postEvent(
-      new URL('/internal/queue/remove-user', env.AUTH_SERVICE_URL),
-      event,
-      env.QUEUE_SECRET,
-      fetcher
-    )
-  }
-  await postEvent(
-    new URL('/internal/queue', env.BACKEND_SERVICE_URL),
-    event,
-    env.QUEUE_SECRET,
-    fetcher
+  const response = await fetcher(
+    new Request(callbackUrl(event, env), {
+      method: 'POST',
+      headers: {
+        authorization: `Bearer ${env.QUEUE_CALLBACK_SECRET}`,
+        'content-type': 'application/json'
+      },
+      body: JSON.stringify(event)
+    })
   )
+  if (!response.ok) {
+    throw new Error(`queue callback failed: ${response.status}`)
+  }
+}
+
+function parseQueueEvent(value: unknown) {
+  if (!isQueueWireEvent(value)) {
+    throw new Error('invalid queue event')
+  }
+  return value
 }
 
 export default {
-  fetch: handleFetch,
-  async queue(batch: MessageBatch<QueueEvent>, env: Env) {
+  async fetch(request, env) {
+    const url = new URL(request.url)
+    if (request.method === 'POST' && url.pathname === '/internal/dlq/replay') return await replayDlq(request, env)
+    return await handleFetch()
+  },
+  async queue(batch: MessageBatch<unknown>, env: Env) {
+    if (batch.queue === 'mzm-events-dlq') {
+      for (const message of batch.messages) {
+        await archiveDlqEvent(parseQueueEvent(message.body), env.DLQ_ARCHIVE)
+        message.ack()
+      }
+      return
+    }
     for (const message of batch.messages) {
-      await dispatchEvent(message.body, env)
+      await dispatchEvent(parseQueueEvent(message.body), env)
       message.ack()
     }
   }
-} satisfies ExportedHandler<Env, QueueEvent>
+} satisfies ExportedHandler<Env, unknown>

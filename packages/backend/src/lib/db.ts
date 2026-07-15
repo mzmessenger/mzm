@@ -10,6 +10,7 @@ import {
 } from 'mzm-shared/src/type/db'
 import { MONGODB_URI } from '../config.js'
 import { logger } from './logger.js'
+import { initializeOutboxIndexes } from './outbox.js'
 
 export {
   COLLECTION_NAMES,
@@ -55,15 +56,28 @@ export async function initMongoClient() {
     }
   })
   await client.connect()
+  await verifyTransactionSupport(client)
   logger.info('[db] connected mongodb')
   return client
+}
+
+export async function verifyTransactionSupport(client: MongoClient) {
+  const probe = client.db().collection<{ _id: ObjectId }>('transaction_probes')
+  const _id = new ObjectId()
+  await client.withSession(async (session) => {
+    await session.withTransaction(async () => {
+      await probe.insertOne({ _id }, { session })
+      await probe.deleteOne({ _id }, { session })
+    })
+  })
 }
 
 export async function initIndexes(c: MongoClient) {
   const db = collections(c)
   await Promise.all([
     db.rooms.createIndex({ name: 1 }, { unique: true }),
-    db.enter.createIndex({ userId: 1, roomId: 1 }, { unique: true })
+    db.enter.createIndex({ userId: 1, roomId: 1 }, { unique: true }),
+    initializeOutboxIndexes(c)
   ])
 }
 

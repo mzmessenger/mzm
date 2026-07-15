@@ -1,0 +1,22 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mzm-event-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-14",
+  "compatibility_flags": ["nodejs_compat"],
+  "routes": ["api.mzm.dev/*", "auth.mzm.dev/*"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "queues": {
+    "producers": [{ "binding": "EVENTS", "queue": "mzm-events" }]
+  },
+  "vars": {
+    "BACKEND_ORIGIN": "http://127.0.0.1:3001",
+    "AUTH_ORIGIN": "http://127.0.0.1:3002"
+  }
+}

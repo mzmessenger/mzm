@@ -1,18 +1,19 @@
 {
   "private": true,
-  "name": "mzm-queue-worker",
+  "name": "mzm-event-gateway-worker",
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start": "wrangler dev --local --var AUTH_SERVICE_URL:http://127.0.0.1:3002 --var BACKEND_SERVICE_URL:http://127.0.0.1:3001 --var QUEUE_CALLBACK_SECRET:local-queue-secret",
-    "dev": "npm run start",
+    "start": "wrangler dev --local --var BACKEND_ORIGIN:http://127.0.0.1:3001 --var AUTH_ORIGIN:http://127.0.0.1:3002",
     "build": "wrangler deploy --dry-run --outdir dist",
     "lint": "eslint -c eslint.config.mjs .",
     "test": "vitest run",
     "types": "wrangler types src/worker-configuration.d.ts"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "eslint": "^9.39.4",
+    "globals": "^17.6.0",
     "typescript": "5.8.3",
     "typescript-eslint": "^8.59.4",
     "vitest": "^4.1.7",

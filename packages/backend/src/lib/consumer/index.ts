@@ -1,5 +1,6 @@
 import type { MongoClient } from 'mongodb'
-import type { EventPublisher, QueueEvent } from 'mzm-shared/src/lib/queue'
+import type { QueueWireEvent } from 'mzm-shared/src/lib/outbox'
+import { acceptConsumerEvent } from '../outbox.js'
 import { message } from './message.js'
 import { increment } from './unread.js'
 import { reply } from './reply.js'
@@ -8,22 +9,22 @@ import { remove } from './remove.js'
 
 export async function handleQueueEvent({
   db,
-  publisher,
   event
 }: {
   db: MongoClient
-  publisher: EventPublisher
-  event: QueueEvent
+  event: QueueWireEvent
 }) {
-  if (event.type === 'message') {
-    await message({ event })
-  } else if (event.type === 'unread') {
-    await increment({ db, event })
-  } else if (event.type === 'reply') {
-    await reply({ db, event })
-  } else if (event.type === 'vote') {
-    await vote({ db, publisher, event })
-  } else if (event.type === 'removeUser') {
-    await remove({ db, event })
+  const wireEvent = event
+  if (wireEvent.type === 'vote') {
+    if (await acceptConsumerEvent(db, wireEvent, async () => undefined)) await vote({ db, event: wireEvent })
+    return
+  }
+  if (!await acceptConsumerEvent(db, wireEvent, async (session) => {
+    if (wireEvent.type === 'unread') await increment({ db, event: wireEvent, session })
+    else if (wireEvent.type === 'reply') await reply({ db, event: wireEvent, session })
+    else if (wireEvent.type === 'removeUser') await remove({ db, event: wireEvent, session })
+  })) return
+  if (wireEvent.type === 'message') {
+    await message({ event: wireEvent })
   }
 }

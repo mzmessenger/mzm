@@ -1,5 +1,4 @@
 import type { MongoClient } from 'mongodb'
-import type { EventPublisher } from 'mzm-shared/src/lib/queue'
 import type { PassportRequest, SerializeUser } from './types.js'
 import express, { type Request } from 'express'
 import cors from 'cors'
@@ -18,7 +17,7 @@ import {
   SESSION_PARSER,
   ALLOW_REDIRECT_ORIGINS,
   CORS_ORIGIN,
-  QUEUE_SECRET
+  QUEUE_CALLBACK_SECRET
 } from './config.js'
 import { logger } from './lib/logger.js'
 import {
@@ -31,16 +30,17 @@ import * as githubHandlers from './handlers/github.js'
 import * as twitterHandlers from './handlers/twitter.js'
 import * as authorizeHandlers from './handlers/authorize.js'
 import { removeUser } from './lib/consumer.js'
+import { GATEWAY_ORIGIN_SECRET } from './config.js'
+import { acknowledgeOutbox, claimOutbox, outboxState, releaseOutbox } from './lib/outbox.js'
 
 const jsonParser = express.json({ limit: '1mb' })
 
 type Options = {
   db: MongoClient
-  publisher: EventPublisher
   sessionClientPromise: Promise<MongoClient>
 }
 
-export function createApp({ db, publisher, sessionClientPromise }: Options) {
+export function createApp({ db, sessionClientPromise }: Options) {
   const app = express()
   const defaultHelmet = helmet()
   app.use(
@@ -62,8 +62,32 @@ export function createApp({ db, publisher, sessionClientPromise }: Options) {
     res.status(200).send('ok')
   })
 
+  app.use('/internal/outbox/v1', (req, res, next) => {
+    if (!GATEWAY_ORIGIN_SECRET || req.headers['x-mzm-gateway-authorization'] !== `Bearer ${GATEWAY_ORIGIN_SECRET}`) return res.status(401).send('unauthorized')
+    next()
+  })
+  app.post('/internal/outbox/v1/claim', jsonParser, async (req, res) => {
+    const { owner, operationId, limit } = req.body
+    if (typeof owner !== 'string' || (operationId !== undefined && typeof operationId !== 'string') || !Number.isInteger(limit) || limit < 1 || limit > 100) return res.status(400).send('invalid claim')
+    return res.json(await claimOutbox(db, owner, operationId, limit))
+  })
+  app.post('/internal/outbox/v1/ack', jsonParser, async (req, res) => {
+    const { owner, events } = req.body
+    if (typeof owner !== 'string' || !Array.isArray(events) || !events.every((event) => event && typeof event === 'object' && typeof event.eventId === 'string' && Number.isInteger(event.eventIndex))) return res.status(400).send('invalid acknowledgement')
+    return res.sendStatus((await acknowledgeOutbox(db, owner, events)) ? 204 : 409)
+  })
+  app.post('/internal/outbox/v1/release', jsonParser, async (req, res) => {
+    const { owner, events } = req.body
+    if (typeof owner !== 'string' || !Array.isArray(events) || !events.every((event) => event && typeof event === 'object' && typeof event.eventId === 'string' && Number.isInteger(event.eventIndex))) return res.status(400).send('invalid release')
+    return res.sendStatus((await releaseOutbox(db, owner, events)) ? 204 : 409)
+  })
+  app.post('/internal/outbox/v1/state', jsonParser, async (req, res) => {
+    if (typeof req.body?.operationId !== 'string') return res.status(400).send('invalid operation')
+    return res.json(await outboxState(db, req.body.operationId))
+  })
+
   app.post('/internal/queue/remove-user', jsonParser, async (req, res) => {
-    if (req.headers.authorization !== `Bearer ${QUEUE_SECRET}`) {
+    if (!QUEUE_CALLBACK_SECRET || req.headers.authorization !== `Bearer ${QUEUE_CALLBACK_SECRET}`) {
       res.status(401).send('invalid queue secret')
       return
     }
@@ -184,7 +208,9 @@ export function createApp({ db, publisher, sessionClientPromise }: Options) {
   app.get('/auth/logout', defaultHelmet, handlers.logout)
 
   app.delete('/auth/user', defaultHelmet, async (req, res) => {
-    const data = await handlers.remove(req, publisher)
+    if (!GATEWAY_ORIGIN_SECRET || req.headers['x-mzm-gateway-authorization'] !== `Bearer ${GATEWAY_ORIGIN_SECRET}`) return res.status(401).send('unauthorized')
+    const data = await handlers.remove(req, db)
+    res.set('x-mzm-operation-id', data.operationId)
     return response(data)(req, res)
   })
   app.get('/auth/error', defaultHelmet, (_, res) =>

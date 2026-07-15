@@ -6,7 +6,7 @@ import { getTestDbName, getTestDbParams } from './testUtil.js'
 beforeAll(async () => {
   const dbName = getTestDbName(process.env.VITEST_POOL_ID!)
   const { userName, userPassword, host, port } = getTestDbParams()
-  const testMongoUri = `mongodb://${userName}:${userPassword}@${host}:${port}/${dbName}`
+  const testMongoUri = `mongodb://${userName}:${userPassword}@${host}:${port}/${dbName}?directConnection=true&replicaSet=rs0`
   globalThis.testMongoClient = await MongoClient.connect(testMongoUri)
 })
 

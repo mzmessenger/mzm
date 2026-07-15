@@ -3,17 +3,14 @@ import http from 'http'
 import { logger } from './lib/logger.js'
 import { createMongoClient, sessionClient } from './lib/db.js'
 import { WORKER_NUM, PORT } from './config.js'
-import { createEventPublisher } from './lib/queue.js'
 import { createApp } from './app.js'
 
 async function main() {
-  const publisher = createEventPublisher()
   const db = await createMongoClient()
 
   const server = http.createServer(
     createApp({
       db: db,
-      publisher,
       sessionClientPromise: sessionClient()
     })
   )

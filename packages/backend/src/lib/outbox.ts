@@ -1,0 +1,194 @@
+import { createHash } from 'node:crypto'
+import { ObjectId, type ClientSession, type MongoClient } from 'mongodb'
+import type { QueueWireEvent } from 'mzm-shared/src/lib/outbox'
+import type { QueueEventPayload, QueueEventType } from 'mzm-shared/src/lib/queue'
+
+export type OutboxEvent = Omit<QueueWireEvent, 'operationId'> & {
+  _id: string
+  operationId: ObjectId
+  status: 'pending' | 'leased' | 'dispatched'
+  attempts: number
+  lease?: { owner: string; expiresAt: Date }
+  publishedAt?: Date
+  dispatchedExpiresAt?: Date
+}
+
+type ConsumerReceipt = { _id: string; consumerName: 'backend' | 'auth'; eventId: string; processedAt: Date }
+type ConsumerRevision = { _id: string; revision: number }
+type ProducerRevision = { _id: string; revision: number }
+type Operation = {
+  _id: ObjectId
+  subject: string
+  route: string
+  idempotencyKey: string
+  requestHash: string
+  response: string
+  createdAt: Date
+  expiresAt: Date
+}
+
+function outbox(db: MongoClient) {
+  return db.db().collection<OutboxEvent>('queue_outbox')
+}
+
+function parseResponse<T>(value: string): T {
+  return JSON.parse(value)
+}
+
+export async function initializeOutboxIndexes(db: MongoClient) {
+  await Promise.all([
+    outbox(db).createIndex({ operationId: 1, eventIndex: 1 }, { unique: true }),
+    outbox(db).createIndex({ status: 1, 'lease.expiresAt': 1, createdAt: 1 }),
+    outbox(db).createIndex({ dispatchedExpiresAt: 1 }, { expireAfterSeconds: 0 }),
+    db.db().collection<ConsumerReceipt>('queue_consumer_receipts').createIndex({ consumerName: 1, eventId: 1 }, { unique: true }),
+    db.db().collection<Operation>('idempotency_operations').createIndex({ subject: 1, route: 1, idempotencyKey: 1 }, { unique: true }),
+    db.db().collection<Operation>('idempotency_operations').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 })
+  ])
+}
+
+export async function createSocketOperation<T>({ db, subject, idempotencyKey, request, run }: {
+  db: MongoClient
+  subject: string
+  idempotencyKey: string
+  request: unknown
+  run: (context: {
+    session: ClientSession
+    emit: <EventType extends QueueEventType>(event: {
+      type: EventType
+      payload: QueueEventPayload[EventType]
+      orderingKey: string
+    }) => void
+  }) => Promise<T>
+}) {
+  const route = 'POST /api/socket'
+  const requestHash = createHash('sha256').update(JSON.stringify(request)).digest('hex')
+  const operations = db.db().collection<Operation>('idempotency_operations')
+  const existing = await operations.findOne({ subject, route, idempotencyKey })
+  if (existing) {
+    if (existing.requestHash !== requestHash) throw new Error('idempotency key reuse conflict')
+    return { operationId: existing._id.toHexString(), response: parseResponse<T>(existing.response) }
+  }
+
+  const operationId = new ObjectId()
+  const events: Array<{
+    type: QueueEventType
+    payload: QueueEventPayload[QueueEventType]
+    orderingKey: string
+  }> = []
+  let value: T | undefined
+  try {
+    await db.withSession(async (session) => {
+      await session.withTransaction(async () => {
+        await operations.insertOne({
+          _id: operationId,
+          subject,
+          route,
+          idempotencyKey,
+          requestHash,
+          response: 'null',
+          createdAt: new Date(),
+          expiresAt: new Date(Date.now() + 30 * 86400_000)
+        }, { session })
+        const response = await run({
+          session,
+          emit(event) {
+            events.push(event)
+          }
+        })
+        value = response
+        const wireEvents: OutboxEvent[] = []
+        for (const [eventIndex, event] of events.entries()) {
+          const revision = await db.db().collection<ProducerRevision>('queue_producer_revisions').findOneAndUpdate(
+            { _id: event.orderingKey },
+            { $inc: { revision: 1 } },
+            { upsert: true, returnDocument: 'after', session }
+          )
+          if (!revision || typeof revision.revision !== 'number') {
+            throw new Error('failed to advance producer revision')
+          }
+          const eventId = `${operationId.toHexString()}:${eventIndex}`
+          wireEvents.push({
+            _id: eventId,
+            version: 1,
+            eventId,
+            operationId,
+            eventIndex,
+            destination: 'backend',
+            type: event.type,
+            payload: event.payload,
+            ordering: { key: event.orderingKey, revision: revision.revision },
+            createdAt: new Date().toISOString(),
+            status: 'pending',
+            attempts: 0
+          })
+        }
+        if (wireEvents.length > 0) await outbox(db).insertMany(wireEvents, { session })
+        await operations.updateOne({ _id: operationId }, { $set: { response: JSON.stringify(response) } }, { session })
+      })
+    })
+  } catch (error) {
+    const duplicate = await operations.findOne({ subject, route, idempotencyKey })
+    if (duplicate) {
+    if (duplicate.requestHash !== requestHash) throw new Error('idempotency key reuse conflict')
+      return { operationId: duplicate._id.toHexString(), response: parseResponse<T>(duplicate.response) }
+    }
+    throw error
+  }
+  if (value === undefined) throw new Error('socket operation returned no response')
+  return { operationId: operationId.toHexString(), response: value }
+}
+
+/** Returns false for duplicate or stale deliveries.  Receipt and revision advance share one transaction. */
+export async function acceptConsumerEvent(db: MongoClient, event: QueueWireEvent, mutate: (session: ClientSession) => Promise<void>) {
+  let accepted = false
+  await db.withSession(async (session) => {
+    await session.withTransaction(async () => {
+      const revisions = db.db().collection<ConsumerRevision>('queue_consumer_revisions')
+      const current = await revisions.findOne({ _id: event.ordering.key }, { session })
+      if (current && current.revision >= event.ordering.revision) return
+      try {
+        await db.db().collection<ConsumerReceipt>('queue_consumer_receipts').insertOne({ _id: `backend:${event.eventId}`, consumerName: 'backend', eventId: event.eventId, processedAt: new Date() }, { session })
+      } catch (error) {
+        if (error instanceof Error && error.message.includes('E11000')) return
+        throw error
+      }
+      await revisions.updateOne({ _id: event.ordering.key }, { $set: { revision: event.ordering.revision } }, { upsert: true, session })
+      await mutate(session)
+      accepted = true
+    })
+  })
+  return accepted
+}
+
+export async function claimOutbox({ db, owner, operationId, limit }: { db: MongoClient; owner: string; operationId?: string; limit: number }) {
+  const now = new Date()
+  const expiresAt = new Date(now.getTime() + 120_000)
+  const operationFilter = operationId ? { operationId: new ObjectId(operationId) } : {}
+  const candidates = await outbox(db).find({ ...operationFilter, $or: [{ status: 'pending' }, { status: 'leased', 'lease.expiresAt': { $lte: now } }] }).sort({ operationId: 1, eventIndex: 1 }).limit(limit).toArray()
+  const claimed: OutboxEvent[] = []
+  for (const event of candidates) {
+    const result = await outbox(db).findOneAndUpdate({ _id: event._id, eventIndex: event.eventIndex, $or: [{ status: 'pending' }, { status: 'leased', 'lease.expiresAt': { $lte: now } }] }, { $set: { status: 'leased', lease: { owner, expiresAt } }, $inc: { attempts: 1 } }, { returnDocument: 'after' })
+    if (result) claimed.push(result)
+  }
+  return claimed
+}
+
+export async function acknowledgeOutbox({ db, owner, events }: { db: MongoClient; owner: string; events: { eventId: string; eventIndex: number }[] }) {
+  const now = new Date()
+  const result = await outbox(db).bulkWrite(events.map((event) => ({ updateOne: { filter: { _id: event.eventId, eventIndex: event.eventIndex, status: 'leased', 'lease.owner': owner, 'lease.expiresAt': { $gt: now } }, update: { $set: { status: 'dispatched', publishedAt: now, dispatchedExpiresAt: new Date(now.getTime() + 30 * 86400_000) }, $unset: { lease: '' } } } })))
+  return result.modifiedCount === events.length
+}
+
+export async function releaseOutbox({ db, owner, events }: { db: MongoClient; owner: string; events: { eventId: string; eventIndex: number }[] }) {
+  const result = await outbox(db).bulkWrite(events.map((event) => ({ updateOne: { filter: { _id: event.eventId, eventIndex: event.eventIndex, status: 'leased', 'lease.owner': owner }, update: { $set: { status: 'pending' }, $unset: { lease: '' } } } })))
+  return result.modifiedCount === events.length
+}
+
+export async function outboxState(db: MongoClient, operationId: string) {
+  const rows = await outbox(db).aggregate<{ _id: OutboxEvent['status']; count: number }>([{ $match: { operationId: new ObjectId(operationId) } }, { $group: { _id: '$status', count: { $sum: 1 } } }]).toArray()
+  const state = { pending: 0, leased: 0, dispatched: 0 }
+  for (const row of rows) {
+    if (row._id === 'pending' || row._id === 'leased' || row._id === 'dispatched') state[row._id] = row.count
+  }
+  return state
+}

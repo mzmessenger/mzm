@@ -12,7 +12,7 @@ export async function setup(project: TestProject): Promise<void> {
   }
 
   const { userName, userPassword, host, port } = getTestDbParams()
-  const TEST_ROOT_MONGODB_URI = `mongodb://${TEST_MONGO_ROOT_USER}:${TEST_MONGO_ROOT_PASSWORD}@${host}:${port}`
+  const TEST_ROOT_MONGODB_URI = `mongodb://${TEST_MONGO_ROOT_USER}:${TEST_MONGO_ROOT_PASSWORD}@${host}:${port}/admin?directConnection=true&replicaSet=rs0`
 
   const rootClient = await MongoClient.connect(TEST_ROOT_MONGODB_URI)
 

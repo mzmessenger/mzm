@@ -19,19 +19,6 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
-    services:
-      mongodb:
-        image: mongo:5
-        ports:
-          - 27017:27017
-        env:
-          MONGO_INITDB_ROOT_USERNAME: root
-          MONGO_INITDB_ROOT_PASSWORD: password
-        options: >-
-          --health-cmd mongo
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
     strategy:
       matrix:
         node-version: [24.x]
@@ -42,6 +29,16 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
+      - name: Initialize MongoDB replica set
+        run: |
+          docker volume create mongodb-keyfile
+          docker run --rm --mount type=volume,source=mongodb-keyfile,target=/run/mongo-keyfile mongo:5 bash -ec 'umask 077; head -c 756 /dev/urandom | base64 > /run/mongo-keyfile/keyfile; chown mongodb:mongodb /run/mongo-keyfile/keyfile; chmod 400 /run/mongo-keyfile/keyfile'
+          docker run --detach --name mongodb --publish 27017:27017 --mount type=volume,source=mongodb-keyfile,target=/run/mongo-keyfile,readonly --env MONGO_INITDB_ROOT_USERNAME=root --env MONGO_INITDB_ROOT_PASSWORD=password mongo:5 mongod --replSet rs0 --bind_ip_all --keyFile /run/mongo-keyfile/keyfile
+          for _ in $(seq 1 60); do docker exec mongodb mongosh 'mongodb://root:password@localhost:27017/admin' --quiet --eval 'db.hello().ok' && break; sleep 1; done
+          docker exec mongodb mongosh 'mongodb://root:password@localhost:27017/admin' --quiet --eval 'db.hello().ok'
+          docker exec mongodb mongosh 'mongodb://root:password@localhost:27017/admin' --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
+          for _ in $(seq 1 60); do docker exec mongodb mongosh 'mongodb://root:password@localhost:27017/admin?replicaSet=rs0' --quiet --eval 'if (db.hello().isWritablePrimary !== true) { quit(1) }' && exit 0; sleep 1; done
+          exit 1
       - run: npx concurrently "npm run build -w ${{ env.WORKSPACE_NAME }}" "npm run lint -w ${{ env.WORKSPACE_NAME }}" "npm run build:test -w ${{ env.WORKSPACE_NAME }}"
       - run: npm run test:ci -w ${{ env.WORKSPACE_NAME }}
         env:
