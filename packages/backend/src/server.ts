@@ -3,18 +3,16 @@ import http from 'http'
 
 import { WORKER_NUM, PORT } from './config.js'
 import { logger } from './lib/logger.js'
-import { createEventPublisher } from './lib/queue.js'
 import { initMongoClient } from './lib/db.js'
 import { init } from './logic/server.js'
 import { createApp } from './app.js'
 
 async function main() {
-  const events = createEventPublisher()
   const db = await initMongoClient()
 
   await init({ db })
 
-  const app = createApp({ db, publisher: events })
+  const app = createApp({ db })
   const server = http.createServer(app)
 
   server.listen(PORT, () => {

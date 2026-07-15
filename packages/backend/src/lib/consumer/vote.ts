@@ -1,20 +1,18 @@
 import { ObjectId, type MongoClient } from 'mongodb'
 import { TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
-import type { EventPublisher, QueueEvent } from 'mzm-shared/src/lib/queue'
+import type { QueueWireEvent } from 'mzm-shared/src/lib/outbox'
 import { collections } from '../db.js'
 import { logger } from '../logger.js'
 import { getVoteAnswers } from '../../logic/vote.js'
 import { getAllUserIdsInRoom } from '../../logic/users.js'
-import { addQueueToUsers } from '../provider/index.js'
+import { sendToUser } from '../fetchStreaming.js'
 
 export async function vote({
   db,
-  event,
-  publisher
+  event
 }: {
   db: MongoClient
-  event: QueueEvent<'vote'>
-  publisher: EventPublisher
+  event: QueueWireEvent<'vote'>
 }) {
   const { messageId: id } = event.payload
   const messageId = new ObjectId(id)
@@ -25,10 +23,6 @@ export async function vote({
   const users = await getAllUserIdsInRoom(db, target.roomId.toHexString())
   const answers = await getVoteAnswers(db, messageId)
 
-  await addQueueToUsers(publisher, users, {
-    cmd: TO_CLIENT_CMD.VOTE_ANSWERS,
-    messageId: id,
-    answers
-  })
+  for (const user of users) sendToUser(user, Buffer.from(JSON.stringify({ cmd: TO_CLIENT_CMD.VOTE_ANSWERS, messageId: id, answers })))
   logger.info('[vote]', id)
 }

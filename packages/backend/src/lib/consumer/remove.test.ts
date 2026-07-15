@@ -1,6 +1,6 @@
 import { expect } from 'vitest'
 import { ObjectId } from 'mongodb'
-import type { QueueEvent } from 'mzm-shared/src/lib/queue'
+import type { QueueWireEvent } from 'mzm-shared/src/lib/outbox'
 import { createTest } from '../../../test/testUtil.js'
 import { collections } from '../db.js'
 import { remove } from './remove.js'
@@ -14,10 +14,15 @@ test('ユーザーをremovedへ移して再配信を安全に処理する', asyn
     account: 'removed-user',
     roomOrder: []
   })
-  const event: QueueEvent<'removeUser'> = {
-    id: 'event-remove-1',
+  const event: QueueWireEvent<'removeUser'> = {
+    version: 1,
+    eventId: 'event-remove-1',
+    operationId: 'operation-remove-1',
+    eventIndex: 0,
+    destination: 'auth',
     type: 'removeUser',
     payload: { userId: userId.toHexString() },
+    ordering: { key: `user:${userId.toHexString()}`, revision: 1 },
     createdAt: new Date().toISOString()
   }
 
@@ -38,10 +43,15 @@ test('ユーザー削除後の再配信でも残存enterを削除する', async 
     unreadCounter: 0,
     replied: 0
   })
-  const event: QueueEvent<'removeUser'> = {
-    id: 'event-remove-orphan-enter',
+  const event: QueueWireEvent<'removeUser'> = {
+    version: 1,
+    eventId: 'event-remove-orphan-enter',
+    operationId: 'operation-remove-orphan-enter',
+    eventIndex: 0,
+    destination: 'auth',
     type: 'removeUser',
     payload: { userId: userId.toHexString() },
+    ordering: { key: `user:${userId.toHexString()}`, revision: 1 },
     createdAt: new Date().toISOString()
   }
 

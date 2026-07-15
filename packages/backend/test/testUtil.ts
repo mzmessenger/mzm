@@ -1,7 +1,6 @@
 /* eslint-disable no-empty-pattern */
 import type { MongoClient, ObjectId } from 'mongodb'
 import type { Request } from 'express'
-import type { EventPublisher } from 'mzm-shared/src/lib/queue'
 
 import('./types.js')
 
@@ -28,14 +27,10 @@ export async function createTest(context: typeof globalThis) {
   const { test } = await import('vitest')
   return test.extend<{
     testDb: Awaited<ReturnType<typeof getTestMongoClient>>
-    testRedis: EventPublisher
   }>({
     testDb: async ({}, use) => {
       const db = await getTestMongoClient(context)
       await use(db)
-    },
-    testRedis: async ({}, use) => {
-      await use({ publish: async () => undefined })
     }
   })
 }

@@ -1,28 +1,27 @@
-import { ObjectId, type MongoClient } from 'mongodb'
-import type { QueueEvent } from 'mzm-shared/src/lib/queue'
+import { ObjectId, type ClientSession, type MongoClient } from 'mongodb'
+import type { QueueWireEvent } from 'mzm-shared/src/lib/outbox'
 import { collections } from '../db.js'
 import { logger } from '../logger.js'
 
 export async function increment({
   db,
-  event
+  event,
+  session
 }: {
   db: MongoClient
-  event: QueueEvent<'unread'>
+  event: QueueWireEvent<'unread'>
+  session?: ClientSession
 }) {
   const { roomId } = event.payload
   await collections(db).enter.updateMany(
     {
       roomId: new ObjectId(roomId),
-      unreadCounter: { $lt: 100 },
-      processedEventIds: { $ne: event.id }
+      unreadCounter: { $lt: 100 }
     },
     {
-      $inc: { unreadCounter: 1 },
-      $push: {
-        processedEventIds: { $each: [event.id], $slice: -1000 }
-      }
-    }
+      $inc: { unreadCounter: 1 }
+    },
+    { session }
   )
   logger.info('[unread:increment]', roomId)
 }

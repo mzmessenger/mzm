@@ -1,6 +1,5 @@
 import type { Request, Response } from 'express'
 import type { SerializeUser, RequestUser } from '../types.js'
-import type { EventPublisher } from '../lib/queue.js'
 import { BadRequest, Unauthorized } from 'mzm-shared/src/lib/errors'
 import { ObjectId, type MongoClient } from 'mongodb'
 import { z } from 'zod'
@@ -11,6 +10,7 @@ import {
 import { collections } from '../lib/db.js'
 import { logger } from '../lib/logger.js'
 import { JWT, ALLOW_REDIRECT_URIS } from '../config.js'
+import { createRemoveUserOperation } from '../lib/outbox.js'
 
 export function createSerializeUser() {
   return (user: Express.User, done: (err: unknown, id: string) => void) => {
@@ -30,7 +30,7 @@ export function createDeserializeUserHandler(db: MongoClient) {
   }
 }
 
-export async function remove(req: Request, publisher: EventPublisher) {
+export async function remove(req: Request, db: MongoClient) {
   const accessToken = parseAuthorizationHeader(req)
   if (!accessToken) {
     throw new Unauthorized('no auth token')
@@ -47,8 +47,9 @@ export async function remove(req: Request, publisher: EventPublisher) {
   if (!decoded.user._id) {
     throw new BadRequest('not auth')
   }
-  await publisher.publish('removeUser', { userId: decoded.user._id })
-  return 'ok'
+  const key = req.headers['idempotency-key']
+  if (typeof key !== 'string' || !/^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(key)) throw new BadRequest('invalid idempotency key')
+  return { operationId: await createRemoveUserOperation(db, decoded.user._id, key) }
 }
 
 const LogoutQuery = z.object({
