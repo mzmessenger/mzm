@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "start": "wrangler dev --local --inspector-port 9230 --var BACKEND_ORIGIN:http://127.0.0.1:3001 --var AUTH_ORIGIN:http://127.0.0.1:3002",
+    "start": "wrangler dev --local --inspector-port 0 --var BACKEND_ORIGIN:http://127.0.0.1:3001 --var AUTH_ORIGIN:http://127.0.0.1:3002",
     "build": "wrangler deploy --dry-run --outdir dist",
     "lint": "eslint -c eslint.config.mjs .",
     "test": "vitest run",
