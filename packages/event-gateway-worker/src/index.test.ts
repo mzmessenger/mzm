@@ -13,7 +13,7 @@ function createEnv() {
 test('POST /api/socket assigns an idempotency key without consuming its body', async () => {
   const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
   await handleFetch(
-    new Request('http://localhost:8788/api/socket', {
+    new Request('http://api.localhost:8788/api/socket', {
       method: 'POST',
       body: 'streamed-body'
     }),
@@ -52,7 +52,7 @@ test('DELETE /auth/user assigns an idempotency key and forwards the gateway cred
 test('local auth requests use the auth origin', async () => {
   const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
   await handleFetch(
-    new Request('http://localhost:8788/auth/user', { method: 'DELETE' }),
+    new Request('http://auth.localhost:8788/auth/user', { method: 'DELETE' }),
     createEnv(),
     fetcher
   )
@@ -69,7 +69,7 @@ test('worker fetch uses the platform fetch implementation', async () => {
   vi.stubGlobal('fetch', fetcher)
 
   const response = await worker.fetch(
-    new Request('http://localhost:8788/api/rooms'),
+    new Request('http://api.localhost:8788/api/rooms'),
     createEnv()
   )
 

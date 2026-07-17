@@ -27,13 +27,11 @@ const idempotencyKey =
 
 function isSocketMutation(request: Request) {
   const url = new URL(request.url)
-  return request.method === 'POST' && (url.hostname === 'api.mzm.dev' || url.hostname === 'localhost') && url.pathname === '/api/socket'
+  return request.method === 'POST' && (url.hostname === 'api.mzm.dev' || url.hostname === 'api.localhost') && url.pathname === '/api/socket'
 }
 
 function isAuthRequest(url: URL) {
-  if (url.hostname === 'auth.mzm.dev') return true
-  return (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
-    (url.pathname === '/authorize' || url.pathname.startsWith('/auth/'))
+  return url.hostname === 'auth.mzm.dev' || url.hostname === 'auth.localhost'
 }
 
 function originFor(url: URL, env: GatewayEnv) {
