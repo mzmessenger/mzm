@@ -75,7 +75,7 @@ export async function createSocketOperation<T>({ db, subject, idempotencyKey, re
     payload: QueueEventPayload[QueueEventType]
     orderingKey: string
   }> = []
-  let value: T | undefined
+  let value: T | null = null
   try {
     await db.withSession(async (session) => {
       await session.withTransaction(async () => {
@@ -95,7 +95,7 @@ export async function createSocketOperation<T>({ db, subject, idempotencyKey, re
             events.push(event)
           }
         })
-        value = response
+        value = response ?? null
         const wireEvents: OutboxEvent[] = []
         for (const [eventIndex, event] of events.entries()) {
           const revision = await db.db().collection<ProducerRevision>('queue_producer_revisions').findOneAndUpdate(
@@ -123,7 +123,7 @@ export async function createSocketOperation<T>({ db, subject, idempotencyKey, re
           })
         }
         if (wireEvents.length > 0) await outbox(db).insertMany(wireEvents, { session })
-        await operations.updateOne({ _id: operationId }, { $set: { response: JSON.stringify(response) } }, { session })
+        await operations.updateOne({ _id: operationId }, { $set: { response: JSON.stringify(value) } }, { session })
       })
     })
   } catch (error) {
@@ -134,7 +134,6 @@ export async function createSocketOperation<T>({ db, subject, idempotencyKey, re
     }
     throw error
   }
-  if (value === undefined) throw new Error('socket operation returned no response')
   return { operationId: operationId.toHexString(), response: value }
 }
 
