@@ -59,6 +59,9 @@ test('local auth requests use the auth origin', async () => {
 
   const forwarded = new Request(fetcher.mock.calls[0][0])
   expect(forwarded.url).toBe('https://auth.internal/auth/user')
+  expect(forwarded.headers.get('idempotency-key')).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  )
 })
 
 test('worker fetch uses the platform fetch implementation', async () => {

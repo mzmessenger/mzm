@@ -75,7 +75,7 @@ function createOriginRequest(request: Request, env: GatewayEnv) {
 
 function isEventMutation(request: Request) {
   const url = new URL(request.url)
-  return isSocketMutation(request) || (request.method === 'DELETE' && url.hostname === 'auth.mzm.dev' && url.pathname === '/auth/user')
+  return isSocketMutation(request) || (request.method === 'DELETE' && isAuthRequest(url) && url.pathname === '/auth/user')
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
