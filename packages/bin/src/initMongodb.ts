@@ -20,7 +20,7 @@ async function createUser(client: MongoClient, dbname: string, user: string, pas
 
 export async function initMongoDb(root_password: string, user:string, user_password: string, port: string = '27017') {
   const client = await MongoClient.connect(
-    `mongodb://root:${root_password}@localhost`
+    `mongodb://root:${root_password}@localhost?directConnection=true`
   )
 
   await createUser(client, 'mzm', user, user_password)
