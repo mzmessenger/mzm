@@ -30,8 +30,14 @@ function isSocketMutation(request: Request) {
   return request.method === 'POST' && (url.hostname === 'api.mzm.dev' || url.hostname === 'localhost') && url.pathname === '/api/socket'
 }
 
+function isAuthRequest(url: URL) {
+  if (url.hostname === 'auth.mzm.dev') return true
+  return (url.hostname === 'localhost' || url.hostname === '127.0.0.1') &&
+    (url.pathname === '/authorize' || url.pathname.startsWith('/auth/'))
+}
+
 function originFor(url: URL, env: GatewayEnv) {
-  return url.hostname === 'auth.mzm.dev' ? env.AUTH_ORIGIN : env.BACKEND_ORIGIN
+  return isAuthRequest(url) ? env.AUTH_ORIGIN : env.BACKEND_ORIGIN
 }
 
 function createOriginRequest(request: Request, env: GatewayEnv) {
