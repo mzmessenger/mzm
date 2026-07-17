@@ -1,4 +1,4 @@
-import { Request, Response, NextFunction } from 'express'
+import { Request, Response, NextFunction, type RequestHandler } from 'express'
 import {
   verifyAccessToken,
   parseAuthorizationHeader
@@ -6,6 +6,16 @@ import {
 import { HEADERS } from 'mzm-shared/src/auth/constants'
 import { JWT, QUEUE_CALLBACK_SECRET } from '../config.js'
 import { verifyInternalAccessToken } from '../lib/token.js'
+
+export const createGatewayOriginCheck = (secret: string): RequestHandler => {
+  return (req, res, next) => {
+    if (!secret || req.headers['x-mzm-gateway-authorization'] !== `Bearer ${secret}`) {
+      res.status(401).send('unauthorized')
+      return
+    }
+    next()
+  }
+}
 
 export const checkAccessToken = (
   req: Request,
