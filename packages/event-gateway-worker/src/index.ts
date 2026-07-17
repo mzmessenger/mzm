@@ -43,7 +43,7 @@ function createOriginRequest(request: Request, env: GatewayEnv) {
       headers.delete(name)
     }
   }
-  if (isSocketMutation(request) && !idempotencyKey.test(headers.get('idempotency-key') ?? '')) {
+  if (isEventMutation(request) && !idempotencyKey.test(headers.get('idempotency-key') ?? '')) {
     headers.set('idempotency-key', crypto.randomUUID())
   }
   headers.set('host', origin.host)
@@ -89,9 +89,6 @@ export async function handleFetch(
   env: GatewayEnv,
   fetcher: typeof fetch = fetch
 ) {
-  if (!isSocketMutation(request) && isEventMutation(request) && !idempotencyKey.test(request.headers.get('idempotency-key') ?? '')) {
-    return new Response('invalid idempotency key', { status: 400 })
-  }
   const originRequest = createOriginRequest(request, env)
   const response = await fetcher(originRequest)
   const operationId = response.headers.get('x-mzm-operation-id')

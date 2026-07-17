@@ -29,6 +29,26 @@ test('POST /api/socket assigns an idempotency key without consuming its body', a
   expect(await forwarded.text()).toBe('streamed-body')
 })
 
+test('DELETE /auth/user assigns an idempotency key and forwards the gateway credential', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  const response = await handleFetch(
+    new Request('https://auth.mzm.dev/auth/user', { method: 'DELETE' }),
+    createEnv(),
+    fetcher
+  )
+
+  expect(response.status).toBe(200)
+  expect(fetcher).toHaveBeenCalledOnce()
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.url).toBe('https://auth.internal/auth/user')
+  expect(forwarded.headers.get('idempotency-key')).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  )
+  expect(forwarded.headers.get('x-mzm-gateway-authorization')).toBe(
+    'Bearer gateway-secret'
+  )
+})
+
 test('worker fetch uses the platform fetch implementation', async () => {
   const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
   vi.stubGlobal('fetch', fetcher)
