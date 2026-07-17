@@ -25,6 +25,11 @@ function isQueueEventType(value: unknown): value is 'message' | 'unread' | 'repl
 const idempotencyKey =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
+function isSocketMutation(request: Request) {
+  const url = new URL(request.url)
+  return request.method === 'POST' && (url.hostname === 'api.mzm.dev' || url.hostname === 'localhost') && url.pathname === '/api/socket'
+}
+
 function originFor(url: URL, env: GatewayEnv) {
   return url.hostname === 'auth.mzm.dev' ? env.AUTH_ORIGIN : env.BACKEND_ORIGIN
 }
@@ -37,6 +42,9 @@ function createOriginRequest(request: Request, env: GatewayEnv) {
     if (name.toLowerCase().startsWith('x-mzm-gateway-')) {
       headers.delete(name)
     }
+  }
+  if (isSocketMutation(request) && !idempotencyKey.test(headers.get('idempotency-key') ?? '')) {
+    headers.set('idempotency-key', crypto.randomUUID())
   }
   headers.set('host', origin.host)
   headers.set('x-forwarded-host', publicUrl.host)
@@ -61,7 +69,7 @@ function createOriginRequest(request: Request, env: GatewayEnv) {
 
 function isEventMutation(request: Request) {
   const url = new URL(request.url)
-  return (request.method === 'POST' && url.hostname === 'api.mzm.dev' && url.pathname === '/api/socket') || (request.method === 'DELETE' && url.hostname === 'auth.mzm.dev' && url.pathname === '/auth/user')
+  return isSocketMutation(request) || (request.method === 'DELETE' && url.hostname === 'auth.mzm.dev' && url.pathname === '/auth/user')
 }
 
 function isRecord(value: unknown): value is Record<string, unknown> {
@@ -81,7 +89,7 @@ export async function handleFetch(
   env: GatewayEnv,
   fetcher: typeof fetch = fetch
 ) {
-  if (isEventMutation(request) && !idempotencyKey.test(request.headers.get('idempotency-key') ?? '')) {
+  if (!isSocketMutation(request) && isEventMutation(request) && !idempotencyKey.test(request.headers.get('idempotency-key') ?? '')) {
     return new Response('invalid idempotency key', { status: 400 })
   }
   const originRequest = createOriginRequest(request, env)
@@ -144,7 +152,9 @@ async function internal(originUrl: string, path: string, body: unknown, env: Gat
 }
 
 export default {
-  fetch: handleFetch,
+  fetch(request: Request, env: GatewayEnv) {
+    return handleFetch(request, env)
+  },
   async scheduled(_: unknown, env: GatewayEnv) {
     try {
       await Promise.all([publishOperation('', env.BACKEND_ORIGIN, env, fetch, 10_000), publishOperation('', env.AUTH_ORIGIN, env, fetch, 10_000)])

@@ -115,6 +115,8 @@ Create `packages/event-gateway-worker` as a Workers workspace. It has:
 
 The Worker proxies all existing API/OAuth/SSE requests transparently. Every `POST /api/socket` requires a valid `Idempotency-Key`; the Worker does not inspect or buffer its raw request body to classify commands. It injects `X-MZM-Gateway-Authorization: Bearer <GATEWAY_ORIGIN_SECRET>` before forwarding, and Node selects the operation and performs its transaction after normal end-user authentication. Direct Queue publication happens only after the Node origin transaction succeeds.
 
+The preceding client-supplied-key requirement is superseded: for every `POST /api/socket`, the gateway assigns a UUID `Idempotency-Key` when the request does not supply a valid one, without inspecting or buffering the raw request body. Node applies the same rule for direct origin requests.
+
 Backend/auth reject event-producing mutation requests without the gateway secret. Existing end-user `Authorization`, Cookie, response, CORS, redirect, and streaming headers are forwarded unchanged except for the gateway internal header. The proxy must preserve every `Set-Cookie` header as an independent header (never coalesce them), preserve response status and `Location`, and preserve `Vary` and CORS/preflight behavior. SSE responses are streamed without buffering, transformation, or response-body inspection. The internal header is stripped from client-bound responses and is never accepted as an end-user credential.
 
 For every proxied request, the Worker constructs the origin URL by replacing only the public origin with the configured Cloud Run origin and preserving the raw path and query. It sets `Host` to the origin host, adds `X-Forwarded-Host` and `X-Forwarded-Proto` from the public request, removes client-supplied `X-MZM-Gateway-*` headers, and streams the request body and abort signal without buffering. It forwards redirects unchanged; origins generate public URLs from `X-Forwarded-*`, not their private Cloud Run origin. `OPTIONS` is proxied unchanged, and affected origin CORS responses must include `Idempotency-Key` in `Access-Control-Allow-Headers`. OAuth callback, cross-origin mutation preflight, cookie multiplicity, and SSE streaming have proxy conformance tests.
@@ -161,7 +163,7 @@ Indexes:
 - unique `{ subject: 1, route: 1, idempotencyKey: 1 }`;
 - TTL `{ expiresAt: 1 }`.
 
-Retention is **30 days**. A retry with the same `(subject, route, key)` and the same request hash returns the persisted response and event IDs. A different request hash returns `409 idempotency key reuse conflict`. A malformed/missing key returns `400` before the business mutation begins.
+Retention is **30 days**. A retry with the same `(subject, route, key)` and the same request hash returns the persisted response and event IDs. A different request hash returns `409 idempotency key reuse conflict`. A malformed or missing key is replaced with a generated UUID before the business mutation begins.
 
 The idempotency guarantee is limited to this 30-day retention window. Clients must not reuse an idempotency key after the operation reaches a terminal result or after its 30-day window expires.
 
@@ -403,7 +405,7 @@ The following are normative safe defaults adopted for findings F-01 through F-10
 
 | Finding | Contract |
 | --- | --- |
-| F-01 | Every `POST /api/socket` requires a syntactically valid UUID `Idempotency-Key`, including read-only commands. The gateway checks only the header and never reads, clones, parses, buffers, or otherwise consumes the request body. Node may skip creating an operation for a read-only command after it has streamed and validated the body. |
+| F-01 | Every `POST /api/socket` receives a syntactically valid UUID `Idempotency-Key`, including read-only commands. The gateway replaces a missing or malformed header with a generated UUID and never reads, clones, parses, buffers, or otherwise consumes the request body. Node applies the same rule for direct origin requests. Node may skip creating an operation for a read-only command after it has streamed and validated the body. |
 | F-02 | Internal outbox APIs are versioned under `/internal/outbox/v1/`: `claim`, `ack`, `release`, and `state`. Each request is authenticated with the gateway secret and has a runtime-validated body. `claim` takes `owner`, optional `operationId`, and `limit`; `ack` and `release` take an exact `owner` and an ordered list of `{ eventId, eventIndex }`; `state` takes `operationId`. |
 | F-03 | Claim, acknowledge, and release are strict compare-and-set operations. A claim changes one row only if it is pending or its lease is expired; acknowledge/release changes one row only if its owner, lease expiry, status, and `eventIndex` still match. A batch response is successful only when every requested row changed. Otherwise it returns `409` with no partial acknowledgement/release. |
 | F-04 | A Queue `sendBatch()` call contains at most 100 messages and at most 256 KiB of UTF-8 serialized envelopes in total. The gateway chunks an already ordered claim at both limits; an oversized single envelope is released with an error and causes publication to fail. |

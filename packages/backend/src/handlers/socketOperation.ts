@@ -9,7 +9,10 @@ import {
 import { VoteStatusEnum, VoteTypeEnum } from 'mzm-shared/src/type/db'
 import { collections, RoomStatusEnum, VoteAnswerEnum, type VoteAnswer } from '../lib/db.js'
 import { createSocketOperation } from '../lib/outbox.js'
-import { createUserIconPath, escape, repliedAccounts, unescape } from '../lib/utils.js'
+import { createRoomIconPath, createUserIconPath, escape, popParam, repliedAccounts, unescape } from '../lib/utils.js'
+import { getMessages } from '../logic/messages.js'
+import { isValidateRoomName } from '../logic/rooms.js'
+import { getRooms as getUserRooms } from '../logic/users.js'
 
 const keyPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
@@ -21,12 +24,26 @@ function isVoteAnswer(answer: number): answer is VoteAnswer['answer'] {
   return Object.values<number>(VoteAnswerEnum).includes(answer)
 }
 
+export type SocketOperationData = Exclude<
+  SocketToBackendType,
+  { cmd: typeof TO_SERVER_CMD.CONNECTION }
+>
+
+function decodeRoomName(value: string) {
+  try {
+    return popParam(decodeURIComponent(value))
+  } catch (error) {
+    if (error instanceof URIError) return undefined
+    throw error
+  }
+}
+
 async function roomUsers(db: MongoClient, roomId: ObjectId, session: ClientSession) {
   const entries = await collections(db).enter.find({ roomId }, { session }).toArray()
   return entries.map((entry) => entry.userId.toHexString())
 }
 
-export async function executeSocketOperation({ db, subject, idempotencyKey, data }: { db: MongoClient; subject: string; idempotencyKey: string; data: SocketToBackendType }) {
+export async function executeSocketOperation({ db, subject, idempotencyKey, data }: { db: MongoClient; subject: string; idempotencyKey: string; data: SocketOperationData }) {
   if (!keyPattern.test(idempotencyKey)) throw new Error('invalid idempotency key')
   return await createSocketOperation({
     db,
@@ -34,6 +51,121 @@ export async function executeSocketOperation({ db, subject, idempotencyKey, data
     idempotencyKey,
     request: data,
     async run({ session, emit }) {
+      if (data.cmd === TO_SERVER_CMD.ROOMS_GET) {
+        const [user, rooms] = await Promise.all([
+          collections(db).users.findOne(
+            { _id: new ObjectId(subject) },
+            { projection: { roomOrder: 1 }, session }
+          ),
+          getUserRooms(db, subject)
+        ])
+        if (!user) return undefined
+        const send: ToClientType = {
+          user: subject,
+          cmd: TO_CLIENT_CMD.ROOMS_GET,
+          rooms,
+          roomOrder: user.roomOrder
+        }
+        emit({ type: 'message', payload: send, orderingKey: `user:${subject}` })
+        return send
+      }
+      if (data.cmd === TO_SERVER_CMD.MESSAGES_ROOM) {
+        const parsed = z.object({
+          room: z.string().min(1),
+          id: z.string().optional()
+        }).safeParse(data)
+        if (!parsed.success || !ObjectId.isValid(parsed.data.room) || (parsed.data.id !== undefined && !ObjectId.isValid(parsed.data.id))) return undefined
+        const room = parsed.data.room
+        const entered = await collections(db).enter.findOne(
+          {
+            userId: new ObjectId(subject),
+            roomId: new ObjectId(room)
+          },
+          { session }
+        )
+        if (!entered) return undefined
+        const { existHistory, messages } = await getMessages(db, room, parsed.data.id)
+        const send: ToClientType = {
+          user: subject,
+          cmd: TO_CLIENT_CMD.MESSAGES_ROOM,
+          room,
+          messages,
+          existHistory
+        }
+        emit({ type: 'message', payload: send, orderingKey: `user:${subject}` })
+        return send
+      }
+      if (data.cmd === TO_SERVER_CMD.ROOMS_ENTER) {
+        let room = data.id && ObjectId.isValid(data.id)
+          ? await collections(db).rooms.findOne(
+              { _id: new ObjectId(data.id) },
+              { session }
+            )
+          : null
+        let reason = 'not found'
+        if (!room && data.name) {
+          const name = decodeRoomName(data.name)
+          if (name === undefined) {
+            reason = 'invalid encoding'
+          } else {
+            const validation = isValidateRoomName(name)
+            if (!validation.valid) {
+              reason = validation.reason ?? 'invalid name'
+            } else {
+              room = await collections(db).rooms.findOneAndUpdate(
+                { name },
+                {
+                  $setOnInsert: {
+                    name,
+                    createdBy: subject,
+                    status: RoomStatusEnum.CLOSE
+                  }
+                },
+                { upsert: true, returnDocument: 'after', session }
+              )
+            }
+          }
+        }
+        if (!room) {
+          const send: ToClientType = {
+            user: subject,
+            cmd: TO_CLIENT_CMD.ROOMS_ENTER_FAIL,
+            id: data.id ?? null,
+            name: data.name ?? null,
+            reason
+          }
+          emit({ type: 'message', payload: send, orderingKey: `user:${subject}` })
+          return send
+        }
+        const userId = new ObjectId(subject)
+        await collections(db).enter.updateOne(
+          { userId, roomId: room._id },
+          {
+            $set: {
+              userId,
+              roomId: room._id,
+              unreadCounter: 0,
+              replied: 0
+            }
+          },
+          { upsert: true, session }
+        )
+        await collections(db).users.updateOne(
+          { _id: userId },
+          { $addToSet: { roomOrder: room._id.toHexString() } },
+          { session }
+        )
+        const send: ToClientType = {
+          user: subject,
+          cmd: TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS,
+          id: room._id.toHexString(),
+          name: room.name,
+          description: room.description ?? '',
+          iconUrl: createRoomIconPath(room)
+        }
+        emit({ type: 'message', payload: send, orderingKey: `user:${subject}` })
+        return send
+      }
       if (data.cmd === TO_SERVER_CMD.MESSAGE_SEND) {
         const parsed = z.object({ message: z.string().min(1), room: z.string().min(1), vote: z.object({ questions: z.array(z.object({ text: z.string().min(1) })) }).optional() }).safeParse(data)
         if (!parsed.success) return undefined
@@ -115,7 +247,9 @@ export async function executeSocketOperation({ db, subject, idempotencyKey, data
       if (data.cmd === TO_SERVER_CMD.ROOMS_OPEN || data.cmd === TO_SERVER_CMD.ROOMS_CLOSE) {
         const roomId = new ObjectId(data.roomId)
         await collections(db).rooms.updateOne({ _id: roomId }, { $set: { status: data.cmd === TO_SERVER_CMD.ROOMS_OPEN ? RoomStatusEnum.OPEN : RoomStatusEnum.CLOSE, updatedBy: new ObjectId(subject) } }, { session })
+        return undefined
       }
+      data satisfies never
       return undefined
     }
   })

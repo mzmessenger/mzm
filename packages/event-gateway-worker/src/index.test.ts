@@ -1,5 +1,5 @@
 import { expect, test, vi } from 'vitest'
-import { handleFetch } from './index.js'
+import worker, { handleFetch } from './index.js'
 
 function createEnv() {
   return {
@@ -10,10 +10,10 @@ function createEnv() {
   }
 }
 
-test('POST /api/socket requires an idempotency key without consuming its body', async () => {
-  const fetcher = vi.fn<typeof fetch>()
-  const response = await handleFetch(
-    new Request('https://api.mzm.dev/api/socket', {
+test('POST /api/socket assigns an idempotency key without consuming its body', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  await handleFetch(
+    new Request('http://localhost:8788/api/socket', {
       method: 'POST',
       body: 'streamed-body'
     }),
@@ -21,8 +21,46 @@ test('POST /api/socket requires an idempotency key without consuming its body', 
     fetcher
   )
 
-  expect(response.status).toBe(400)
-  expect(fetcher).not.toHaveBeenCalled()
+  expect(fetcher).toHaveBeenCalledOnce()
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.headers.get('idempotency-key')).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  )
+  expect(await forwarded.text()).toBe('streamed-body')
+})
+
+test('worker fetch uses the platform fetch implementation', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  vi.stubGlobal('fetch', fetcher)
+
+  const response = await worker.fetch(
+    new Request('http://localhost:8788/api/rooms'),
+    createEnv()
+  )
+
+  expect(response.status).toBe(200)
+  expect(fetcher).toHaveBeenCalledOnce()
+  vi.unstubAllGlobals()
+})
+
+test('POST /api/socket replaces a malformed idempotency key', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  await handleFetch(
+    new Request('https://api.mzm.dev/api/socket', {
+      method: 'POST',
+      headers: {
+        'Idempotency-Key': 'malformed'
+      },
+      body: 'streamed-body'
+    }),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.headers.get('idempotency-key')).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  )
 })
 
 test('gateway proxies the socket body and removes forged internal headers', async () => {
