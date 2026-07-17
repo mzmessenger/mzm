@@ -33,7 +33,7 @@ test('clients', async () => {
   expect(res.status).toStrictEqual(200)
   expect(proxyRequest).toBeCalledTimes(1)
   expect(proxyRequest).toBeCalledWith(
-    'http://localhost:3001/api/rooms/room-id/users',
+    'http://localhost:8788/api/rooms/room-id/users',
     {
       method: 'GET',
       headers: {
@@ -63,7 +63,7 @@ test('clients: FormData', async () => {
   expect(res.status).toStrictEqual(200)
   expect(requestMock).toBeCalledTimes(1)
   expect(requestMock.mock.calls[0][0]).toStrictEqual(
-    'http://localhost:3001/api/icon/rooms/room-name'
+    'http://localhost:8788/api/icon/rooms/room-name'
   )
   const form = requestMock.mock.calls[0][1]?.form
   expect(Object.prototype.hasOwnProperty.call(form, 'icon')).toStrictEqual(true)
@@ -85,7 +85,7 @@ test('authClients', async () => {
   expect(res.ok).toStrictEqual(true)
   expect(res.status).toStrictEqual(200)
   expect(proxyRequest).toBeCalledTimes(1)
-  expect(proxyRequest).toBeCalledWith('http://localhost:3002/auth/token', {
+  expect(proxyRequest).toBeCalledWith('http://localhost:8788/auth/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'

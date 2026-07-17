@@ -49,6 +49,18 @@ test('DELETE /auth/user assigns an idempotency key and forwards the gateway cred
   )
 })
 
+test('local auth requests use the auth origin', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  await handleFetch(
+    new Request('http://localhost:8788/auth/user', { method: 'DELETE' }),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.url).toBe('https://auth.internal/auth/user')
+})
+
 test('worker fetch uses the platform fetch implementation', async () => {
   const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
   vi.stubGlobal('fetch', fetcher)
