@@ -2,8 +2,11 @@
   "$schema": "../../node_modules/wrangler/config-schema.json",
   "name": "mzm-event-gateway",
   "main": "src/index.ts",
-  "compatibility_date": "2026-07-14",
+  "compatibility_date": "2026-07-08",
   "compatibility_flags": ["nodejs_compat"],
+  "dev": {
+    "port": 8788
+  },
   "routes": ["api.mzm.dev/*", "auth.mzm.dev/*"],
   "observability": {
     "enabled": true,
