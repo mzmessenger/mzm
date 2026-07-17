@@ -16,7 +16,7 @@ import * as rooms from './handlers/rooms/index.js'
 import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import { connection } from './handlers/socket/connection.js'
-import { checkAccessToken, checkQueueSecret } from './middleware/index.js'
+import { checkAccessToken, checkQueueSecret, createGatewayOriginCheck } from './middleware/index.js'
 import { handleQueueEvent } from './lib/consumer/index.js'
 import { GATEWAY_ORIGIN_SECRET } from './config.js'
 import { acknowledgeOutbox, claimOutbox, outboxState, releaseOutbox } from './lib/outbox.js'
@@ -24,6 +24,7 @@ import { executeSocketOperation } from './handlers/socketOperation.js'
 import { socketIdempotencyKey } from './lib/idempotency.js'
 
 const jsonParser = express.json({ limit: '1mb' })
+const checkGatewayOrigin = createGatewayOriginCheck(GATEWAY_ORIGIN_SECRET)
 
 export function createApp({ db }: { db: MongoClient }) {
   const app = express()
@@ -113,7 +114,7 @@ export function createApp({ db }: { db: MongoClient }) {
     }, 5000)
   })
 
-  app.post('/api/socket', checkAccessToken, jsonParser, async (req, res) => {
+  app.post('/api/socket', checkAccessToken, checkGatewayOrigin, jsonParser, async (req, res) => {
     const user = getRequestUserId(req)
     const key = socketIdempotencyKey(req.headers['idempotency-key'])
     const operation = await executeSocketOperation({ db, subject: user, idempotencyKey: key, data: req.body })
