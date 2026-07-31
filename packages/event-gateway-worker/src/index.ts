@@ -38,6 +38,17 @@ function originFor(url: URL, env: GatewayEnv) {
   return isAuthRequest(url) ? env.AUTH_ORIGIN : env.BACKEND_ORIGIN
 }
 
+function isPublicInternalPath(url: URL) {
+  let pathname: string
+  try {
+    pathname = decodeURIComponent(url.pathname)
+  } catch {
+    return true
+  }
+  pathname = pathname.replaceAll('\\', '/').replace(/\/{2,}/g, '/').toLowerCase()
+  return pathname === '/internal' || pathname.startsWith('/internal/')
+}
+
 function createOriginRequest(request: Request, env: GatewayEnv) {
   const publicUrl = new URL(request.url)
   const origin = new URL(originFor(publicUrl, env))
@@ -93,6 +104,9 @@ export async function handleFetch(
   env: GatewayEnv,
   fetcher: typeof fetch = fetch
 ) {
+  if (isPublicInternalPath(new URL(request.url))) {
+    return new Response('not found', { status: 404 })
+  }
   const originRequest = createOriginRequest(request, env)
   const response = await fetcher(originRequest)
   const operationId = response.headers.get('x-mzm-operation-id')
