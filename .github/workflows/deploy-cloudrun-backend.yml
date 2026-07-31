@@ -10,6 +10,7 @@ on:
         default: deploy
         options:
           - deploy
+          - verify-wif
           - bootstrap-wif
 
 concurrency:
@@ -43,6 +44,52 @@ jobs:
         env:
           PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
         run: .github/scripts/bootstrap-gcp-wif.sh
+
+  verify-wif:
+    if: github.ref == 'refs/heads/dev' && inputs.operation == 'verify-wif'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Validate WIF configuration
+        env:
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+          : "${PROJECT_ID:?Set the GCP_PROJECT_ID repository variable}"
+          : "${WIF_PROVIDER:?Set the GCP_WIF_PROVIDER repository variable}"
+          : "${DEPLOY_SERVICE_ACCOUNT:?Set the GCP_DEPLOY_SERVICE_ACCOUNT repository variable}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud with WIF
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Verify impersonated identity and Cloud Run access
+        env:
+          EXPECTED_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+        run: |
+          set -euo pipefail
+          gcloud auth print-access-token >/dev/null
+          active_account="$(gcloud auth list --filter=status:ACTIVE --format='value(account)')"
+          test "${active_account}" = "${EXPECTED_ACCOUNT}"
+          for service in mzm-backend mzm-auth; do
+            gcloud run services describe "${service}" \
+              --project="${{ vars.GCP_PROJECT_ID }}" \
+              --region="${REGION}" \
+              --format='table(metadata.name,status.url,spec.template.spec.serviceAccountName)'
+          done
 
   deploy:
     if: github.ref == 'refs/heads/dev' && inputs.operation == 'deploy'
