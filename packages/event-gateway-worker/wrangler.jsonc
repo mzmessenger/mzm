@@ -22,7 +22,7 @@
     "producers": [{ "binding": "EVENTS", "queue": "mzm-events" }]
   },
   "vars": {
-    "BACKEND_ORIGIN": "http://127.0.0.1:3001",
-    "AUTH_ORIGIN": "http://127.0.0.1:3002"
+    "BACKEND_ORIGIN": "https://mzm-backend-yjv4jzdmua-an.a.run.app",
+    "AUTH_ORIGIN": "https://mzm-auth-yjv4jzdmua-an.a.run.app"
   }
 }

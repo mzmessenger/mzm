@@ -26,5 +26,10 @@
   },
   "r2_buckets": [
     { "binding": "DLQ_ARCHIVE", "bucket_name": "mzm-events-dlq-archive" }
-  ]
+  ],
+  "vars": {
+    "AUTH_SERVICE_URL": "https://mzm-auth-yjv4jzdmua-an.a.run.app",
+    "BACKEND_SERVICE_URL": "https://mzm-backend-yjv4jzdmua-an.a.run.app",
+    "CF_ACCESS_TEAM_DOMAIN": "koh110.cloudflareaccess.com"
+  }
 }

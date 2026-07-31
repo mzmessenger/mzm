@@ -18,9 +18,9 @@ GitHub Actions uses Workload Identity Federation (WIF) with service-account impe
 
 Repository and owner numeric IDs are used instead of names to avoid trusting a deleted and recreated organization or repository with the same name.
 
-### One-time bootstrap
+### One-time bootstrap (completed 2026-07-31)
 
-The existing `Build and Deploy mzm-backend` workflow has a temporary `bootstrap-wif` operation. It uses the existing `GCP_SA_KEY` secret exactly once to create or update:
+The bootstrap was executed once from an exact reviewed commit with the owner account, then the temporary path was removed. It created or updated:
 
 - the `github-actions` workload identity pool
 - the `mzm-repository` OIDC provider
@@ -39,20 +39,22 @@ gh variable set GCP_DEPLOY_SERVICE_ACCOUNT --repo mzmessenger/mzm --body 'github
 gh variable set GCP_ARTIFACT_REGISTRY --repo mzmessenger/mzm --body 'asia-northeast1-docker.pkg.dev/<project-id>/mzm'
 ```
 
-### Migration completion
+### Migration completion status
 
-1. Dispatch one Cloud Run deployment workflow from `dev` and confirm its `Authenticate to Google Cloud with WIF` step succeeds.
-2. Confirm the deployed revision and service URL before changing production traffic.
-3. Remove the legacy key from GitHub:
+The real GitHub OIDC exchange, service-account impersonation, Artifact Registry push, and Cloud Run deployments have completed. The legacy GitHub secret and temporary bootstrap path were removed. The deployed services are:
+
+- backend revision `mzm-backend-00056-x8s`, traffic 100%
+- auth revision `mzm-auth-00077-wzn`, traffic 100%
+
+The remaining credential cleanup is to list and disable/delete the corresponding Google Cloud service-account key with an owner account. Deleting the GitHub secret alone does not revoke the key at Google Cloud.
+
+Historical cleanup command for the now-removed GitHub secret:
 
 ```sh
 gh secret delete GCP_SA_KEY --repo mzmessenger/mzm
 ```
 
-4. Disable or delete the corresponding Google Cloud service-account key.
-5. Remove the `bootstrap-wif` input and job from `.github/workflows/deploy-cloudrun-backend.yml` after migration so the key-based path cannot be reused.
-
-Do not delete `GCP_SA_KEY` before a real WIF token exchange succeeds. Do not deploy the new application revisions until required production environment variables and secrets are present.
+Do not deploy another application revision unless required production environment variables and secrets are present.
 
 ## Cloudflare authentication
 
@@ -69,7 +71,7 @@ The following production resources were created and read back before any Worker 
 - Queue `mzm-events-dlq`
 - R2 bucket `mzm-events-dlq-archive`
 
-At creation time both Queues had zero producers and zero consumers, so they did not affect application traffic. The `mzm-event-gateway` and `mzm-queue-worker` scripts still did not exist.
+Both Queues currently have zero producers and zero consumers. The `mzm-event-gateway` and `mzm-queue-worker` scripts have not been deployed, so the public API route has not been cut over.
 
 Verification commands:
 
@@ -79,3 +81,18 @@ hermes-secret-run --env-file ~/dev/tmp/mzm-cloudflare-readonly.env \
 hermes-secret-run --env-file ~/dev/tmp/mzm-cloudflare-readonly.env \
   --workdir ~/dev/mzm/.worktree/dev -- npx wrangler r2 bucket list
 ```
+
+### Worker cutover gate
+
+The production Wrangler configuration contains the verified Cloud Run origins. Before any Worker deployment, all of the following are required:
+
+1. Create a Cloudflare Access application for the queue Worker's `/internal/dlq/replay` endpoint and record its audience.
+2. Configure `CF_ACCESS_AUD` and `QUEUE_CALLBACK_SECRET` for `mzm-queue-worker` as Worker secrets.
+3. Configure `GATEWAY_ORIGIN_SECRET` for `mzm-event-gateway` as a Worker secret.
+4. Confirm the two shared secret values match the corresponding Cloud Run environment variables without printing either value.
+5. Deploy and verify `mzm-queue-worker` first. Its Queue consumer bindings may become active, but no event producer exists yet.
+6. Obtain repository-owner approval for the public cutover.
+7. Deploy `mzm-event-gateway`, which installs routes for `api.mzm.dev/*` and `auth.mzm.dev/*` and begins intercepting production traffic.
+8. Verify OAuth redirects/cookies, CORS preflight, SSE streaming, one idempotent mutation, Queue delivery, and an empty outbox/DLQ state.
+
+Do not deploy the gateway merely to discover missing configuration: its route declaration is the production traffic cutover.
