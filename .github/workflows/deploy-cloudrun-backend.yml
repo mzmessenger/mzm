@@ -2,41 +2,101 @@ name: Build and Deploy mzm-backend
 
 on:
   workflow_dispatch:
+    inputs:
+      operation:
+        description: Operation to run
+        type: choice
+        required: true
+        default: deploy
+        options:
+          - deploy
+          - bootstrap-wif
+
+concurrency:
+  group: deploy-cloudrun-backend-production
+  cancel-in-progress: false
 
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   SERVICE: mzm-backend
   REGION: asia-northeast1
 
 jobs:
-  deploy:
+  bootstrap-wif:
+    if: github.ref == 'refs/heads/dev' && inputs.operation == 'bootstrap-wif'
     runs-on: ubuntu-latest
-
     permissions:
-      contents: 'read'
-      id-token: 'write'
-
+      contents: read
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - id: 'auth'
-      uses: 'google-github-actions/auth@v0'
-      with:
-        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+      - name: Authenticate with the legacy key for the one-time bootstrap
+        uses: google-github-actions/auth@v3
+        with:
+          credentials_json: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
 
-    - name: Authorize Docker push
-      run: gcloud auth configure-docker
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
 
-    - name: Build and Push Container
-      run: |-
-        docker build -f ./packages/backend/Dockerfile -t gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }} .
-        docker push gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}
+      - name: Create or update WIF resources
+        env:
+          PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
+        run: .github/scripts/bootstrap-gcp-wif.sh
 
-    - name: Deploy to Cloud Run
-      id: deploy
-      uses: google-github-actions/deploy-cloudrun@v1
-      with:
-        service: ${{ env.SERVICE }}
-        image: gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}
-        region: ${{ env.REGION }}
+  deploy:
+    if: github.ref == 'refs/heads/dev' && inputs.operation == 'deploy'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Validate deployment configuration
+        env:
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          ARTIFACT_REGISTRY: ${{ vars.GCP_ARTIFACT_REGISTRY }}
+        run: |
+          set -euo pipefail
+          : "${PROJECT_ID:?Set the GCP_PROJECT_ID repository variable}"
+          : "${WIF_PROVIDER:?Set the GCP_WIF_PROVIDER repository variable}"
+          : "${DEPLOY_SERVICE_ACCOUNT:?Set the GCP_DEPLOY_SERVICE_ACCOUNT repository variable}"
+          : "${ARTIFACT_REGISTRY:?Set the GCP_ARTIFACT_REGISTRY repository variable}"
+
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud with WIF
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
+
+      - name: Authorize Artifact Registry push
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build and push container
+        env:
+          IMAGE: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-backend:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          docker build -f ./packages/backend/Dockerfile -t "${IMAGE}" .
+          docker push "${IMAGE}"
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          service: ${{ env.SERVICE }}
+          image: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-backend:${{ github.sha }}
+          region: ${{ env.REGION }}
+
+      - name: Report deployed URL
+        run: |
+          printf 'Cloud Run URL: %s\n' '${{ steps.deploy.outputs.url }}'
