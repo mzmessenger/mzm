@@ -110,7 +110,7 @@ test('checkAccessToken verify token error', async () => {
 
 test('gateway origin middleware rejects a request without its credential', () => {
   const send = vi.fn()
-  const res = { status: vi.fn().mockReturnThis(), send }
+  const res = { status: vi.fn().mockReturnThis(), send, set: vi.fn() }
   const next = vi.fn()
 
   createGatewayOriginCheck('gateway-secret')(
@@ -120,7 +120,7 @@ test('gateway origin middleware rejects a request without its credential', () =>
   )
 
   expect(res.status).toHaveBeenCalledWith(401)
-  expect(send).toHaveBeenCalledWith('unauthorized')
+  expect(send).toHaveBeenCalledWith('missing gateway origin authorization')
   expect(next).not.toHaveBeenCalled()
 })
 
@@ -128,7 +128,9 @@ test('gateway origin middleware accepts only its credential', () => {
   const next = vi.fn()
 
   createGatewayOriginCheck('gateway-secret')(
-    { headers: { 'x-mzm-gateway-authorization': 'Bearer gateway-secret' } } as unknown as Request,
+    {
+      headers: { 'x-mzm-gateway-authorization': 'Bearer gateway-secret' }
+    } as unknown as Request,
     {} as Response,
     next
   )

@@ -12,6 +12,9 @@
     "enabled": true,
     "head_sampling_rate": 1
   },
+  "secrets": {
+    "required": ["GATEWAY_ORIGIN_SECRET"]
+  },
   "triggers": {
     "crons": ["* * * * *"]
   },
