@@ -64,7 +64,7 @@ jobs:
             gcloud run services describe "${service}" \
               --project="${{ vars.GCP_PROJECT_ID }}" \
               --region="${REGION}" \
-              --format='table(metadata.name,status.url,spec.template.spec.serviceAccountName)'
+              --format='yaml(metadata.name,spec.template.spec.serviceAccountName,status.conditions,status.latestCreatedRevisionName,status.latestReadyRevisionName,status.traffic,status.url)'
           done
 
   deploy:
