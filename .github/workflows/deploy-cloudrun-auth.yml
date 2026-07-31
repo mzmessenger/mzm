@@ -49,12 +49,26 @@ jobs:
       - name: Authorize Artifact Registry push
         run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
 
-      - name: Build and push container
+      - name: Build container
         env:
           IMAGE: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}
         run: |
           set -euo pipefail
           docker build -f ./packages/auth/Dockerfile -t "${IMAGE}" .
+
+      - name: Verify container entrypoint
+        env:
+          IMAGE: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}
+        run: |
+          set -euo pipefail
+          test "$(docker inspect --format '{{json .Config.Cmd}}' "${IMAGE}")" = '["node","packages/auth/dist/src/server.js"]'
+          docker run --rm --entrypoint test "${IMAGE}" -f packages/auth/dist/src/server.js
+
+      - name: Push container
+        env:
+          IMAGE: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}
+        run: |
+          set -euo pipefail
           docker push "${IMAGE}"
 
       - name: Deploy to Cloud Run
