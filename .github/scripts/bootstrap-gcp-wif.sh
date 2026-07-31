@@ -19,12 +19,22 @@ POOL_RESOURCE="projects/${PROJECT_NUMBER}/locations/global/workloadIdentityPools
 PROVIDER_RESOURCE="${POOL_RESOURCE}/providers/${PROVIDER_ID}"
 ARTIFACT_REGISTRY="${REGION}-docker.pkg.dev/${PROJECT_ID}/${ARTIFACT_REPOSITORY}"
 
-gcloud services enable \
-  artifactregistry.googleapis.com \
-  iamcredentials.googleapis.com \
-  run.googleapis.com \
-  sts.googleapis.com \
-  --project="${PROJECT_ID}"
+required_services=(
+  artifactregistry.googleapis.com
+  iamcredentials.googleapis.com
+  run.googleapis.com
+  sts.googleapis.com
+)
+for service in "${required_services[@]}"; do
+  if gcloud services list \
+    --enabled \
+    --project="${PROJECT_ID}" \
+    --filter="config.name=${service}" \
+    --format='value(config.name)' | grep -Fxq "${service}"; then
+    continue
+  fi
+  gcloud services enable "${service}" --project="${PROJECT_ID}"
+done
 
 if ! gcloud iam service-accounts describe "${DEPLOY_SERVICE_ACCOUNT}" --project="${PROJECT_ID}" >/dev/null 2>&1; then
   gcloud iam service-accounts create "${DEPLOY_SERVICE_ACCOUNT_ID}" \
