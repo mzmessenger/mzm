@@ -85,7 +85,7 @@ test('authClients', async () => {
   expect(res.ok).toStrictEqual(true)
   expect(res.status).toStrictEqual(200)
   expect(proxyRequest).toBeCalledTimes(1)
-  expect(proxyRequest).toBeCalledWith('http://auth.localhost:8789/auth/token', {
+  expect(proxyRequest).toBeCalledWith('http://auth.localhost:8788/auth/token', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json'
