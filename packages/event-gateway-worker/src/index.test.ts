@@ -78,6 +78,23 @@ test('worker fetch uses the platform fetch implementation', async () => {
   vi.unstubAllGlobals()
 })
 
+test.each([
+  '/internal/outbox/v1/claim',
+  '/INTERNAL/outbox/v1/claim',
+  '/%69nternal/outbox/v1/claim'
+])('public requests cannot reach the internal origin path %s', async (path) => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('origin reached'))
+
+  const response = await handleFetch(
+    new Request(`https://api.mzm.dev${path}`, { method: 'POST', body: '{}' }),
+    createEnv(),
+    fetcher
+  )
+
+  expect(response.status).toBe(404)
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
 test('POST /api/socket replaces a malformed idempotency key', async () => {
   const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
   await handleFetch(
