@@ -3,6 +3,13 @@
   "name": "mzm-queue-worker",
   "main": "src/index.ts",
   "compatibility_date": "2026-07-01",
+  "workers_dev": false,
+  "routes": [
+    {
+      "pattern": "queue.mzm.dev",
+      "custom_domain": true
+    }
+  ],
   "dev": {
     "port": 8787
   },
