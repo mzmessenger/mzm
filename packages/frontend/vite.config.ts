@@ -11,7 +11,9 @@ export default defineConfig(({ mode }) => {
   const API_URL_BASE =
     mode === 'production' ? 'https://api.mzm.dev' : 'http://api.localhost:8788'
   const AUTH_URL_BASE =
-    mode === 'production' ? 'https://auth.mzm.dev' : 'http://auth.localhost:8789'
+    mode === 'production'
+      ? 'https://auth.mzm.dev'
+      : 'http://auth.localhost:8788'
 
   return {
     define: {
