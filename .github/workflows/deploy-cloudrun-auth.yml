@@ -51,22 +51,23 @@ jobs:
 
       - name: Build container
         env:
-          IMAGE: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}
+          IMAGE: '${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}'
         run: |
           set -euo pipefail
           docker build -f ./packages/auth/Dockerfile -t "${IMAGE}" .
 
       - name: Verify container entrypoint
         env:
-          IMAGE: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}
+          IMAGE: '${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}'
         run: |
           set -euo pipefail
           test "$(docker inspect --format '{{json .Config.Cmd}}' "${IMAGE}")" = '["node","packages/auth/dist/src/server.js"]'
           docker run --rm --entrypoint test "${IMAGE}" -f packages/auth/dist/src/server.js
+          docker run --rm --entrypoint node "${IMAGE}" -e "if (process.versions.node.split('.')[0] !== '24') process.exit(1)"
 
       - name: Push container
         env:
-          IMAGE: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}
+          IMAGE: '${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}'
         run: |
           set -euo pipefail
           docker push "${IMAGE}"

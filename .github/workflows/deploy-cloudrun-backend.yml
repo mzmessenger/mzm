@@ -105,22 +105,24 @@ jobs:
 
       - name: Build container
         env:
-          IMAGE: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-backend:${{ github.sha }}
+          IMAGE: '${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-backend:${{ github.sha }}'
         run: |
           set -euo pipefail
           docker build -f ./packages/backend/Dockerfile -t "${IMAGE}" .
 
       - name: Verify container entrypoint
         env:
-          IMAGE: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-backend:${{ github.sha }}
+          IMAGE: '${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-backend:${{ github.sha }}'
         run: |
           set -euo pipefail
           test "$(docker inspect --format '{{json .Config.Cmd}}' "${IMAGE}")" = '["node","packages/backend/dist/src/server.js"]'
           docker run --rm --entrypoint test "${IMAGE}" -f packages/backend/dist/src/server.js
+          docker run --rm --entrypoint node "${IMAGE}" -e "if (process.versions.node.split('.')[0] !== '24') process.exit(1)"
+          docker run --rm --entrypoint node "${IMAGE}" -e "import('./packages/backend/node_modules/undici/index.js')"
 
       - name: Push container
         env:
-          IMAGE: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-backend:${{ github.sha }}
+          IMAGE: '${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-backend:${{ github.sha }}'
         run: |
           set -euo pipefail
           docker push "${IMAGE}"
