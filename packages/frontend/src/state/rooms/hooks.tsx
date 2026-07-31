@@ -11,7 +11,7 @@ import {
 } from 'jotai'
 import { FilterToClientType, TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
 import { clients, fetcher, textFetcher } from '../../lib/client'
-import { isReplied } from '../../lib/util'
+import { getRoomName, isReplied } from '../../lib/util'
 
 type RoomUser = {
   account: string
@@ -20,8 +20,22 @@ type RoomUser = {
   enterId: string
 }
 
-const splited = window.location.pathname.split('/')
-const initCurrentRoomName = splited[1] === 'rooms' ? splited[2] : ''
+function initialRoomPath() {
+  if (window.location.pathname !== '/login/success') {
+    return window.location.pathname
+  }
+  const state = new URLSearchParams(window.location.search).get('state')
+  if (!state) {
+    return ''
+  }
+  try {
+    return decodeURIComponent(state)
+  } catch {
+    return ''
+  }
+}
+
+const initCurrentRoomName = getRoomName(initialRoomPath())
 
 type OpenRoomSettingState = {
   openRoomSetting: boolean
