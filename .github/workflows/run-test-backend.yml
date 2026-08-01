@@ -6,12 +6,10 @@ on:
       - 'packages/backend/**'
       - 'packages/shared/**'
       - 'packages/package.json'
-    branches: [ main ]
   pull_request:
     paths:
       - 'packages/backend/**'
       - 'packages/shared/**'
-    branches: [ main ]
 
 env:
   WORKSPACE_NAME: mzm-backend

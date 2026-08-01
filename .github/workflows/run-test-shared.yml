@@ -5,11 +5,9 @@ on:
     paths:
       - 'packages/shared/**'
       - 'packages/package.json'
-    branches: [ main ]
   pull_request:
     paths:
       - 'packages/shared/**'
-    branches: [ main ]
 
 env:
   WORKSPACE_NAME: mzm-shared

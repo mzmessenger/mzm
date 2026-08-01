@@ -17,7 +17,7 @@ WIF providerは次のclaimへ限定する。
 
 - repository ID: `448959755`（`mzmessenger/mzm`）
 - repository owner ID: `52990312`（`mzmessenger`）
-- ref: `refs/heads/dev`
+- ref: 任意のbranch（tagは不可）
 - event: `workflow_dispatch`
 - workflow: backend/authのCloud Run deploy workflow
 
@@ -37,7 +37,7 @@ backend:
 ```sh
 gh workflow run deploy-cloudrun-backend.yml \
   --repo mzmessenger/mzm \
-  --ref dev
+  --ref <deploy-branch>
 ```
 
 auth:
@@ -45,7 +45,7 @@ auth:
 ```sh
 gh workflow run deploy-cloudrun-auth.yml \
   --repo mzmessenger/mzm \
-  --ref dev
+  --ref <deploy-branch>
 ```
 
 各workflowはWIF認証、container build、entrypoint/runtime検証、Artifact Registry push、Cloud Run deployを行う。deploy後はworkflow run、Cloud Run Ready revision、traffic、公開endpointをread-backする。
