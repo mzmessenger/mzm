@@ -61,8 +61,10 @@ push to any branch
 Cloudflare Workers Builds GitHub App
   │ build command
   ├─ npm ci --ignore-scripts
-  ├─ queue lint/test/dry-run build
-  └─ gateway lint/test/dry-run build
+  └─ npm run verify:workers-builds
+      ├─ shared build
+      ├─ queue lint/test/dry-run build
+      └─ gateway lint/test/dry-run build
   │ deploy command（production branch / non-production branchで同一）
   ├─ versions upload: mzm-queue-worker（未昇格）
   ├─ versions upload: mzm-event-gateway（未昇格）
@@ -112,14 +114,12 @@ Build commandは次をfail-fastで実行する。
 
 ```sh
 npm ci --ignore-scripts && \
-npm run test:workers-builds && \
-npm run lint -w packages/queue-worker && \
-npm test -w packages/queue-worker && \
-npm run build -w packages/queue-worker && \
-npm run lint -w packages/event-gateway-worker && \
-npm test -w packages/event-gateway-worker && \
-npm run build -w packages/event-gateway-worker
+npm run verify:workers-builds
 ```
+
+`verify:workers-builds`はWorkers orchestration testsに続けて`mzm-shared`をbuildし、
+その後にQueue/Gatewayのlint/test/dry-run buildを実行する。sharedのpackage exportsは`dist`を参照するため、
+clean checkoutでQueue/Gatewayを検証する前にshared buildを省略してはならない。
 
 production/non-production deploy commandはrepository管理の単一shell scriptを呼ぶ。scriptは次を満たす。
 

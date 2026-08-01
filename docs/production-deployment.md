@@ -108,14 +108,11 @@ Build command:
 
 ```sh
 npm ci --ignore-scripts && \
-npm run test:workers-builds && \
-npm run lint -w packages/queue-worker && \
-npm test -w packages/queue-worker && \
-npm run build -w packages/queue-worker && \
-npm run lint -w packages/event-gateway-worker && \
-npm test -w packages/event-gateway-worker && \
-npm run build -w packages/event-gateway-worker
+npm run verify:workers-builds
 ```
+
+`verify:workers-builds`はclean checkoutでも`mzm-shared`のexport先が存在するよう、最初に
+`npm run build -w packages/shared`を実行してからQueue/Gatewayのlint/test/dry-run buildを実行する。
 
 Build variables:
 
@@ -182,13 +179,8 @@ Queue→Gatewayの順を固定する。Queue event envelopeとcallback contract�
 local gate:
 
 ```sh
-npm run test:workers-builds
-npm run lint -w packages/queue-worker
-npm test -w packages/queue-worker
-npm run build -w packages/queue-worker
-npm run lint -w packages/event-gateway-worker
-npm test -w packages/event-gateway-worker
-npm run build -w packages/event-gateway-worker
+npm ci --ignore-scripts
+npm run verify:workers-builds
 npm exec -w packages/queue-worker -- wrangler versions upload --dry-run
 npm exec -w packages/event-gateway-worker -- wrangler versions upload --dry-run
 ```
