@@ -1,98 +1,136 @@
-# Production deployment
+# 本番デプロイ
 
-## Responsibility boundary
+## 責任境界
 
-- The repository owner approves production cutovers, OAuth callback changes, and PR merges.
-- Automation provisions repeatable infrastructure, deploys revisions, and records command-backed verification.
-- Long-lived credentials must not be added to repository files, command arguments, or workflow logs.
+- 本番cutover、OAuth callback変更、PR mergeはrepository ownerが承認する。
+- 通常deployは既存resourceと既存secret参照を再利用し、bootstrapやIAM変更を行わない。
+- 長期credentialやsecret値をrepository、command引数、workflow logへ出さない。
+- secretの正本は1Passwordとし、GitHub Actions Secretsを恒久的な中継storeとして使わない。
 
-## Google Cloud authentication
+## Google Cloud
 
-GitHub Actions uses Workload Identity Federation (WIF) with service-account impersonation. The provider only accepts GitHub OIDC tokens when all of the following are true:
+### 認証
 
-- repository ID is `448959755` (`mzmessenger/mzm`)
-- repository owner ID is `52990312` (`mzmessenger`)
-- ref is `refs/heads/dev`
-- event is `workflow_dispatch`
-- workflow is one of the two Cloud Run deployment workflows
+GitHub Actionsはservice-account JSON keyではなく、GitHub OIDCとWorkload Identity Federation（WIF）で`github-mzm-deploy@mzmessenger.iam.gserviceaccount.com`をimpersonateする。
 
-Repository and owner numeric IDs are used instead of names to avoid trusting a deleted and recreated organization or repository with the same name.
+WIF providerは次のclaimへ限定する。
 
-### One-time bootstrap (completed 2026-07-31)
+- repository ID: `448959755`（`mzmessenger/mzm`）
+- repository owner ID: `52990312`（`mzmessenger`）
+- ref: `refs/heads/dev`
+- event: `workflow_dispatch`
+- workflow: backend/authのCloud Run deploy workflow
 
-The bootstrap was executed once from an exact reviewed commit with the owner account, then the temporary path was removed. It created or updated:
+Repository Variables:
 
-- the `github-actions` workload identity pool
-- the `mzm-repository` OIDC provider
-- the `github-mzm-deploy` deployment service account
-- the `mzm` Artifact Registry Docker repository in `asia-northeast1`
-- the minimum impersonation, Artifact Registry, Cloud Run, and runtime service-account bindings required by the deployment workflows
+- `GCP_PROJECT_ID`
+- `GCP_WIF_PROVIDER`
+- `GCP_DEPLOY_SERVICE_ACCOUNT`
+- `GCP_ARTIFACT_REGISTRY`
 
-Dispatch `Build and Deploy mzm-backend` from the `dev` branch with operation `bootstrap-wif`. The bootstrap is temporarily embedded in a workflow that already exists on the default branch because GitHub does not expose a newly added `workflow_dispatch` file until that file exists on the default branch. If it fails with `PERMISSION_DENIED`, grant the bootstrap principal only the permission reported by Google Cloud and retry; do not broaden the runtime WIF principal condition.
+WIF、deploy service account、Artifact Registry、Cloud Run services、runtime IAMは構築済みである。一回限りのbootstrap scriptとworkflow operationは残さない。再構築が必要になった場合は、現在のresourceとIAMをread-backしてから別の明示的な復旧手順として実施する。
 
-The workflow prints four non-secret values. Store them as GitHub repository variables:
+### WIF確認
 
-```sh
-gh variable set GCP_PROJECT_ID --repo mzmessenger/mzm --body '<project-id>'
-gh variable set GCP_WIF_PROVIDER --repo mzmessenger/mzm --body 'projects/<number>/locations/global/workloadIdentityPools/github-actions/providers/mzm-repository'
-gh variable set GCP_DEPLOY_SERVICE_ACCOUNT --repo mzmessenger/mzm --body 'github-mzm-deploy@<project-id>.iam.gserviceaccount.com'
-gh variable set GCP_ARTIFACT_REGISTRY --repo mzmessenger/mzm --body 'asia-northeast1-docker.pkg.dev/<project-id>/mzm'
-```
-
-### Migration completion status
-
-The real GitHub OIDC exchange, service-account impersonation, Artifact Registry push, and Cloud Run deployments have completed. The legacy GitHub secret and temporary bootstrap path were removed. The deployed services are:
-
-- backend revision `mzm-backend-00056-x8s`, traffic 100%
-- auth revision `mzm-auth-00077-wzn`, traffic 100%
-
-The remaining credential cleanup is to list and disable/delete the corresponding Google Cloud service-account key with an owner account. Deleting the GitHub secret alone does not revoke the key at Google Cloud.
-
-Historical cleanup command for the now-removed GitHub secret:
+backend workflowのread-only operationで、token exchange、active identity、backend/authのReady状態とtrafficを確認できる。
 
 ```sh
-gh secret delete GCP_SA_KEY --repo mzmessenger/mzm
+gh workflow run deploy-cloudrun-backend.yml \
+  --repo mzmessenger/mzm \
+  --ref dev \
+  -f operation=verify-wif
 ```
 
-Do not deploy another application revision unless required production environment variables and secrets are present.
+### Cloud Run deploy
 
-## Cloudflare authentication
+backend:
 
-Cloudflare commands run through `hermes-secret-run` with the token read from 1Password. The token value must never be copied into repository files or process arguments. Read-only verification:
+```sh
+gh workflow run deploy-cloudrun-backend.yml \
+  --repo mzmessenger/mzm \
+  --ref dev \
+  -f operation=deploy
+```
+
+auth:
+
+```sh
+gh workflow run deploy-cloudrun-auth.yml \
+  --repo mzmessenger/mzm \
+  --ref dev
+```
+
+各workflowはWIF認証、container build、entrypoint/runtime検証、Artifact Registry push、Cloud Run deployを行う。deploy後はworkflow run、Cloud Run Ready revision、traffic、公開endpointをread-backする。
+
+### Internal secrets
+
+Cloud Runは次のSecret Manager resourceを`latest`で参照する。
+
+- `mzm-gateway-origin-secret` → `GATEWAY_ORIGIN_SECRET`
+- `mzm-queue-callback-secret` → `QUEUE_CALLBACK_SECRET`
+
+runtime service accountには対象secret単位の`roles/secretmanager.secretAccessor`だけを付与する。通常deploy workflowはsecret resource作成、version追加、IAM変更、Cloud Run secret binding変更を行わない。
+
+rotationは通常deployと分離し、次の順で明示的に実施する。
+
+1. 1Password上の正本を更新する。
+2. 既存Secret Manager resourceへ新versionを追加する。
+3. Cloudflare Worker側の対応するsecretを更新する。
+4. Cloud Runの新revisionを作成し、Readyとsecret参照を確認する。
+5. internal callbackとgatewayのpositive/negative probeを行う。
+6. rollback期間後に旧versionを無効化する。
+
+secret resourceの新規作成やIAM復旧が必要な場合はrotationとして扱わず、owner/admin identityによる復旧作業として分離する。deploy service accountへ`roles/secretmanager.admin`を恒久付与しない。
+
+## Cloudflare
+
+### 認証
+
+Cloudflare操作は1Passwordからcredentialを注入する`hermes-secret-run`経由で実行する。token値をrepository fileやcommand引数へ展開しない。
 
 ```sh
 hermes-secret-run --env-file ~/dev/tmp/mzm-cloudflare-readonly.env \
   --workdir ~/dev/mzm/.worktree/dev -- npx wrangler whoami
 ```
 
-The following production resources were created and read back before any Worker or public route was deployed:
+### 本番resource
 
-- Queue `mzm-events`
-- Queue `mzm-events-dlq`
-- R2 bucket `mzm-events-dlq-archive`
+- Event Gateway Worker: `mzm-event-gateway`
+- Queue Worker: `mzm-queue-worker`
+- Queue Worker custom domain: `queue.mzm.dev`
+- Queue: `mzm-events`
+- DLQ: `mzm-events-dlq`
+- R2 archive: `mzm-events-dlq-archive`
+- public routes: `api.mzm.dev/*`、`auth.mzm.dev/*`
+- Access-protected endpoint: `queue.mzm.dev/internal/dlq/replay`
 
-Both Queues currently have zero producers and zero consumers. The `mzm-event-gateway` and `mzm-queue-worker` scripts have not been deployed, so the public API route has not been cut over.
+`mzm-queue-worker`は`workers_dev: false`とし、`workers.dev`を公開経路として使わない。
 
-Verification commands:
+### Worker deploy順序
+
+1. Queue WorkerのQueue/DLQ/R2 bindings、Worker secrets、Access application/policiesをread-backする。
+2. Queue Workerを先にdeployし、service token付き空replay requestと未認証拒否を確認する。
+3. Event GatewayのCloud Run origins、Queue producer binding、Worker secretをread-backする。
+4. repository-owner承認後にEvent Gatewayをdeployする。
+5. OAuth、CORS、SSE、idempotent mutation、Queue delivery、backlog、DLQを確認する。
+
+Event Gateway deployは`api.mzm.dev/*`と`auth.mzm.dev/*`のproduction trafficへ直接影響する。設定不足を発見する目的でdeployしない。
+
+### 検証
 
 ```sh
 hermes-secret-run --env-file ~/dev/tmp/mzm-cloudflare-readonly.env \
   --workdir ~/dev/mzm/.worktree/dev -- npx wrangler queues list
+
 hermes-secret-run --env-file ~/dev/tmp/mzm-cloudflare-readonly.env \
   --workdir ~/dev/mzm/.worktree/dev -- npx wrangler r2 bucket list
 ```
 
-### Worker cutover gate
+Queue WorkerのAccess確認では、次をすべて確認する。
 
-The production Wrangler configuration contains the verified Cloud Run origins. Before any Worker deployment, all of the following are required:
+- protected-resource metadataが対象pathを保護済みと返す。
+- 既存service token付きの空replay requestがAccessとWorker内JWT検証を通る。
+- 未認証requestがAccessで拒否される。
+- 旧`workers.dev` endpointが利用できない。
 
-1. Create a Cloudflare Access application for the queue Worker's `/internal/dlq/replay` endpoint and record its audience.
-2. Configure `CF_ACCESS_AUD` and `QUEUE_CALLBACK_SECRET` for `mzm-queue-worker` as Worker secrets.
-3. Configure `GATEWAY_ORIGIN_SECRET` for `mzm-event-gateway` as a Worker secret.
-4. Confirm the two shared secret values match the corresponding Cloud Run environment variables without printing either value.
-5. Deploy and verify `mzm-queue-worker` first. Its Queue consumer bindings may become active, but no event producer exists yet.
-6. Obtain repository-owner approval for the public cutover.
-7. Deploy `mzm-event-gateway`, which installs routes for `api.mzm.dev/*` and `auth.mzm.dev/*` and begins intercepting production traffic.
-8. Verify OAuth redirects/cookies, CORS preflight, SSE streaming, one idempotent mutation, Queue delivery, and an empty outbox/DLQ state.
-
-Do not deploy the gateway merely to discover missing configuration: its route declaration is the production traffic cutover.
+Access applicationやcustom domainの変更直後は伝播待ちが発生し得るため、単発probeではなくread-backと再probeで最終状態を確認する。

@@ -23,7 +23,7 @@ jobs:
       matrix:
         node-version: [24.x]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
         uses: actions/setup-node@v4
         with:
@@ -47,7 +47,7 @@ jobs:
           TEST_MONGO_ROOT_USER: root
           TEST_MONGO_ROOT_PASSWORD: password
       - name: test docker build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         with:
           file: packages/backend/Dockerfile
           context: .
