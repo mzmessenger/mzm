@@ -8,6 +8,7 @@
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
     "test:workers-builds": "node --test scripts/deploy-workers-builds.test.mjs",
+    "verify:workers-builds": "npm run test:workers-builds && npm run build -w packages/shared && npm run lint -w packages/queue-worker && npm test -w packages/queue-worker && npm run build -w packages/queue-worker && npm run lint -w packages/event-gateway-worker && npm test -w packages/event-gateway-worker && npm run build -w packages/event-gateway-worker",
     "lint": "npm run lint --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",
     "start": "concurrently -k -c \"auto\" npm:start:events npm:start:auth npm:start:backend npm:start:frontend",
