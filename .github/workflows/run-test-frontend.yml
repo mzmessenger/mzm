@@ -6,12 +6,10 @@ on:
       - 'packages/frontend/**'
       - 'packages/shared/**'
       - 'packages/package.json'
-    branches: [ main ]
   pull_request:
     paths:
       - 'packages/frontend/**'
       - 'packages/shared/**'
-    branches: [ main ]
 
 env:
   WORKSPACE_NAME: mzm-frontend

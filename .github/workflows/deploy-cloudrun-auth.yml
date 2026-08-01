@@ -17,7 +17,7 @@ env:
 
 jobs:
   deploy:
-    if: github.ref == 'refs/heads/dev'
+    if: startsWith(github.ref, 'refs/heads/')
     runs-on: ubuntu-latest
     steps:
       - name: Validate deployment configuration
