@@ -7,6 +7,7 @@
   "scripts": {
     "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
+    "test:workers-builds": "node --test scripts/deploy-workers-builds.test.mjs",
     "lint": "npm run lint --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",
     "start": "concurrently -k -c \"auto\" npm:start:events npm:start:auth npm:start:backend npm:start:frontend",
