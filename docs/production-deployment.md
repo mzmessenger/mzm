@@ -30,17 +30,6 @@ Repository Variables:
 
 WIF、deploy service account、Artifact Registry、Cloud Run services、runtime IAMは構築済みである。一回限りのbootstrap scriptとworkflow operationは残さない。再構築が必要になった場合は、現在のresourceとIAMをread-backしてから別の明示的な復旧手順として実施する。
 
-### WIF確認
-
-backend workflowのread-only operationで、token exchange、active identity、backend/authのReady状態とtrafficを確認できる。
-
-```sh
-gh workflow run deploy-cloudrun-backend.yml \
-  --repo mzmessenger/mzm \
-  --ref dev \
-  -f operation=verify-wif
-```
-
 ### Cloud Run deploy
 
 backend:
@@ -48,8 +37,7 @@ backend:
 ```sh
 gh workflow run deploy-cloudrun-backend.yml \
   --repo mzmessenger/mzm \
-  --ref dev \
-  -f operation=deploy
+  --ref dev
 ```
 
 auth:
