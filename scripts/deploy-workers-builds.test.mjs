@@ -120,7 +120,8 @@ function runFakeDeployment({
   queueProbeStatus = '302',
   gatewayRootStatus = '200',
   staleRemoteCall = '0',
-  failGatewayPromotion = false
+  failGatewayPromotion = false,
+  connectedBuildIdentity = false
 } = {}) {
   const fakeBin = mkdtempSync(
     path.join(os.tmpdir(), 'mzm-workers-builds-test-')
@@ -156,6 +157,10 @@ fi
     'npm',
     `#!/usr/bin/env bash
 set -euo pipefail
+if [[ -n "\${WRANGLER_CI_OVERRIDE_NAME:-}" || -n "\${WRANGLER_CI_MATCH_TAG:-}" ]]; then
+  printf 'connected build identity leaked to Wrangler subprocess\\n' >&2
+  exit 67
+fi
 printf 'npm' >> "$TEST_LOG"
 printf ' %q' "$@" >> "$TEST_LOG"
 printf '\\n' >> "$TEST_LOG"
@@ -197,7 +202,13 @@ esac
         TEST_LOG: logPath,
         TEST_GIT_CALLS: path.join(fakeBin, 'git-calls'),
         STALE_REMOTE_CALL: staleRemoteCall,
-        FAIL_GATEWAY_PROMOTION: failGatewayPromotion ? '1' : '0'
+        FAIL_GATEWAY_PROMOTION: failGatewayPromotion ? '1' : '0',
+        ...(connectedBuildIdentity
+          ? {
+              WRANGLER_CI_OVERRIDE_NAME: 'mzm-event-gateway',
+              WRANGLER_CI_MATCH_TAG: 'gateway-worker-tag'
+            }
+          : {})
       }),
       encoding: 'utf8',
       stdio: 'pipe'
@@ -210,6 +221,11 @@ esac
     return { commands, error }
   }
 }
+
+test('removes connected-build Worker identity before orchestrating both Workers', () => {
+  const { error } = runFakeDeployment({ connectedBuildIdentity: true })
+  assert.ifError(error)
+})
 
 test('uploads both versions before ordered promotion and read-only probes', () => {
   const { commands, error } = runFakeDeployment()

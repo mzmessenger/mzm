@@ -76,9 +76,9 @@ secret resourceの新規作成やIAM復旧が必要な場合はrotationとして
 
 Cloud RunのGitHub Actions＋WIFは継続する。廃止するのはCloudflare Worker deploy用のGitHub Actions credentialだけである。
 
-通常のWorker code deployはCloudflare Workers BuildsのGitHub App connectionを使う。GitHub App installation `40083580`（`cloudflare-workers-and-pages`、selected repositories）では`mzmessenger/mzm`だけを許可し、別repositoryを追加しない。Build projectには、account `789787f7b7b778b108bb8ad86350db9d`に対する`Workers Scripts: Edit`だけを持つ専用User API tokenを選択し、既定生成tokenを使わない。token値をrepository、GitHub Actions、Build variable、command引数、logへ出さない。
+通常のWorker code deployはCloudflare Workers BuildsのGitHub App connectionを使う。GitHub App installation `40083580`（`cloudflare-workers-and-pages`、selected repositories）では`mzmessenger/mzm`だけを許可し、別repositoryを追加しない。Build projectで現在使用中のUser API tokenへ、account `789787f7b7b778b108bb8ad86350db9d`に対する`Workers Scripts: Edit`と`Workers R2 Storage Read`だけを付与し、新しいtokenは増やさない。Queue Workerの既存R2 bindingをVersion upload時に検証するためR2 readが必要だが、R2 writeは付与しない。token値をrepository、GitHub Actions、Build variable、command引数、logへ出さない。
 
-この権限はWorker名単位に限定できない。接続repositoryの任意branch codeは同一account内8 Workerへ作用できるため、2026-08-01にrepository ownerが残余リスクを明示承認した。secret/resource/route/domain/consumer trigger変更は通常deployから分離する。
+これらの権限はWorker名またはR2 bucket単位に限定しない。接続repositoryの任意branch codeは同一account内8 Workerへ作用でき、R2 storage metadataをreadできるため、2026-08-01にrepository ownerが残余リスクを明示承認した。secret/resource/route/domain/consumer trigger変更は通常deployから分離する。
 
 Workers Builds APIで初期設定する場合だけ、`Workers Builds Configuration: Edit`と`Workers Scripts: Read`を持つ一時configurator tokenを別に作る。Build tokenと兼用せず、trigger/environment variablesのread-back後にrevokeする。Builds APIにはWorker名ではなくsystem-generated Worker tagを渡す。2026-08-01 read-back値はGateway `fb9569302ab44ec8bf193a588a09b6fd`、Queue `5342eaf857b24935a36e923fbfb3b811`。
 
@@ -113,6 +113,11 @@ npm run verify:workers-builds
 
 `verify:workers-builds`はclean checkoutでも`mzm-shared`のexport先が存在するよう、最初に
 `npm run build -w packages/shared`を実行してからQueue/Gatewayのlint/test/dry-run buildを実行する。
+
+Workers Buildsは接続先`mzm-event-gateway`をWranglerへ強制する
+`WRANGLER_CI_OVERRIDE_NAME`と`WRANGLER_CI_MATCH_TAG`を注入する。単一projectから2 Workerを扱う
+deploy scriptは、CI metadataとowner承認済みの両config hashを検証した上でこの2変数を解除し、
+Queue/Gatewayそれぞれのconfig名を使う。解除しない場合、Queue uploadもGateway名へ上書きされる。
 
 Build variables:
 
