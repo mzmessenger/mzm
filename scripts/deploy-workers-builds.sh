@@ -46,6 +46,11 @@ verify_current_branch_head() {
 [[ "${WORKERS_CI_BRANCH:-}" =~ ^[A-Za-z0-9._/-]+$ ]] || fatal "WORKERS_CI_BRANCH has an invalid format"
 [[ "$WORKERS_CI_BRANCH" != -* && "$WORKERS_CI_BRANCH" != *..* && "$WORKERS_CI_BRANCH" != *//* ]] || fatal "WORKERS_CI_BRANCH is unsafe"
 
+# A connected build pins Wrangler to the connected Worker. This pipeline intentionally
+# orchestrates two explicitly hashed configs, so do not let that single-Worker identity
+# override either config or reject the second Worker by tag.
+unset WRANGLER_CI_OVERRIDE_NAME WRANGLER_CI_MATCH_TAG
+
 require_sha256 EXPECTED_QUEUE_WRANGLER_SHA256
 require_sha256 EXPECTED_GATEWAY_WRANGLER_SHA256
 verify_config_hash "$QUEUE_CONFIG" "$EXPECTED_QUEUE_WRANGLER_SHA256"

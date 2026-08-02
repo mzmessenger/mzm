@@ -127,12 +127,13 @@ production/non-production deploy commandはrepository管理の単一shell script
 2. Cloudflareが提供する`WORKERS_CI_COMMIT_SHA`、`WORKERS_CI_BRANCH`、`WORKERS_CI_BUILD_UUID`を検証し、空・形式不正・`git rev-parse HEAD`とのSHA不一致ならdeployしない。
 3. PUBLIC repositoryの`git ls-remote origin refs/heads/$WORKERS_CI_BRANCH`を取得し、remote branch headがBuild SHAと不一致またはbranchが削除済みならstale buildとしてdeployしない。この照合は最初のupload前、Queue promote直前、Gateway promote直前の3回行う。Queue promote後の照合でstaleを検出した場合は直前のQueue Versionへ自動rollbackする。
 4. SHAとBuild UUIDから安全な長さ・文字種の一意なversion tagを作る。
-5. Queue WorkerとEvent Gatewayの順に`wrangler versions upload --strict --keep-vars --tag ... --message ...`を実行する。この時点ではproduction trafficを変更しない。
-6. 両Version upload成功後、Queue Workerを`wrangler versions deploy --version-tag ... --percentage 100 --yes`でproductionへpromoteする。
-7. `https://queue.mzm.dev/internal/dlq/replay`へcredentialなしのGETを行い、Cloudflare AccessのHTTP 302を確認する。service-token付きreplayはcallback処理を起こし得るため自動buildでは実行しない。
-8. Queue probe成功後、Event Gatewayを同じtagで100%へpromoteする。
-9. `https://auth.mzm.dev/`のHTTP 200、`https://api.mzm.dev/`のHTTP 404、両hostの`/internal/outbox/v1/claim`と`/%69nternal/outbox/v1/claim`のHTTP 404を確認する。いずれもGETのみで、書込みmutationやQueue投入を行わない。
-10. promote前に両Workerの100% active Version IDをread-backする。Queue probe、Gateway直前のstale照合、Gateway promoteの失敗時はQueueを直前Versionへ戻し、Gateway probe失敗時はGateway→Queueの順で直前Versionへ自動rollbackする。rollback失敗を含むいずれかの失敗はnon-zero exitし、GitHub checkをfailureにする。
+5. Cloudflareが接続先Worker用に注入する`WRANGLER_CI_OVERRIDE_NAME`と`WRANGLER_CI_MATCH_TAG`を解除する。単一projectからowner承認済みの2 configを扱うための明示的な例外であり、解除しない場合はQueue config名が接続先Gateway名へ上書きされる。
+6. Queue WorkerとEvent Gatewayの順に`wrangler versions upload --strict --keep-vars --tag ... --message ...`を実行する。この時点ではproduction trafficを変更しない。
+7. 両Version upload成功後、Queue Workerを`wrangler versions deploy --version-tag ... --percentage 100 --yes`でproductionへpromoteする。
+8. `https://queue.mzm.dev/internal/dlq/replay`へcredentialなしのGETを行い、Cloudflare AccessのHTTP 302を確認する。service-token付きreplayはcallback処理を起こし得るため自動buildでは実行しない。
+9. Queue probe成功後、Event Gatewayを同じtagで100%へpromoteする。
+10. `https://auth.mzm.dev/`のHTTP 200、`https://api.mzm.dev/`のHTTP 404、両hostの`/internal/outbox/v1/claim`と`/%69nternal/outbox/v1/claim`のHTTP 404を確認する。いずれもGETのみで、書込みmutationやQueue投入を行わない。
+11. promote前に両Workerの100% active Version IDをread-backする。Queue probe、Gateway直前のstale照合、Gateway promoteの失敗時はQueueを直前Versionへ戻し、Gateway probe失敗時はGateway→Queueの順で直前Versionへ自動rollbackする。rollback失敗を含むいずれかの失敗はnon-zero exitし、GitHub checkをfailureにする。
 
 通常pipelineはVersion upload/promotionだけを扱う。Versionはbundled code、bindings、compatibility settingsを含むが、route/domain/cron等のtriggerとR2/Queue自体のstateは含まない。通常pipelineではWrangler configのSHA-256一致を必須にして、binding/compatibilityの意図しない変更をfail-closedする。route、custom domain、Queue consumer trigger、resource作成・削除、secret、承認済みWrangler config自体の変更はowner承認付きの別config deployとして扱い、必要な権限を自動追加したり通常`wrangler deploy`へfallbackしたりしない。`--strict`はremoteとの競合防止に使うが、policy gateの代替とはしない。
 
@@ -191,8 +192,8 @@ Worker間contract変更は後方互換にし、Queue wire envelope version `n`�
 - repository default workflow permissionsを`read`へ変更し、書込みが必要なGitHub Actions workflowだけjob/workflow levelで最小権限を明示する。
 - GitHub/Cloudflareの接続とuser token選択には一回限りの対話loginが必要である。通常push/deploy時にはloginを要求しない。
 - Workers Buildsの既定自動生成tokenは使用しない。既定tokenはAccount Settings read、Workers Scripts/KV/R2 edit、全zoneのWorkers Routes editを持ち、任意branch codeに対して過大である。
-- 既存2 Workerのdeployに必要な最小permissionだけを持つ専用user API tokenを別途作成してBuild設定へ選択する。CloudflareがWorker script単位のtoken scopeを提供しない場合、Workers Scripts editは同一accountの全8 Workerへ及ぶ残余リスクとしてownerが明示承認するまで接続しない。
-- 専用tokenが既存Queue/R2 bindingを参照するだけのdeployにQueue/R2 editを必要としないことを実deploy前に確認する。必要だった場合は権限を自動追加せず再承認する。
+- 既存2 Workerのdeployに必要な最小permissionとして、Build projectで現在使用中のuser API tokenへaccount `789787f7b7b778b108bb8ad86350db9d`の`Workers Scripts: Edit`と`Workers R2 Storage Read`だけを付与し、新しいtokenは作成しない。CloudflareがWorker script/R2 bucket単位のtoken scopeを提供しないため、同一accountの全8 Workerへのscript editとR2 storage metadata readが任意branch codeへ及ぶ残余リスクとしてowner承認対象になる。
+- Queue Version uploadは既存R2 bindingのbucket metadataをGETするため`Workers R2 Storage Read`を必要とする。`Workers R2 Storage Edit`、Queues edit、route、secret、Builds configuration権限は付与しない。
 - Workers Buildsのbuild tokenをrepository secretやlocal fileへコピーしない。
 - fork PRからproduction deployしない。
 - public preview URLとworkers.dev endpointを無効化する。
