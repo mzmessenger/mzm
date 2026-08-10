@@ -109,7 +109,7 @@ hermes-secret-run --env-file ~/dev/tmp/mzm-workers-builds-deploy.env \
     --commit <40-character-commit-sha>
 ```
 
-secretなしの検証は次で実行できる。これはtoken検証前に停止するためCloudflare mutationを行わない。
+secretなしでmutation前に拒否されることの確認は次で実行できる。token存在確認で停止するため、Cloudflare mutationやWrangler実行は行わない。実際のWrangler `--dry-run`は、tokenを1Passwordから注入した状態で実行する。
 
 ```sh
 npm run deploy:workers-manual -- \
