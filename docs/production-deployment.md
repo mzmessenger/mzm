@@ -102,7 +102,7 @@ Cloudflare Workersの通常releaseはWorkers Buildsを経由せず、operatorが
 production deployは、対象branchと40文字SHAを明示し、1Passwordからlocal実行時だけtokenを注入する。
 
 ```sh
-hermes-secret-run --env-file ~/dev/tmp/mzm-cloudflare-deploy.env \
+hermes-secret-run --env-file ~/dev/tmp/mzm-workers-builds-deploy.env \
   --workdir ~/dev/mzm/.worktree/dev \
   -- npm run deploy:workers-manual -- \
     --branch main \
