@@ -64,7 +64,7 @@ Wrangler 4.107.0で`wrangler versions upload`と`wrangler versions deploy`の`--
 
 ```bash
 hermes-secret-run \
-  --env-file ~/dev/tmp/mzm-cloudflare-deploy.env \
+  --env-file ~/dev/tmp/mzm-workers-builds-deploy.env \
   --workdir ~/dev/mzm/.worktree/dev \
   -- scripts/deploy-workers-manual.sh --branch main --commit <40-char-sha>
 ```
