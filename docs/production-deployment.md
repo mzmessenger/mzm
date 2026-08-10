@@ -76,11 +76,9 @@ secret resourceの新規作成やIAM復旧が必要な場合はrotationとして
 
 Cloud RunのGitHub Actions＋WIFは継続する。廃止するのはCloudflare Worker deploy用のGitHub Actions credentialだけである。
 
-通常のWorker code deployはCloudflare Workers BuildsのGitHub App connectionを使う。GitHub App installation `40083580`（`cloudflare-workers-and-pages`、selected repositories）では`mzmessenger/mzm`だけを許可し、別repositoryを追加しない。Build projectで現在使用中のUser API tokenへ、account `789787f7b7b778b108bb8ad86350db9d`に対する`Workers Scripts: Edit`と`Workers R2 Storage Read`だけを付与し、新しいtokenは増やさない。Queue Workerの既存R2 bindingをVersion upload時に検証するためR2 readが必要だが、R2 writeは付与しない。token値をrepository、GitHub Actions、Build variable、command引数、logへ出さない。
+local direct deployで使用する既存API tokenは、account `789787f7b7b778b108bb8ad86350db9d`のWrangler upload/promoteに必要な最小権限を持つものを1Passwordから一時注入する。token値をrepository、GitHub Actions、Build variable、command引数、logへ出さない。新規token発行やrotationは行わない。
 
-これらの権限はWorker名またはR2 bucket単位に限定しない。接続repositoryの任意branch codeは同一account内8 Workerへ作用でき、R2 storage metadataをreadできるため、2026-08-01にrepository ownerが残余リスクを明示承認した。secret/resource/route/domain/consumer trigger変更は通常deployから分離する。
-
-Workers Builds APIで初期設定する場合だけ、`Workers Builds Configuration: Edit`と`Workers Scripts: Read`を持つ一時configurator tokenを別に作る。Build tokenと兼用せず、trigger/environment variablesのread-back後にrevokeする。Builds APIにはWorker名ではなくsystem-generated Worker tagを渡す。2026-08-01 read-back値はGateway `fb9569302ab44ec8bf193a588a09b6fd`、Queue `5342eaf857b24935a36e923fbfb3b811`。
+Workers Buildsの設定変更・trigger停止が必要な場合はCloudflare ownerの別operationとして扱い、manual deploy tokenへWorkers Builds Configuration権限を追加しない。
 
 read-only調査や復旧時の対話操作は、1Passwordからcredentialを注入する`hermes-secret-run`経由で実行する。
 
@@ -89,66 +87,58 @@ hermes-secret-run --env-file ~/dev/tmp/mzm-cloudflare-readonly.env \
   --workdir ~/dev/mzm/.worktree/dev -- npm exec -w packages/event-gateway-worker -- wrangler whoami
 ```
 
-### Workers Builds project設定
+### local manual deploy
 
-単一のBuild projectを`mzm-event-gateway`へ接続し、repository内scriptからQueue/Gateway両Versionを扱う。これはCloudflare標準のWorkerごとのdeployではなく、両Workerの順序を管理する独自orchestrationである。
+Cloudflare Workersの通常releaseはWorkers Buildsを経由せず、operatorがlocal worktreeからVersions APIを使って明示的に実行する。GitHub Actions、server常駐token、Deploy Hook、Workers Builds API manual triggerは通常経路に使用しない。
 
-- repository: `mzmessenger/mzm`
-- production branch: `main`
-- non-production branch builds: enabled
-- root directory: `/`
-- repository connection UUID: `60f43460-5c1f-405c-88eb-87f6560616cd`
-- Build token UUID: `e0ecf279-ee52-4895-b2c6-e33639e3a843`
-- production trigger UUID: `6c2044d6-ae20-4b30-96b3-26188cf604bd`
-- non-production trigger UUID: `b7bb3fc4-3d16-4411-854a-1b644441acfc`
-- production deploy commandとnon-production deploy command: `bash scripts/deploy-workers-builds.sh`
-- GitHub check: この単一Build projectだけを必須対象として扱う
+実装と運用手順の正本は以下である。
 
-Build command:
+- script: `scripts/deploy-workers-manual.sh`
+- test: `scripts/deploy-workers-manual.test.mjs`
+- spec: `docs/spec/local-manual-worker-deploy.md`
+- Queue → Event Gatewayの順でuploadし、Queue promote/probe後にGatewayをpromoteする
+- uploadは`wrangler versions upload`、promotionは`wrangler versions deploy`へ固定する
+
+production deployは、対象branchと40文字SHAを明示し、1Passwordからlocal実行時だけtokenを注入する。
 
 ```sh
-npm ci --ignore-scripts && \
-npm run verify:workers-builds
+hermes-secret-run --env-file ~/dev/tmp/mzm-cloudflare-deploy.env \
+  --workdir ~/dev/mzm/.worktree/dev \
+  -- npm run deploy:workers-manual -- \
+    --branch main \
+    --commit <40-character-commit-sha>
 ```
 
-`verify:workers-builds`はclean checkoutでも`mzm-shared`のexport先が存在するよう、最初に
-`npm run build -w packages/shared`を実行してからQueue/Gatewayのlint/test/dry-run buildを実行する。
+secretなしの検証は次で実行できる。これはtoken検証前に停止するためCloudflare mutationを行わない。
 
-Workers Buildsは接続先`mzm-event-gateway`をWranglerへ強制する
-`WRANGLER_CI_OVERRIDE_NAME`と`WRANGLER_CI_MATCH_TAG`を注入する。単一projectから2 Workerを扱う
-deploy scriptは、CI metadataとowner承認済みの両config hashを検証した上でこの2変数を解除し、
-Queue/Gatewayそれぞれのconfig名を使う。解除しない場合、Queue uploadもGateway名へ上書きされる。
-
-Build variables:
-
-| name                               | value                                                              |
-| ---------------------------------- | ------------------------------------------------------------------ |
-| `SKIP_DEPENDENCY_INSTALL`          | `1`                                                                |
-| `NODE_VERSION`                     | `24.18.0`                                                          |
-| `CLOUDFLARE_ACCOUNT_ID`            | `789787f7b7b778b108bb8ad86350db9d`                                 |
-| `EXPECTED_QUEUE_WRANGLER_SHA256`   | `35b4ecb20f912ebf17fc7e8b9c923a1bbd313ee66c6bca9723b49543e66347f0` |
-| `EXPECTED_GATEWAY_WRANGLER_SHA256` | `689d8ca9f33db1600c0bc93cc486e75186334c244f8e0ad024b54f6be0e47246` |
-
-Build watch paths:
-
-```text
-package.json
-package-lock.json
-scripts/deploy-workers-builds.sh
-scripts/deploy-workers-builds.test.mjs
-packages/shared/*
-packages/shared/**
-packages/queue-worker/*
-packages/queue-worker/**
-packages/event-gateway-worker/*
-packages/event-gateway-worker/**
-docs/production-deployment.md
-docs/spec/workers-builds-any-branch-production.md
+```sh
+npm run deploy:workers-manual -- \
+  --branch main \
+  --commit <40-character-commit-sha> \
+  --dry-run
 ```
 
-watch pathsは最適化でありsecurity boundaryではない。Cloudflareのbypass条件により対象外差分でもbuildが起動し得る。
+scriptは次をfail-closedで検証する。
 
-### 本番resource
+- approved Account IDとtokenの存在
+- detached HEADでないこと
+- `git status --porcelain --untracked-files=all`が空であること
+- current branch、local HEAD、`origin/<branch>` headが指定SHAと一致すること
+- Queue/Gateway Wrangler configのowner-approved SHA-256
+- production active Versionが各Workerで1件かつ100%であること
+- Queue probe、Gateway/Auth/API probe、通常およびpercent-encoded `/internal`拒否probe
+
+probe失敗やpartial failureでは直前Versionへrollbackする。rollback自体に失敗した場合は自動で成功扱いにせず、Version IDを出力して手動復旧を要求する。
+
+### Workers Builds停止の責任境界
+
+repositoryのscript/package変更だけでは、Cloudflare側のWorkers Builds push trigger停止は完了しない。manual direct deployの実装・検証後、Cloudflare ownerがDashboardまたは適切な既存管理経路でproduction/non-production triggerを停止し、read-backを取得する。Deploy Hookは作成しない。停止前にmanual pathをproductionへ実施してはならない。
+
+### 認証
+
+read-only調査とmanual deployは、1Passwordからcredentialを一時注入する`hermes-secret-run`経由で実行する。token値をrepository、GitHub Actions、Build variable、command引数、logへ出さない。新規tokenの発行・rotationは行わず、既存tokenの権限変更が必要な場合は実行前に別途確認する。
+
+
 
 - Event Gateway Worker: `mzm-event-gateway`
 - Queue Worker: `mzm-queue-worker`
@@ -163,19 +153,17 @@ watch pathsは最適化でありsecurity boundaryではない。Cloudflareのbyp
 
 ### Worker deploy順序
 
-接続repository内の任意branchへの対象path pushをproduction deploy承認として扱う。branch名、PR、review、merge状態は実行gateではない。fork側だけに存在するbranchは`origin` remote headを解決できないためfail-closedとなる。同一repository PRに関連する同一SHAの重複buildは再deployし得る。
+production deployはpushではなく、operatorが`--branch`と`--commit`を明示してlocal manual scriptをkickした場合だけ実行する。scriptはclean worktree、local HEAD、`origin/<branch>` head、config hash、Account ID、production active Versionをfail-closedに検証する。
 
-`bash scripts/deploy-workers-builds.sh`は次をfail-closedで実行する。
+`scripts/deploy-workers-manual.sh`は次を実行する。
 
-1. Workers CI metadata、owner承認済みconfig SHA-256、local commit SHAを検証する。
-2. PUBLIC Git remoteの同一branch headとBuild SHAを照合する。
-3. Queue/GatewayのVersionを両方uploadする。片方でも失敗すればproduction trafficを変更しない。
-4. branch headを再照合する。
-5. Queueを100%へpromoteし、`queue.mzm.dev/internal/dlq/replay`の未認証GETがAccess HTTP 302となることを確認する。
-6. Event Gatewayを100%へpromoteする。
-7. `auth.mzm.dev/`のHTTP 200、`api.mzm.dev/`とraw/encoded `/internal`候補のHTTP 404を確認する。
+1. Queue/GatewayのVersionを両方uploadする。片方でも失敗すればproduction trafficを変更しない。
+2. target branch/SHAを再照合する。
+3. Queueを100%へpromoteし、`queue.mzm.dev/internal/dlq/replay`の未認証GETがAccess HTTP 302となることを確認する。
+4. Event Gatewayを100%へpromoteする。
+5. `auth.mzm.dev/`のHTTP 200、`api.mzm.dev/`とraw/encoded `/internal`候補のHTTP 404を確認する。
 
-Queue→Gatewayの順を固定する。Queue event envelopeとcallback contractはn−1互換を維持し、混在期間を許容できない変更はこのpipelineで直接deployしない。head照合後からpromoteまでのTOCTOUとbranch横断build raceは残るため、productionは「最後にpushされたcommit」ではなく「最後に成功したbuild」になり得る。
+Queue→Gatewayの順を固定する。Queue event envelopeとcallback contractはn−1互換を維持し、混在期間を許容できない変更はこのpipelineで直接deployしない。head照合後からpromoteまでのraceは残るため、promotion直前にもtargetを再検証する。
 
 `mzm-queue-worker`と`mzm-event-gateway`は`workers_dev: false`、`preview_urls: false`とし、`workers.dev`やversion preview URLを公開経路として使わない。通常deployはroute、custom domain、Queue consumer、Queue/R2 resource、secretを変更しない。
 
@@ -185,12 +173,11 @@ local gate:
 
 ```sh
 npm ci --ignore-scripts
-npm run verify:workers-builds
-npm exec -w packages/queue-worker -- wrangler versions upload --dry-run
-npm exec -w packages/event-gateway-worker -- wrangler versions upload --dry-run
+npm run verify:workers-manual
+npm run deploy:workers-manual -- --branch <branch> --commit <40-character-commit-sha> --dry-run
 ```
 
-resourceとVersion履歴のread-back:
+resourceとVersion履歴のread-backは、1Password経由のread-only credentialで行う。
 
 ```sh
 hermes-secret-run --env-file ~/dev/tmp/mzm-cloudflare-readonly.env \
@@ -206,7 +193,7 @@ hermes-secret-run --env-file ~/dev/tmp/mzm-cloudflare-readonly.env \
   --workdir ~/dev/mzm/.worktree/dev -- npm exec -w packages/event-gateway-worker -- wrangler versions list
 ```
 
-Workers Builds historyでrepository、branch、commit SHA、Build ID、status、両WorkerのVersion tag/message、Queue→Gateway deployment messageを突合する。`workers.dev`とversion preview URLが無効であること、Queue/DLQ/R2 bindings、Queue consumers、public routes、custom domain、secret名が切替前後で維持されていることをAPI/Dashboardでread-backする。secret値は表示しない。
+manual direct deployのVersion tag/messageと、Queue→Gatewayの実行順を突合する。`workers.dev`とversion preview URLが無効であること、Queue/DLQ/R2 bindings、Queue consumers、public routes、custom domain、secret名が切替前後で維持されていることをAPI/Dashboardでread-backする。secret値は表示しない。
 
 自動deployは副作用のないprobeだけを行う。service token付きDLQ replayはcallback処理を起こし得るため、自動deployでは実行しない。運用者がreplayを実行する場合は別の明示的なoperationとしてbacklog/DLQ件数とcallback結果を確認する。
 
@@ -226,4 +213,4 @@ npm exec -w packages/queue-worker -- wrangler versions deploy \
   --version-id <queue-version-id> --percentage 100 --dry-run --yes
 ```
 
-実rollbackは`--dry-run`を外し、`--message "rollback reason=<reason> source-build=<build-id>"`を付ける。timestamp、branch、commit SHA、Build ID、両Workerの変更前後Version ID、理由、operatorを`koh110/memo#1`へ記録する。
+実rollbackは`--dry-run`を外し、`--message "rollback reason=<reason> source-commit=<commit-sha>"`を付ける。timestamp、branch、commit SHA、両Workerの変更前後Version ID、理由、operatorを`koh110/memo#1`へ記録する。
