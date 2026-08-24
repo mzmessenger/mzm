@@ -31,7 +31,13 @@ import * as twitterHandlers from './handlers/twitter.js'
 import * as authorizeHandlers from './handlers/authorize.js'
 import { removeUser } from './lib/consumer.js'
 import { GATEWAY_ORIGIN_SECRET } from './config.js'
-import { acknowledgeOutbox, claimOutbox, outboxState, releaseOutbox } from './lib/outbox.js'
+import {
+  acknowledgeOutbox,
+  claimOutbox,
+  outboxState,
+  releaseOutbox
+} from './lib/outbox.js'
+import { MAX_QUEUE_BATCH_MESSAGES } from 'mzm-shared/src/lib/outbox'
 
 const jsonParser = express.json({ limit: '1mb' })
 
@@ -63,31 +69,71 @@ export function createApp({ db, sessionClientPromise }: Options) {
   })
 
   app.use('/internal/outbox/v1', (req, res, next) => {
-    if (!GATEWAY_ORIGIN_SECRET || req.headers['x-mzm-gateway-authorization'] !== `Bearer ${GATEWAY_ORIGIN_SECRET}`) return res.status(401).send('unauthorized')
+    if (
+      !GATEWAY_ORIGIN_SECRET ||
+      req.headers['x-mzm-gateway-authorization'] !==
+        `Bearer ${GATEWAY_ORIGIN_SECRET}`
+    )
+      return res.status(401).send('unauthorized')
     next()
   })
   app.post('/internal/outbox/v1/claim', jsonParser, async (req, res) => {
     const { owner, operationId, limit } = req.body
-    if (typeof owner !== 'string' || (operationId !== undefined && typeof operationId !== 'string') || !Number.isInteger(limit) || limit < 1 || limit > 100) return res.status(400).send('invalid claim')
+    if (
+      typeof owner !== 'string' ||
+      (operationId !== undefined && typeof operationId !== 'string') ||
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > MAX_QUEUE_BATCH_MESSAGES
+    )
+      return res.status(400).send('invalid claim')
     return res.json(await claimOutbox(db, owner, operationId, limit))
   })
   app.post('/internal/outbox/v1/ack', jsonParser, async (req, res) => {
     const { owner, events } = req.body
-    if (typeof owner !== 'string' || !Array.isArray(events) || !events.every((event) => event && typeof event === 'object' && typeof event.eventId === 'string' && Number.isInteger(event.eventIndex))) return res.status(400).send('invalid acknowledgement')
-    return res.sendStatus((await acknowledgeOutbox(db, owner, events)) ? 204 : 409)
+    if (
+      typeof owner !== 'string' ||
+      !Array.isArray(events) ||
+      !events.every(
+        (event) =>
+          event &&
+          typeof event === 'object' &&
+          typeof event.eventId === 'string' &&
+          Number.isInteger(event.eventIndex)
+      )
+    )
+      return res.status(400).send('invalid acknowledgement')
+    return res.sendStatus(
+      (await acknowledgeOutbox(db, owner, events)) ? 204 : 409
+    )
   })
   app.post('/internal/outbox/v1/release', jsonParser, async (req, res) => {
     const { owner, events } = req.body
-    if (typeof owner !== 'string' || !Array.isArray(events) || !events.every((event) => event && typeof event === 'object' && typeof event.eventId === 'string' && Number.isInteger(event.eventIndex))) return res.status(400).send('invalid release')
+    if (
+      typeof owner !== 'string' ||
+      !Array.isArray(events) ||
+      !events.every(
+        (event) =>
+          event &&
+          typeof event === 'object' &&
+          typeof event.eventId === 'string' &&
+          Number.isInteger(event.eventIndex)
+      )
+    )
+      return res.status(400).send('invalid release')
     return res.sendStatus((await releaseOutbox(db, owner, events)) ? 204 : 409)
   })
   app.post('/internal/outbox/v1/state', jsonParser, async (req, res) => {
-    if (typeof req.body?.operationId !== 'string') return res.status(400).send('invalid operation')
+    if (typeof req.body?.operationId !== 'string')
+      return res.status(400).send('invalid operation')
     return res.json(await outboxState(db, req.body.operationId))
   })
 
   app.post('/internal/queue/remove-user', jsonParser, async (req, res) => {
-    if (!QUEUE_CALLBACK_SECRET || req.headers.authorization !== `Bearer ${QUEUE_CALLBACK_SECRET}`) {
+    if (
+      !QUEUE_CALLBACK_SECRET ||
+      req.headers.authorization !== `Bearer ${QUEUE_CALLBACK_SECRET}`
+    ) {
       res.status(401).send('invalid queue secret')
       return
     }
@@ -208,7 +254,12 @@ export function createApp({ db, sessionClientPromise }: Options) {
   app.get('/auth/logout', defaultHelmet, handlers.logout)
 
   app.delete('/auth/user', defaultHelmet, async (req, res) => {
-    if (!GATEWAY_ORIGIN_SECRET || req.headers['x-mzm-gateway-authorization'] !== `Bearer ${GATEWAY_ORIGIN_SECRET}`) return res.status(401).send('unauthorized')
+    if (
+      !GATEWAY_ORIGIN_SECRET ||
+      req.headers['x-mzm-gateway-authorization'] !==
+        `Bearer ${GATEWAY_ORIGIN_SECRET}`
+    )
+      return res.status(401).send('unauthorized')
     const data = await handlers.remove(req, db)
     res.set('x-mzm-operation-id', data.operationId)
     return response(data)(req, res)

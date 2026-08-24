@@ -5,7 +5,7 @@ import type { QueueEventType } from 'mzm-shared/src/lib/queue'
 import { TO_CLIENT_CMD, TO_SERVER_CMD } from 'mzm-shared/src/type/socket'
 import { createTest } from '../../test/testUtil.js'
 import { collections, RoomStatusEnum } from '../lib/db.js'
-import { initializeOutboxIndexes, type OutboxEvent } from '../lib/outbox.js'
+import { initializeOutboxIndexes, outbox } from '../lib/db/outbox.js'
 import {
   executeSocketOperation,
   type SocketOperationData
@@ -53,10 +53,9 @@ test('rooms:get emits the current room list to the requester', async ({
     roomOrder: [roomId.toHexString()],
     rooms: [{ id: roomId.toHexString() }]
   })
-  const event = await testDb
-    .db()
-    .collection<OutboxEvent>('queue_outbox')
-    .findOne({ _id: `${operation.operationId}:0` })
+  const event = await outbox(testDb).findOne({
+    _id: `${operation.operationId}:0`
+  })
   expect(event).toMatchObject({
     type: 'message',
     payload: {
@@ -121,10 +120,9 @@ test('messages:room emits the room history to an entered user', async ({
     room: roomId.toHexString(),
     messages: [{ id: messageId.toHexString(), message: 'hello' }]
   })
-  const event = await testDb
-    .db()
-    .collection<OutboxEvent>('queue_outbox')
-    .findOne({ _id: `${operation.operationId}:0` })
+  const event = await outbox(testDb).findOne({
+    _id: `${operation.operationId}:0`
+  })
   expect(event?.payload).toMatchObject({
     cmd: TO_CLIENT_CMD.MESSAGES_ROOM,
     user: userId.toHexString(),
@@ -173,10 +171,9 @@ test('rooms:enter adds the user and emits the entered room', async ({
   expect(
     await collections(testDb).enter.findOne({ userId, roomId })
   ).not.toBeNull()
-  const event = await testDb
-    .db()
-    .collection<OutboxEvent>('queue_outbox')
-    .findOne({ _id: `${operation.operationId}:0` })
+  const event = await outbox(testDb).findOne({
+    _id: `${operation.operationId}:0`
+  })
   expect(event?.payload).toMatchObject({
     cmd: TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS,
     user: userId.toHexString(),
@@ -353,9 +350,7 @@ test('every POST socket command has an explicit response and outbox contract', a
         ? operation.response.cmd
         : operation.response
     ).toBe(contract.response)
-    const events = await testDb
-      .db()
-      .collection<OutboxEvent>('queue_outbox')
+    const events = await outbox(testDb)
       .find({ operationId: new ObjectId(operation.operationId) })
       .sort({ eventIndex: 1 })
       .toArray()

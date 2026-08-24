@@ -83,7 +83,9 @@ test.each([
   '/INTERNAL/outbox/v1/claim',
   '/%69nternal/outbox/v1/claim'
 ])('public requests cannot reach the internal origin path %s', async (path) => {
-  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('origin reached'))
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(new Response('origin reached'))
 
   const response = await handleFetch(
     new Request(`https://api.mzm.dev${path}`, { method: 'POST', body: '{}' }),
@@ -140,6 +142,26 @@ test('gateway proxies the socket body and removes forged internal headers', asyn
   expect(await forwarded.text()).toBe('streamed-body')
 })
 
+function claimedOutboxEventFixture(
+  overrides: Partial<Record<string, unknown>> = {}
+) {
+  return {
+    _id: '0123456789abcdef01234567:0',
+    status: 'leased',
+    attempts: 1,
+    eventIndex: 0,
+    version: 1,
+    eventId: '0123456789abcdef01234567:0',
+    operationId: '0123456789abcdef01234567',
+    destination: 'backend',
+    type: 'message',
+    payload: {},
+    ordering: { key: 'message:abc', revision: 1 },
+    createdAt: '2026-07-14T00:00:00.000Z',
+    ...overrides
+  }
+}
+
 test('a failed queue send turns a committed mutation into a retryable 503', async () => {
   const env = createEnv()
   env.EVENTS.sendBatch.mockRejectedValueOnce(new Error('queue unavailable'))
@@ -151,22 +173,7 @@ test('a failed queue send turns a committed mutation into a retryable 503', asyn
       })
     )
     .mockResolvedValueOnce(
-      new Response(
-        JSON.stringify([
-          {
-            _id: '0123456789abcdef01234567:0',
-            eventIndex: 0,
-            version: 1,
-            eventId: '0123456789abcdef01234567:0',
-            operationId: '0123456789abcdef01234567',
-            destination: 'backend',
-            type: 'message',
-            payload: {},
-            ordering: { key: 'message:abc', revision: 1 },
-            createdAt: '2026-07-14T00:00:00.000Z'
-          }
-        ])
-      )
+      new Response(JSON.stringify([claimedOutboxEventFixture()]))
     )
 
   const response = await handleFetch(
@@ -181,6 +188,48 @@ test('a failed queue send turns a committed mutation into a retryable 503', asyn
     fetcher
   )
 
+  expect(env.EVENTS.sendBatch).toHaveBeenCalledOnce()
   expect(response.status).toBe(503)
   expect(response.headers.get('retry-after')).toBe('1')
+})
+
+test('a committed mutation is published to the queue and acknowledged', async () => {
+  const env = createEnv()
+  env.EVENTS.sendBatch.mockResolvedValueOnce(undefined)
+  const claimedEvent = claimedOutboxEventFixture()
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(
+      new Response('committed', {
+        headers: { 'x-mzm-operation-id': '0123456789abcdef01234567' }
+      })
+    )
+    .mockResolvedValueOnce(new Response(JSON.stringify([claimedEvent])))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify([])))
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ pending: 0, leased: 0, dispatched: 1 }))
+    )
+
+  const response = await handleFetch(
+    new Request('https://api.mzm.dev/api/socket', {
+      method: 'POST',
+      headers: {
+        'Idempotency-Key': 'a2b0d5c8-4473-4c36-8a9e-d08a52e4dbab'
+      },
+      body: 'streamed-body'
+    }),
+    env,
+    fetcher
+  )
+
+  expect(env.EVENTS.sendBatch).toHaveBeenCalledOnce()
+  expect(env.EVENTS.sendBatch).toHaveBeenCalledWith([{ body: claimedEvent }])
+  const ackRequest = new Request(fetcher.mock.calls[2][0])
+  expect(new URL(ackRequest.url).pathname).toBe('/internal/outbox/v1/ack')
+  expect(await ackRequest.json()).toMatchObject({
+    events: [{ eventId: claimedEvent._id, eventIndex: claimedEvent.eventIndex }]
+  })
+  expect(await response.text()).toBe('committed')
+  expect(response.status).toBe(200)
 })

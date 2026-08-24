@@ -1,24 +1,21 @@
-import type {} from 'mzm-shared/src/type/db'
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import {
   VoteStatusEnum,
   VoteTypeEnum,
   COLLECTION_NAMES,
-  type User,
-  type Room,
-  type Enter
+  type User
 } from 'mzm-shared/src/type/db'
+import type { Room, Enter } from 'mzm-shared/src/type/mongo'
 import { MONGODB_URI } from '../config.js'
 import { logger } from './logger.js'
-import { initializeOutboxIndexes } from './outbox.js'
+import { initializeOutboxIndexes } from './db/outbox.js'
 
 export {
   COLLECTION_NAMES,
   RoomStatusEnum,
-  type User,
-  type Room,
-  type Enter
+  type User
 } from 'mzm-shared/src/type/db'
+export type { Room, Enter } from 'mzm-shared/src/type/mongo'
 
 function initCollections(c: MongoClient) {
   const db = c.db()

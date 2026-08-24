@@ -2,10 +2,9 @@ import { MongoClient, ObjectId } from 'mongodb'
 import {
   COLLECTION_NAMES,
   RoomStatusEnum,
-  type User,
-  type Room,
-  type Enter
+  type User
 } from 'mzm-shared/src/type/db'
+import type { Room, Enter } from 'mzm-shared/src/type/mongo'
 
 export async function createSeeds(dbUser: string, userPassword: string) {
   const uri = `mongodb://${dbUser}:${userPassword}@localhost:27017/mzm`
@@ -22,7 +21,11 @@ export async function createSeeds(dbUser: string, userPassword: string) {
   client.close()
 }
 
-async function createEnterGeneral(userId: ObjectId, generalRoomId: ObjectId, client: MongoClient) {
+async function createEnterGeneral(
+  userId: ObjectId,
+  generalRoomId: ObjectId,
+  client: MongoClient
+) {
   const db = client.db('mzm')
 
   const existGeneral = await db
