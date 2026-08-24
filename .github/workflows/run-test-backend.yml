@@ -17,6 +17,33 @@ env:
 jobs:
   build:
     runs-on: ubuntu-latest
+    services:
+      mongo:
+        image: mongo:5
+        entrypoint: bash
+        command: >-
+          -c 'set -eu;
+          keyfile=/tmp/mongodb-keyfile;
+          umask 077;
+          printf "bXptLWNpLXJlcGxpY2Etc2V0LWtleQ==" > "$keyfile";
+          chown mongodb:mongodb "$keyfile";
+          gosu mongodb mongod --dbpath /data/db --bind_ip_all --port 27017 --fork --logpath /tmp/mongod-init.log;
+          until mongosh --quiet --host 127.0.0.1:27017 --eval "db.hello().ok" >/dev/null 2>&1; do sleep 1; done;
+          mongosh --quiet --host 127.0.0.1:27017 --eval "db.getSiblingDB(\"admin\").createUser({user:\"root\",pwd:\"password\",roles:[{role:\"root\",db:\"admin\"}]})";
+          mongosh --quiet --host 127.0.0.1:27017 --eval "db.getSiblingDB(\"admin\").shutdownServer()" || true;
+          exec gosu mongodb mongod --dbpath /data/db --bind_ip_all --replSet rs0 --auth --keyFile "$keyfile" --port 27017'
+        ports:
+          - 27017:27017
+        env:
+          MONGO_INITDB_ROOT_USERNAME: root
+          MONGO_INITDB_ROOT_PASSWORD: password
+        options: >-
+          --health-cmd "mongosh --quiet --username root --password password
+          --authenticationDatabase admin --eval 'db.hello().ok'"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 30
+
     strategy:
       matrix:
         node-version: [24.x]
@@ -28,15 +55,64 @@ jobs:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
       - name: Initialize MongoDB replica set
+        working-directory: packages/backend
         run: |
-          docker volume create mongodb-keyfile
-          docker run --rm --mount type=volume,source=mongodb-keyfile,target=/run/mongo-keyfile mongo:5 bash -ec 'umask 077; head -c 756 /dev/urandom | base64 > /run/mongo-keyfile/keyfile; chown mongodb:mongodb /run/mongo-keyfile/keyfile; chmod 400 /run/mongo-keyfile/keyfile'
-          docker run --detach --name mongodb --publish 27017:27017 --mount type=volume,source=mongodb-keyfile,target=/run/mongo-keyfile,readonly --env MONGO_INITDB_ROOT_USERNAME=root --env MONGO_INITDB_ROOT_PASSWORD=password mongo:5 mongod --replSet rs0 --bind_ip_all --keyFile /run/mongo-keyfile/keyfile
-          for _ in $(seq 1 60); do docker exec mongodb mongosh 'mongodb://root:password@localhost:27017/admin' --quiet --eval 'db.hello().ok' && break; sleep 1; done
-          docker exec mongodb mongosh 'mongodb://root:password@localhost:27017/admin' --quiet --eval 'db.hello().ok'
-          docker exec mongodb mongosh 'mongodb://root:password@localhost:27017/admin' --eval 'rs.initiate({_id:"rs0",members:[{_id:0,host:"localhost:27017"}]})'
-          for _ in $(seq 1 60); do docker exec mongodb mongosh 'mongodb://root:password@localhost:27017/admin?replicaSet=rs0' --quiet --eval 'if (db.hello().isWritablePrimary !== true) { quit(1) }' && exit 0; sleep 1; done
-          exit 1
+          node --input-type=module <<'EOF'
+          import { MongoClient } from 'mongodb'
+
+          const directUri = 'mongodb://root:password@127.0.0.1:27017/admin?directConnection=true'
+          const replicaSetUri = `${directUri}&replicaSet=rs0`
+          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
+
+          for (let attempt = 1; attempt <= 60; attempt++) {
+            const client = new MongoClient(directUri)
+            try {
+              await client.connect()
+              await client.db('admin').command({ hello: 1 })
+              await client.close()
+              break
+            } catch (error) {
+              await client.close().catch(() => undefined)
+              if (attempt === 60) throw error
+              await sleep(1000)
+            }
+          }
+
+          const initClient = new MongoClient(directUri)
+          await initClient.connect()
+          try {
+            try {
+              await initClient.db('admin').command({ replSetGetStatus: 1 })
+            } catch {
+              await initClient.db('admin').command({
+                replSetInitiate: {
+                  _id: 'rs0',
+                  members: [{ _id: 0, host: '127.0.0.1:27017' }]
+                }
+              })
+            }
+          } finally {
+            await initClient.close()
+          }
+
+          for (let attempt = 1; attempt <= 60; attempt++) {
+            const client = new MongoClient(replicaSetUri)
+            try {
+              await client.connect()
+              const hello = await client.db('admin').command({ hello: 1 })
+              if (hello.isWritablePrimary === true) {
+                await client.close()
+                process.exit(0)
+              }
+              await client.close()
+            } catch (error) {
+              await client.close().catch(() => undefined)
+              if (attempt === 60) throw error
+            }
+            await sleep(1000)
+          }
+          throw new Error('MongoDB replica set did not become writable primary')
+          EOF
       - run: npx concurrently "npm run build -w ${{ env.WORKSPACE_NAME }}" "npm run lint -w ${{ env.WORKSPACE_NAME }}" "npm run build:test -w ${{ env.WORKSPACE_NAME }}"
       - run: npm run test:ci -w ${{ env.WORKSPACE_NAME }}
         env:

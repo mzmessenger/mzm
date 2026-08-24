@@ -1,5 +1,3 @@
-import type { ObjectId } from 'mongodb'
-
 export const VoteStatusEnum = {
   CLOSE: 0,
   OPEN: 1
@@ -32,22 +30,9 @@ export type User = {
   roomOrder: string[]
 }
 
-export type Room = {
-  name: string
-  description?: string
-  createdBy: string
-  updatedBy?: ObjectId
-  icon?: {
-    key: string
-    version: string
-  }
-  status: (typeof RoomStatusEnum)[keyof typeof RoomStatusEnum]
-}
-
-export type Enter = {
-  roomId: ObjectId
-  userId: ObjectId
-  unreadCounter: number
-  replied: number
-  processedEventIds?: string[]
-}
+/*
+ * `Room` and `Enter` are deliberately NOT re-exported here: they need mongodb's
+ * `ObjectId` and live in `./mongo.js`. Re-exporting them would put mongodb back
+ * into the module graph of every browser and Worker build that reaches this
+ * file through `../api/universal.js`.
+ */

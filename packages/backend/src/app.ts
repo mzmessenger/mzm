@@ -16,10 +16,20 @@ import * as rooms from './handlers/rooms/index.js'
 import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
 import { connection } from './handlers/socket/connection.js'
-import { checkAccessToken, checkQueueSecret, createGatewayOriginCheck } from './middleware/index.js'
+import {
+  checkAccessToken,
+  checkQueueSecret,
+  createGatewayOriginCheck
+} from './middleware/index.js'
 import { handleQueueEvent } from './lib/consumer/index.js'
 import { GATEWAY_ORIGIN_SECRET } from './config.js'
-import { acknowledgeOutbox, claimOutbox, outboxState, releaseOutbox } from './lib/outbox.js'
+import {
+  acknowledgeOutbox,
+  claimOutbox,
+  outboxState,
+  releaseOutbox
+} from './lib/outbox.js'
+import { MAX_QUEUE_BATCH_MESSAGES } from 'mzm-shared/src/lib/outbox'
 import { executeSocketOperation } from './handlers/socketOperation.js'
 import { socketIdempotencyKey } from './lib/idempotency.js'
 
@@ -40,7 +50,11 @@ export function createApp({ db }: { db: MongoClient }) {
   icon.createRoute(app, { db, checkAccessToken })
 
   app.use('/internal/outbox/v1', (req, res, next) => {
-    if (!GATEWAY_ORIGIN_SECRET || req.headers['x-mzm-gateway-authorization'] !== `Bearer ${GATEWAY_ORIGIN_SECRET}`) {
+    if (
+      !GATEWAY_ORIGIN_SECRET ||
+      req.headers['x-mzm-gateway-authorization'] !==
+        `Bearer ${GATEWAY_ORIGIN_SECRET}`
+    ) {
       res.status(401).send('unauthorized')
       return
     }
@@ -48,21 +62,55 @@ export function createApp({ db }: { db: MongoClient }) {
   })
   app.post('/internal/outbox/v1/claim', jsonParser, async (req, res) => {
     const { owner, operationId, limit } = req.body
-    if (typeof owner !== 'string' || (operationId !== undefined && typeof operationId !== 'string') || !Number.isInteger(limit) || limit < 1 || limit > 100) return res.status(400).send('invalid claim')
+    if (
+      typeof owner !== 'string' ||
+      (operationId !== undefined && typeof operationId !== 'string') ||
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > MAX_QUEUE_BATCH_MESSAGES
+    )
+      return res.status(400).send('invalid claim')
     return res.json(await claimOutbox({ db, owner, operationId, limit }))
   })
   app.post('/internal/outbox/v1/ack', jsonParser, async (req, res) => {
     const { owner, events } = req.body
-    if (typeof owner !== 'string' || !Array.isArray(events) || !events.every((event) => event && typeof event === 'object' && typeof event.eventId === 'string' && Number.isInteger(event.eventIndex))) return res.status(400).send('invalid acknowledgement')
-    return res.sendStatus((await acknowledgeOutbox({ db, owner, events })) ? 204 : 409)
+    if (
+      typeof owner !== 'string' ||
+      !Array.isArray(events) ||
+      !events.every(
+        (event) =>
+          event &&
+          typeof event === 'object' &&
+          typeof event.eventId === 'string' &&
+          Number.isInteger(event.eventIndex)
+      )
+    )
+      return res.status(400).send('invalid acknowledgement')
+    return res.sendStatus(
+      (await acknowledgeOutbox({ db, owner, events })) ? 204 : 409
+    )
   })
   app.post('/internal/outbox/v1/release', jsonParser, async (req, res) => {
     const { owner, events } = req.body
-    if (typeof owner !== 'string' || !Array.isArray(events) || !events.every((event) => event && typeof event === 'object' && typeof event.eventId === 'string' && Number.isInteger(event.eventIndex))) return res.status(400).send('invalid release')
-    return res.sendStatus((await releaseOutbox({ db, owner, events })) ? 204 : 409)
+    if (
+      typeof owner !== 'string' ||
+      !Array.isArray(events) ||
+      !events.every(
+        (event) =>
+          event &&
+          typeof event === 'object' &&
+          typeof event.eventId === 'string' &&
+          Number.isInteger(event.eventIndex)
+      )
+    )
+      return res.status(400).send('invalid release')
+    return res.sendStatus(
+      (await releaseOutbox({ db, owner, events })) ? 204 : 409
+    )
   })
   app.post('/internal/outbox/v1/state', jsonParser, async (req, res) => {
-    if (typeof req.body?.operationId !== 'string') return res.status(400).send('invalid operation')
+    if (typeof req.body?.operationId !== 'string')
+      return res.status(400).send('invalid operation')
     return res.json(await outboxState(db, req.body.operationId))
   })
 
@@ -114,13 +162,24 @@ export function createApp({ db }: { db: MongoClient }) {
     }, 5000)
   })
 
-  app.post('/api/socket', checkAccessToken, checkGatewayOrigin, jsonParser, async (req, res) => {
-    const user = getRequestUserId(req)
-    const key = socketIdempotencyKey(req.headers['idempotency-key'])
-    const operation = await executeSocketOperation({ db, subject: user, idempotencyKey: key, data: req.body })
-    res.set('x-mzm-operation-id', operation.operationId)
-    return response(operation.response)(req, res)
-  })
+  app.post(
+    '/api/socket',
+    checkAccessToken,
+    checkGatewayOrigin,
+    jsonParser,
+    async (req, res) => {
+      const user = getRequestUserId(req)
+      const key = socketIdempotencyKey(req.headers['idempotency-key'])
+      const operation = await executeSocketOperation({
+        db,
+        subject: user,
+        idempotencyKey: key,
+        data: req.body
+      })
+      res.set('x-mzm-operation-id', operation.operationId)
+      return response(operation.response)(req, res)
+    }
+  )
 
   app.use(createErrorHandler(logger))
 

@@ -1,10 +1,13 @@
 import { expect } from 'vitest'
 import { createTest } from '../../test/testUtil.js'
-import { createSocketOperation, initializeOutboxIndexes } from './outbox.js'
+import { initializeOutboxIndexes } from './db/outbox.js'
+import { createSocketOperation } from './outbox.js'
 
 const test = await createTest(globalThis)
 
-test('createSocketOperation persists an empty socket response', async ({ testDb }) => {
+test('createSocketOperation persists an empty socket response', async ({
+  testDb
+}) => {
   await initializeOutboxIndexes(testDb)
 
   const operation = await createSocketOperation({

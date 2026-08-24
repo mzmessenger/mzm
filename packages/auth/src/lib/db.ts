@@ -1,7 +1,7 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI, MONGO_SESSION_URI } from '../config.js'
 import { logger } from './logger.js'
-import { initializeOutboxIndexes } from './outbox.js'
+import { initializeOutboxIndexes } from './db/outbox.js'
 
 export function collections(c: MongoClient) {
   if (!c) {
@@ -15,13 +15,12 @@ export function collections(c: MongoClient) {
   }
 }
 
-
 export async function createMongoClient() {
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,
-      deprecationErrors: true,
+      deprecationErrors: true
     }
   })
   await client.connect()
@@ -47,7 +46,7 @@ export async function sessionClient() {
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,
-      deprecationErrors: true,
+      deprecationErrors: true
     }
   })
   await client.connect()

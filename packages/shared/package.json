@@ -10,6 +10,7 @@
     "./src/lib/*": "./dist/src/lib/*.js",
     "./src/auth/*": "./dist/src/auth/*.js",
     "./src/type/db": "./dist/src/type/db.js",
+    "./src/type/mongo": "./dist/src/type/mongo.js",
     "./src/type/socket": "./dist/src/type/socket.js",
     "./src/type/api": "./dist/src/type/api.js",
     "./src/type/auth": "./dist/src/type/auth.js",
@@ -34,6 +35,7 @@
   "devDependencies": {
     "@types/jsonwebtoken": "^9.0.10",
     "eslint": "^9.39.4",
+    "mongodb": "^6.21.0",
     "typescript": "5.8.3",
     "typescript-eslint": "^8.59.4"
   }
