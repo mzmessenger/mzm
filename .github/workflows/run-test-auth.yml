@@ -20,26 +20,11 @@ jobs:
     services:
       mongo:
         image: mongo:5
-        entrypoint: bash
-        command: >-
-          -c 'set -eu;
-          keyfile=/tmp/mongodb-keyfile;
-          umask 077;
-          printf "bXptLWNpLXJlcGxpY2Etc2V0LWtleQ==" > "$keyfile";
-          chown mongodb:mongodb "$keyfile";
-          gosu mongodb mongod --dbpath /data/db --bind_ip_all --port 27017 --fork --logpath /tmp/mongod-init.log;
-          until mongosh --quiet --host 127.0.0.1:27017 --eval "db.hello().ok" >/dev/null 2>&1; do sleep 1; done;
-          mongosh --quiet --host 127.0.0.1:27017 --eval "db.getSiblingDB(\"admin\").createUser({user:\"root\",pwd:\"password\",roles:[{role:\"root\",db:\"admin\"}]})";
-          mongosh --quiet --host 127.0.0.1:27017 --eval "db.getSiblingDB(\"admin\").shutdownServer()" || true;
-          exec gosu mongodb mongod --dbpath /data/db --bind_ip_all --replSet rs0 --auth --keyFile "$keyfile" --port 27017'
+        command: --replSet rs0 --bind_ip_all
         ports:
           - 27017:27017
-        env:
-          MONGO_INITDB_ROOT_USERNAME: root
-          MONGO_INITDB_ROOT_PASSWORD: password
         options: >-
-          --health-cmd "mongosh --quiet --username root --password password
-          --authenticationDatabase admin --eval 'db.hello().ok'"
+          --health-cmd "mongosh --quiet --eval 'db.hello().ok'"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 30
@@ -60,7 +45,7 @@ jobs:
           node --input-type=module <<'EOF'
           import { MongoClient } from 'mongodb'
 
-          const directUri = 'mongodb://root:password@127.0.0.1:27017/admin?directConnection=true'
+          const directUri = 'mongodb://127.0.0.1:27017/admin?directConnection=true'
           const replicaSetUri = `${directUri}&replicaSet=rs0`
           const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
 
