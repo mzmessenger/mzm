@@ -103,8 +103,6 @@ jobs:
         env:
           CI: true
           TEST_MONGODB_PORT: 27017
-          TEST_MONGO_ROOT_USER: root
-          TEST_MONGO_ROOT_PASSWORD: password
       - name: test docker build
         uses: docker/build-push-action@v6
         with:
