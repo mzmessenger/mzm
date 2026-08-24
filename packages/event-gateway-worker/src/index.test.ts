@@ -1,4 +1,5 @@
 import { expect, test, vi } from 'vitest'
+import { MAX_QUEUE_EVENT_BYTES } from 'mzm-shared/src/lib/outbox'
 import worker, { handleFetch } from './index.js'
 
 function createEnv() {
@@ -231,5 +232,57 @@ test('a committed mutation is published to the queue and acknowledged', async ()
     events: [{ eventId: claimedEvent._id, eventIndex: claimedEvent.eventIndex }]
   })
   expect(await response.text()).toBe('committed')
+  expect(response.status).toBe(200)
+})
+
+test('claimed events outside the byte-limited batch are released', async () => {
+  const env = createEnv()
+  env.EVENTS.sendBatch.mockResolvedValueOnce(undefined)
+  const publishedEvent = claimedOutboxEventFixture()
+  const deferredEvent = claimedOutboxEventFixture({
+    _id: '0123456789abcdef01234568:1',
+    eventId: '0123456789abcdef01234568:1',
+    eventIndex: 1,
+    payload: { body: 'x'.repeat(MAX_QUEUE_EVENT_BYTES) }
+  })
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(
+      new Response('committed', {
+        headers: { 'x-mzm-operation-id': '0123456789abcdef01234567' }
+      })
+    )
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify([publishedEvent, deferredEvent]))
+    )
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify([])))
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ pending: 0, leased: 0, dispatched: 1 }))
+    )
+
+  const response = await handleFetch(
+    new Request('https://api.mzm.dev/api/socket', {
+      method: 'POST',
+      headers: {
+        'Idempotency-Key': 'a2b0d5c8-4473-4c36-8a9e-d08a52e4dbab'
+      },
+      body: 'streamed-body'
+    }),
+    env,
+    fetcher
+  )
+
+  expect(env.EVENTS.sendBatch).toHaveBeenCalledWith([{ body: publishedEvent }])
+  const releaseRequest = new Request(fetcher.mock.calls[2][0])
+  expect(new URL(releaseRequest.url).pathname).toBe(
+    '/internal/outbox/v1/release'
+  )
+  expect(await releaseRequest.json()).toMatchObject({
+    events: [
+      { eventId: deferredEvent._id, eventIndex: deferredEvent.eventIndex }
+    ]
+  })
   expect(response.status).toBe(200)
 })

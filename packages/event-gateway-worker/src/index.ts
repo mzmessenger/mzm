@@ -184,6 +184,23 @@ async function publishOperation(
       batch.push(event)
       bytes += eventBytes
     }
+    const deferred = events.slice(batch.length)
+    if (deferred.length > 0) {
+      const released = await internal(
+        originUrl,
+        '/internal/outbox/v1/release',
+        {
+          owner,
+          events: deferred.map((event) => ({
+            eventId: event._id,
+            eventIndex: event.eventIndex
+          }))
+        },
+        env,
+        fetcher
+      )
+      if (released !== null) throw new Error('outbox release failed')
+    }
     if (batch.length === 0) throw new Error('queue event too large')
     await env.EVENTS.sendBatch(batch.map((event) => ({ body: event })))
     const acknowledged = await internal(
