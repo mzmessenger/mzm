@@ -2,9 +2,8 @@ import type { TestProject } from 'vitest/node'
 import { MongoClient } from 'mongodb'
 import { getTestDbName, getTestDbParams } from './testUtil.js'
 
-const TEST_MONGO_ROOT_USER = process.env.TEST_MONGO_ROOT_USER ?? 'root'
-const TEST_MONGO_ROOT_PASSWORD =
-  process.env.TEST_MONGO_ROOT_PASSWORD ?? 'example'
+const TEST_MONGO_ROOT_USER = process.env.TEST_MONGO_ROOT_USER
+const TEST_MONGO_ROOT_PASSWORD = process.env.TEST_MONGO_ROOT_PASSWORD
 const VERBOSE = process.env.VERBOSE === 'true'
 
 export async function setup(project: TestProject): Promise<void> {
@@ -13,9 +12,11 @@ export async function setup(project: TestProject): Promise<void> {
   }
 
   const { userName, userPassword, host, port } = getTestDbParams()
-  const TEST_ROOT_MONGODB_URI = `mongodb://${encodeURIComponent(TEST_MONGO_ROOT_USER)}:${encodeURIComponent(
-    TEST_MONGO_ROOT_PASSWORD
-  )}@${host}:${port}/admin?directConnection=true&replicaSet=rs0`
+  const credentials =
+    TEST_MONGO_ROOT_USER && TEST_MONGO_ROOT_PASSWORD
+      ? `${encodeURIComponent(TEST_MONGO_ROOT_USER)}:${encodeURIComponent(TEST_MONGO_ROOT_PASSWORD)}@`
+      : ''
+  const TEST_ROOT_MONGODB_URI = `mongodb://${credentials}${host}:${port}/admin?directConnection=true&replicaSet=rs0`
 
   const rootClient = await MongoClient.connect(TEST_ROOT_MONGODB_URI)
 
