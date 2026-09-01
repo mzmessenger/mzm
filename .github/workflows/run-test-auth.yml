@@ -39,65 +39,9 @@ jobs:
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
-      - name: Initialize MongoDB replica set
-        working-directory: packages/auth
-        run: |
-          node --input-type=module <<'EOF'
-          import { MongoClient } from 'mongodb'
-
-          const directUri = 'mongodb://127.0.0.1:27017/admin?directConnection=true'
-          const replicaSetUri = `${directUri}&replicaSet=rs0`
-          const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms))
-
-          for (let attempt = 1; attempt <= 60; attempt++) {
-            const client = new MongoClient(directUri)
-            try {
-              await client.connect()
-              await client.db('admin').command({ hello: 1 })
-              await client.close()
-              break
-            } catch (error) {
-              await client.close().catch(() => undefined)
-              if (attempt === 60) throw error
-              await sleep(1000)
-            }
-          }
-
-          const initClient = new MongoClient(directUri)
-          await initClient.connect()
-          try {
-            try {
-              await initClient.db('admin').command({ replSetGetStatus: 1 })
-            } catch {
-              await initClient.db('admin').command({
-                replSetInitiate: {
-                  _id: 'rs0',
-                  members: [{ _id: 0, host: '127.0.0.1:27017' }]
-                }
-              })
-            }
-          } finally {
-            await initClient.close()
-          }
-
-          for (let attempt = 1; attempt <= 60; attempt++) {
-            const client = new MongoClient(replicaSetUri)
-            try {
-              await client.connect()
-              const hello = await client.db('admin').command({ hello: 1 })
-              if (hello.isWritablePrimary === true) {
-                await client.close()
-                process.exit(0)
-              }
-              await client.close()
-            } catch (error) {
-              await client.close().catch(() => undefined)
-              if (attempt === 60) throw error
-            }
-            await sleep(1000)
-          }
-          throw new Error('MongoDB replica set did not become writable primary')
-          EOF
+      - uses: ./.github/actions/initialize-mongodb-replica-set
+        with:
+          working-directory: packages/auth
       - run: npx concurrently "npm run build -w ${{ env.WORKSPACE_NAME }}" "npm run lint -w ${{ env.WORKSPACE_NAME }}" "npm run build:test -w ${{ env.WORKSPACE_NAME }}"
       - run: npm run test:ci -w ${{ env.WORKSPACE_NAME }}
         env:
