@@ -6,12 +6,10 @@ on:
       - 'packages/auth/**'
       - 'packages/shared/**'
       - 'packages/package.json'
-    branches: [ main ]
   pull_request:
     paths:
       - 'packages/auth/**'
       - 'packages/shared/**'
-    branches: [ main ]
 
 env:
   WORKSPACE_NAME: mzm-auth
@@ -20,47 +18,37 @@ jobs:
   build:
     runs-on: ubuntu-latest
     services:
-      mongodb:
+      mongo:
         image: mongo:5
+        command: --replSet rs0 --bind_ip_all
         ports:
           - 27017:27017
-        env:
-          MONGO_INITDB_ROOT_USERNAME: root
-          MONGO_INITDB_ROOT_PASSWORD: password
         options: >-
-          --health-cmd mongo
+          --health-cmd "mongosh --quiet --eval 'db.hello().ok'"
           --health-interval 10s
           --health-timeout 5s
-          --health-retries 5
-      redis:
-        image: redis
-        ports:
-          - 6379:6379
-        options: >-
-          --health-cmd "redis-cli ping"
-          --health-interval 10s
-          --health-timeout 5s
-          --health-retries 5
+          --health-retries 30
+
     strategy:
       matrix:
-        node-version: [22.x]
+        node-version: [24.x]
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci
+      - uses: ./.github/actions/initialize-mongodb-replica-set
+        with:
+          working-directory: packages/auth
       - run: npx concurrently "npm run build -w ${{ env.WORKSPACE_NAME }}" "npm run lint -w ${{ env.WORKSPACE_NAME }}" "npm run build:test -w ${{ env.WORKSPACE_NAME }}"
       - run: npm run test:ci -w ${{ env.WORKSPACE_NAME }}
         env:
           CI: true
-          TEST_MONGODB_PORT: ${{ job.services.mongodb.ports[27017] }}
-          TEST_MONGO_ROOT_USER: root
-          TEST_MONGO_ROOT_PASSWORD: password
-          TEST_REDIS_PORT: 6379
+          TEST_MONGODB_PORT: 27017
       - name: test docker build
-        uses: docker/build-push-action@v2
+        uses: docker/build-push-action@v6
         with:
           file: packages/auth/Dockerfile
           context: .

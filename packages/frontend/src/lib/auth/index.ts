@@ -165,7 +165,30 @@ async function _getAccessTokenFromIframe() {
   return res
 }
 
+function isLocalCrossSiteAuth() {
+  return (
+    location.hostname === 'localhost' &&
+    new URL(AUTH_URL_BASE).hostname.endsWith('.localhost')
+  )
+}
+
+async function redirectForLocalAccessToken() {
+  const instance = await getInstance()
+  const { code_challenge, code_verifier } = await instance.pkceChallenge()
+  savePkceChallenge({ code_challenge, code_verifier })
+  const query = new URLSearchParams([
+    ['code_challenge', code_challenge],
+    ['state', location.pathname],
+    ['redirect_uri', REDIRECT_URI]
+  ])
+  location.assign(`${AUTH_URL_BASE}/authorize?${query.toString()}`)
+  return await new Promise<never>(() => undefined)
+}
+
 export async function getAccessTokenFromIframe() {
+  if (isLocalCrossSiteAuth()) {
+    return await redirectForLocalAccessToken()
+  }
   let res: Awaited<ReturnType<typeof _getAccessTokenFromIframe>> = {
     success: false,
     status: 500
@@ -180,6 +203,7 @@ export async function getAccessTokenFromIframe() {
       if (e instanceof AuthorizationErrorResponse) {
         continue
       }
+      logger.warn('mzm:auth:restore failed', e)
       break
     }
   }

@@ -5,15 +5,15 @@ import type { Request } from 'express'
 import('./types.js')
 
 export function getTestDbName(suffix: string) {
-  return `mzm-auth-${suffix}`
+  return `mzm-backend-${suffix}`
 }
 
 export function getTestDbParams() {
   const TEST_MONGODB_HOST = process.env.TEST_MONGODB_HOST ?? 'localhost'
   const TEST_MONGODB_PORT = process.env.TEST_MONGODB_PORT ?? '27018'
 
-  const userName = 'mzm-auth-test'
-  const userPassword = 'mzm-auth-test-password'
+  const userName = 'mzm-backend-test'
+  const userPassword = 'mzm-backend-test-password'
 
   return {
     userName,
@@ -27,25 +27,16 @@ export async function createTest(context: typeof globalThis) {
   const { test } = await import('vitest')
   return test.extend<{
     testDb: Awaited<ReturnType<typeof getTestMongoClient>>
-    testRedis: Awaited<ReturnType<typeof getTestRedisClient>>
   }>({
     testDb: async ({}, use) => {
       const db = await getTestMongoClient(context)
       await use(db)
-    },
-    testRedis: async ({}, use) => {
-      const redis = await getTestRedisClient(context)
-      await use(redis)
     }
   })
 }
 
 export async function getTestMongoClient(context: typeof globalThis) {
   return context.testMongoClient
-}
-
-export async function getTestRedisClient(context: typeof globalThis) {
-  return context.testRedisClient
 }
 
 export async function dropCollection(client: MongoClient, name: string) {

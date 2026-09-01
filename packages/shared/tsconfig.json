@@ -6,11 +6,12 @@
     "sourceMap": true,
     "noImplicitAny": true,
     "esModuleInterop": true,
-    "module": "NodeNext",
+    "module": "nodenext",
     "target": "esnext",
     "skipLibCheck": true,
     "composite": true,
-    "forceConsistentCasingInFileNames": true
+    "forceConsistentCasingInFileNames": true,
+    "types": ["node"]
   },
   "exclude": ["node_modules", "**/*.test.ts", "dist", "vitest.config.ts"]
 }

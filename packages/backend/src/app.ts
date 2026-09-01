@@ -10,25 +10,33 @@ import {
   getRequestGithubUserName,
   getRequestTwitterUserName
 } from './lib/utils.js'
-import { type ExRedisClient } from './lib/redis.js'
 import { addUserResponse, closeUserResponse } from './lib/fetchStreaming.js'
 import { response } from 'mzm-shared/src/lib/wrap'
 import * as rooms from './handlers/rooms/index.js'
 import * as user from './handlers/users.js'
 import * as icon from './handlers/icon/index.js'
-import * as internal from './handlers/internal.js'
 import { connection } from './handlers/socket/connection.js'
-import { checkAccessToken } from './middleware/index.js'
+import {
+  checkAccessToken,
+  checkQueueSecret,
+  createGatewayOriginCheck
+} from './middleware/index.js'
+import { handleQueueEvent } from './lib/consumer/index.js'
+import { GATEWAY_ORIGIN_SECRET } from './config.js'
+import {
+  acknowledgeOutbox,
+  claimOutbox,
+  outboxState,
+  releaseOutbox
+} from './lib/outbox.js'
+import { MAX_QUEUE_BATCH_MESSAGES } from 'mzm-shared/src/lib/outbox'
+import { executeSocketOperation } from './handlers/socketOperation.js'
+import { socketIdempotencyKey } from './lib/idempotency.js'
 
 const jsonParser = express.json({ limit: '1mb' })
+const checkGatewayOrigin = createGatewayOriginCheck(GATEWAY_ORIGIN_SECRET)
 
-export function createApp({
-  db,
-  redis
-}: {
-  db: MongoClient
-  redis: ExRedisClient
-}) {
+export function createApp({ db }: { db: MongoClient }) {
   const app = express()
   app.use(helmet())
   app.use(
@@ -37,9 +45,84 @@ export function createApp({
     })
   )
 
-  rooms.createRoute(app, { db, redis, jsonParser, checkAccessToken })
+  rooms.createRoute(app, { db, jsonParser, checkAccessToken })
   user.createRoute(app, { db, jsonParser, checkAccessToken })
   icon.createRoute(app, { db, checkAccessToken })
+
+  app.use('/internal/outbox/v1', (req, res, next) => {
+    if (
+      !GATEWAY_ORIGIN_SECRET ||
+      req.headers['x-mzm-gateway-authorization'] !==
+        `Bearer ${GATEWAY_ORIGIN_SECRET}`
+    ) {
+      res.status(401).send('unauthorized')
+      return
+    }
+    next()
+  })
+  app.post('/internal/outbox/v1/claim', jsonParser, async (req, res) => {
+    const { owner, operationId, limit } = req.body
+    if (
+      typeof owner !== 'string' ||
+      (operationId !== undefined && typeof operationId !== 'string') ||
+      !Number.isInteger(limit) ||
+      limit < 1 ||
+      limit > MAX_QUEUE_BATCH_MESSAGES
+    )
+      return res.status(400).send('invalid claim')
+    return res.json(await claimOutbox({ db, owner, operationId, limit }))
+  })
+  app.post('/internal/outbox/v1/ack', jsonParser, async (req, res) => {
+    const { owner, events } = req.body
+    if (
+      typeof owner !== 'string' ||
+      !Array.isArray(events) ||
+      !events.every(
+        (event) =>
+          event &&
+          typeof event === 'object' &&
+          typeof event.eventId === 'string' &&
+          Number.isInteger(event.eventIndex)
+      )
+    )
+      return res.status(400).send('invalid acknowledgement')
+    return res.sendStatus(
+      (await acknowledgeOutbox({ db, owner, events })) ? 204 : 409
+    )
+  })
+  app.post('/internal/outbox/v1/release', jsonParser, async (req, res) => {
+    const { owner, events } = req.body
+    if (
+      typeof owner !== 'string' ||
+      !Array.isArray(events) ||
+      !events.every(
+        (event) =>
+          event &&
+          typeof event === 'object' &&
+          typeof event.eventId === 'string' &&
+          Number.isInteger(event.eventIndex)
+      )
+    )
+      return res.status(400).send('invalid release')
+    return res.sendStatus(
+      (await releaseOutbox({ db, owner, events })) ? 204 : 409
+    )
+  })
+  app.post('/internal/outbox/v1/state', jsonParser, async (req, res) => {
+    if (typeof req.body?.operationId !== 'string')
+      return res.status(400).send('invalid operation')
+    return res.json(await outboxState(db, req.body.operationId))
+  })
+
+  app.post(
+    '/internal/queue',
+    checkQueueSecret,
+    jsonParser,
+    async (req, res) => {
+      await handleQueueEvent({ db, event: req.body })
+      res.status(204).send()
+    }
+  )
 
   app.get('/api/socket', checkAccessToken, (req, res) => {
     const user = getRequestUserId(req)
@@ -79,10 +162,24 @@ export function createApp({
     }, 5000)
   })
 
-  app.post('/api/socket', checkAccessToken, jsonParser, async (req, res) => {
-    const data = await internal.socket(req, { db, redis })
-    return response(data)(req, res)
-  })
+  app.post(
+    '/api/socket',
+    checkAccessToken,
+    checkGatewayOrigin,
+    jsonParser,
+    async (req, res) => {
+      const user = getRequestUserId(req)
+      const key = socketIdempotencyKey(req.headers['idempotency-key'])
+      const operation = await executeSocketOperation({
+        db,
+        subject: user,
+        idempotencyKey: key,
+        data: req.body
+      })
+      res.set('x-mzm-operation-id', operation.operationId)
+      return response(operation.response)(req, res)
+    }
+  )
 
   app.use(createErrorHandler(logger))
 

@@ -17,10 +17,17 @@ async function createEnvToDir(dir: string, user: string, password: string) {
   const envBase = parseEnv(envStr) as Record<string, string>
   const env = {
     ...envBase,
-    MONGODB_URI: envBase.MONGODB_URI
-      .replace('[user]', user)
-      .replace('[password]', password)
+    MONGODB_URI: replaceCredentials(envBase.MONGODB_URI, user, password),
+    ...(envBase.MONGO_SESSION_URI === undefined
+      ? {}
+      : {
+          MONGO_SESSION_URI: replaceCredentials(envBase.MONGO_SESSION_URI, user, password)
+        })
   }
   const str = Object.entries(env).map(([key, value]) => `${key}=${value}`).join('\n')
   await writeFile(path.join(dir, '.env'), str)
+}
+
+function replaceCredentials(uri: string, user: string, password: string) {
+  return uri.replace('[user]', user).replace('[password]', password)
 }

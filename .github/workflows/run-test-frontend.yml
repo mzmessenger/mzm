@@ -6,12 +6,10 @@ on:
       - 'packages/frontend/**'
       - 'packages/shared/**'
       - 'packages/package.json'
-    branches: [ main ]
   pull_request:
     paths:
       - 'packages/frontend/**'
       - 'packages/shared/**'
-    branches: [ main ]
 
 env:
   WORKSPACE_NAME: mzm-frontend
@@ -21,11 +19,11 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        node-version: [22.x]
+        node-version: [24.x]
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
       - name: Use Node.js ${{ matrix.node-version }}
-        uses: actions/setup-node@v1
+        uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
       - run: npm ci

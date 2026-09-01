@@ -1,11 +1,5 @@
 import { vi, expect } from 'vitest'
 vi.mock('../lib/logger.js')
-vi.mock('../lib/redis.js', () => {
-  return {
-    lock: vi.fn(() => Promise.resolve(true)),
-    release: vi.fn()
-  }
-})
 
 import { ObjectId } from 'mongodb'
 import { createTest } from '../../test/testUtil.js'
@@ -21,8 +15,8 @@ import { initUser, getAllUserIdsInRoom } from './users.js'
 
 const test = await createTest(globalThis)
 
-test('initUser', async ({ testDb, testRedis }) => {
-  await initGeneral({ db: testDb, redis: testRedis })
+test('initUser', async ({ testDb }) => {
+  await initGeneral({ db: testDb })
 
   const userId = new ObjectId()
   const account = 'aaa'

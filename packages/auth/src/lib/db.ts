@@ -1,6 +1,7 @@
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import { MONGODB_URI, MONGO_SESSION_URI } from '../config.js'
 import { logger } from './logger.js'
+import { initializeOutboxIndexes } from './db/outbox.js'
 
 export function collections(c: MongoClient) {
   if (!c) {
@@ -14,18 +15,30 @@ export function collections(c: MongoClient) {
   }
 }
 
-
 export async function createMongoClient() {
   const client = new MongoClient(MONGODB_URI, {
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,
-      deprecationErrors: true,
+      deprecationErrors: true
     }
   })
   await client.connect()
+  await verifyTransactionSupport(client)
+  await initializeOutboxIndexes(client)
   logger.info('[db] connected mongodb')
   return client
+}
+
+export async function verifyTransactionSupport(client: MongoClient) {
+  const probe = client.db().collection<{ _id: ObjectId }>('transaction_probes')
+  const _id = new ObjectId()
+  await client.withSession(async (session) => {
+    await session.withTransaction(async () => {
+      await probe.insertOne({ _id }, { session })
+      await probe.deleteOne({ _id }, { session })
+    })
+  })
 }
 
 export async function sessionClient() {
@@ -33,7 +46,7 @@ export async function sessionClient() {
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,
-      deprecationErrors: true,
+      deprecationErrors: true
     }
   })
   await client.connect()

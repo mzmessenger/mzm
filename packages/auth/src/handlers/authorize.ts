@@ -114,19 +114,21 @@ const AuthorizationQuery = z.object({
 export function createAuthorize(db: MongoClient) {
   return async (req: Request, res: NonceResponse) => {
     const nonce = res.locals.nonce
+    const query = AuthorizationQuery.safeParse(req.query)
+    const redirectUri =
+      query.success && ALLOW_REDIRECT_URIS.includes(query.data.redirect_uri)
+        ? query.data.redirect_uri
+        : undefined
     try {
+      if (query.success === false) {
+        throw new BadRequest('invalid query')
+      }
+      if (!redirectUri) {
+        throw new BadRequest('invalid host')
+      }
       const { user } = req as PassportRequest
       if (!user) {
         throw new Unauthorized('unauthorized')
-      }
-      const query = AuthorizationQuery.safeParse(req.query)
-      if (query.success === false) {
-        logger.error({ label: 'authorize', error: query.error })
-        throw new BadRequest('invalid query')
-      }
-
-      if (!ALLOW_REDIRECT_URIS.includes(query.data.redirect_uri)) {
-        throw new BadRequest('invalid host')
       }
 
       const generateCode = await generateUniqAuthorizationCode(db)
@@ -146,6 +148,7 @@ export function createAuthorize(db: MongoClient) {
       const state = encodeURIComponent(query.data.state ?? '')
       const html = authorizeTemplate({
         targetOrigin: new URL(query.data.redirect_uri).origin,
+        redirectUri,
         code,
         state,
         nonce
@@ -153,7 +156,7 @@ export function createAuthorize(db: MongoClient) {
       return html
     } catch (e) {
       const status = isHttpError(e) ? e.status : 500
-      const html = authorizeErrorTemplate({ nonce, status })
+      const html = authorizeErrorTemplate({ nonce, status, redirectUri })
       return html
     }
   }

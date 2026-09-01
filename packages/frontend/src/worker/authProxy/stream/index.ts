@@ -3,6 +3,7 @@ import { sleep } from '../../../lib/util'
 import { logger } from '../../../lib/logger'
 import { incrementRecconectAttenmpts, initRecconect, isMax } from './reconnect'
 import { messages } from '../index'
+import { acceptEventId } from './dedup'
 
 const recconect = initRecconect()
 
@@ -10,6 +11,35 @@ let isConnected = false
 
 type Options = {
   getAccessToken: () => string
+}
+
+type RealtimeEnvelope = {
+  eventId: string
+  data: unknown
+}
+
+function subjectFromToken(token: string) {
+  const segment = token.split('.')[1]
+  if (!segment) {
+    return undefined
+  }
+  try {
+    const payload: unknown = JSON.parse(atob(segment.replace(/-/g, '+').replace(/_/g, '/')))
+    if (typeof payload !== 'object' || payload === null || !('user' in payload)) {
+      return undefined
+    }
+    const user = payload.user
+    if (typeof user !== 'object' || user === null || !('_id' in user) || typeof user._id !== 'string') {
+      return undefined
+    }
+    return user._id
+  } catch {
+    return undefined
+  }
+}
+
+function realtimeEnvelope(value: unknown): value is RealtimeEnvelope {
+  return typeof value === 'object' && value !== null && 'eventId' in value && typeof value.eventId === 'string' && 'data' in value
 }
 
 export async function consumeSocket(options: Options) {
@@ -56,7 +86,18 @@ async function _consumeSocket(options: Options) {
       continue
     }
     try {
-      const message = JSON.parse(value)
+      const message: unknown = JSON.parse(value)
+      if (realtimeEnvelope(message)) {
+        const subject = subjectFromToken(token)
+        if (!subject || !(await acceptEventId(subject, message.eventId))) {
+          continue
+        }
+        self.postMessage({
+          type: messages.message,
+          payload: message.data
+        })
+        continue
+      }
       self.postMessage({
         type: messages.message,
         payload: message
