@@ -98,6 +98,115 @@ test.each([
   expect(fetcher).not.toHaveBeenCalled()
 })
 
+test.each([
+  'https://auth.mzm.dev/.env',
+  'https://auth.mzm.dev/@fs/home/app/.env',
+  'https://api.mzm.dev/api/proc/self/environ',
+  'https://api.mzm.dev/graphql'
+])('unknown public path %s does not reach an origin', async (url) => {
+  const fetcher = vi.fn<typeof fetch>()
+
+  const response = await handleFetch(new Request(url), createEnv(), fetcher)
+
+  expect(response.status).toBe(404)
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
+test('unsupported public host does not default to the backend origin', async () => {
+  const fetcher = vi.fn<typeof fetch>()
+
+  const response = await handleFetch(
+    new Request('https://unknown.mzm.dev/api/rooms'),
+    createEnv(),
+    fetcher
+  )
+
+  expect(response.status).toBe(404)
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
+test.each([
+  ['https://auth.mzm.dev/authorize?redirect_uri=https%3A%2F%2Fmzm.dev', 'GET'],
+  ['https://auth.mzm.dev/auth/token', 'POST'],
+  ['https://auth.mzm.dev/AUTH/TOKEN', 'POST'],
+  ['https://auth.mzm.dev/authorize', 'HEAD'],
+  ['https://auth.mzm.dev/auth/token', 'OPTIONS'],
+  ['https://api.mzm.dev/api/rooms/search?query=test', 'GET'],
+  ['https://api.mzm.dev/API/ROOMS', 'GET'],
+  ['https://api.mzm.dev/api/rooms/room-id/users', 'GET'],
+  ['https://api.mzm.dev/api/icon/user/name%20with%20spaces', 'GET'],
+  ['https://api.mzm.dev/api/icon/rooms/room%20name/v1', 'GET'],
+  ['https://api.mzm.dev/api/icon/rooms/room%20name', 'POST'],
+  ['https://api.mzm.dev/api/socket', 'OPTIONS'],
+  ['https://api.mzm.dev/api/user/@me', 'PUT']
+])('known public path %s %s reaches its origin', async (url, method) => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+
+  const response = await handleFetch(
+    new Request(url, { method }),
+    createEnv(),
+    fetcher
+  )
+
+  expect(response.status).toBe(200)
+  expect(fetcher).toHaveBeenCalledOnce()
+})
+
+test.each([
+  'https://auth.mzm.dev//authorize',
+  'https://api.mzm.dev/api//rooms',
+  'https://api.mzm.dev/api/%2Frooms',
+  'https://api.mzm.dev/api/rooms/%2E%2E/users',
+  'https://api.mzm.dev/api/%73ocket',
+  'https://auth.mzm.dev/auth/%74oken'
+])(
+  'ambiguous or invalid public path %s does not reach an origin',
+  async (url) => {
+    const fetcher = vi.fn<typeof fetch>()
+
+    const response = await handleFetch(new Request(url), createEnv(), fetcher)
+
+    expect(response.status).toBe(404)
+    expect(fetcher).not.toHaveBeenCalled()
+  }
+)
+
+test.each([
+  ['https://auth.mzm.dev/authorize', 'POST'],
+  ['https://auth.mzm.dev/auth/token', 'GET'],
+  ['https://api.mzm.dev/api/icon/rooms/room%20name', 'GET'],
+  ['https://api.mzm.dev/api/rooms', 'DELETE']
+])('unsupported method %s %s does not reach an origin', async (url, method) => {
+  const fetcher = vi.fn<typeof fetch>()
+
+  const response = await handleFetch(
+    new Request(url, { method }),
+    createEnv(),
+    fetcher
+  )
+
+  expect(response.status).toBe(404)
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
+test('a trailing slash keeps socket mutation handling enabled', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+
+  await handleFetch(
+    new Request('https://api.mzm.dev/api/socket/', {
+      method: 'POST',
+      body: 'streamed-body'
+    }),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.headers.get('idempotency-key')).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  )
+})
+
 test('POST /api/socket replaces a malformed idempotency key', async () => {
   const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
   await handleFetch(
@@ -116,6 +225,41 @@ test('POST /api/socket replaces a malformed idempotency key', async () => {
   expect(forwarded.headers.get('idempotency-key')).toMatch(
     /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
   )
+})
+
+test('POST /api/socket preserves a valid hexadecimal idempotency key', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  const key = 'a2b0d5c8-4473-4c36-8a9e-d08a52e4dbab'
+
+  await handleFetch(
+    new Request('https://api.mzm.dev/api/socket', {
+      method: 'POST',
+      headers: { 'idempotency-key': key },
+      body: 'streamed-body'
+    }),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.headers.get('idempotency-key')).toBe(key)
+})
+
+test('DELETE /auth/user preserves a valid hexadecimal idempotency key', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  const key = 'a2b0d5c8-4473-4c36-8a9e-d08a52e4dbab'
+
+  await handleFetch(
+    new Request('https://auth.mzm.dev/auth/user', {
+      method: 'DELETE',
+      headers: { 'idempotency-key': key }
+    }),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.headers.get('idempotency-key')).toBe(key)
 })
 
 test('gateway proxies the socket body and removes forged internal headers', async () => {
