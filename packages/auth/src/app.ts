@@ -38,6 +38,7 @@ import {
   releaseOutbox
 } from './lib/outbox.js'
 import { MAX_QUEUE_BATCH_MESSAGES } from 'mzm-shared/src/lib/outbox'
+import { publicRoutePaths } from 'mzm-shared/src/api/public-routes'
 
 const jsonParser = express.json({ limit: '1mb' })
 
@@ -64,7 +65,7 @@ export function createApp({ db, sessionClientPromise }: Options) {
   app.use(passport.initialize())
   app.use(passport.session())
 
-  app.get('/', defaultHelmet, (_, res) => {
+  app.get(publicRoutePaths.auth.root, defaultHelmet, (_, res) => {
     res.status(200).send('ok')
   })
 
@@ -174,7 +175,7 @@ export function createApp({ db, sessionClientPromise }: Options) {
   )
 
   app.get(
-    '/authorize',
+    publicRoutePaths.auth.authorize,
     createNonceMiddleware,
     helmet({
       contentSecurityPolicy: {
@@ -202,20 +203,25 @@ export function createApp({ db, sessionClientPromise }: Options) {
   passport.serializeUser(handlers.createSerializeUser())
   passport.deserializeUser(handlers.createDeserializeUserHandler(db))
 
-  app.post('/auth/token', defaultHelmet, jsonParser, async (req, res) => {
-    const data = await authorizeHandlers.createTokenHandler(db)(req)
-    return response(data)(req, res)
-  })
+  app.post(
+    publicRoutePaths.auth.token,
+    defaultHelmet,
+    jsonParser,
+    async (req, res) => {
+      const data = await authorizeHandlers.createTokenHandler(db)(req)
+      return response(data)(req, res)
+    }
+  )
 
-  app.get('/auth/twitter', defaultHelmet, (req, res, next) => {
+  app.get(publicRoutePaths.auth.twitter, defaultHelmet, (req, res, next) => {
     oauthHandlers.oauthHandler(passport, 'twitter')(req, res, next)
   })
   app.get(
-    '/auth/twitter/callback',
+    publicRoutePaths.auth.twitterCallback,
     defaultHelmet,
     passport.authenticate('twitter', {
       keepSessionInfo: true,
-      failureRedirect: '/auth/error'
+      failureRedirect: publicRoutePaths.auth.error
     }),
     (req, res) => {
       oauthHandlers.oauthCallback(db)(
@@ -224,20 +230,20 @@ export function createApp({ db, sessionClientPromise }: Options) {
       )
     }
   )
-  app.delete('/auth/twitter', defaultHelmet, async (req, res) => {
+  app.delete(publicRoutePaths.auth.twitter, defaultHelmet, async (req, res) => {
     const data = await twitterHandlers.removeTwitter(req, db)
     return response(data)(req, res)
   })
 
-  app.get('/auth/github', defaultHelmet, (req, res, next) => {
+  app.get(publicRoutePaths.auth.github, defaultHelmet, (req, res, next) => {
     oauthHandlers.oauthHandler(passport, 'github')(req, res, next)
   })
   app.get(
-    '/auth/github/callback',
+    publicRoutePaths.auth.githubCallback,
     defaultHelmet,
     passport.authenticate('github', {
       keepSessionInfo: true,
-      failureRedirect: '/auth/error'
+      failureRedirect: publicRoutePaths.auth.error
     }),
     (req, res) => {
       oauthHandlers.oauthCallback(db)(
@@ -246,14 +252,14 @@ export function createApp({ db, sessionClientPromise }: Options) {
       )
     }
   )
-  app.delete('/auth/github', defaultHelmet, async (req, res) => {
+  app.delete(publicRoutePaths.auth.github, defaultHelmet, async (req, res) => {
     const data = await githubHandlers.removeGithub(req, db)
     return response(data)(req, res)
   })
 
-  app.get('/auth/logout', defaultHelmet, handlers.logout)
+  app.get(publicRoutePaths.auth.logout, defaultHelmet, handlers.logout)
 
-  app.delete('/auth/user', defaultHelmet, async (req, res) => {
+  app.delete(publicRoutePaths.auth.user, defaultHelmet, async (req, res) => {
     if (
       !GATEWAY_ORIGIN_SECRET ||
       req.headers['x-mzm-gateway-authorization'] !==
@@ -264,7 +270,7 @@ export function createApp({ db, sessionClientPromise }: Options) {
     res.set('x-mzm-operation-id', data.operationId)
     return response(data)(req, res)
   })
-  app.get('/auth/error', defaultHelmet, (_, res) =>
+  app.get(publicRoutePaths.auth.error, defaultHelmet, (_, res) =>
     res.redirect(ALLOW_REDIRECT_ORIGINS[0])
   )
 

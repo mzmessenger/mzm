@@ -7,6 +7,10 @@ import {
   MAX_QUEUE_EVENT_BYTES,
   type ClaimedOutboxEvent
 } from 'mzm-shared/src/lib/outbox'
+import {
+  publicRoutes,
+  type PublicRoute
+} from 'mzm-shared/src/api/public-routes'
 
 type GatewayEnv = {
   BACKEND_ORIGIN: string
@@ -21,35 +25,11 @@ type GatewayEnv = {
 const idempotencyKey =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
 
-const authGetPaths = new Set([
-  '/',
-  '/authorize',
-  '/auth/twitter',
-  '/auth/twitter/callback',
-  '/auth/github',
-  '/auth/github/callback',
-  '/auth/logout',
-  '/auth/error'
-])
-const authPostPaths = new Set(['/auth/token'])
-const authDeletePaths = new Set(['/auth/twitter', '/auth/github', '/auth/user'])
-
-const apiGetPaths = new Set([
-  '/api/socket',
-  '/api/rooms',
-  '/api/rooms/search',
-  '/api/user/@me'
-])
-const apiPostPaths = new Set(['/api/socket', '/api/rooms', '/api/icon/user'])
-const apiDeletePaths = new Set(['/api/rooms/enter'])
-const apiPutPaths = new Set(['/api/user/@me'])
-
-function isSocketMutation(request: Request) {
-  const url = new URL(request.url)
+function isSocketMutation(request: Request, url: URL, rawPathname: string) {
   return (
     request.method === 'POST' &&
     isApiRequest(url) &&
-    canonicalPublicPath(url) === '/api/socket'
+    canonicalPublicPath(rawPathname) === '/api/socket'
   )
 }
 
@@ -67,10 +47,23 @@ function originFor(url: URL, env: GatewayEnv) {
   return null
 }
 
-function isPublicInternalPath(url: URL) {
+function rawPathnameFromRequestUrl(rawUrl: string) {
+  const authorityStart = rawUrl.indexOf('://') + 3
+  const pathStart = rawUrl.indexOf('/', authorityStart)
+  if (pathStart === -1) return '/'
+
+  const queryStart = rawUrl.indexOf('?', pathStart)
+  const fragmentStart = rawUrl.indexOf('#', pathStart)
+  let pathEnd = rawUrl.length
+  if (queryStart !== -1) pathEnd = Math.min(pathEnd, queryStart)
+  if (fragmentStart !== -1) pathEnd = Math.min(pathEnd, fragmentStart)
+  return rawUrl.slice(pathStart, pathEnd) || '/'
+}
+
+function isPublicInternalPath(rawPathname: string) {
   let pathname: string
   try {
-    pathname = decodeURIComponent(url.pathname)
+    pathname = decodeURIComponent(rawPathname)
   } catch {
     return true
   }
@@ -90,9 +83,22 @@ function hasControlCharacter(value: string) {
   return false
 }
 
-function canonicalPublicPath(url: URL) {
-  const rawPathname = url.pathname
+function isDotPathSegment(segment: string) {
+  const normalized = segment.toLowerCase()
+  return (
+    normalized === '.' ||
+    normalized === '..' ||
+    normalized === '%2e' ||
+    normalized === '.%2e' ||
+    normalized === '%2e.' ||
+    normalized === '%2e%2e'
+  )
+}
+
+function canonicalPublicPath(rawPathname: string) {
   if (rawPathname.includes('//')) return null
+  if (rawPathname.split('/').some((segment) => isDotPathSegment(segment)))
+    return null
 
   let pathname: string
   try {
@@ -117,139 +123,64 @@ function canonicalPublicPath(url: URL) {
   return pathname
 }
 
-function isRoomUsersPath(pathname: string) {
-  const segments = pathname.split('/')
-  return (
-    segments.length === 5 &&
-    segments[1] === 'api' &&
-    segments[2] === 'rooms' &&
-    segments[3].length > 0 &&
-    segments[4] === 'users'
-  )
+function matchesRoutePattern(pattern: string, pathname: string) {
+  const patternSegments = pattern.split('/')
+  const pathSegments = pathname.split('/')
+  if (patternSegments.length !== pathSegments.length) return false
+  return patternSegments.every((segment, index) => {
+    if (segment.startsWith(':')) return pathSegments[index].length > 0
+    return segment === pathSegments[index]
+  })
 }
 
-function isUserIconPath(pathname: string) {
-  const segments = pathname.split('/')
-  return (
-    segments.length === 5 &&
-    segments[1] === 'api' &&
-    segments[2] === 'icon' &&
-    segments[3] === 'user' &&
-    segments[4].length > 0
-  )
+function findRoute(routes: readonly PublicRoute[], pathname: string) {
+  return routes.find((route) => {
+    return matchesRoutePattern(route.path, pathname)
+  })
 }
 
-function isUserIconVersionPath(pathname: string) {
-  const segments = pathname.split('/')
-  return (
-    segments.length === 6 &&
-    segments[1] === 'api' &&
-    segments[2] === 'icon' &&
-    segments[3] === 'user' &&
-    segments[4].length > 0 &&
-    segments[5].length > 0
-  )
+function findPublicRoute(url: URL, pathname: string) {
+  if (isAuthRequest(url)) return findRoute(publicRoutes.auth, pathname)
+  if (isApiRequest(url)) return findRoute(publicRoutes.api, pathname)
+  return undefined
 }
 
-function isRoomIconPath(pathname: string) {
-  const segments = pathname.split('/')
-  return (
-    segments.length === 5 &&
-    segments[1] === 'api' &&
-    segments[2] === 'icon' &&
-    segments[3] === 'rooms' &&
-    segments[4].length > 0
-  )
+function hasEncodedStaticPathSegment(rawPathname: string, routePath: string) {
+  const rawSegments = rawPathname.split('/')
+  const routeSegments = routePath.split('/')
+  return rawSegments.some((segment, index) => {
+    return segment.includes('%') && !routeSegments[index].startsWith(':')
+  })
 }
 
-function isRoomIconVersionPath(pathname: string) {
-  const segments = pathname.split('/')
-  return (
-    segments.length === 6 &&
-    segments[1] === 'api' &&
-    segments[2] === 'icon' &&
-    segments[3] === 'rooms' &&
-    segments[4].length > 0 &&
-    segments[5].length > 0
-  )
+function isRouteMethodAllowed(method: string, methods: readonly string[]) {
+  if (method === 'OPTIONS') return methods.length > 0
+  if (method === 'HEAD')
+    return methods.some((routeMethod) => routeMethod === 'GET')
+  return methods.some((routeMethod) => routeMethod === method)
 }
 
-function hasEncodedStaticPathSegment(url: URL, pathname: string) {
-  const rawSegments = url.pathname.split('/')
-  const dynamicSegments = new Set<number>()
-  if (isRoomUsersPath(pathname)) dynamicSegments.add(3)
-  if (isUserIconPath(pathname) || isUserIconVersionPath(pathname))
-    dynamicSegments.add(4)
-  if (isUserIconVersionPath(pathname)) dynamicSegments.add(5)
-  if (isRoomIconPath(pathname) || isRoomIconVersionPath(pathname))
-    dynamicSegments.add(4)
-  if (isRoomIconVersionPath(pathname)) dynamicSegments.add(5)
+function isPublicRequestAllowed(
+  request: Request,
+  url: URL,
+  rawPathname: string
+) {
+  if (isPublicInternalPath(rawPathname)) return false
 
-  for (let index = 0; index < rawSegments.length; index += 1) {
-    if (rawSegments[index].includes('%') && !dynamicSegments.has(index))
-      return true
-  }
-  return false
-}
-
-function isKnownAuthPath(method: string, pathname: string) {
-  if (method === 'OPTIONS') {
-    return (
-      authGetPaths.has(pathname) ||
-      authPostPaths.has(pathname) ||
-      authDeletePaths.has(pathname)
-    )
-  }
-  if (method === 'GET' || method === 'HEAD') {
-    return authGetPaths.has(pathname)
-  }
-  if (method === 'POST') return authPostPaths.has(pathname)
-  if (method === 'DELETE') return authDeletePaths.has(pathname)
-  return false
-}
-
-function isKnownApiGetPath(pathname: string) {
-  return (
-    apiGetPaths.has(pathname) ||
-    isRoomUsersPath(pathname) ||
-    isUserIconPath(pathname) ||
-    isUserIconVersionPath(pathname) ||
-    isRoomIconVersionPath(pathname)
-  )
-}
-
-function isKnownApiPath(method: string, pathname: string) {
-  const isKnownPath =
-    isKnownApiGetPath(pathname) ||
-    apiPostPaths.has(pathname) ||
-    apiDeletePaths.has(pathname) ||
-    apiPutPaths.has(pathname) ||
-    isRoomIconPath(pathname)
-
-  if (method === 'OPTIONS') return isKnownPath
-  if (method === 'GET') return isKnownApiGetPath(pathname)
-  if (method === 'HEAD') return isKnownApiGetPath(pathname)
-  if (method === 'POST') {
-    return apiPostPaths.has(pathname) || isRoomIconPath(pathname)
-  }
-  if (method === 'DELETE') return apiDeletePaths.has(pathname)
-  if (method === 'PUT') return apiPutPaths.has(pathname)
-  return false
-}
-
-function isPublicRequestAllowed(request: Request, url: URL) {
-  if (isPublicInternalPath(url)) return false
-
-  const pathname = canonicalPublicPath(url)
+  const pathname = canonicalPublicPath(rawPathname)
   if (!pathname) return false
-  if (hasEncodedStaticPathSegment(url, pathname)) return false
-  if (isAuthRequest(url)) return isKnownAuthPath(request.method, pathname)
-  if (isApiRequest(url)) return isKnownApiPath(request.method, pathname)
-  return false
+  const route = findPublicRoute(url, pathname)
+  if (!route) return false
+  if (hasEncodedStaticPathSegment(rawPathname, route.path)) return false
+  return isRouteMethodAllowed(request.method, route.methods)
 }
 
-function createOriginRequest(request: Request, env: GatewayEnv) {
-  const publicUrl = new URL(request.url)
+function createOriginRequest(
+  request: Request,
+  env: GatewayEnv,
+  publicUrl: URL,
+  rawPathname: string
+) {
   const originValue = originFor(publicUrl, env)
   if (!originValue) throw new Error('unsupported gateway host')
   const origin = new URL(originValue)
@@ -260,7 +191,7 @@ function createOriginRequest(request: Request, env: GatewayEnv) {
     }
   }
   if (
-    isEventMutation(request) &&
+    isEventMutation(request, publicUrl, rawPathname) &&
     !idempotencyKey.test(headers.get('idempotency-key') ?? '')
   ) {
     headers.set('idempotency-key', crypto.randomUUID())
@@ -280,19 +211,15 @@ function createOriginRequest(request: Request, env: GatewayEnv) {
     redirect: 'manual' as const,
     duplex: 'half'
   }
-  return new Request(
-    new URL(`${publicUrl.pathname}${publicUrl.search}`, origin),
-    init
-  )
+  return new Request(new URL(`${rawPathname}${publicUrl.search}`, origin), init)
 }
 
-function isEventMutation(request: Request) {
-  const url = new URL(request.url)
+function isEventMutation(request: Request, url: URL, rawPathname: string) {
   return (
-    isSocketMutation(request) ||
+    isSocketMutation(request, url, rawPathname) ||
     (request.method === 'DELETE' &&
       isAuthRequest(url) &&
-      canonicalPublicPath(url) === '/auth/user')
+      canonicalPublicPath(rawPathname) === '/auth/user')
   )
 }
 
@@ -302,13 +229,23 @@ export async function handleFetch(
   fetcher: typeof fetch = fetch
 ) {
   const publicUrl = new URL(request.url)
-  if (!isPublicRequestAllowed(request, publicUrl)) {
+  const rawPathname = rawPathnameFromRequestUrl(request.url)
+  if (!isPublicRequestAllowed(request, publicUrl, rawPathname)) {
     return new Response('not found', { status: 404 })
   }
-  const originRequest = createOriginRequest(request, env)
+  const originRequest = createOriginRequest(
+    request,
+    env,
+    publicUrl,
+    rawPathname
+  )
   const response = await fetcher(originRequest)
   const operationId = response.headers.get('x-mzm-operation-id')
-  if (operationId && isEventMutation(request) && response.ok) {
+  if (
+    operationId &&
+    isEventMutation(request, publicUrl, rawPathname) &&
+    response.ok
+  ) {
     try {
       await publishOperation(
         operationId,

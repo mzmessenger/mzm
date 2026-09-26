@@ -32,6 +32,7 @@ import {
 import { MAX_QUEUE_BATCH_MESSAGES } from 'mzm-shared/src/lib/outbox'
 import { executeSocketOperation } from './handlers/socketOperation.js'
 import { socketIdempotencyKey } from './lib/idempotency.js'
+import { publicRoutePaths } from 'mzm-shared/src/api/public-routes'
 
 const jsonParser = express.json({ limit: '1mb' })
 const checkGatewayOrigin = createGatewayOriginCheck(GATEWAY_ORIGIN_SECRET)
@@ -124,7 +125,7 @@ export function createApp({ db }: { db: MongoClient }) {
     }
   )
 
-  app.get('/api/socket', checkAccessToken, (req, res) => {
+  app.get(publicRoutePaths.api.socket, checkAccessToken, (req, res) => {
     const user = getRequestUserId(req)
 
     addUserResponse(user, res)
@@ -163,7 +164,7 @@ export function createApp({ db }: { db: MongoClient }) {
   })
 
   app.post(
-    '/api/socket',
+    publicRoutePaths.api.socket,
     checkAccessToken,
     checkGatewayOrigin,
     jsonParser,

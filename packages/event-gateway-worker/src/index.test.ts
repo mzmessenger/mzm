@@ -1,6 +1,28 @@
 import { expect, test, vi } from 'vitest'
 import { MAX_QUEUE_EVENT_BYTES } from 'mzm-shared/src/lib/outbox'
+import { publicRoutes } from 'mzm-shared/src/api/public-routes'
 import worker, { handleFetch } from './index.js'
+
+const manifestRouteCases = [
+  ...publicRoutes.auth.flatMap((route) =>
+    route.methods.map(
+      (method) =>
+        [
+          `https://auth.mzm.dev${route.path.replace(/:[^/]+/g, 'value')}`,
+          method
+        ] as const
+    )
+  ),
+  ...publicRoutes.api.flatMap((route) =>
+    route.methods.map(
+      (method) =>
+        [
+          `https://api.mzm.dev${route.path.replace(/:[^/]+/g, 'value')}`,
+          method
+        ] as const
+    )
+  )
+]
 
 function createEnv() {
   return {
@@ -9,6 +31,12 @@ function createEnv() {
     GATEWAY_ORIGIN_SECRET: 'gateway-secret',
     EVENTS: { send: vi.fn(), sendBatch: vi.fn() }
   }
+}
+
+function createRequestWithRawUrl(url: string, init?: RequestInit) {
+  const request = new Request(url, init)
+  Object.defineProperty(request, 'url', { value: url })
+  return request
 }
 
 test('POST /api/socket assigns an idempotency key without consuming its body', async () => {
@@ -99,6 +127,25 @@ test.each([
 })
 
 test.each([
+  'https://api.mzm.dev/internal/%2e%2e/api/socket',
+  'https://api.mzm.dev/api/rooms/%2e%2e/socket',
+  'https://auth.mzm.dev/x/%2e%2e/authorize'
+])(
+  'raw encoded dot path %s does not normalize into an allowed origin route',
+  async (url) => {
+    const fetcher = vi.fn<typeof fetch>()
+    const response = await handleFetch(
+      createRequestWithRawUrl(url),
+      createEnv(),
+      fetcher
+    )
+
+    expect(response.status).toBe(404)
+    expect(fetcher).not.toHaveBeenCalled()
+  }
+)
+
+test.each([
   'https://auth.mzm.dev/.env',
   'https://auth.mzm.dev/@fs/home/app/.env',
   'https://api.mzm.dev/api/proc/self/environ',
@@ -124,6 +171,22 @@ test('unsupported public host does not default to the backend origin', async () 
   expect(response.status).toBe(404)
   expect(fetcher).not.toHaveBeenCalled()
 })
+
+test.each(manifestRouteCases)(
+  'manifest route %s %s reaches its origin',
+  async (url, method) => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+
+    const response = await handleFetch(
+      new Request(url, { method }),
+      createEnv(),
+      fetcher
+    )
+
+    expect(response.status).toBe(200)
+    expect(fetcher).toHaveBeenCalledOnce()
+  }
+)
 
 test.each([
   ['https://auth.mzm.dev/authorize?redirect_uri=https%3A%2F%2Fmzm.dev', 'GET'],
@@ -152,11 +215,29 @@ test.each([
   expect(fetcher).toHaveBeenCalledOnce()
 })
 
+test('forwards an encoded dynamic segment without decoding it', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+
+  await handleFetch(
+    new Request('https://api.mzm.dev/api/icon/user/name%20with%20spaces'),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.url).toBe(
+    'https://backend.internal/api/icon/user/name%20with%20spaces'
+  )
+})
+
 test.each([
   'https://auth.mzm.dev//authorize',
   'https://api.mzm.dev/api//rooms',
   'https://api.mzm.dev/api/%2Frooms',
   'https://api.mzm.dev/api/rooms/%2E%2E/users',
+  'https://api.mzm.dev/api/rooms/a%2Fb/users',
+  'https://api.mzm.dev/api/icon/user/a%2Fb/v1',
+  'https://api.mzm.dev/api/%69con/user/name',
   'https://api.mzm.dev/api/%73ocket',
   'https://auth.mzm.dev/auth/%74oken'
 ])(
