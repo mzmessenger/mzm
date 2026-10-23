@@ -1,0 +1,22 @@
+{
+  "private": true,
+  "name": "mzm-event-gateway-worker",
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "start": "wrangler dev -c wrangler.local.jsonc -c ../queue-worker/wrangler.local.jsonc --local --port 8788 --ip 127.0.0.1 --persist-to ../../.wrangler/state --inspector-port 0",
+    "build": "wrangler deploy --dry-run --outdir dist",
+    "lint": "eslint -c eslint.config.mjs .",
+    "test": "vitest run",
+    "types": "wrangler types src/worker-configuration.d.ts"
+  },
+  "devDependencies": {
+    "@eslint/js": "^9.39.4",
+    "eslint": "^9.39.4",
+    "globals": "^17.6.0",
+    "typescript": "5.8.3",
+    "typescript-eslint": "^8.59.4",
+    "vitest": "^4.1.7",
+    "wrangler": "4.107.0"
+  }
+}

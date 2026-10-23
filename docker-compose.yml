@@ -1,4 +1,3 @@
-version: '3.5'
 services:
   web:
     image: nginx
@@ -13,6 +12,7 @@ services:
   mongo:
     container_name: mzm-mongo
     image: mongo:5
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--keyFile", "/run/mongo-keyfile/keyfile"]
     ports:
       - 27017:27017
     environment:
@@ -22,21 +22,81 @@ services:
       - ./.infra/mongo/mongod.conf:/etc/mongod.conf
       - ./.infra/mongo/db:/data/db
       - ./.infra/mongo/configdb:/data/configdb
+      - mongo-keyfile:/run/mongo-keyfile:ro
+    depends_on:
+      mongo-keyfile:
+        condition: service_completed_successfully
+  mongo-keyfile:
+    image: mongo:5
+    restart: "no"
+    entrypoint: ["bash", "-ec"]
+    command:
+      - |
+        if [ ! -s /run/mongo-keyfile/keyfile ]; then
+          umask 077
+          head -c 756 /dev/urandom | base64 > /run/mongo-keyfile/keyfile
+          chown mongodb:mongodb /run/mongo-keyfile/keyfile
+        fi
+        chmod 400 /run/mongo-keyfile/keyfile
+    volumes:
+      - mongo-keyfile:/run/mongo-keyfile
+  mongo-init:
+    image: mongo:5
+    depends_on:
+      - mongo
+    restart: "no"
+    entrypoint:
+      - bash
+      - -ec
+      - |
+        for _ in $(seq 1 60); do mongosh --host mongo --username root --password example --authenticationDatabase admin --eval 'db.hello().ok' >/dev/null 2>&1 && break; sleep 1; done
+        mongosh --host mongo --username root --password example --authenticationDatabase admin --eval 'db.hello().ok' >/dev/null
+        mongosh --host mongo --username root --password example --authenticationDatabase admin --eval 'try { rs.status() } catch (error) { rs.initiate({_id:"rs0",members:[{_id:0,host:"mongo:27017"}]}) }'
+        for _ in $(seq 1 60); do mongosh --host mongo --username root --password example --authenticationDatabase admin --eval 'if (db.hello().isWritablePrimary !== true) { quit(1) }' && exit 0; sleep 1; done
+        exit 1
   mongo-test:
     image: mongo:5
+    command: ["mongod", "--replSet", "rs0", "--bind_ip_all", "--keyFile", "/run/mongo-keyfile/keyfile"]
     ports:
       - 27018:27017
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     environment:
       MONGO_INITDB_ROOT_USERNAME: root
       MONGO_INITDB_ROOT_PASSWORD: example
-  redis:
-    image: redis:6
-    ports:
-      - 6379:6379
-  redis-test:
-    image: redis:6
-    ports:
-      - 6380:6379
+    volumes:
+      - mongo-test-keyfile:/run/mongo-keyfile:ro
+    depends_on:
+      mongo-test-keyfile:
+        condition: service_completed_successfully
+  mongo-test-keyfile:
+    image: mongo:5
+    restart: "no"
+    entrypoint: ["bash", "-ec"]
+    command:
+      - |
+        if [ ! -s /run/mongo-keyfile/keyfile ]; then
+          umask 077
+          head -c 756 /dev/urandom | base64 > /run/mongo-keyfile/keyfile
+          chown mongodb:mongodb /run/mongo-keyfile/keyfile
+        fi
+        chmod 400 /run/mongo-keyfile/keyfile
+    volumes:
+      - mongo-test-keyfile:/run/mongo-keyfile
+  mongo-test-init:
+    image: mongo:5
+    depends_on:
+      - mongo-test
+    restart: "no"
+    entrypoint:
+      - bash
+      - -ec
+      - |
+        for _ in $(seq 1 60); do mongosh --host mongo-test --username root --password example --authenticationDatabase admin --eval 'db.hello().ok' >/dev/null 2>&1 && break; sleep 1; done
+        mongosh --host mongo-test --username root --password example --authenticationDatabase admin --eval 'db.hello().ok' >/dev/null
+        mongosh --host mongo-test --username root --password example --authenticationDatabase admin --eval 'try { rs.status() } catch (error) { rs.initiate({_id:"rs0",members:[{_id:0,host:"host.docker.internal:27018"}]}) }'
+        for _ in $(seq 1 60); do mongosh --host mongo-test --username root --password example --authenticationDatabase admin --eval 'if (db.hello().isWritablePrimary !== true) { quit(1) }' && exit 0; sleep 1; done
+        exit 1
   elasticsearch:
     build:
       context: ./packages/infra/elasticsearch
@@ -50,3 +110,7 @@ services:
         hard: -1
     ports:
       - 9200:9200
+
+volumes:
+  mongo-keyfile:
+  mongo-test-keyfile:

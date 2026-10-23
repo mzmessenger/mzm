@@ -1,0 +1,513 @@
+import { expect, test, vi } from 'vitest'
+import { MAX_QUEUE_EVENT_BYTES } from 'mzm-shared/src/lib/outbox'
+import { publicRoutes } from 'mzm-shared/src/api/public-routes'
+import worker, { handleFetch } from './index.js'
+
+const manifestRouteCases = [
+  ...publicRoutes.auth.flatMap((route) =>
+    route.methods.map(
+      (method) =>
+        [
+          `https://auth.mzm.dev${route.path.replace(/:[^/]+/g, 'value')}`,
+          method
+        ] as const
+    )
+  ),
+  ...publicRoutes.api.flatMap((route) =>
+    route.methods.map(
+      (method) =>
+        [
+          `https://api.mzm.dev${route.path.replace(/:[^/]+/g, 'value')}`,
+          method
+        ] as const
+    )
+  )
+]
+
+function createEnv() {
+  return {
+    BACKEND_ORIGIN: 'https://backend.internal',
+    AUTH_ORIGIN: 'https://auth.internal',
+    GATEWAY_ORIGIN_SECRET: 'gateway-secret',
+    EVENTS: { send: vi.fn(), sendBatch: vi.fn() }
+  }
+}
+
+function createRequestWithRawUrl(url: string, init?: RequestInit) {
+  const request = new Request(url, init)
+  Object.defineProperty(request, 'url', { value: url })
+  return request
+}
+
+test('POST /api/socket assigns an idempotency key without consuming its body', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  await handleFetch(
+    new Request('http://api.localhost:8788/api/socket', {
+      method: 'POST',
+      body: 'streamed-body'
+    }),
+    createEnv(),
+    fetcher
+  )
+
+  expect(fetcher).toHaveBeenCalledOnce()
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.headers.get('idempotency-key')).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  )
+  expect(await forwarded.text()).toBe('streamed-body')
+})
+
+test('DELETE /auth/user assigns an idempotency key and forwards the gateway credential', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  const response = await handleFetch(
+    new Request('https://auth.mzm.dev/auth/user', { method: 'DELETE' }),
+    createEnv(),
+    fetcher
+  )
+
+  expect(response.status).toBe(200)
+  expect(fetcher).toHaveBeenCalledOnce()
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.url).toBe('https://auth.internal/auth/user')
+  expect(forwarded.headers.get('idempotency-key')).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  )
+  expect(forwarded.headers.get('x-mzm-gateway-authorization')).toBe(
+    'Bearer gateway-secret'
+  )
+})
+
+test('local auth requests use the auth origin', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  await handleFetch(
+    new Request('http://auth.localhost:8788/auth/user', { method: 'DELETE' }),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.url).toBe('https://auth.internal/auth/user')
+  expect(forwarded.headers.get('idempotency-key')).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  )
+})
+
+test('worker fetch uses the platform fetch implementation', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  vi.stubGlobal('fetch', fetcher)
+
+  const response = await worker.fetch(
+    new Request('http://api.localhost:8788/api/rooms'),
+    createEnv()
+  )
+
+  expect(response.status).toBe(200)
+  expect(fetcher).toHaveBeenCalledOnce()
+  vi.unstubAllGlobals()
+})
+
+test.each([
+  '/internal/outbox/v1/claim',
+  '/INTERNAL/outbox/v1/claim',
+  '/%69nternal/outbox/v1/claim'
+])('public requests cannot reach the internal origin path %s', async (path) => {
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValue(new Response('origin reached'))
+
+  const response = await handleFetch(
+    new Request(`https://api.mzm.dev${path}`, { method: 'POST', body: '{}' }),
+    createEnv(),
+    fetcher
+  )
+
+  expect(response.status).toBe(404)
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
+test.each([
+  'https://api.mzm.dev/internal/%2e%2e/api/socket',
+  'https://api.mzm.dev/api/rooms/%2e%2e/socket',
+  'https://auth.mzm.dev/x/%2e%2e/authorize'
+])(
+  'raw encoded dot path %s does not normalize into an allowed origin route',
+  async (url) => {
+    const fetcher = vi.fn<typeof fetch>()
+    const response = await handleFetch(
+      createRequestWithRawUrl(url),
+      createEnv(),
+      fetcher
+    )
+
+    expect(response.status).toBe(404)
+    expect(fetcher).not.toHaveBeenCalled()
+  }
+)
+
+test.each([
+  'https://auth.mzm.dev/.env',
+  'https://auth.mzm.dev/@fs/home/app/.env',
+  'https://api.mzm.dev/api/proc/self/environ',
+  'https://api.mzm.dev/graphql'
+])('unknown public path %s does not reach an origin', async (url) => {
+  const fetcher = vi.fn<typeof fetch>()
+
+  const response = await handleFetch(new Request(url), createEnv(), fetcher)
+
+  expect(response.status).toBe(404)
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
+test('unsupported public host does not default to the backend origin', async () => {
+  const fetcher = vi.fn<typeof fetch>()
+
+  const response = await handleFetch(
+    new Request('https://unknown.mzm.dev/api/rooms'),
+    createEnv(),
+    fetcher
+  )
+
+  expect(response.status).toBe(404)
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
+test.each(manifestRouteCases)(
+  'manifest route %s %s reaches its origin',
+  async (url, method) => {
+    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+
+    const response = await handleFetch(
+      new Request(url, { method }),
+      createEnv(),
+      fetcher
+    )
+
+    expect(response.status).toBe(200)
+    expect(fetcher).toHaveBeenCalledOnce()
+  }
+)
+
+test.each([
+  ['https://auth.mzm.dev/authorize?redirect_uri=https%3A%2F%2Fmzm.dev', 'GET'],
+  ['https://auth.mzm.dev/auth/token', 'POST'],
+  ['https://auth.mzm.dev/AUTH/TOKEN', 'POST'],
+  ['https://auth.mzm.dev/authorize', 'HEAD'],
+  ['https://auth.mzm.dev/auth/token', 'OPTIONS'],
+  ['https://api.mzm.dev/api/rooms/search?query=test', 'GET'],
+  ['https://api.mzm.dev/API/ROOMS', 'GET'],
+  ['https://api.mzm.dev/api/rooms/room-id/users', 'GET'],
+  ['https://api.mzm.dev/api/icon/user/name%20with%20spaces', 'GET'],
+  ['https://api.mzm.dev/api/icon/rooms/room%20name/v1', 'GET'],
+  ['https://api.mzm.dev/api/icon/rooms/room%20name', 'POST'],
+  ['https://api.mzm.dev/api/socket', 'OPTIONS'],
+  ['https://api.mzm.dev/api/user/@me', 'PUT']
+])('known public path %s %s reaches its origin', async (url, method) => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+
+  const response = await handleFetch(
+    new Request(url, { method }),
+    createEnv(),
+    fetcher
+  )
+
+  expect(response.status).toBe(200)
+  expect(fetcher).toHaveBeenCalledOnce()
+})
+
+test('forwards an encoded dynamic segment without decoding it', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+
+  await handleFetch(
+    new Request('https://api.mzm.dev/api/icon/user/name%20with%20spaces'),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.url).toBe(
+    'https://backend.internal/api/icon/user/name%20with%20spaces'
+  )
+})
+
+test.each([
+  'https://auth.mzm.dev//authorize',
+  'https://api.mzm.dev/api//rooms',
+  'https://api.mzm.dev/api/%2Frooms',
+  'https://api.mzm.dev/api/rooms/%2E%2E/users',
+  'https://api.mzm.dev/api/rooms/a%2Fb/users',
+  'https://api.mzm.dev/api/icon/user/a%2Fb/v1',
+  'https://api.mzm.dev/api/%69con/user/name',
+  'https://api.mzm.dev/api/%73ocket',
+  'https://auth.mzm.dev/auth/%74oken'
+])(
+  'ambiguous or invalid public path %s does not reach an origin',
+  async (url) => {
+    const fetcher = vi.fn<typeof fetch>()
+
+    const response = await handleFetch(new Request(url), createEnv(), fetcher)
+
+    expect(response.status).toBe(404)
+    expect(fetcher).not.toHaveBeenCalled()
+  }
+)
+
+test.each([
+  ['https://auth.mzm.dev/authorize', 'POST'],
+  ['https://auth.mzm.dev/auth/token', 'GET'],
+  ['https://api.mzm.dev/api/icon/rooms/room%20name', 'GET'],
+  ['https://api.mzm.dev/api/rooms', 'DELETE']
+])('unsupported method %s %s does not reach an origin', async (url, method) => {
+  const fetcher = vi.fn<typeof fetch>()
+
+  const response = await handleFetch(
+    new Request(url, { method }),
+    createEnv(),
+    fetcher
+  )
+
+  expect(response.status).toBe(404)
+  expect(fetcher).not.toHaveBeenCalled()
+})
+
+test('a trailing slash keeps socket mutation handling enabled', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+
+  await handleFetch(
+    new Request('https://api.mzm.dev/api/socket/', {
+      method: 'POST',
+      body: 'streamed-body'
+    }),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.headers.get('idempotency-key')).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  )
+})
+
+test('POST /api/socket replaces a malformed idempotency key', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  await handleFetch(
+    new Request('https://api.mzm.dev/api/socket', {
+      method: 'POST',
+      headers: {
+        'Idempotency-Key': 'malformed'
+      },
+      body: 'streamed-body'
+    }),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.headers.get('idempotency-key')).toMatch(
+    /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+  )
+})
+
+test('POST /api/socket preserves a valid hexadecimal idempotency key', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  const key = 'a2b0d5c8-4473-4c36-8a9e-d08a52e4dbab'
+
+  await handleFetch(
+    new Request('https://api.mzm.dev/api/socket', {
+      method: 'POST',
+      headers: { 'idempotency-key': key },
+      body: 'streamed-body'
+    }),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.headers.get('idempotency-key')).toBe(key)
+})
+
+test('DELETE /auth/user preserves a valid hexadecimal idempotency key', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  const key = 'a2b0d5c8-4473-4c36-8a9e-d08a52e4dbab'
+
+  await handleFetch(
+    new Request('https://auth.mzm.dev/auth/user', {
+      method: 'DELETE',
+      headers: { 'idempotency-key': key }
+    }),
+    createEnv(),
+    fetcher
+  )
+
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.headers.get('idempotency-key')).toBe(key)
+})
+
+test('gateway proxies the socket body and removes forged internal headers', async () => {
+  const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('ok'))
+  const response = await handleFetch(
+    new Request('https://api.mzm.dev/api/socket?x=1', {
+      method: 'POST',
+      headers: {
+        'Idempotency-Key': 'a2b0d5c8-4473-4c36-8a9e-d08a52e4dbab',
+        'X-MZM-Gateway-Authorization': 'Bearer forged'
+      },
+      body: 'streamed-body'
+    }),
+    createEnv(),
+    fetcher
+  )
+
+  expect(await response.text()).toBe('ok')
+  expect(fetcher).toHaveBeenCalledOnce()
+  const forwarded = new Request(fetcher.mock.calls[0][0])
+  expect(forwarded.url).toBe('https://backend.internal/api/socket?x=1')
+  expect(forwarded.headers.get('x-mzm-gateway-authorization')).toBe(
+    'Bearer gateway-secret'
+  )
+  expect(await forwarded.text()).toBe('streamed-body')
+})
+
+function claimedOutboxEventFixture(
+  overrides: Partial<Record<string, unknown>> = {}
+) {
+  return {
+    _id: '0123456789abcdef01234567:0',
+    status: 'leased',
+    attempts: 1,
+    eventIndex: 0,
+    version: 1,
+    eventId: '0123456789abcdef01234567:0',
+    operationId: '0123456789abcdef01234567',
+    destination: 'backend',
+    type: 'message',
+    payload: {},
+    ordering: { key: 'message:abc', revision: 1 },
+    createdAt: '2026-07-14T00:00:00.000Z',
+    ...overrides
+  }
+}
+
+test('a failed queue send turns a committed mutation into a retryable 503', async () => {
+  const env = createEnv()
+  env.EVENTS.sendBatch.mockRejectedValueOnce(new Error('queue unavailable'))
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(
+      new Response('committed', {
+        headers: { 'x-mzm-operation-id': '0123456789abcdef01234567' }
+      })
+    )
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify([claimedOutboxEventFixture()]))
+    )
+
+  const response = await handleFetch(
+    new Request('https://api.mzm.dev/api/socket', {
+      method: 'POST',
+      headers: {
+        'Idempotency-Key': 'a2b0d5c8-4473-4c36-8a9e-d08a52e4dbab'
+      },
+      body: 'streamed-body'
+    }),
+    env,
+    fetcher
+  )
+
+  expect(env.EVENTS.sendBatch).toHaveBeenCalledOnce()
+  expect(response.status).toBe(503)
+  expect(response.headers.get('retry-after')).toBe('1')
+})
+
+test('a committed mutation is published to the queue and acknowledged', async () => {
+  const env = createEnv()
+  env.EVENTS.sendBatch.mockResolvedValueOnce(undefined)
+  const claimedEvent = claimedOutboxEventFixture()
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(
+      new Response('committed', {
+        headers: { 'x-mzm-operation-id': '0123456789abcdef01234567' }
+      })
+    )
+    .mockResolvedValueOnce(new Response(JSON.stringify([claimedEvent])))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify([])))
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ pending: 0, leased: 0, dispatched: 1 }))
+    )
+
+  const response = await handleFetch(
+    new Request('https://api.mzm.dev/api/socket', {
+      method: 'POST',
+      headers: {
+        'Idempotency-Key': 'a2b0d5c8-4473-4c36-8a9e-d08a52e4dbab'
+      },
+      body: 'streamed-body'
+    }),
+    env,
+    fetcher
+  )
+
+  expect(env.EVENTS.sendBatch).toHaveBeenCalledOnce()
+  expect(env.EVENTS.sendBatch).toHaveBeenCalledWith([{ body: claimedEvent }])
+  const ackRequest = new Request(fetcher.mock.calls[2][0])
+  expect(new URL(ackRequest.url).pathname).toBe('/internal/outbox/v1/ack')
+  expect(await ackRequest.json()).toMatchObject({
+    events: [{ eventId: claimedEvent._id, eventIndex: claimedEvent.eventIndex }]
+  })
+  expect(await response.text()).toBe('committed')
+  expect(response.status).toBe(200)
+})
+
+test('claimed events outside the byte-limited batch are released', async () => {
+  const env = createEnv()
+  env.EVENTS.sendBatch.mockResolvedValueOnce(undefined)
+  const publishedEvent = claimedOutboxEventFixture()
+  const deferredEvent = claimedOutboxEventFixture({
+    _id: '0123456789abcdef01234568:1',
+    eventId: '0123456789abcdef01234568:1',
+    eventIndex: 1,
+    payload: { body: 'x'.repeat(MAX_QUEUE_EVENT_BYTES) }
+  })
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(
+      new Response('committed', {
+        headers: { 'x-mzm-operation-id': '0123456789abcdef01234567' }
+      })
+    )
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify([publishedEvent, deferredEvent]))
+    )
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(new Response(null, { status: 204 }))
+    .mockResolvedValueOnce(new Response(JSON.stringify([])))
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ pending: 0, leased: 0, dispatched: 1 }))
+    )
+
+  const response = await handleFetch(
+    new Request('https://api.mzm.dev/api/socket', {
+      method: 'POST',
+      headers: {
+        'Idempotency-Key': 'a2b0d5c8-4473-4c36-8a9e-d08a52e4dbab'
+      },
+      body: 'streamed-body'
+    }),
+    env,
+    fetcher
+  )
+
+  expect(env.EVENTS.sendBatch).toHaveBeenCalledWith([{ body: publishedEvent }])
+  const releaseRequest = new Request(fetcher.mock.calls[2][0])
+  expect(new URL(releaseRequest.url).pathname).toBe(
+    '/internal/outbox/v1/release'
+  )
+  expect(await releaseRequest.json()).toMatchObject({
+    events: [
+      { eventId: deferredEvent._id, eventIndex: deferredEvent.eventIndex }
+    ]
+  })
+  expect(response.status).toBe(200)
+})

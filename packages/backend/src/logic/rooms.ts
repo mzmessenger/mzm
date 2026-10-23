@@ -1,4 +1,9 @@
-import { ObjectId, type WithId, type MongoClient } from 'mongodb'
+import {
+  MongoServerError,
+  ObjectId,
+  type WithId,
+  type MongoClient
+} from 'mongodb'
 import {
   collections,
   RoomStatusEnum,
@@ -6,29 +11,11 @@ import {
   type Room
 } from '../lib/db.js'
 import { logger } from '../lib/logger.js'
-import { type ExRedisClient, lock, release } from '../lib/redis.js'
 import * as config from '../config.js'
 
-export async function initGeneral({
-  db,
-  redis
-}: {
-  db: MongoClient
-  redis: ExRedisClient
-}) {
-  const lockKey = config.lock.INIT_GENERAL_ROOM
-  const lockVal = new ObjectId().toHexString()
-  const locked = await lock(redis, lockKey, lockVal, 1000)
-
-  if (!locked) {
-    logger.info('[locked] initGeneral')
-    return
-  }
-
+export async function initGeneral({ db }: { db: MongoClient }) {
   await collections(db).rooms.updateOne(
-    {
-      name: config.room.GENERAL_ROOM_NAME
-    },
+    { name: config.room.GENERAL_ROOM_NAME },
     {
       $set: {
         name: config.room.GENERAL_ROOM_NAME,
@@ -38,8 +25,6 @@ export async function initGeneral({
     },
     { upsert: true }
   )
-
-  await release(redis, lockKey, lockVal)
 }
 
 export function isValidateRoomName(name: string): {
@@ -49,28 +34,16 @@ export function isValidateRoomName(name: string): {
   if (!name.trim()) {
     return { valid: false, reason: 'name is empty' }
   } else if (name.length > config.room.MAX_ROOM_NAME_LENGTH) {
-    return {
-      valid: false,
-      reason: `over ${config.room.MAX_ROOM_NAME_LENGTH}`
-    }
+    return { valid: false, reason: `over ${config.room.MAX_ROOM_NAME_LENGTH}` }
   } else if (name.length < config.room.MIN_ROOM_NAME_LENGTH) {
-    return {
-      valid: false,
-      reason: `less ${config.room.MAX_ROOM_NAME_LENGTH}`
-    }
+    return { valid: false, reason: `less ${config.room.MAX_ROOM_NAME_LENGTH}` }
   } else if (config.room.BANNED_ROOM_NAME.has(name)) {
-    return {
-      valid: false,
-      reason: `${name} is not valid`
-    }
+    return { valid: false, reason: `${name} is not valid` }
   } else if (
     config.room.BANNED_CHARS_REGEXP_IN_ROOM_NAME.test(name) ||
     config.room.BANNED_UNICODE_REGEXP_IN_ROOM_NAME.test(name)
   ) {
-    return {
-      valid: false,
-      reason: `banned chars`
-    }
+    return { valid: false, reason: 'banned chars' }
   }
   return { valid: true }
 }
@@ -81,19 +54,17 @@ export async function enterRoom(
   roomId: ObjectId
 ) {
   const enter: Enter = {
-    userId: userId,
-    roomId: roomId,
+    userId,
+    roomId,
     unreadCounter: 0,
     replied: 0
   }
 
   await Promise.all([
     collections(db).enter.findOneAndUpdate(
-      { userId: userId, roomId: roomId },
+      { userId, roomId },
       { $set: enter },
-      {
-        upsert: true
-      }
+      { upsert: true }
     ),
     collections(db).users.findOneAndUpdate(
       { _id: userId },
@@ -105,23 +76,12 @@ export async function enterRoom(
 export async function createRoom({
   userId,
   name,
-  db,
-  redis
+  db
 }: {
   db: MongoClient
-  redis: ExRedisClient
   userId: ObjectId
   name: string
 }): Promise<WithId<Room> | null> {
-  const lockKey = config.lock.CREATE_ROOM + ':' + name
-  const lockVal = new ObjectId().toHexString()
-  const locked = await lock(redis, lockKey, lockVal, 1000)
-
-  if (!locked) {
-    logger.info('[locked] createRoom:' + name)
-    return null
-  }
-
   const createdBy = userId.toHexString()
   const room: Pick<Room, 'name' | 'createdBy' | 'status'> = {
     name,
@@ -129,19 +89,26 @@ export async function createRoom({
     status: RoomStatusEnum.CLOSE
   }
 
-  const inserted = await collections(db).rooms.insertOne(room)
-  await enterRoom(db, userId, inserted.insertedId)
-
-  const id = inserted.insertedId.toHexString()
-  logger.info(`[room:create] ${name} (${id}) created by ${createdBy}`)
-
-  await release(redis, lockKey, lockVal)
-
-  return {
-    _id: inserted.insertedId,
-    name,
-    createdBy,
-    updatedBy: undefined,
-    status: RoomStatusEnum.CLOSE
+  let insertedId: ObjectId
+  try {
+    const inserted = await collections(db).rooms.insertOne(room)
+    insertedId = inserted.insertedId
+  } catch (error) {
+    if (error instanceof MongoServerError && error.code === 11000) {
+      const existing = await collections(db).rooms.findOne({ name, createdBy })
+      if (!existing) {
+        return null
+      }
+      await enterRoom(db, userId, existing._id)
+      return existing
+    }
+    throw error
   }
+
+  await enterRoom(db, userId, insertedId)
+
+  logger.info(
+    `[room:create] ${name} (${insertedId.toHexString()}) created by ${createdBy}`
+  )
+  return { _id: insertedId, ...room }
 }

@@ -5,26 +5,30 @@
     "packages/*"
   ],
   "scripts": {
+    "build": "npm run build --workspaces --if-present",
     "test": "npm test --workspaces --if-present",
+    "test:workers-manual": "node --test scripts/deploy-workers-manual.test.mjs",
+    "deploy:workers-manual": "bash scripts/deploy-workers-manual.sh",
+    "verify:workers-manual": "npm run test:workers-manual && npm run build -w packages/shared && npm run lint -w packages/queue-worker && npm test -w packages/queue-worker && npm run build -w packages/queue-worker && npm run lint -w packages/event-gateway-worker && npm test -w packages/event-gateway-worker && npm run build -w packages/event-gateway-worker",
     "lint": "npm run lint --workspaces --if-present",
     "format": "npm run format --workspaces --if-present",
-    "start": "concurrently -c \"auto\" npm:start:auth npm:start:socket npm:start:backend npm:start:frontend",
-    "start:without:frontend": "concurrently -c \"auto\" npm:start:auth npm:start:socket npm:start:backend",
+    "start": "concurrently -k -c \"auto\" npm:start:events npm:start:auth npm:start:backend npm:start:frontend",
+    "start:without:frontend": "concurrently -k -c \"auto\" npm:start:events npm:start:auth npm:start:backend",
+    "start:events": "npm run start:event-gateway",
     "start:auth": "npm start -w packages/auth",
-    "start:socket": "npm start -w packages/socket",
+    "start:event-gateway": "npm start -w packages/event-gateway-worker",
     "start:backend": "npm start -w packages/backend",
     "start:frontend": "npm start -w packages/frontend",
     "build-docker-image:auth": "docker build -f packages/auth/Dockerfile -t mzm-auth .",
-    "build-docker-image:socket": "docker build -f packages/socket/Dockerfile -t mzm-socket .",
     "build-docker-image:backend": "docker build -f packages/backend/Dockerfile -t mzm-backend .",
     "build-docker-image:frontend": "docker build -f packages/frontend/Dockerfile -t mzm-frontend ."
   },
   "devDependencies": {
-    "@types/express": "^5.0.0",
-    "@types/node": "^24.0.10",
-    "concurrently": "^9.0.1",
+    "@types/express": "^5.0.6",
+    "@types/node": "^25.9.1",
+    "concurrently": "^9.2.1",
     "mzm-auth": "^1.0.1",
     "mzm-frontend": "^0.0.0",
-    "prettier": "^3.5.1"
+    "prettier": "^3.8.3"
   }
 }

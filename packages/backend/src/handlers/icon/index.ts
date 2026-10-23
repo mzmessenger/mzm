@@ -18,6 +18,7 @@ import { logger } from '../../lib/logger.js'
 import * as config from '../../config.js'
 import { isValidMimetype, createVersion } from './internal.js'
 import { sizeOf } from '../../lib/image.js'
+import { publicRoutePaths } from 'mzm-shared/src/api/public-routes'
 
 const iconUpload = multer({
   dest: config.MULTER_PATH,
@@ -34,7 +35,7 @@ export function createRoute(
     checkAccessToken: typeof checkAccessTokenMiddleware
   }
 ) {
-  app.get('/api/icon/user/:account', async (req, res, next) => {
+  app.get(publicRoutePaths.api.userIconByAccount, async (req, res, next) => {
     const paramsParser = z.object({
       account: z.string().min(1)
     })
@@ -52,7 +53,7 @@ export function createRoute(
     res.set(headers)
     stream.pipe(res).on('error', (e) => next(e))
   })
-  app.get('/api/icon/user/:account/:version', async (req, res, next) => {
+  app.get(publicRoutePaths.api.userIconByVersion, async (req, res, next) => {
     const paramsParser = z.object({
       account: z.string().min(1),
       version: z.string()
@@ -72,7 +73,7 @@ export function createRoute(
     stream.pipe(res).on('error', (e) => next(e))
   })
   app.post(
-    '/api/icon/user',
+    publicRoutePaths.api.userIcon,
     checkAccessToken,
     iconUpload.single('icon'),
     async (req, res) => {
@@ -95,7 +96,7 @@ export function createRoute(
       )(req, res)
     }
   )
-  app.get('/api/icon/rooms/:roomName/:version', async (req, res, next) => {
+  app.get(publicRoutePaths.api.roomIconByVersion, async (req, res, next) => {
     const paramsParser = z.object({
       roomName: z.string().min(1),
       version: z.string().min(1)
@@ -115,7 +116,7 @@ export function createRoute(
     stream.pipe(res).on('error', (e) => next(e))
   })
   app.post(
-    '/api/icon/rooms/:roomName',
+    publicRoutePaths.api.roomIcon,
     checkAccessToken,
     iconUpload.single('icon'),
     async (req, res) => {

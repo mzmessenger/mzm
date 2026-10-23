@@ -14,7 +14,7 @@ import { default as jsonwebtoken } from 'jsonwebtoken'
 import { NextFunction, Request, Response } from 'express'
 import { HEADERS } from 'mzm-shared/src/auth/constants'
 import { verifyAccessToken } from 'mzm-shared/src/auth/index'
-import { checkAccessToken } from './index.js'
+import { checkAccessToken, createGatewayOriginCheck } from './index.js'
 
 test('checkAccessToken (success)', async () => {
   expect.assertions(3)
@@ -106,4 +106,34 @@ test('checkAccessToken verify token error', async () => {
     res as unknown as Response,
     vi.fn() as unknown as NextFunction
   )
+})
+
+test('gateway origin middleware rejects a request without its credential', () => {
+  const send = vi.fn()
+  const res = { status: vi.fn().mockReturnThis(), send, set: vi.fn() }
+  const next = vi.fn()
+
+  createGatewayOriginCheck('gateway-secret')(
+    { headers: {} } as Request,
+    res as unknown as Response,
+    next
+  )
+
+  expect(res.status).toHaveBeenCalledWith(401)
+  expect(send).toHaveBeenCalledWith('missing gateway origin authorization')
+  expect(next).not.toHaveBeenCalled()
+})
+
+test('gateway origin middleware accepts only its credential', () => {
+  const next = vi.fn()
+
+  createGatewayOriginCheck('gateway-secret')(
+    {
+      headers: { 'x-mzm-gateway-authorization': 'Bearer gateway-secret' }
+    } as unknown as Request,
+    {} as Response,
+    next
+  )
+
+  expect(next).toHaveBeenCalledOnce()
 })

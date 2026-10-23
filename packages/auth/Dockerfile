@@ -24,4 +24,4 @@ COPY --from=builder /usr/app/packages/auth/dist/ packages/auth/dist/
 RUN npm install --omit=dev --no-audit --no-progress --silent -w mzm-auth -w mzm-shared
 
 ENV NODE_ENV=production
-CMD [ "node", "packages/auth/dist/server.js" ]
+CMD [ "node", "packages/auth/dist/src/server.js" ]
