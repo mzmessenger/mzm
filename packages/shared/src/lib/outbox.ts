@@ -203,7 +203,7 @@ function isToClientPayload(value: unknown): value is ToClientType {
       return (
         isOptionalString(value.user) &&
         typeof value.roomId === 'string' &&
-        typeof value.description === 'string'
+        typeof value.descrioption === 'string'
       )
     default:
       return false

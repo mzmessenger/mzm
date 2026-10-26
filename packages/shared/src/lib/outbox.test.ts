@@ -19,7 +19,7 @@ function claimedOutboxEventFixture(
     operationId: '0123456789abcdef01234567',
     eventIndex: 0,
     destination: 'backend',
-    type: 'message',
+    type: 'unread',
     payload: { roomId: '0123456789abcdef01234567', messageId: 'abcdef0123456789abcdef01' },
     ordering: { key: 'message:abc', revision: 1 },
     createdAt: '2026-07-14T00:00:00.000Z',

@@ -525,7 +525,24 @@ test('claimed events outside the byte-limited batch are released', async () => {
     _id: '0123456789abcdef01234568:1',
     eventId: '0123456789abcdef01234568:1',
     eventIndex: 1,
-    payload: { body: 'x'.repeat(MAX_QUEUE_EVENT_BYTES) }
+    type: 'message',
+    payload: {
+      user: null,
+      cmd: 'message:receive',
+      message: {
+        id: 'abcdef0123456789abcdef01',
+        userId: '0123456789abcdef01234567',
+        message: 'x'.repeat(MAX_QUEUE_EVENT_BYTES),
+        iine: 0,
+        updated: false,
+        removed: false,
+        createdAt: '2026-07-14T00:00:00.000Z',
+        updatedAt: null,
+        userAccount: 'example',
+        icon: null
+      },
+      room: '0123456789abcdef01234567'
+    }
   })
   const fetcher = vi
     .fn<typeof fetch>()
