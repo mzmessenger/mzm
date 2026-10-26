@@ -380,15 +380,29 @@ function claimedOutboxEventFixture(
     eventId: '0123456789abcdef01234567:0',
     operationId: '0123456789abcdef01234567',
     destination: 'backend',
-    type: 'message',
-    payload: {},
+    type: 'unread',
+    payload: { roomId: '0123456789abcdef01234567', messageId: 'abcdef0123456789abcdef01' },
     ordering: { key: 'message:abc', revision: 1 },
     createdAt: '2026-07-14T00:00:00.000Z',
     ...overrides
   }
 }
 
-test('a failed queue send turns a committed mutation into a retryable 503', async () => {
+function queueEventBodyFixture(event: ReturnType<typeof claimedOutboxEventFixture>) {
+  return {
+    version: event.version,
+    eventId: event.eventId,
+    operationId: event.operationId,
+    eventIndex: event.eventIndex,
+    destination: event.destination,
+    type: event.type,
+    payload: event.payload,
+    ordering: event.ordering,
+    createdAt: event.createdAt
+  }
+}
+
+test('a failed immediate publish still acknowledges the committed mutation', async () => {
   const env = createEnv()
   env.EVENTS.sendBatch.mockRejectedValueOnce(new Error('queue unavailable'))
   const fetcher = vi
@@ -415,8 +429,9 @@ test('a failed queue send turns a committed mutation into a retryable 503', asyn
   )
 
   expect(env.EVENTS.sendBatch).toHaveBeenCalledOnce()
-  expect(response.status).toBe(503)
-  expect(response.headers.get('retry-after')).toBe('1')
+  expect(response.status).toBe(200)
+  expect(response.headers.get('retry-after')).toBeNull()
+  expect(await response.text()).toBe('committed')
 })
 
 test('a committed mutation is published to the queue and acknowledged', async () => {
@@ -450,7 +465,9 @@ test('a committed mutation is published to the queue and acknowledged', async ()
   )
 
   expect(env.EVENTS.sendBatch).toHaveBeenCalledOnce()
-  expect(env.EVENTS.sendBatch).toHaveBeenCalledWith([{ body: claimedEvent }])
+  expect(env.EVENTS.sendBatch).toHaveBeenCalledWith([
+    { body: queueEventBodyFixture(claimedEvent) }
+  ])
   const ackRequest = new Request(fetcher.mock.calls[2][0])
   expect(new URL(ackRequest.url).pathname).toBe('/internal/outbox/v1/ack')
   expect(await ackRequest.json()).toMatchObject({
@@ -458,6 +475,46 @@ test('a committed mutation is published to the queue and acknowledged', async ()
   })
   expect(await response.text()).toBe('committed')
   expect(response.status).toBe(200)
+})
+
+test('backs off between empty claims while the operation remains pending', async () => {
+  const env = createEnv()
+  const fetcher = vi
+    .fn<typeof fetch>()
+    .mockResolvedValueOnce(
+      new Response('committed', {
+        headers: { 'x-mzm-operation-id': '0123456789abcdef01234567' }
+      })
+    )
+    .mockResolvedValueOnce(new Response(JSON.stringify([])))
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ pending: 1, leased: 0, dispatched: 0 }))
+    )
+    .mockResolvedValueOnce(new Response(JSON.stringify([])))
+    .mockResolvedValueOnce(
+      new Response(JSON.stringify({ pending: 0, leased: 0, dispatched: 1 }))
+    )
+
+  vi.useFakeTimers()
+  try {
+    const responsePromise = handleFetch(
+      new Request('https://api.mzm.dev/api/socket', {
+        method: 'POST',
+        body: 'streamed-body'
+      }),
+      env,
+      fetcher
+    )
+
+    await vi.advanceTimersByTimeAsync(0)
+    expect(fetcher).toHaveBeenCalledTimes(3)
+    await vi.advanceTimersByTimeAsync(100)
+
+    expect((await responsePromise).status).toBe(200)
+    expect(fetcher).toHaveBeenCalledTimes(5)
+  } finally {
+    vi.useRealTimers()
+  }
 })
 
 test('claimed events outside the byte-limited batch are released', async () => {
@@ -499,7 +556,9 @@ test('claimed events outside the byte-limited batch are released', async () => {
     fetcher
   )
 
-  expect(env.EVENTS.sendBatch).toHaveBeenCalledWith([{ body: publishedEvent }])
+  expect(env.EVENTS.sendBatch).toHaveBeenCalledWith([
+    { body: queueEventBodyFixture(publishedEvent) }
+  ])
   const releaseRequest = new Request(fetcher.mock.calls[2][0])
   expect(new URL(releaseRequest.url).pathname).toBe(
     '/internal/outbox/v1/release'

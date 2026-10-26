@@ -17,7 +17,6 @@ export type ConsumerReceipt = {
   eventId: string
   processedAt: Date
 }
-export type ConsumerRevision = { _id: string; revision: number }
 export type ProducerRevision = { _id: string; revision: number }
 export type Operation = {
   _id: ObjectId
@@ -36,10 +35,6 @@ export function outbox(db: MongoClient) {
 
 export function consumerReceipts(db: MongoClient) {
   return db.db().collection<ConsumerReceipt>('queue_consumer_receipts')
-}
-
-export function consumerRevisions(db: MongoClient) {
-  return db.db().collection<ConsumerRevision>('queue_consumer_revisions')
 }
 
 export function producerRevisions(db: MongoClient) {
@@ -73,7 +68,6 @@ export async function initializeOutboxIndexes(db: MongoClient) {
 export type OutboxCollections = {
   outbox: Collection<OutboxEvent>
   consumerReceipts: Collection<ConsumerReceipt>
-  consumerRevisions: Collection<ConsumerRevision>
   producerRevisions: Collection<ProducerRevision>
   operations: Collection<Operation>
 }
@@ -82,7 +76,6 @@ export function outboxCollections(db: MongoClient): OutboxCollections {
   return {
     outbox: outbox(db),
     consumerReceipts: consumerReceipts(db),
-    consumerRevisions: consumerRevisions(db),
     producerRevisions: producerRevisions(db),
     operations: operations(db)
   }

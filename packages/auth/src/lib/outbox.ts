@@ -1,5 +1,6 @@
 import { ObjectId, type MongoClient } from 'mongodb'
 import { createHash } from 'node:crypto'
+import { Conflict } from 'mzm-shared/src/lib/errors'
 import { foldOutboxState } from 'mzm-shared/src/lib/outbox'
 
 /** How long a claim holds a row before another gateway may steal the lease. */
@@ -31,7 +32,7 @@ export async function createRemoveUserOperation(
   })
   if (existing) {
     if (existing.requestHash !== requestHash)
-      throw new Error('idempotency key reuse conflict')
+      throw new Conflict('idempotency key reuse conflict')
     return existing._id.toHexString()
   }
   const operationId = new ObjectId()
