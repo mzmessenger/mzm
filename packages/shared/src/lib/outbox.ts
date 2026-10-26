@@ -1,4 +1,5 @@
 import type { QueueEventPayload, QueueEventType } from './queue.js'
+import { TO_CLIENT_CMD, type MessageType, type ToClientType } from '../type/socket.js'
 
 export const OUTBOX_VERSION = 1 as const
 export const MAX_QUEUE_BATCH_MESSAGES = 100
@@ -60,6 +61,171 @@ export function isOutboxStatus(value: unknown): value is OutboxStatus {
   return OUTBOX_STATUSES.includes(value as OutboxStatus)
 }
 
+function isFiniteNumber(value: unknown): value is number {
+  return typeof value === 'number' && Number.isFinite(value)
+}
+
+function isOptionalString(value: unknown) {
+  return value === undefined || typeof value === 'string'
+}
+
+function isNullableString(value: unknown) {
+  return value === null || typeof value === 'string'
+}
+
+function isStringArray(value: unknown): value is string[] {
+  return Array.isArray(value) && value.every((item) => typeof item === 'string')
+}
+
+function isVoteAnswer(value: unknown) {
+  return (
+    isRecord(value) &&
+    isFiniteNumber(value.answer) &&
+    isFiniteNumber(value.index) &&
+    typeof value.userId === 'string' &&
+    typeof value.userAccount === 'string' &&
+    isNullableString(value.icon)
+  )
+}
+
+function isMessageVote(value: unknown) {
+  return (
+    isRecord(value) &&
+    Array.isArray(value.questions) &&
+    value.questions.every(
+      (question) => isRecord(question) && typeof question.text === 'string'
+    ) &&
+    Array.isArray(value.answers) &&
+    value.answers.every(isVoteAnswer) &&
+    (value.status === 0 || value.status === 1)
+  )
+}
+
+function isMessage(value: unknown): value is MessageType {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.userId === 'string' &&
+    typeof value.message === 'string' &&
+    isFiniteNumber(value.iine) &&
+    typeof value.updated === 'boolean' &&
+    typeof value.removed === 'boolean' &&
+    typeof value.createdAt === 'string' &&
+    isNullableString(value.updatedAt) &&
+    typeof value.userAccount === 'string' &&
+    isNullableString(value.icon) &&
+    (value.vote === undefined || isMessageVote(value.vote))
+  )
+}
+
+function isRoomSummary(value: unknown) {
+  return (
+    isRecord(value) &&
+    typeof value.id === 'string' &&
+    typeof value.name === 'string' &&
+    typeof value.description === 'string' &&
+    isNullableString(value.iconUrl) &&
+    isFiniteNumber(value.unread) &&
+    isFiniteNumber(value.replied) &&
+    (value.status === 'open' || value.status === 'close')
+  )
+}
+
+function isToClientPayload(value: unknown): value is ToClientType {
+  if (!isRecord(value)) return false
+  switch (value.cmd) {
+    case TO_CLIENT_CMD.CLIENT_RELOAD:
+      return isOptionalString(value.user)
+    case TO_CLIENT_CMD.SOCKET_CONNECTION:
+      return typeof value.user === 'string' && typeof value.signup === 'boolean'
+    case TO_CLIENT_CMD.ROOMS_GET:
+      return (
+        typeof value.user === 'string' &&
+        Array.isArray(value.rooms) &&
+        value.rooms.every(isRoomSummary) &&
+        isStringArray(value.roomOrder)
+      )
+    case TO_CLIENT_CMD.MESSAGE_RECEIVE:
+      return (
+        isNullableString(value.user) &&
+        isMessage(value.message) &&
+        typeof value.room === 'string'
+      )
+    case TO_CLIENT_CMD.MESSAGES_ROOM:
+      return (
+        typeof value.user === 'string' &&
+        Array.isArray(value.messages) &&
+        value.messages.every(isMessage) &&
+        typeof value.room === 'string' &&
+        typeof value.existHistory === 'boolean'
+      )
+    case TO_CLIENT_CMD.ROOMS_ENTER_SUCCESS:
+      return (
+        typeof value.user === 'string' &&
+        typeof value.id === 'string' &&
+        typeof value.name === 'string' &&
+        isNullableString(value.iconUrl) &&
+        typeof value.description === 'string'
+      )
+    case TO_CLIENT_CMD.ROOMS_ENTER_FAIL:
+      return (
+        typeof value.user === 'string' &&
+        isNullableString(value.id) &&
+        isNullableString(value.name) &&
+        isNullableString(value.reason)
+      )
+    case TO_CLIENT_CMD.MESSAGE_MODIFY:
+    case TO_CLIENT_CMD.MESSAGE_REMOVE:
+      return (
+        typeof value.user === 'string' &&
+        isMessage(value.message) &&
+        typeof value.room === 'string'
+      )
+    case TO_CLIENT_CMD.ROOMS_READ:
+      return typeof value.user === 'string' && typeof value.room === 'string'
+    case TO_CLIENT_CMD.MESSAGE_IINE:
+      return (
+        isOptionalString(value.user) &&
+        typeof value.room === 'string' &&
+        typeof value.id === 'string' &&
+        isFiniteNumber(value.iine)
+      )
+    case TO_CLIENT_CMD.ROOMS_SORT_SUCCESS:
+      return typeof value.user === 'string' && isStringArray(value.roomOrder)
+    case TO_CLIENT_CMD.VOTE_ANSWERS:
+      return (
+        isOptionalString(value.user) &&
+        typeof value.messageId === 'string' &&
+        Array.isArray(value.answers) &&
+        value.answers.every(isVoteAnswer)
+      )
+    case TO_CLIENT_CMD.ROOMS_UPDATE_DESCRIPTION:
+      return (
+        isOptionalString(value.user) &&
+        typeof value.roomId === 'string' &&
+        typeof value.descrioption === 'string'
+      )
+    default:
+      return false
+  }
+}
+
+function isQueueEventPayload(type: QueueEventType, payload: unknown) {
+  if (!isRecord(payload)) return false
+  switch (type) {
+    case 'message':
+      return isToClientPayload(payload)
+    case 'unread':
+      return typeof payload.roomId === 'string' && typeof payload.messageId === 'string'
+    case 'reply':
+      return typeof payload.roomId === 'string' && typeof payload.userId === 'string'
+    case 'vote':
+      return typeof payload.messageId === 'string'
+    case 'removeUser':
+      return typeof payload.userId === 'string'
+  }
+}
+
 export function isQueueWireEvent(value: unknown): value is QueueWireEvent {
   if (
     !isRecord(value) ||
@@ -80,7 +246,7 @@ export function isQueueWireEvent(value: unknown): value is QueueWireEvent {
   ) {
     return false
   }
-  return true
+  return isQueueEventPayload(value.type, value.payload)
 }
 
 export function isClaimedOutboxEvent(

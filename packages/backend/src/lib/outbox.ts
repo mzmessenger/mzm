@@ -1,13 +1,19 @@
 import { createHash } from 'node:crypto'
+import { BadRequest, Conflict } from 'mzm-shared/src/lib/errors'
 import { ObjectId, type ClientSession, type MongoClient } from 'mongodb'
-import { foldOutboxState, type QueueWireEvent } from 'mzm-shared/src/lib/outbox'
+import {
+  foldOutboxState,
+  isQueueWireEvent,
+  MAX_QUEUE_EVENT_BYTES,
+  serializedEventBytes,
+  type QueueWireEvent
+} from 'mzm-shared/src/lib/outbox'
 import type {
   QueueEventPayload,
   QueueEventType
 } from 'mzm-shared/src/lib/queue'
 import {
   consumerReceipts,
-  consumerRevisions,
   operations,
   outbox,
   producerRevisions,
@@ -18,6 +24,14 @@ import {
 const OUTBOX_LEASE_MS = 120_000
 /** How long acknowledged rows stay queryable before the TTL index drops them. */
 const OUTBOX_DISPATCHED_RETENTION_MS = 30 * 86400_000
+
+type OperationEvent = {
+  [EventType in QueueEventType]: {
+    type: EventType
+    payload: QueueEventPayload[EventType]
+    orderingKey: string
+  }
+}[QueueEventType]
 
 function parseResponse<T>(value: string): T {
   return JSON.parse(value)
@@ -36,11 +50,7 @@ export async function createSocketOperation<T>({
   request: unknown
   run: (context: {
     session: ClientSession
-    emit: <EventType extends QueueEventType>(event: {
-      type: EventType
-      payload: QueueEventPayload[EventType]
-      orderingKey: string
-    }) => void
+    emit: (event: OperationEvent) => void
   }) => Promise<T>
 }) {
   const route = 'POST /api/socket'
@@ -55,7 +65,7 @@ export async function createSocketOperation<T>({
   })
   if (existing) {
     if (existing.requestHash !== requestHash)
-      throw new Error('idempotency key reuse conflict')
+      throw new Conflict('idempotency key reuse conflict')
     return {
       operationId: existing._id.toHexString(),
       response: parseResponse<T>(existing.response)
@@ -63,11 +73,7 @@ export async function createSocketOperation<T>({
   }
 
   const operationId = new ObjectId()
-  const events: Array<{
-    type: QueueEventType
-    payload: QueueEventPayload[QueueEventType]
-    orderingKey: string
-  }> = []
+  const events: OperationEvent[] = []
   let value: T | null = null
   try {
     await db.withSession(async (session) => {
@@ -103,17 +109,27 @@ export async function createSocketOperation<T>({
             throw new Error('failed to advance producer revision')
           }
           const eventId = `${operationId.toHexString()}:${eventIndex}`
-          wireEvents.push({
-            _id: eventId,
+          const queueEvent = {
             version: 1,
             eventId,
-            operationId,
+            operationId: operationId.toHexString(),
             eventIndex,
             destination: 'backend',
             type: event.type,
             payload: event.payload,
             ordering: { key: event.orderingKey, revision: revision.revision },
-            createdAt: new Date().toISOString(),
+            createdAt: new Date().toISOString()
+          }
+          if (!isQueueWireEvent(queueEvent)) {
+            throw new BadRequest({ reason: 'invalid queue event' })
+          }
+          if (serializedEventBytes(queueEvent) > MAX_QUEUE_EVENT_BYTES) {
+            throw new BadRequest({ reason: 'queue event too large' })
+          }
+          wireEvents.push({
+            ...queueEvent,
+            _id: eventId,
+            operationId,
             status: 'pending',
             attempts: 0
           })
@@ -135,7 +151,7 @@ export async function createSocketOperation<T>({
     })
     if (duplicate) {
       if (duplicate.requestHash !== requestHash)
-        throw new Error('idempotency key reuse conflict')
+        throw new Conflict('idempotency key reuse conflict')
       return {
         operationId: duplicate._id.toHexString(),
         response: parseResponse<T>(duplicate.response)
@@ -146,7 +162,7 @@ export async function createSocketOperation<T>({
   return { operationId: operationId.toHexString(), response: value }
 }
 
-/** Returns false for duplicate or stale deliveries.  Receipt and revision advance share one transaction. */
+/** Returns false only for duplicate deliveries. Receipt and mutation share one transaction. */
 export async function acceptConsumerEvent(
   db: MongoClient,
   event: QueueWireEvent,
@@ -155,31 +171,19 @@ export async function acceptConsumerEvent(
   let accepted = false
   await db.withSession(async (session) => {
     await session.withTransaction(async () => {
-      const revisions = consumerRevisions(db)
-      const current = await revisions.findOne(
-        { _id: event.ordering.key },
-        { session }
-      )
-      if (current && current.revision >= event.ordering.revision) return
-      try {
-        await consumerReceipts(db).insertOne(
-          {
-            _id: `backend:${event.eventId}`,
+      accepted = false
+      const receipt = await consumerReceipts(db).updateOne(
+        { _id: `backend:${event.eventId}` },
+        {
+          $setOnInsert: {
             consumerName: 'backend',
             eventId: event.eventId,
             processedAt: new Date()
-          },
-          { session }
-        )
-      } catch (error) {
-        if (error instanceof Error && error.message.includes('E11000')) return
-        throw error
-      }
-      await revisions.updateOne(
-        { _id: event.ordering.key },
-        { $set: { revision: event.ordering.revision } },
+          }
+        },
         { upsert: true, session }
       )
+      if (receipt.upsertedCount === 0) return
       await mutate(session)
       accepted = true
     })

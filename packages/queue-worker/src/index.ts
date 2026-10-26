@@ -27,8 +27,14 @@ export async function handleFetch() {
   return new Response('not found', { status: 404 })
 }
 
-export async function archiveDlqEvent(event: QueueWireEvent, archive: Pick<Env['DLQ_ARCHIVE'], 'put'>) {
-  await archive.put(event.eventId, JSON.stringify(event), {
+export async function archiveDlqEvent(
+  messageId: string,
+  body: unknown,
+  archive: Pick<Env['DLQ_ARCHIVE'], 'put'>
+) {
+  const archiveId = isQueueWireEvent(body) ? body.eventId : messageId
+  const serializedBody = JSON.stringify(body) ?? 'null'
+  await archive.put(archiveId, serializedBody, {
     httpMetadata: { contentType: 'application/json' }
   })
 }
@@ -62,8 +68,11 @@ export async function validateAccessJwt(token: string, env: Env, fetcher: typeof
     const certificates = await fetcher(`https://${env.CF_ACCESS_TEAM_DOMAIN}/cdn-cgi/access/certs`)
     if (!certificates.ok) return false
     const body: unknown = await certificates.json()
-    if (!body || typeof body !== 'object' || !Array.isArray(Reflect.get(body, 'keys'))) return false
-    const key = Reflect.get(body, 'keys').find((candidate) => candidate && typeof candidate === 'object' && Reflect.get(candidate, 'kid') === Reflect.get(header, 'kid'))
+    if (!body || typeof body !== 'object') return false
+    const keysValue: unknown = Reflect.get(body, 'keys')
+    if (!Array.isArray(keysValue)) return false
+    const keys: unknown[] = keysValue
+    const key = keys.find((candidate) => candidate && typeof candidate === 'object' && Reflect.get(candidate, 'kid') === Reflect.get(header, 'kid'))
     if (!isJsonWebKey(key)) return false
     const publicKey = await crypto.subtle.importKey('jwk', key, { name: 'RSASSA-PKCS1-v1_5', hash: 'SHA-256' }, false, ['verify'])
     return await crypto.subtle.verify('RSASSA-PKCS1-v1_5', publicKey, decodeBase64Url(encodedSignature), new TextEncoder().encode(`${encodedHeader}.${encodedPayload}`))
@@ -77,16 +86,28 @@ export async function replayDlq(request: Request, env: Env, fetcher: typeof fetc
   if (!assertion || !await validateAccessJwt(assertion, env, fetcher)) return new Response('Cloudflare Access authentication required', { status: 401 })
   const body: unknown = await request.json()
   if (!body || typeof body !== 'object') return new Response('invalid replay request', { status: 400 })
-  const eventIds: unknown = Reflect.get(body, 'eventIds')
-  if (!Array.isArray(eventIds) || !eventIds.every((id) => typeof id === 'string')) return new Response('invalid replay request', { status: 400 })
-  if (eventIds.length === 0 || eventIds.length > 100) return new Response('invalid replay request', { status: 400 })
-  const events = await Promise.all(eventIds.map(async (eventId) => {
-    const saved = await env.DLQ_ARCHIVE.get(eventId)
-    if (!saved) return undefined
-    return parseQueueEvent(await saved.json())
-  }))
-  const replayable = events.filter((event) => event !== undefined)
-  if (replayable.length > 0) await env.EVENTS.sendBatch(replayable.map((event) => ({ body: event })))
+  const archiveIds: unknown =
+    Reflect.get(body, 'archiveIds') ?? Reflect.get(body, 'eventIds')
+  if (
+    !Array.isArray(archiveIds) ||
+    !archiveIds.every((id) => typeof id === 'string')
+  )
+    return new Response('invalid replay request', { status: 400 })
+  if (archiveIds.length === 0 || archiveIds.length > 100)
+    return new Response('invalid replay request', { status: 400 })
+  const savedEvents = await Promise.all(
+    archiveIds.map((archiveId) => env.DLQ_ARCHIVE.get(archiveId))
+  )
+  const replayable: QueueWireEvent[] = []
+  for (const saved of savedEvents) {
+    if (!saved) continue
+    const value = await saved.json()
+    if (!isQueueWireEvent(value))
+      return new Response('invalid archived event', { status: 400 })
+    replayable.push(value)
+  }
+  if (replayable.length > 0)
+    await env.EVENTS.sendBatch(replayable.map((event) => ({ body: event })))
   return Response.json({ replayed: replayable.length })
 }
 
@@ -126,7 +147,7 @@ export default {
   async queue(batch: MessageBatch<unknown>, env: Env) {
     if (batch.queue === 'mzm-events-dlq') {
       for (const message of batch.messages) {
-        await archiveDlqEvent(parseQueueEvent(message.body), env.DLQ_ARCHIVE)
+        await archiveDlqEvent(message.id, message.body, env.DLQ_ARCHIVE)
         message.ack()
       }
       return

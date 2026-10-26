@@ -1,11 +1,13 @@
 import {
   isClaimedOutboxEvent,
   isOutboxState,
+  isQueueWireEvent,
   serializedEventBytes,
   MAX_QUEUE_BATCH_BYTES,
   MAX_QUEUE_BATCH_MESSAGES,
   MAX_QUEUE_EVENT_BYTES,
-  type ClaimedOutboxEvent
+  type ClaimedOutboxEvent,
+  type QueueWireEvent
 } from 'mzm-shared/src/lib/outbox'
 import {
   publicRoutes,
@@ -20,6 +22,22 @@ type GatewayEnv = {
     send(value: unknown): Promise<void>
     sendBatch(values: { body: unknown }[]): Promise<void>
   }
+}
+
+function queueEventBody(event: ClaimedOutboxEvent): QueueWireEvent {
+  const value = {
+    version: event.version,
+    eventId: event.eventId,
+    operationId: event.operationId,
+    eventIndex: event.eventIndex,
+    destination: event.destination,
+    type: event.type,
+    payload: event.payload,
+    ordering: event.ordering,
+    createdAt: event.createdAt
+  }
+  if (!isQueueWireEvent(value)) throw new Error('invalid claimed queue event')
+  return value
 }
 
 const idempotencyKey =
@@ -263,10 +281,6 @@ export async function handleFetch(
           error: error instanceof Error ? error.message : 'unknown'
         })
       )
-      return new Response('queue publication pending', {
-        status: 503,
-        headers: { 'retry-after': '1' }
-      })
     }
   }
   const headers = new Headers(response.headers)
@@ -283,6 +297,7 @@ async function publishOperation(
 ) {
   const deadline = Date.now() + deadlineMs
   const owner = crypto.randomUUID()
+  let emptyClaimAttempts = 0
   while (Date.now() < deadline) {
     const claim = await internal(
       originUrl,
@@ -303,21 +318,32 @@ async function publishOperation(
       if (!isOutboxState(state))
         throw new Error('invalid outbox state response')
       if (state.pending === 0 && state.leased === 0) return
+      const backoffMs = Math.min(
+        50 * 2 ** Math.min(emptyClaimAttempts, 3),
+        400,
+        Math.max(0, deadline - Date.now())
+      )
+      emptyClaimAttempts++
+      await new Promise<void>((resolve) => setTimeout(resolve, backoffMs))
       continue
     }
     if (!claim.every(isClaimedOutboxEvent))
       throw new Error('invalid outbox claim response')
     const events = claim
+    emptyClaimAttempts = 0
     let bytes = 0
     const batch: ClaimedOutboxEvent[] = []
+    const queueBatch: QueueWireEvent[] = []
     for (const event of events) {
-      const eventBytes = serializedEventBytes(event)
+      const queueEvent = queueEventBody(event)
+      const eventBytes = serializedEventBytes(queueEvent)
       if (
         eventBytes > MAX_QUEUE_EVENT_BYTES ||
         bytes + eventBytes > MAX_QUEUE_BATCH_BYTES
       )
         break
       batch.push(event)
+      queueBatch.push(queueEvent)
       bytes += eventBytes
     }
     const deferred = events.slice(batch.length)
@@ -338,7 +364,7 @@ async function publishOperation(
       if (released !== null) throw new Error('outbox release failed')
     }
     if (batch.length === 0) throw new Error('queue event too large')
-    await env.EVENTS.sendBatch(batch.map((event) => ({ body: event })))
+    await env.EVENTS.sendBatch(queueBatch.map((event) => ({ body: event })))
     const acknowledged = await internal(
       originUrl,
       '/internal/outbox/v1/ack',

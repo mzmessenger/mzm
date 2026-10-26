@@ -6,6 +6,9 @@ export async function message({ event }: { event: QueueWireEvent<'message'> }) {
   const data = event.payload
   logger.info({ label: 'consume:message', message: data })
   if (data.user) {
-    sendToUser(data.user, Buffer.from(JSON.stringify(data)))
+    sendToUser(
+      data.user,
+      Buffer.from(JSON.stringify({ eventId: event.eventId, data }))
+    )
   }
 }

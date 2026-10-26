@@ -22,6 +22,18 @@ export class BadRequest<T extends object | string>
   }
 }
 
+export class Conflict<T extends object | string>
+  extends HttpError
+  implements HttpResponse
+{
+  readonly status: number = 409
+
+  constructor(res: T) {
+    super('Conflict')
+    this.res = res
+  }
+}
+
 export class Unauthorized<T extends object | string>
   extends HttpError
   implements HttpResponse
