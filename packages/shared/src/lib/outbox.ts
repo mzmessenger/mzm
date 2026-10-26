@@ -203,14 +203,14 @@ function isToClientPayload(value: unknown): value is ToClientType {
       return (
         isOptionalString(value.user) &&
         typeof value.roomId === 'string' &&
-        typeof value.descrioption === 'string'
+        typeof value.description === 'string'
       )
     default:
       return false
   }
 }
 
-function isQueueEventPayload(type: QueueEventType, payload: unknown) {
+function isQueueEventPayload(type: QueueEventType, payload: unknown): boolean {
   if (!isRecord(payload)) return false
   switch (type) {
     case 'message':
@@ -223,6 +223,8 @@ function isQueueEventPayload(type: QueueEventType, payload: unknown) {
       return typeof payload.messageId === 'string'
     case 'removeUser':
       return typeof payload.userId === 'string'
+    default:
+      return false
   }
 }
 
