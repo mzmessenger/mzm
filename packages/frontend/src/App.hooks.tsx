@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useRef } from 'react'
 import { useLocation } from 'react-router'
 import { useMessageListener } from './state/socket/hooks'
 import { useMyInfoActions } from './state/user/hooks'
@@ -59,6 +59,7 @@ export const useApp = () => {
   const { init: initAuth } = useAuth()
   const location = useLocation()
   const { handlers } = useMessageListener({ pathname: location.pathname })
+  const initialized = useRef(false)
 
   useEffect(() => {
     logger.info('mzm:app:init')
@@ -77,7 +78,15 @@ export const useApp = () => {
     }
     window.addEventListener(events.authorized, authoriaedListener)
     window.addEventListener(events.message, messageListener)
-    initAuth()
+    if (!initialized.current) {
+      initialized.current = true
+      if (
+        location.pathname !== '/login/success' &&
+        !new URLSearchParams(location.search).has('auth_error')
+      ) {
+        initAuth()
+      }
+    }
 
     return () => {
       window.removeEventListener(events.authorized, authoriaedListener)
