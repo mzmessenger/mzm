@@ -1,72 +1,31 @@
-import { vi, expect } from 'vitest'
-import { createTest } from '../../../test/testUtil.js'
-vi.mock('../logger.js')
-vi.mock('./common.js', () => {
-  return {
-    initConsumerGroup: vi.fn(),
-    consumeGroup: vi.fn(),
-    createParser: vi.fn()
-  }
-})
-vi.mock('../fetchStreaming.js', async () => {
-  return {
-    sendToUser: vi.fn()
-  }
-})
-
-import * as config from '../../config.js'
-import { initConsumerGroup, consumeGroup } from './common.js'
-import { message, initMessageConsumerGroup, consumeMessage } from './message.js'
+import { TO_CLIENT_CMD } from 'mzm-shared/src/type/socket'
+import type { QueueWireEvent } from 'mzm-shared/src/lib/outbox'
+import { expect, test, vi } from 'vitest'
 import { sendToUser } from '../fetchStreaming.js'
+import { message } from './message.js'
 
-const test = await createTest(globalThis)
+vi.mock('../fetchStreaming.js', () => ({
+  sendToUser: vi.fn()
+}))
 
-test('initRemoveConsumerGroup', async ({ testRedis }) => {
-  const init = vi.mocked(initConsumerGroup)
+test('message eventを接続中のユーザーへeventId付きで配信する', async () => {
+  const event: QueueWireEvent<'message'> = {
+    version: 1,
+    eventId: 'event-message-1',
+    operationId: 'operation-message-1',
+    eventIndex: 0,
+    destination: 'backend',
+    type: 'message',
+    payload: { cmd: TO_CLIENT_CMD.CLIENT_RELOAD, user: 'user-1' },
+    ordering: { key: 'user:user-1', revision: 1 },
+    createdAt: new Date().toISOString()
+  }
 
-  await initMessageConsumerGroup(testRedis)
+  await message({ event })
 
-  expect(init.mock.calls.length).toStrictEqual(1)
-  expect(init.mock.calls[0][1]).toStrictEqual(config.stream.MESSAGE)
-})
-
-test('consumeRemove', async ({ testDb, testRedis }) => {
-  const consume = vi.mocked(consumeGroup)
-
-  await consumeMessage({ db: testDb, redis: testRedis })
-
-  expect(consume.mock.calls.length).toStrictEqual(1)
-  expect(consume.mock.calls[0][3]).toStrictEqual(config.stream.MESSAGE)
-})
-
-test('message', async ({ testDb, testRedis }) => {
-  const sendToUserMock = vi.mocked(sendToUser)
-  sendToUserMock.mockClear()
-
-  const users = ['5cc9d148139370d11b706624', '5cc9d148139370d11b706625']
-  const queues = users.map((user) => {
-    return JSON.stringify({
-      cmd: 'cmd',
-      user: user
-    })
-  })
-
-  await message({
-    db: testDb,
-    redis: testRedis,
-    ackId: 'queue-id',
-    messages: ['message', queues[0]]
-  })
-  await message({
-    db: testDb,
-    redis: testRedis,
-    ackId: 'queue-id',
-    messages: ['message', queues[1]]
-  })
-
-  expect(sendToUserMock.mock.calls.length).toBe(2)
-  expect(sendToUserMock.mock.calls[0][0]).toBe(users[0])
-  expect(sendToUserMock.mock.calls[0][1].toString()).toBe(queues[0])
-  expect(sendToUserMock.mock.calls[1][0]).toBe(users[1])
-  expect(sendToUserMock.mock.calls[1][1].toString()).toBe(queues[1])
+  expect(vi.mocked(sendToUser)).toHaveBeenCalledTimes(1)
+  expect(vi.mocked(sendToUser)).toHaveBeenCalledWith(
+    'user-1',
+    Buffer.from(JSON.stringify({ eventId: event.eventId, data: event.payload }))
+  )
 })

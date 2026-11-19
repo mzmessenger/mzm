@@ -14,7 +14,7 @@ import {
   type Message,
   type User
 } from '../../lib/db.js'
-import { type ExRedisClient } from '../../lib/redis.js'
+
 import { searchRoom } from '../../lib/elasticsearch/rooms.js'
 import { popParam, createUserIconPath } from '../../lib/utils.js'
 import {
@@ -23,17 +23,17 @@ import {
   createRoom as createRoomLogic
 } from '../../logic/rooms.js'
 import { listRooms } from './listRooms.js'
+import { publicRoutePaths } from 'mzm-shared/src/api/public-routes'
 
 export function createRoute(
   app: Express,
   {
     db,
-    redis,
     jsonParser,
     checkAccessToken
   }: {
     db: MongoClient
-    redis: ExRedisClient
+
     jsonParser: ReturnType<typeof json>
     checkAccessToken: typeof checkAccessTokenMiddleware
   }
@@ -41,7 +41,7 @@ export function createRoute(
   const queryParser = z.object({
     threshold: z.string().optional()
   })
-  app.get('/api/rooms', checkAccessToken, async (req, res) => {
+  app.get(publicRoutePaths.api.rooms, checkAccessToken, async (req, res) => {
     const userId = getRequestUserId(req)
     const parsedQuery = queryParser.safeParse(req.query)
     if (parsedQuery.success === false) {
@@ -60,22 +60,26 @@ export function createRoute(
     )
   })
 
-  app.post('/api/rooms', checkAccessToken, jsonParser, async (req, res) => {
-    const userId = getRequestUserId(req)
-    const data = await createRoom({
-      db,
-      redis,
-      userId: new ObjectId(userId),
-      body: req.body
-    })
-    return response<API['/api/rooms']['POST']['response'][200]['body']>(data)(
-      req,
-      res
-    )
-  })
+  app.post(
+    publicRoutePaths.api.rooms,
+    checkAccessToken,
+    jsonParser,
+    async (req, res) => {
+      const userId = getRequestUserId(req)
+      const data = await createRoom({
+        db,
+        userId: new ObjectId(userId),
+        body: req.body
+      })
+      return response<API['/api/rooms']['POST']['response'][200]['body']>(data)(
+        req,
+        res
+      )
+    }
+  )
 
   app.delete(
-    '/api/rooms/enter',
+    publicRoutePaths.api.roomsEnter,
     checkAccessToken,
     jsonParser,
     async (req, res) => {
@@ -90,41 +94,48 @@ export function createRoute(
     }
   )
 
-  app.get('/api/rooms/:roomId/users', checkAccessToken, async (req, res) => {
-    const paramsParser = z.object({
-      roomId: z.string().min(1)
-    })
-    const parsedParams = paramsParser.safeParse(req.params)
-    if (parsedParams.success === false) {
-      throw new BadRequest({ reason: parsedParams.error.message })
+  app.get(
+    publicRoutePaths.api.roomsUsers,
+    checkAccessToken,
+    async (req, res) => {
+      const paramsParser = z.object({
+        roomId: z.string().min(1)
+      })
+      const parsedParams = paramsParser.safeParse(req.params)
+      if (parsedParams.success === false) {
+        throw new BadRequest({ reason: parsedParams.error.message })
+      }
+      const params = apis['/api/rooms/:roomId/users']['GET'].request.params(
+        parsedParams.data
+      )
+
+      const data = await getUsers(db, { params, query: req.query })
+      return response<
+        API['/api/rooms/:roomId/users']['GET']['response'][200]['body']
+      >(data)(req, res)
     }
-    const params = apis['/api/rooms/:roomId/users']['GET'].request.params(
-      parsedParams.data
-    )
+  )
 
-    const data = await getUsers(db, { params, query: req.query })
-    return response<
-      API['/api/rooms/:roomId/users']['GET']['response'][200]['body']
-    >(data)(req, res)
-  })
-
-  app.get('/api/rooms/search', checkAccessToken, async (req, res) => {
-    const data = await search(db, { query: req.query })
-    return response<API['/api/rooms/search']['GET']['response'][200]['body']>(
-      data
-    )(req, res)
-  })
+  app.get(
+    publicRoutePaths.api.roomsSearch,
+    checkAccessToken,
+    async (req, res) => {
+      const data = await search(db, { query: req.query })
+      return response<API['/api/rooms/search']['GET']['response'][200]['body']>(
+        data
+      )(req, res)
+    }
+  )
   return app
 }
 
 export async function createRoom({
   db,
-  redis,
   userId,
   body
 }: {
   db: MongoClient
-  redis: ExRedisClient
+
   userId: ObjectId
   body: unknown
 }) {
@@ -152,7 +163,7 @@ export async function createRoom({
     return { id: found._id.toHexString(), name: found.name }
   }
 
-  const created = await createRoomLogic({ db, redis, userId, name })
+  const created = await createRoomLogic({ db, userId, name })
 
   // @todo
   if (!created) {

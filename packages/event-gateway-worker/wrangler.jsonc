@@ -1,0 +1,30 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mzm-event-gateway",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-08",
+  "compatibility_flags": ["nodejs_compat"],
+  "workers_dev": false,
+  "preview_urls": false,
+  "dev": {
+    "port": 8788
+  },
+  "routes": ["api.mzm.dev/*", "auth.mzm.dev/*"],
+  "observability": {
+    "enabled": true,
+    "head_sampling_rate": 1
+  },
+  "secrets": {
+    "required": ["GATEWAY_ORIGIN_SECRET"]
+  },
+  "triggers": {
+    "crons": ["* * * * *"]
+  },
+  "queues": {
+    "producers": [{ "binding": "EVENTS", "queue": "mzm-events" }]
+  },
+  "vars": {
+    "BACKEND_ORIGIN": "https://mzm-backend-yjv4jzdmua-an.a.run.app",
+    "AUTH_ORIGIN": "https://mzm-auth-yjv4jzdmua-an.a.run.app"
+  }
+}

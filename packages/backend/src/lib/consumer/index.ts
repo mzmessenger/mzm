@@ -1,29 +1,30 @@
-import { type MongoClient } from 'mongodb'
-import { type ExRedisClient } from '../redis.js'
-import { initRemoveConsumerGroup, consumeRemove } from './remove.js'
-import { initUnreadConsumerGroup, consumeUnread } from './unread.js'
-import { initReplyConsumerGroup, consumeReply } from './reply.js'
-import { initVoteConsumerGroup, consumeVote } from './vote.js'
-import { initMessageConsumerGroup, consumeMessage } from './message.js'
+import type { MongoClient } from 'mongodb'
+import type { QueueWireEvent } from 'mzm-shared/src/lib/outbox'
+import { acceptConsumerEvent } from '../outbox.js'
+import { message } from './message.js'
+import { increment } from './unread.js'
+import { reply } from './reply.js'
+import { vote } from './vote.js'
+import { remove } from './remove.js'
 
-export async function initConsumer({
+export async function handleQueueEvent({
   db,
-  redis
+  event
 }: {
   db: MongoClient
-  redis: ExRedisClient
+  event: QueueWireEvent
 }) {
-  await Promise.all([
-    initRemoveConsumerGroup(redis),
-    initUnreadConsumerGroup(redis),
-    initReplyConsumerGroup(redis),
-    initVoteConsumerGroup(redis),
-    initMessageConsumerGroup(redis)
-  ])
-
-  consumeRemove({ redis, db })
-  consumeUnread({ redis, db })
-  consumeReply({ redis, db })
-  consumeVote({ redis, db })
-  consumeMessage({ redis, db })
+  const wireEvent = event
+  if (wireEvent.type === 'vote') {
+    if (await acceptConsumerEvent(db, wireEvent, async () => undefined)) await vote({ db, event: wireEvent })
+    return
+  }
+  if (!await acceptConsumerEvent(db, wireEvent, async (session) => {
+    if (wireEvent.type === 'unread') await increment({ db, event: wireEvent, session })
+    else if (wireEvent.type === 'reply') await reply({ db, event: wireEvent, session })
+    else if (wireEvent.type === 'removeUser') await remove({ db, event: wireEvent, session })
+  })) return
+  if (wireEvent.type === 'message') {
+    await message({ event: wireEvent })
+  }
 }

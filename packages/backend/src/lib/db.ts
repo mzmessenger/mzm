@@ -1,23 +1,21 @@
-import type {} from 'mzm-shared/src/type/db'
 import { MongoClient, ObjectId, ServerApiVersion } from 'mongodb'
 import {
   VoteStatusEnum,
   VoteTypeEnum,
   COLLECTION_NAMES,
-  type User,
-  type Room,
-  type Enter
+  type User
 } from 'mzm-shared/src/type/db'
+import type { Room, Enter } from 'mzm-shared/src/type/mongo'
 import { MONGODB_URI } from '../config.js'
 import { logger } from './logger.js'
+import { initializeOutboxIndexes } from './db/outbox.js'
 
 export {
   COLLECTION_NAMES,
   RoomStatusEnum,
-  type User,
-  type Room,
-  type Enter
+  type User
 } from 'mzm-shared/src/type/db'
+export type { Room, Enter } from 'mzm-shared/src/type/mongo'
 
 function initCollections(c: MongoClient) {
   const db = c.db()
@@ -51,16 +49,37 @@ export async function initMongoClient() {
     serverApi: {
       version: ServerApiVersion.v1,
       strict: true,
-      deprecationErrors: true,
+      deprecationErrors: true
     }
   })
   await client.connect()
+  await verifyTransactionSupport(client)
   logger.info('[db] connected mongodb')
   return client
 }
 
+export async function verifyTransactionSupport(client: MongoClient) {
+  const probe = client.db().collection<{ _id: ObjectId }>('transaction_probes')
+  const _id = new ObjectId()
+  await client.withSession(async (session) => {
+    await session.withTransaction(async () => {
+      await probe.insertOne({ _id }, { session })
+      await probe.deleteOne({ _id }, { session })
+    })
+  })
+}
+
+export async function initIndexes(c: MongoClient) {
+  const db = collections(c)
+  await Promise.all([
+    db.rooms.createIndex({ name: 1 }, { unique: true }),
+    db.enter.createIndex({ userId: 1, roomId: 1 }, { unique: true }),
+    initializeOutboxIndexes(c)
+  ])
+}
+
 export async function close(c: MongoClient) {
-  c.close()
+  await c.close()
 }
 
 export type Removed = {

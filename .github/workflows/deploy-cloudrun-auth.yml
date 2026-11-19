@@ -3,40 +3,84 @@ name: Build and Deploy mzm-auth
 on:
   workflow_dispatch:
 
+concurrency:
+  group: deploy-cloudrun-auth-production
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+  id-token: write
+
 env:
-  PROJECT_ID: ${{ secrets.GCP_PROJECT_ID }}
   SERVICE: mzm-auth
   REGION: asia-northeast1
 
 jobs:
   deploy:
+    if: startsWith(github.ref, 'refs/heads/')
     runs-on: ubuntu-latest
-
-    permissions:
-      contents: 'read'
-      id-token: 'write'
-
     steps:
-    - name: Checkout
-      uses: actions/checkout@v2
+      - name: Validate deployment configuration
+        env:
+          PROJECT_ID: ${{ vars.GCP_PROJECT_ID }}
+          WIF_PROVIDER: ${{ vars.GCP_WIF_PROVIDER }}
+          DEPLOY_SERVICE_ACCOUNT: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
+          ARTIFACT_REGISTRY: ${{ vars.GCP_ARTIFACT_REGISTRY }}
+        run: |
+          set -euo pipefail
+          : "${PROJECT_ID:?Set the GCP_PROJECT_ID repository variable}"
+          : "${WIF_PROVIDER:?Set the GCP_WIF_PROVIDER repository variable}"
+          : "${DEPLOY_SERVICE_ACCOUNT:?Set the GCP_DEPLOY_SERVICE_ACCOUNT repository variable}"
+          : "${ARTIFACT_REGISTRY:?Set the GCP_ARTIFACT_REGISTRY repository variable}"
 
-    - id: 'auth'
-      uses: 'google-github-actions/auth@v0'
-      with:
-        credentials_json: '${{ secrets.GCP_SA_KEY }}'
+      - name: Checkout
+        uses: actions/checkout@v4
 
-    - name: Authorize Docker push
-      run: gcloud auth configure-docker
+      - name: Authenticate to Google Cloud with WIF
+        uses: google-github-actions/auth@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          workload_identity_provider: ${{ vars.GCP_WIF_PROVIDER }}
+          service_account: ${{ vars.GCP_DEPLOY_SERVICE_ACCOUNT }}
 
-    - name: Build and Push Container
-      run: |-
-        docker build -f ./packages/auth/Dockerfile -t gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }} .
-        docker push gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}
+      - name: Set up Google Cloud CLI
+        uses: google-github-actions/setup-gcloud@v3
 
-    - name: Deploy to Cloud Run
-      id: deploy
-      uses: google-github-actions/deploy-cloudrun@v1
-      with:
-        service: ${{ env.SERVICE }}
-        image: gcr.io/${{ env.PROJECT_ID }}/${{ env.SERVICE }}:${{ github.sha }}
-        region: ${{ env.REGION }}
+      - name: Authorize Artifact Registry push
+        run: gcloud auth configure-docker "${REGION}-docker.pkg.dev" --quiet
+
+      - name: Build container
+        env:
+          IMAGE: '${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}'
+        run: |
+          set -euo pipefail
+          docker build -f ./packages/auth/Dockerfile -t "${IMAGE}" .
+
+      - name: Verify container entrypoint
+        env:
+          IMAGE: '${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}'
+        run: |
+          set -euo pipefail
+          test "$(docker inspect --format '{{json .Config.Cmd}}' "${IMAGE}")" = '["node","packages/auth/dist/src/server.js"]'
+          docker run --rm --entrypoint test "${IMAGE}" -f packages/auth/dist/src/server.js
+          docker run --rm --entrypoint node "${IMAGE}" -e "if (process.versions.node.split('.')[0] !== '24') process.exit(1)"
+
+      - name: Push container
+        env:
+          IMAGE: '${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}'
+        run: |
+          set -euo pipefail
+          docker push "${IMAGE}"
+
+      - name: Deploy to Cloud Run
+        id: deploy
+        uses: google-github-actions/deploy-cloudrun@v3
+        with:
+          project_id: ${{ vars.GCP_PROJECT_ID }}
+          service: ${{ env.SERVICE }}
+          image: ${{ vars.GCP_ARTIFACT_REGISTRY }}/mzm-auth:${{ github.sha }}
+          region: ${{ env.REGION }}
+
+      - name: Report deployed URL
+        run: |
+          printf 'Cloud Run URL: %s\n' '${{ steps.deploy.outputs.url }}'

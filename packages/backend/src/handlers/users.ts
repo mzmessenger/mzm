@@ -9,6 +9,7 @@ import { isValidAccount } from 'mzm-shared/src/validator'
 import { BadRequest, NotFound } from 'mzm-shared/src/lib/errors'
 import { getRequestUserId, createUserIconPath } from '../lib/utils.js'
 import { collections } from '../lib/db.js'
+import { publicRoutePaths } from 'mzm-shared/src/api/public-routes'
 
 export function createRoute(
   app: Express,
@@ -22,16 +23,20 @@ export function createRoute(
     checkAccessToken: typeof checkAccessTokenMiddleware
   }
 ) {
-  app.put('/api/user/@me', checkAccessToken, jsonParser, async (req, res) => {
-    const userId = getRequestUserId(req)
-    const data = await update(db, new ObjectId(userId), req.body)
-    return response<API['/api/user/@me']['PUT']['response'][200]['body']>(data)(
-      req,
-      res
-    )
-  })
+  app.put(
+    publicRoutePaths.api.userMe,
+    checkAccessToken,
+    jsonParser,
+    async (req, res) => {
+      const userId = getRequestUserId(req)
+      const data = await update(db, new ObjectId(userId), req.body)
+      return response<API['/api/user/@me']['PUT']['response'][200]['body']>(
+        data
+      )(req, res)
+    }
+  )
 
-  app.get('/api/user/@me', checkAccessToken, async (req, res) => {
+  app.get(publicRoutePaths.api.userMe, checkAccessToken, async (req, res) => {
     const userId = getRequestUserId(req)
     const data = await getUserInfo(db, new ObjectId(userId))
     return response<API['/api/user/@me']['GET']['response'][200]['body']>(data)(

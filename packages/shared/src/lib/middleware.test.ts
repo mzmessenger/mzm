@@ -28,6 +28,7 @@ test('errorHandler (Internal Server Error)', async () => {
 
 test.each([
   [new HttpErrors.BadRequest('BadRequest')],
+  [new HttpErrors.Conflict('Conflict')],
   [new HttpErrors.Unauthorized('Unauthorized')],
   [new HttpErrors.Forbidden('Forbidden')],
   [new HttpErrors.NotFound('NotFound')]
