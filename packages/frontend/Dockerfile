@@ -16,7 +16,7 @@ RUN npm run build -w packages/shared
 RUN npm run build -w packages/frontend
 
 # https://cloud.google.com/community/tutorials/deploy-react-nginx-cloud-run
-FROM nginx:alpine
+FROM nginx:1.31.9-alpine
 
 WORKDIR /usr/app
 
