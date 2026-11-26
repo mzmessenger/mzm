@@ -88,7 +88,8 @@ test('recognizes an existing receipt without issuing a duplicate insert', async 
     _id: `backend:${event.eventId}`,
     consumerName: 'backend',
     eventId: event.eventId,
-    processedAt: new Date()
+    processedAt: new Date(),
+    createdAt: new Date()
   })
 
   const insertSpy = vi

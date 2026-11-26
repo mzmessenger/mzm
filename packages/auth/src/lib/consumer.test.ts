@@ -11,7 +11,7 @@ vi.mock('./logger.js')
 const test = baseTest.extend<{
   testDb: Awaited<ReturnType<typeof getTestMongoClient>>
 }>({
-  testDb: async (_, use) => {
+  testDb: async ({ task: _task }, use) => {
     const db = await getTestMongoClient(globalThis)
     await use(db)
   }
