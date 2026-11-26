@@ -9,9 +9,11 @@ const dirname = path.dirname(new URL(import.meta.url).pathname)
 
 export default defineConfig(({ mode }) => {
   const API_URL_BASE =
-    mode === 'production' ? 'https://api.mzm.dev' : 'http://localhost:3001'
+    mode === 'production' ? 'https://api.mzm.dev' : 'http://api.localhost:8788'
   const AUTH_URL_BASE =
-    mode === 'production' ? 'https://auth.mzm.dev' : 'http://localhost:3002'
+    mode === 'production'
+      ? 'https://auth.mzm.dev'
+      : 'http://auth.localhost:8788'
 
   return {
     define: {

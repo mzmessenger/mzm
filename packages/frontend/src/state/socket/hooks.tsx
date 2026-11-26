@@ -13,7 +13,34 @@ import { useMyInfoActions, useUserAccount } from '../user/hooks'
 import { useUiActions } from '../ui/hooks'
 import { getRoomName } from '../../lib/util'
 import { sendSocket } from '../../lib/client'
+import { dispatchMessageEvent } from '../../lib/events'
 import { createRoutePath } from '../../lib/route'
+
+/**
+ * Send a socket command and deliver a read response (JSON body) through the
+ * same window message event the SSE stream uses. Write commands answer with an
+ * empty body; their delivery keeps going through the queue.
+ */
+function deliverSocket(message: ClientToSocketType) {
+  void sendSocket(message).then((res) => {
+    if (!res.ok || typeof res.body !== 'string' || res.body === '') {
+      return
+    }
+    let payload: unknown
+    try {
+      payload = JSON.parse(res.body)
+    } catch {
+      return
+    }
+    if (
+      payload &&
+      typeof payload === 'object' &&
+      typeof (payload as ToClientType).cmd === 'string'
+    ) {
+      dispatchMessageEvent(payload as ToClientType)
+    }
+  })
+}
 
 type HandlerArgs<P extends ToClientType['cmd']> = {
   message: FilterToClientType<P>
@@ -24,32 +51,32 @@ type MessageHandlers = {
 
 const sharedActions = {
   readMessages: (roomId: string) => {
-    sendSocket({
+    deliverSocket({
       cmd: TO_SERVER_CMD.ROOMS_READ,
       room: roomId
     })
   },
   getMessages: (roomId: string) => {
-    sendSocket({
+    deliverSocket({
       cmd: TO_SERVER_CMD.MESSAGES_ROOM,
       room: roomId
     })
   },
   getRooms: () => {
-    sendSocket({ cmd: TO_SERVER_CMD.ROOMS_GET })
+    deliverSocket({ cmd: TO_SERVER_CMD.ROOMS_GET })
   }
 } as const
 
 export const useSocketActions = () => {
   const sortRoom = useCallback((roomOrder: string[]) => {
-    sendSocket({
+    deliverSocket({
       cmd: TO_SERVER_CMD.ROOMS_SORT,
       roomOrder
     })
   }, [])
 
   const incrementIine = useCallback((messageId: string) => {
-    sendSocket({
+    deliverSocket({
       cmd: TO_SERVER_CMD.MESSAGE_IINE,
       id: messageId
     })
@@ -69,13 +96,13 @@ export const useSocketActions = () => {
       if (vote) {
         send.vote = vote
       }
-      sendSocket(send)
+      deliverSocket(send)
     },
     []
   )
 
   const enterRoom = useCallback((roomName: string) => {
-    sendSocket({
+    deliverSocket({
       cmd: TO_SERVER_CMD.ROOMS_ENTER,
       name: encodeURIComponent(roomName)
     })
@@ -88,7 +115,7 @@ export const useSocketActions = () => {
         message: message,
         id: messageId
       }
-      sendSocket(send)
+      deliverSocket(send)
     },
     []
   )
@@ -98,18 +125,18 @@ export const useSocketActions = () => {
       cmd: TO_SERVER_CMD.MESSAGE_REMOVE,
       id: messageId
     }
-    sendSocket(send)
+    deliverSocket(send)
   }, [])
 
   const openRoom = useCallback((roomId: string) => {
-    sendSocket({
+    deliverSocket({
       cmd: TO_SERVER_CMD.ROOMS_OPEN,
       roomId
     })
   }, [])
 
   const closeRoom = useCallback((roomId: string) => {
-    sendSocket({
+    deliverSocket({
       cmd: TO_SERVER_CMD.ROOMS_CLOSE,
       roomId
     })
@@ -121,11 +148,11 @@ export const useSocketActions = () => {
       room: roomId,
       id: id
     }
-    sendSocket(message)
+    deliverSocket(message)
   }, [])
 
   const removeVoteAnswer = useCallback((messageId: string, index: number) => {
-    sendSocket({
+    deliverSocket({
       cmd: TO_SERVER_CMD.VOTE_ANSWER_REMOVE,
       messageId: messageId,
       index: index
@@ -134,7 +161,7 @@ export const useSocketActions = () => {
 
   const sendVoteAnswer = useCallback(
     (messageId: string, index: number, answer: number) => {
-      sendSocket({
+      deliverSocket({
         cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND,
         messageId: messageId,
         index: index,
@@ -146,7 +173,7 @@ export const useSocketActions = () => {
 
   const updateRoomDescription = useCallback(
     (roomId: string, description: string) => {
-      sendSocket({
+      deliverSocket({
         cmd: TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION,
         roomId,
         description
@@ -219,12 +246,12 @@ export const useMessageListener = (props: { pathname: string }) => {
         fetchMyInfo()
       }
       if (currentRoomName) {
-        sendSocket({
+        deliverSocket({
           cmd: TO_SERVER_CMD.ROOMS_ENTER,
           name: currentRoomName
         })
       } else {
-        sendSocket({ cmd: TO_SERVER_CMD.ROOMS_GET })
+        deliverSocket({ cmd: TO_SERVER_CMD.ROOMS_GET })
       }
     },
     [TO_CLIENT_CMD.ROOMS_GET]: ({ message }) => {

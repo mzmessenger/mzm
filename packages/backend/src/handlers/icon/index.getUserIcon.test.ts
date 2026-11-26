@@ -115,7 +115,8 @@ test.for([
       statusCode: 200,
       trailers: {},
       opaque: undefined,
-      context: {}
+      context: {},
+      statusText: 'OK'
     })
 
     const res = await getUserIcon(testDb, { account, version: requestVersion })
@@ -161,7 +162,8 @@ test('getUserIcon from identicon: not found on storage', async ({ testDb }) => {
     statusCode: 200,
     trailers: {},
     opaque: undefined,
-    context: {}
+    context: {},
+      statusText: 'OK'
   })
 
   const res = await getUserIcon(testDb, {

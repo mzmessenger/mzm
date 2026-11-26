@@ -6,10 +6,6 @@ import { getTestMongoClient } from '../../test/testUtil.js'
 import { collections } from '../lib/db.js'
 import { verifyAccessToken } from 'mzm-shared/src/auth/index'
 
-vi.mock('../lib/redis.js', async () => {
-  return { sessionRedis: vi.fn() }
-})
-
 vi.mock('mzm-shared/src/auth/index', async () => {
   const actual = await vi.importActual<
     typeof import('mzm-shared/src/auth/index')

@@ -1,0 +1,32 @@
+{
+  "$schema": "../../node_modules/wrangler/config-schema.json",
+  "name": "mzm-queue-worker",
+  "main": "src/index.ts",
+  "compatibility_date": "2026-07-01",
+  "queues": {
+    "producers": [{ "binding": "EVENTS", "queue": "mzm-events" }],
+    "consumers": [
+      {
+        "queue": "mzm-events",
+        "max_batch_size": 10,
+        "max_batch_timeout": 1,
+        "max_retries": 5,
+        "dead_letter_queue": "mzm-events-dlq"
+      },
+      {
+        "queue": "mzm-events-dlq",
+        "max_batch_size": 10,
+        "max_batch_timeout": 1,
+        "max_retries": 5
+      }
+    ]
+  },
+  "r2_buckets": [
+    { "binding": "DLQ_ARCHIVE", "bucket_name": "mzm-events-dlq-archive" }
+  ],
+  "vars": {
+    "AUTH_SERVICE_URL": "http://127.0.0.1:3002",
+    "BACKEND_SERVICE_URL": "http://127.0.0.1:3001",
+    "QUEUE_CALLBACK_SECRET": "local-queue-secret"
+  }
+}

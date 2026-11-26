@@ -35,9 +35,10 @@ export const useAuth = () => {
         }))
       }
       setLoginFlag(res.success)
-      return
+      return res.success
     } catch (e) {
       setLoginFlag(false)
+      return false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
@@ -52,12 +53,11 @@ export const useAuth = () => {
           twitterUserName: res.data.user.twitterUserName,
           githubUserName: res.data.user.githubUserName
         }))
+        setLoginFlag(true)
       }
-      setLoginFlag(res.success)
       return res.success
     } catch (e) {
       logger.warn(e)
-      setLoginFlag(false)
       return false
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps

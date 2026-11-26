@@ -1,21 +1,18 @@
 import cluster from 'cluster'
 import http from 'http'
 
-import { WORKER_NUM, PORT, redis } from './config.js'
+import { WORKER_NUM, PORT } from './config.js'
 import { logger } from './lib/logger.js'
-import { connect } from './lib/redis.js'
 import { initMongoClient } from './lib/db.js'
 import { init } from './logic/server.js'
 import { createApp } from './app.js'
 
 async function main() {
-  const redisClient = await connect(redis.options)
-
   const db = await initMongoClient()
 
-  await init({ db, redis: redisClient })
+  await init({ db })
 
-  const app = createApp({ db, redis: redisClient })
+  const app = createApp({ db })
   const server = http.createServer(app)
 
   server.listen(PORT, () => {

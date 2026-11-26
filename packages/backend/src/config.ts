@@ -1,5 +1,3 @@
-import type { RedisOptions } from 'ioredis'
-
 export const API_URL_BASE = process.env.API_URL_BASE ?? 'http://localhost:3001'
 
 export const MONGODB_URI =
@@ -111,13 +109,8 @@ export const aws = {
   AWS_SECRET_ACCESS_KEY: process.env.AWS_SECRET_ACCESS_KEY ?? ''
 } as const
 
-export const redis = {
-  options: {
-    host: process.env.REDIS_HOST,
-    enableOfflineQueue: false,
-    connectTimeout: Number(process.env.REDIS_TIMEOUT ?? 30000)
-  } satisfies RedisOptions
-} as const
+export const GATEWAY_ORIGIN_SECRET = process.env.GATEWAY_ORIGIN_SECRET ?? ''
+export const QUEUE_CALLBACK_SECRET = process.env.QUEUE_CALLBACK_SECRET ?? ''
 
 export const elasticsearch = {
   client: {

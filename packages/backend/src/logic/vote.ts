@@ -37,7 +37,19 @@ export async function getVoteAnswers(db: MongoClient, messageId: ObjectId) {
     answer != null;
     answer = await cursor.next()
   ) {
+    // Defensive: rows written before vote answer validation existed (or by a
+    // future bug) must not break history reads for a whole room.
+    if (
+      !Number.isInteger(answer.index) ||
+      typeof answer.answer !== 'number' ||
+      !answer.userId
+    ) {
+      continue
+    }
     const [answerUser] = answer.user
+    if (!answerUser) {
+      continue
+    }
     answers.push({
       userId: answer.userId.toHexString(),
       userAccount: answerUser.account,

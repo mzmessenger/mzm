@@ -51,7 +51,7 @@ export const authClients = createClients(authApis, AUTH_URL_BASE)
 
 export async function sendSocket(message: ClientToSocketType) {
   return await clients['/api/socket']['POST'].client({
-    fetcher,
+    fetcher: textFetcher,
     body: message
   })
 }
