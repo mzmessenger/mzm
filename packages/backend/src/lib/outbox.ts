@@ -16,7 +16,6 @@ import {
   consumerReceipts,
   operations,
   outbox,
-  producerRevisions,
   type OutboxEvent
 } from './db/outbox.js'
 
@@ -73,11 +72,12 @@ export async function createSocketOperation<T>({
   }
 
   const operationId = new ObjectId()
-  const events: OperationEvent[] = []
-  let value: T | null = null
   try {
-    await db.withSession(async (session) => {
-      await session.withTransaction(async () => {
+    return await db.withSession(async (session) => {
+      return await session.withTransaction(async () => {
+        // A retried attempt must never see the previous attempt's state.
+        const events: OperationEvent[] = []
+        let value: T | null = null
         await operationCollection.insertOne(
           {
             _id: operationId,
@@ -100,14 +100,10 @@ export async function createSocketOperation<T>({
         value = response ?? null
         const wireEvents: OutboxEvent[] = []
         for (const [eventIndex, event] of events.entries()) {
-          const revision = await producerRevisions(db).findOneAndUpdate(
-            { _id: event.orderingKey },
-            { $inc: { revision: 1 } },
-            { upsert: true, returnDocument: 'after', session }
-          )
-          if (!revision || typeof revision.revision !== 'number') {
-            throw new Error('failed to advance producer revision')
-          }
+          // ordering.revision is kept only for wire compatibility: consumers do not
+          // order by it, and a shared per-key counter made every concurrent write
+          // to the same key abort and retry the whole transaction.
+          const revision = 1
           const eventId = `${operationId.toHexString()}:${eventIndex}`
           const queueEvent = {
             version: 1,
@@ -117,7 +113,7 @@ export async function createSocketOperation<T>({
             destination: 'backend',
             type: event.type,
             payload: event.payload,
-            ordering: { key: event.orderingKey, revision: revision.revision },
+            ordering: { key: event.orderingKey, revision },
             createdAt: new Date().toISOString()
           }
           if (!isQueueWireEvent(queueEvent)) {
@@ -141,6 +137,7 @@ export async function createSocketOperation<T>({
           { $set: { response: JSON.stringify(value) } },
           { session }
         )
+        return { operationId: operationId.toHexString(), response: value }
       })
     })
   } catch (error) {
@@ -159,7 +156,6 @@ export async function createSocketOperation<T>({
     }
     throw error
   }
-  return { operationId: operationId.toHexString(), response: value }
 }
 
 /** Returns false only for duplicate deliveries. Receipt and mutation share one transaction. */
@@ -178,7 +174,8 @@ export async function acceptConsumerEvent(
           $setOnInsert: {
             consumerName: 'backend',
             eventId: event.eventId,
-            processedAt: new Date()
+            processedAt: new Date(),
+            createdAt: new Date()
           }
         },
         { upsert: true, session }

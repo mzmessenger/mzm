@@ -10,7 +10,6 @@ const OUTBOX_DISPATCHED_RETENTION_MS = 30 * 86400_000
 import {
   operations,
   outbox,
-  producerRevisions,
   type OutboxEvent,
   type OutboxFilter
 } from './db/outbox.js'
@@ -41,14 +40,10 @@ export async function createRemoveUserOperation(
   await db.withSession(async (session) => {
     await session.withTransaction(async () => {
       const orderingKey = `user:${subject}`
-      const revision = await producerRevisions(db).findOneAndUpdate(
-        { _id: orderingKey },
-        { $inc: { revision: 1 } },
-        { upsert: true, returnDocument: 'after', session }
-      )
-      if (!revision || typeof revision.revision !== 'number') {
-        throw new Error('failed to advance producer revision')
-      }
+      // ordering.revision is kept only for wire compatibility: consumers do not
+      // order by it, and a shared per-key counter made every concurrent write
+      // to the same key abort and retry the whole transaction.
+      const revision = 1
       const event: OutboxEvent = {
         _id: eventId,
         version: 1,
@@ -58,7 +53,7 @@ export async function createRemoveUserOperation(
         destination: 'auth',
         type: 'removeUser',
         payload: { userId: subject },
-        ordering: { key: orderingKey, revision: revision.revision },
+        ordering: { key: orderingKey, revision },
         createdAt: createdAt.toISOString(),
         status: 'pending',
         attempts: 0

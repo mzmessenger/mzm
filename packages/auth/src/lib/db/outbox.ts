@@ -32,6 +32,7 @@ export type ConsumerReceipt = {
   consumerName: 'backend' | 'auth'
   eventId: string
   processedAt: Date
+  createdAt: Date
 }
 
 export function outbox(db: MongoClient) {
@@ -69,6 +70,12 @@ export async function initializeOutboxIndexes(db: MongoClient) {
     consumerReceipts(db).createIndex(
       { consumerName: 1, eventId: 1 },
       { unique: true }
+    ),
+    // Receipts are replay protection, not data. The TTL keeps the collection
+    // bounded; the queue redelivery window is far shorter.
+    consumerReceipts(db).createIndex(
+      { createdAt: 1 },
+      { expireAfterSeconds: 35 * 86400 }
     )
   ])
 }
