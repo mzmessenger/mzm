@@ -2,7 +2,7 @@ import { ObjectId, type MongoClient } from 'mongodb'
 import type { QueueWireEvent } from 'mzm-shared/src/lib/outbox'
 import { logger } from './logger.js'
 import { collections } from './db.js'
-import { consumerReceipts } from './db/outbox.js'
+import { consumerReceipts, outbox } from './db/outbox.js'
 
 type RemoveUserEvent = QueueWireEvent & {
   type: 'removeUser'
@@ -36,7 +36,8 @@ export async function removeUser({
           $setOnInsert: {
             consumerName: 'auth',
             eventId: event.eventId,
-            processedAt: new Date()
+            processedAt: new Date(),
+            createdAt: new Date()
           }
         },
         { upsert: true, session }
@@ -55,6 +56,29 @@ export async function removeUser({
         )
         await collections(db).users.deleteOne({ _id: originId }, { session })
       }
+      // The backend keeps its own copy of the account (user doc, enter
+      // records). Queue routing is destination-based, so a follow-up event
+      // with destination 'backend' is what actually reaches it. Emitting it
+      // inside this transaction keeps it exactly-once with the auth-side
+      // receipt.
+      const operationId = new ObjectId()
+      await outbox(db).insertOne(
+        {
+          _id: `${operationId.toHexString()}:0`,
+          version: 1,
+          eventId: `${operationId.toHexString()}:0`,
+          operationId,
+          eventIndex: 0,
+          destination: 'backend',
+          type: 'removeUser',
+          payload: { userId: event.payload.userId },
+          ordering: { key: `user:${event.payload.userId}`, revision: 1 },
+          createdAt: new Date().toISOString(),
+          status: 'pending',
+          attempts: 0
+        },
+        { session }
+      )
       processed = true
     })
   })
