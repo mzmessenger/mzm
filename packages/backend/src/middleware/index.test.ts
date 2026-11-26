@@ -120,7 +120,7 @@ test('gateway origin middleware rejects a request without its credential', () =>
   )
 
   expect(res.status).toHaveBeenCalledWith(401)
-  expect(send).toHaveBeenCalledWith('missing gateway origin authorization')
+  expect(send).toHaveBeenCalledWith('unauthorized')
   expect(next).not.toHaveBeenCalled()
 })
 

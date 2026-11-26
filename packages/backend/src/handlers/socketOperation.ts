@@ -13,8 +13,12 @@ import { createRoomIconPath, createUserIconPath, escape, popParam, repliedAccoun
 import { getMessages } from '../logic/messages.js'
 import { isValidateRoomName } from '../logic/rooms.js'
 import { getRooms as getUserRooms } from '../logic/users.js'
+import * as config from '../config.js'
 
 const keyPattern = /^[0-9a-f]{8}-[0-9a-f]{4}-[1-8][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i
+
+const MESSAGE_TEXT_MAX_LENGTH = config.message.MAX_MESSAGE_LENGTH
+const VOTE_QUESTION_MAX_LENGTH = 500
 
 function messageEvent(users: string[], message: ToClientType, emit: (event: { type: 'message'; payload: ToClientType; orderingKey: string }) => void) {
   for (const user of users) emit({ type: 'message', payload: { ...message, user }, orderingKey: `user:${user}` })
@@ -45,7 +49,12 @@ async function roomUsers(db: MongoClient, roomId: ObjectId, session: ClientSessi
 
 export async function executeSocketOperation({ db, subject, idempotencyKey, data }: { db: MongoClient; subject: string; idempotencyKey: string; data: SocketOperationData }) {
   if (!keyPattern.test(idempotencyKey)) throw new Error('invalid idempotency key')
-  return await createSocketOperation({
+  // Read commands (rooms:get / messages:room / rooms:read / rooms:sort) answer
+  // the requester only. Their payload size is bounded by history rather than by
+  // the queue wire limit, so they do not emit outbox events; the POST response
+  // body is the delivery. Going through the queue would fail on large payloads
+  // and cost a needless round-trip.
+  const result = await createSocketOperation({
     db,
     subject,
     idempotencyKey,
@@ -66,7 +75,6 @@ export async function executeSocketOperation({ db, subject, idempotencyKey, data
           rooms,
           roomOrder: user.roomOrder
         }
-        emit({ type: 'message', payload: send, orderingKey: `user:${subject}` })
         return send
       }
       if (data.cmd === TO_SERVER_CMD.MESSAGES_ROOM) {
@@ -92,7 +100,6 @@ export async function executeSocketOperation({ db, subject, idempotencyKey, data
           messages,
           existHistory
         }
-        emit({ type: 'message', payload: send, orderingKey: `user:${subject}` })
         return send
       }
       if (data.cmd === TO_SERVER_CMD.ROOMS_ENTER) {
@@ -167,11 +174,11 @@ export async function executeSocketOperation({ db, subject, idempotencyKey, data
         return send
       }
       if (data.cmd === TO_SERVER_CMD.MESSAGE_SEND) {
-        const parsed = z.object({ message: z.string().min(1), room: z.string().min(1), vote: z.object({ questions: z.array(z.object({ text: z.string().min(1) })) }).optional() }).safeParse(data)
+        const parsed = z.object({ message: z.string().min(1).max(MESSAGE_TEXT_MAX_LENGTH), room: z.string().min(1), vote: z.object({ questions: z.array(z.object({ text: z.string().min(1).max(VOTE_QUESTION_MAX_LENGTH) })) }).optional() }).safeParse(data)
         if (!parsed.success) return undefined
         const text = escape(parsed.data.message.trim())
         const room = escape(parsed.data.room.trim())
-        if (!text || !room) return undefined
+        if (!text || !room || text.length > MESSAGE_TEXT_MAX_LENGTH) return undefined
         const vote = parsed.data.vote ? { questions: parsed.data.vote.questions.map((question) => ({ text: question.text })), status: VoteStatusEnum.OPEN, type: VoteTypeEnum.CHOICE } : undefined
         const saved = await collections(db).messages.insertOne({ message: text, roomId: new ObjectId(room), userId: new ObjectId(subject), iine: 0, updated: false, removed: false, createdAt: new Date(), updatedAt: null, ...(vote ? { vote } : {}) }, { session })
         const user = await collections(db).users.findOne({ _id: new ObjectId(subject) }, { session })
@@ -201,7 +208,7 @@ export async function executeSocketOperation({ db, subject, idempotencyKey, data
         const updatedAt = new Date()
         const isRemove = data.cmd === TO_SERVER_CMD.MESSAGE_REMOVE
         const text = isRemove ? '' : escape(data.message.trim())
-        if (!isRemove && !text) return undefined
+        if (!isRemove && (!text || text.length > MESSAGE_TEXT_MAX_LENGTH)) return undefined
         await collections(db).messages.updateOne({ _id: target._id }, { $set: isRemove ? { removed: true, updatedAt } : { message: text, updated: true, updatedAt } }, { session })
         const user = await collections(db).users.findOne({ _id: new ObjectId(subject) }, { session })
         if (!user) return undefined
@@ -213,14 +220,12 @@ export async function executeSocketOperation({ db, subject, idempotencyKey, data
         if (!data.room) return undefined
         await collections(db).enter.updateOne({ userId: new ObjectId(subject), roomId: new ObjectId(data.room) }, { $set: { unreadCounter: 0, replied: 0 } }, { session })
         const send = { user: subject, cmd: TO_CLIENT_CMD.ROOMS_READ, room: data.room }
-        emit({ type: 'message', payload: send, orderingKey: `user:${subject}` })
         return send
       }
       if (data.cmd === TO_SERVER_CMD.ROOMS_SORT) {
         if (!Array.isArray(data.roomOrder) || !data.roomOrder.every((room) => typeof room === 'string')) return undefined
         await collections(db).users.updateOne({ _id: new ObjectId(subject) }, { $set: { roomOrder: data.roomOrder } }, { session })
         const send = { user: subject, cmd: TO_CLIENT_CMD.ROOMS_SORT_SUCCESS, roomOrder: data.roomOrder }
-        emit({ type: 'message', payload: send, orderingKey: `user:${subject}` })
         return send
       }
       if (data.cmd === TO_SERVER_CMD.ROOMS_UPDATE_DESCRIPTION) {
@@ -236,7 +241,14 @@ export async function executeSocketOperation({ db, subject, idempotencyKey, data
         const target = await collections(db).messages.findOne({ _id: messageId }, { session })
         if (!target?.vote || target.vote.status !== VoteStatusEnum.OPEN) return undefined
         if (data.cmd === TO_SERVER_CMD.VOTE_ANSWER_SEND) {
-          if (!isVoteAnswer(data.answer) || data.answer > target.vote.questions.length) return undefined
+          if (
+            !Number.isInteger(data.index) ||
+            data.index < 0 ||
+            data.index >= target.vote.questions.length
+          )
+            return undefined
+          if (!isVoteAnswer(data.answer) || data.answer > target.vote.questions.length)
+            return undefined
           await collections(db).voteAnswer.updateOne({ messageId, userId: new ObjectId(subject), index: data.index }, { $set: { answer: data.answer } }, { upsert: true, session })
         } else {
           await collections(db).voteAnswer.deleteOne({ messageId, userId: new ObjectId(subject), index: data.index }, { session })
@@ -246,6 +258,10 @@ export async function executeSocketOperation({ db, subject, idempotencyKey, data
       }
       if (data.cmd === TO_SERVER_CMD.ROOMS_OPEN || data.cmd === TO_SERVER_CMD.ROOMS_CLOSE) {
         const roomId = new ObjectId(data.roomId)
+        const room = await collections(db).rooms.findOne({ _id: roomId }, { session })
+        if (!room) return undefined
+        // The general room is seeded and always open; its status is app state.
+        if (room.name === config.room.GENERAL_ROOM_NAME) return undefined
         await collections(db).rooms.updateOne({ _id: roomId }, { $set: { status: data.cmd === TO_SERVER_CMD.ROOMS_OPEN ? RoomStatusEnum.OPEN : RoomStatusEnum.CLOSE, updatedBy: new ObjectId(subject) } }, { session })
         return undefined
       }
@@ -253,4 +269,5 @@ export async function executeSocketOperation({ db, subject, idempotencyKey, data
       return undefined
     }
   })
+  return result
 }

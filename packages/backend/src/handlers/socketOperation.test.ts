@@ -13,7 +13,7 @@ import {
 
 const test = await createTest(globalThis)
 
-test('rooms:get emits the current room list to the requester', async ({
+test('rooms:get answers the requester directly without a queue event', async ({
   testDb
 }) => {
   await initializeOutboxIndexes(testDb)
@@ -53,19 +53,11 @@ test('rooms:get emits the current room list to the requester', async ({
     roomOrder: [roomId.toHexString()],
     rooms: [{ id: roomId.toHexString() }]
   })
-  const event = await outbox(testDb).findOne({
-    _id: `${operation.operationId}:0`
-  })
-  expect(event).toMatchObject({
-    type: 'message',
-    payload: {
-      cmd: TO_CLIENT_CMD.ROOMS_GET,
-      user: userId.toHexString()
-    }
-  })
+  // Read commands bypass the outbox: the response above is the delivery.
+  expect(await outbox(testDb).countDocuments({})).toBe(0)
 })
 
-test('messages:room emits the room history to an entered user', async ({
+test('messages:room answers the requester directly without a queue event', async ({
   testDb
 }) => {
   await initializeOutboxIndexes(testDb)
@@ -120,14 +112,8 @@ test('messages:room emits the room history to an entered user', async ({
     room: roomId.toHexString(),
     messages: [{ id: messageId.toHexString(), message: 'hello' }]
   })
-  const event = await outbox(testDb).findOne({
-    _id: `${operation.operationId}:0`
-  })
-  expect(event?.payload).toMatchObject({
-    cmd: TO_CLIENT_CMD.MESSAGES_ROOM,
-    user: userId.toHexString(),
-    room: roomId.toHexString()
-  })
+  // Read commands bypass the outbox: the response above is the delivery.
+  expect(await outbox(testDb).countDocuments({})).toBe(0)
 })
 
 test('rooms:enter adds the user and emits the entered room', async ({
@@ -229,7 +215,7 @@ test('every POST socket command has an explicit response and outbox contract', a
     {
       data: { cmd: TO_SERVER_CMD.ROOMS_GET },
       response: TO_CLIENT_CMD.ROOMS_GET,
-      events: ['message']
+      events: []
     },
     {
       data: { cmd: TO_SERVER_CMD.ROOMS_ENTER, id: roomId.toHexString() },
@@ -239,7 +225,7 @@ test('every POST socket command has an explicit response and outbox contract', a
     {
       data: { cmd: TO_SERVER_CMD.ROOMS_READ, room: roomId.toHexString() },
       response: TO_CLIENT_CMD.ROOMS_READ,
-      events: ['message']
+      events: []
     },
     {
       data: {
@@ -247,7 +233,7 @@ test('every POST socket command has an explicit response and outbox contract', a
         roomOrder: [roomId.toHexString()]
       },
       response: TO_CLIENT_CMD.ROOMS_SORT_SUCCESS,
-      events: ['message']
+      events: []
     },
     {
       data: { cmd: TO_SERVER_CMD.ROOMS_OPEN, roomId: roomId.toHexString() },
@@ -297,7 +283,7 @@ test('every POST socket command has an explicit response and outbox contract', a
         room: roomId.toHexString()
       },
       response: TO_CLIENT_CMD.MESSAGES_ROOM,
-      events: ['message']
+      events: []
     },
     {
       data: {
@@ -356,4 +342,170 @@ test('every POST socket command has an explicit response and outbox contract', a
       .toArray()
     expect(events.map((event) => event.type)).toEqual(contract.events)
   }
+})
+
+test('general room status is not changed by rooms:open or rooms:close', async ({
+  testDb
+}) => {
+  await initializeOutboxIndexes(testDb)
+
+  const userId = new ObjectId()
+  const generalId = new ObjectId()
+  await Promise.all([
+    collections(testDb).users.insertOne({
+      _id: userId,
+      account: `user-${userId.toHexString()}`,
+      roomOrder: []
+    }),
+    collections(testDb).rooms.insertOne({
+      _id: generalId,
+      name: 'general',
+      createdBy: userId.toHexString(),
+      status: RoomStatusEnum.OPEN
+    })
+  ])
+
+  const close = await executeSocketOperation({
+    db: testDb,
+    subject: userId.toHexString(),
+    idempotencyKey: crypto.randomUUID(),
+    data: { cmd: TO_SERVER_CMD.ROOMS_CLOSE, roomId: generalId.toHexString() }
+  })
+  expect(close.response).toBeNull()
+
+  const open = await executeSocketOperation({
+    db: testDb,
+    subject: userId.toHexString(),
+    idempotencyKey: crypto.randomUUID(),
+    data: { cmd: TO_SERVER_CMD.ROOMS_OPEN, roomId: generalId.toHexString() }
+  })
+  expect(open.response).toBeNull()
+
+  const general = await collections(testDb).rooms.findOne({ _id: generalId })
+  expect(general?.status).toBe(RoomStatusEnum.OPEN)
+})
+
+test('vote answers reject a non-integer index and out-of-range values', async ({
+  testDb
+}) => {
+  await initializeOutboxIndexes(testDb)
+
+  const userId = new ObjectId()
+  const roomId = new ObjectId()
+  const messageId = new ObjectId()
+  await Promise.all([
+    collections(testDb).users.insertOne({
+      _id: userId,
+      account: `user-${userId.toHexString()}`,
+      roomOrder: []
+    }),
+    collections(testDb).rooms.insertOne({
+      _id: roomId,
+      name: `room-${roomId.toHexString()}`,
+      createdBy: userId.toHexString(),
+      status: RoomStatusEnum.OPEN
+    }),
+    collections(testDb).messages.insertOne({
+      _id: messageId,
+      userId,
+      roomId,
+      message: 'vote message',
+      iine: 0,
+      updated: false,
+      removed: false,
+      createdAt: new Date(),
+      updatedAt: null,
+      vote: {
+        questions: [{ text: 'question' }],
+        status: VoteStatusEnum.OPEN,
+        type: VoteTypeEnum.CHOICE
+      }
+    }),
+    collections(testDb).enter.insertOne({
+      userId,
+      roomId,
+      unreadCounter: 0,
+      replied: 0
+    })
+  ])
+
+  const run = (data: Record<string, unknown>) =>
+    executeSocketOperation({
+      db: testDb,
+      subject: userId.toHexString(),
+      idempotencyKey: crypto.randomUUID(),
+      data: data as SocketOperationData
+    })
+
+  expect((await run({ cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND, messageId: messageId.toHexString(), index: 'x', answer: 0 })).response).toBeNull()
+  expect((await run({ cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND, messageId: messageId.toHexString(), index: 1, answer: 0 })).response).toBeNull()
+  expect((await run({ cmd: TO_SERVER_CMD.VOTE_ANSWER_SEND, messageId: messageId.toHexString(), index: 0, answer: 3 })).response).toBeNull()
+  expect(await collections(testDb).voteAnswer.countDocuments({ messageId })).toBe(0)
+
+  // A previously saved invalid row must not break later reads.
+  await collections(testDb).voteAnswer.insertOne({
+    messageId,
+    userId,
+    index: 'x' as unknown as number,
+    answer: 0
+  })
+  const history = await executeSocketOperation({
+    db: testDb,
+    subject: userId.toHexString(),
+    idempotencyKey: crypto.randomUUID(),
+    data: { cmd: TO_SERVER_CMD.MESSAGES_ROOM, room: roomId.toHexString() }
+  })
+  expect(history.response).toMatchObject({ cmd: TO_CLIENT_CMD.MESSAGES_ROOM })
+})
+
+test('message text keeps the 3000 character bound', async ({ testDb }) => {
+  await initializeOutboxIndexes(testDb)
+
+  const userId = new ObjectId()
+  const roomId = new ObjectId()
+  await Promise.all([
+    collections(testDb).users.insertOne({
+      _id: userId,
+      account: `user-${userId.toHexString()}`,
+      roomOrder: []
+    }),
+    collections(testDb).rooms.insertOne({
+      _id: roomId,
+      name: `room-${roomId.toHexString()}`,
+      createdBy: userId.toHexString(),
+      status: RoomStatusEnum.OPEN
+    }),
+    collections(testDb).enter.insertOne({
+      userId,
+      roomId,
+      unreadCounter: 0,
+      replied: 0
+    })
+  ])
+
+  const tooLong = await executeSocketOperation({
+    db: testDb,
+    subject: userId.toHexString(),
+    idempotencyKey: crypto.randomUUID(),
+    data: {
+      cmd: TO_SERVER_CMD.MESSAGE_SEND,
+      room: roomId.toHexString(),
+      message: 'あ'.repeat(3001)
+    }
+  })
+  expect(tooLong.response).toBeNull()
+  expect(await collections(testDb).messages.countDocuments({ roomId })).toBe(0)
+
+  const maxLen = await executeSocketOperation({
+    db: testDb,
+    subject: userId.toHexString(),
+    idempotencyKey: crypto.randomUUID(),
+    data: {
+      cmd: TO_SERVER_CMD.MESSAGE_SEND,
+      room: roomId.toHexString(),
+      message: 'あ'.repeat(3000)
+    }
+  })
+  expect(maxLen.response && typeof maxLen.response === 'object' ? maxLen.response.cmd : null).toBe(TO_CLIENT_CMD.MESSAGE_RECEIVE)
+  expect(await collections(testDb).messages.countDocuments({ roomId })).toBe(1)
 })

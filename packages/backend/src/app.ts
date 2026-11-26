@@ -50,17 +50,7 @@ export function createApp({ db }: { db: MongoClient }) {
   user.createRoute(app, { db, jsonParser, checkAccessToken })
   icon.createRoute(app, { db, checkAccessToken })
 
-  app.use('/internal/outbox/v1', (req, res, next) => {
-    if (
-      !GATEWAY_ORIGIN_SECRET ||
-      req.headers['x-mzm-gateway-authorization'] !==
-        `Bearer ${GATEWAY_ORIGIN_SECRET}`
-    ) {
-      res.status(401).send('unauthorized')
-      return
-    }
-    next()
-  })
+  app.use('/internal/outbox/v1', checkGatewayOrigin)
   app.post('/internal/outbox/v1/claim', jsonParser, async (req, res) => {
     const { owner, operationId, limit } = req.body
     if (

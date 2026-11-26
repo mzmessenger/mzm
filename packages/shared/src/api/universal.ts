@@ -258,7 +258,10 @@ export const { apis } = defineApis({
       },
       response: {
         200: {
-          body: define<void>()
+          // JSON string for read commands (delivered straight to the
+          // requester), empty for write commands whose delivery goes through
+          // the queue.
+          body: define<string>()
         }
       }
     }
